@@ -26,7 +26,19 @@ fallback: OLLAMA_MODEL env (default llama3.1:8b)
 
 Eve tool `switch_chat_model` writes the same file via `frontend/ollama_cli.py`.
 
-## Tools (14)
+### Voice vs instructions
+
+`agent/instructions.md` separates **Voice** (what users see as Eve) from **Tool usage** (internal). Eve must not quote system rules, tool names, or framework errors in chat. Personality can grow in the Voice section over time.
+
+### Disabled harness tools
+
+| Tool | Why disabled |
+|------|----------------|
+| `ask_question` | `agent/tools/ask_question.ts` — Workbench uses normal chat; local Ollama misfires on structured question tools |
+
+Clarifications belong in **plain chat text**, not a separate question tool.
+
+## Tools (14 EMPIRE tools)
 
 | Tool | Backend | Purpose |
 |------|---------|---------|
@@ -57,6 +69,8 @@ Eve **framework skills** — markdown in `agent/skills/`, loaded on demand via `
 | `manage-tasks` | `manage-tasks.md` | Multi-step PocketBase workflows, "Have Eve do this" |
 | `recall-ingested-context` | `recall-ingested-context.md` | Curated primitives, `primitives_test` |
 | `route-local-models` | `route-local-models.md` | Model choice, suite gaps, switching |
+
+System instructions: `agent/instructions.md` (voice + internal tool rules).
 
 **Note:** Workbench "skills" in `ollama_inventory.py` (dailyChat, coding, etc.) are **model routing slots**, not Eve framework skills.
 

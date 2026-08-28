@@ -76,6 +76,8 @@ See [docs/manifest/06-eve-agent.md](../../docs/manifest/06-eve-agent.md) and [do
 | `recall-ingested-context` | Curated primitives / `primitives_test` |
 | `route-local-models` | Model selection and switching |
 
+Built-in Eve `ask_question` is **disabled** — use normal chat for clarifications. See `agent/instructions.md` for voice vs internal rules.
+
 ## MCP parity
 
 Cursor uses stdio FastMCP (`empire-pocketbase`, `empire-cognee`); Eve uses typed REST/subprocess tools with the same backends. See [docs/manifest/09-mcp-cursor.md](../../docs/manifest/09-mcp-cursor.md).
