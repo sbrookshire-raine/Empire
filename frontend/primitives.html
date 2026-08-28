@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPIRE Primitives Pilot</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>
+      body { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+      .meta { opacity: 0.75; font-size: 0.9rem; }
+      code.path { word-break: break-all; font-size: 0.8rem; }
+      .ok { color: #0f5132; }
+      .bad { color: #842029; }
+      pre.hit { max-height: 12rem; overflow: auto; font-size: 0.8rem; }
+    </style>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="primitives"></nav>
+    <main x-data="prim()" x-init="refresh()">
+      <header>
+        <h1>Primitives pilot</h1>
+        <p class="meta">
+          This is how you give Eve data. Fuel goes in Cognee dataset
+          <code>primitives_test</code>. Directives (<code>SYSTEM.md</code>) stay
+          out of the graph — they are the query lens.
+          Wikipedia ingest is halted; <code>wikipedia_2017</code> is preserved.
+        </p>
+      </header>
+
+      <section>
+        <h2>Do this</h2>
+        <ol>
+          <li>If the stack is down: <code>.\scripts\start-stack.ps1</code> from the repo root.</li>
+          <li>Copy <code>.md</code> files into the Fuel folder below (PDF → Markdown first if needed).</li>
+          <li>Click <strong>Run curated ingest</strong> (or Remember+embed only for a faster pass).</li>
+          <li>Ask Cursor or Eve: recall from dataset <code>primitives_test</code>.</li>
+        </ol>
+        <p class="meta">Never drop directive files into Fuel. Eve is port 2000, not Cursor chat.</p>
+      </section>
+
+      <section>
+        <h2>Folders (drop files on disk)</h2>
+        <p><strong>Fuel</strong> — PDFs converted to MD / domain text only</p>
+        <p class="path"><code class="path" x-text="s.raw_materials"></code></p>
+        <ul>
+          <template x-for="f in s.fuel || []" :key="f.name">
+            <li><span x-text="f.name"></span> <span class="meta" x-text="f.bytes != null ? ('(' + f.bytes + ' B)') : ''"></span></li>
+          </template>
+        </ul>
+        <p><strong>Directives</strong> — SYSTEM + lenses (never ingest)</p>
+        <p class="path"><code class="path" x-text="s.directives"></code></p>
+        <ul>
+          <template x-for="f in s.directive_files || []" :key="f.name">
+            <li x-text="f.name"></li>
+          </template>
+        </ul>
+        <button type="button" class="outline" @click="refresh()">Refresh lists</button>
+      </section>
+
+      <section>
+        <h2>Run ingest</h2>
+        <p class="meta">Uses Ollama <code>huihui_ai/qwen2.5-coder-abliterate:14b</code> for cognify + <code>nomic-embed-text</code> for vectors.</p>
+        <button type="button" :disabled="running" @click="runIngest(false)" x-text="running ? 'Running…' : 'Run curated ingest (full graph)'"></button>
+        <button type="button" class="secondary" :disabled="running" @click="runIngest(true)">Remember+embed only</button>
+        <p class="meta" x-show="msg" x-text="msg"></p>
+      </section>
+
+      <section>
+        <h2>Last job</h2>
+        <p>
+          <span :class="s.last_ingest?.ok ? 'ok' : 'bad'" x-text="s.last_ingest?.ok ? 'OK' : (s.last_ingest?.error || 'No run yet')"></span>
+          · docs <span x-text="s.last_ingest?.docs ?? '—'"></span>
+          · <span x-text="s.last_ingest?.finished_at || ''"></span>
+        </p>
+        <p class="meta">LLM <code x-text="s.last_ingest?.llm_model || '—'"></code></p>
+        <h3>Smoke recall</h3>
+        <p class="meta" x-text="s.last_ingest?.smoke_query || ''"></p>
+        <template x-for="(hit, i) in (s.last_ingest?.smoke_hits || []).slice(0, 5)" :key="i">
+          <pre class="hit" x-text="typeof hit === 'string' ? hit : JSON.stringify(hit, null, 2)"></pre>
+        </template>
+      </section>
+
+      <section>
+        <h2>How to talk to the system</h2>
+        <h3>Cursor (MCP)</h3>
+        <ol>
+          <li>Open <code x-text="s.system_prompt"></code> (or paste SYSTEM.md into chat).</li>
+          <li>Say: use this lexicon/lens; search Cognee dataset <code>primitives_test</code>.</li>
+          <li>Call MCP <code>cognee_recall</code> with that dataset.</li>
+        </ol>
+        <h3>Eve agent</h3>
+        <ol>
+          <li><code>.\scripts\start-eve.ps1</code> (API on port 2000).</li>
+          <li>Eve is <strong>not</strong> Cursor chat — separate session/REPL.</li>
+          <li>Ask it to recall from <code>primitives_test</code> using Pattern Weaver vocabulary.</li>
+        </ol>
+        <p class="meta">Full notes: <code x-text="s.readme"></code></p>
+      </section>
+    </main>
+    <script src="empire-nav.js"></script>
+    <script>
+      function prim() {
+        return {
+          s: { fuel: [], directive_files: [], last_ingest: {} },
+          running: false,
+          msg: "",
+          refresh: async function () {
+            var r = await fetch("/api/primitives/status");
+            this.s = await r.json();
+          },
+          runIngest: async function (skip) {
+            this.running = true;
+            this.msg = "Starting… (cognify can take several minutes)";
+            try {
+              var r = await fetch("/api/primitives/ingest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ skip_cognify: !!skip }),
+              });
+              var data = await r.json();
+              this.s = data;
+              this.msg = data.ok ? "Ingest finished" : (data.error || data.run?.stderr_tail || "Failed");
+            } catch (e) {
+              this.msg = String(e);
+            } finally {
+              this.running = false;
+              this.refresh();
+            }
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,86 @@
+{
+  "rollInOrder": ["ollama", "pocketbase", "frontend", "eve"],
+  "rollOutOrder": ["eve", "frontend", "pocketbase"],
+  "defaults": {
+    "healthTimeoutSec": 8,
+    "healthRetrySec": 1,
+    "healthRetries": 12,
+    "stopGraceSec": 5,
+    "stopForceSec": 3
+  },
+  "services": {
+    "ollama": {
+      "label": "Ollama",
+      "description": "Local LLM inference",
+      "port": 11434,
+      "healthUrl": "http://127.0.0.1:11434/api/tags",
+      "dashboardUrl": "http://127.0.0.1:11434/",
+      "managed": false,
+      "dashboardControl": false,
+      "startHint": "ollama serve"
+    },
+    "pocketbase": {
+      "label": "PocketBase",
+      "description": "SQLite API + admin",
+      "port": 8090,
+      "healthUrl": "http://127.0.0.1:8090/api/health",
+      "dashboardUrl": "http://127.0.0.1:8090/",
+      "managed": true,
+      "dashboardControl": true,
+      "startScript": "scripts/start-pocketbase-background.ps1",
+      "start": {
+        "type": "process",
+        "exe": "backend/pocketbase/pocketbase.exe",
+        "args": ["serve", "--http=127.0.0.1:8090"],
+        "cwd": "backend/pocketbase",
+        "hidden": true
+      }
+    },
+    "frontend": {
+      "label": "Tasks UI",
+      "description": "Zero-build HTMX frontend + dashboard control API",
+      "port": 8080,
+      "healthUrl": "http://127.0.0.1:8080/api/memory/status",
+      "dashboardUrl": "http://127.0.0.1:8080/",
+      "managed": true,
+      "dashboardControl": false,
+      "startScript": "scripts/start-frontend.ps1",
+      "start": {
+        "type": "process",
+        "exe": "venv/Scripts/python.exe",
+        "args": ["-m", "frontend.serve"],
+        "cwd": ".",
+        "hidden": true
+      }
+    },
+    "eve": {
+      "label": "Eve Agent",
+      "description": "Local task + memory agent",
+      "port": 2000,
+      "healthUrl": "http://127.0.0.1:2000/eve/v1/info",
+      "dashboardUrl": "http://127.0.0.1:2000/",
+      "managed": true,
+      "dashboardControl": true,
+      "startScript": "scripts/start-eve.ps1",
+      "dependsOn": ["ollama", "pocketbase"],
+      "start": {
+        "type": "process",
+        "exe": "npm",
+        "args": ["exec", "--", "eve", "start", "--host", "127.0.0.1", "--port", "2000"],
+        "cwd": "agents/empire-task-agent",
+        "hidden": true,
+        "prepare": {
+          "exe": "venv/Scripts/python.exe",
+          "args": ["scripts/ensure-eve-build.py"],
+          "cwd": "."
+        },
+        "env": {
+          "EMPIRE_ROOT": "{{EMPIRE_ROOT}}",
+          "POCKETBASE_URL": "http://127.0.0.1:8090",
+          "OLLAMA_BASE_URL": "http://localhost:11434/v1",
+          "OLLAMA_MODEL": "llama3.1:8b"
+        }
+      }
+    }
+  }
+}

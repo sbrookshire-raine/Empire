@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPIRE — API Health</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="/empire-nav.css" />
+    <style>
+      .ok {
+        color: #0f5132;
+        font-weight: 600;
+      }
+      .bad {
+        color: #842029;
+        font-weight: 600;
+      }
+      pre {
+        background: var(--pico-code-background-color);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav id="empire-nav" data-current="health"></nav>
+
+      <h1>API Health</h1>
+      <p id="summary">Checking PocketBase…</p>
+
+      <article>
+        <header><strong>Response</strong></header>
+        <pre id="json">—</pre>
+      </article>
+    </main>
+    <script src="/empire-nav.js"></script>
+    <script>
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((data) => {
+          document.getElementById("summary").innerHTML =
+            '<span class="ok">✓ ' + data.message + "</span> (HTTP " + data.code + ")";
+          document.getElementById("json").textContent = JSON.stringify(data, null, 2);
+        })
+        .catch((err) => {
+          document.getElementById("summary").innerHTML =
+            '<span class="bad">✗ PocketBase API unreachable</span>';
+          document.getElementById("json").textContent = String(err);
+        });
+    </script>
+  </body>
+</html>

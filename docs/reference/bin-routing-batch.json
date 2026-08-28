@@ -1,0 +1,142 @@
+[
+  {
+    "original_name": "gabriel-herencia/postgres-mcp",
+    "assigned_bin": 1,
+    "reasoning": "FastMCP+Python+psycopg3 fills a real gap for empire-cognee-postgres admin/query; PocketBase MCP and data-processor do not replace scoped PG MCP modes."
+  },
+  {
+    "original_name": "tommypj/readable-mcp",
+    "assigned_bin": 1,
+    "reasoning": "FastMCP Trafilatura URL→Markdown with SSRF guards is the preferred one-shot fetch specialist; docs-guide-scraper still wins full-site crawls."
+  },
+  {
+    "original_name": "modelcontextprotocol/servers (filesystem)",
+    "assigned_bin": 3,
+    "reasoning": "Official Node filesystem MCP duplicates Desktop Commander which already owns local FS/shell; adding both bloats the nervous system."
+  },
+  {
+    "original_name": "modelcontextprotocol/servers (fetch)",
+    "assigned_bin": 3,
+    "reasoning": "Node fetch→Markdown is redundant with readable-mcp (FastMCP preference) plus docs-guide-scraper and web-researcher scrapers."
+  },
+  {
+    "original_name": "picocss/pico",
+    "assigned_bin": 2,
+    "reasoning": "CDN classless CSS library, not a Cursor skill; keep as HTMX markup reference—css-framework-reference already covers CDN CSS without a Pico-only skill."
+  },
+  {
+    "original_name": "Hypermedia Systems (htmx + Alpine book)",
+    "assigned_bin": 2,
+    "reasoning": "Canonical anti-SPA doctrine manual; read-only reference—do not install as an active skill."
+  },
+  {
+    "original_name": "EMPIRE hallmark-design-skill",
+    "assigned_bin": 1,
+    "reasoning": "Already a polished Build1 frontend skill wrapping Nutlope/Hallmark anti-slop rules for HTMX/Alpine; keep as-is."
+  },
+  {
+    "original_name": "EMPIRE css-framework-reference",
+    "assigned_bin": 1,
+    "reasoning": "Already installed HTMX/Alpine-oriented CSS markup lookup; covers Pico-classless needs without a new skill."
+  },
+  {
+    "original_name": "docling-project/docling",
+    "assigned_bin": 1,
+    "reasoning": "Local air-gapped PDF/Office(+ASR)→Markdown is the strongest offline ingest converter for Cognee staging; modularize as a Cursor skill pointing at scripts/."
+  },
+  {
+    "original_name": "microsoft/markitdown",
+    "assigned_bin": 2,
+    "reasoning": "Useful lean local convert_local CLI, but same job as Docling; keep as secondary reference and skip Azure extras entirely."
+  },
+  {
+    "original_name": "EMPIRE docs-guide-scraper",
+    "assigned_bin": 1,
+    "reasoning": "Already installed docs-site→Markdown pipeline for Cognee; winner for multi-page documentation crawls."
+  },
+  {
+    "original_name": "EMPIRE no-mistakes (kunchenguid/no-mistakes)",
+    "assigned_bin": 1,
+    "reasoning": "Already installed local git push gate with Ollama-capable review; keep—do not rewrite."
+  },
+  {
+    "original_name": "yangyixxxx/skillguard",
+    "assigned_bin": 1,
+    "reasoning": "Zero-LLM offline static scan of SKILL.md/scripts fills a security gap before enabling community skills; prefer over SkillSpector for Build1."
+  },
+  {
+    "original_name": "NVIDIA/SkillSpector",
+    "assigned_bin": 3,
+    "reasoning": "Same offline skill/MCP audit job as SkillGuard with heavier AST surface; SkillGuard is the single winner—avoid dual scanners."
+  },
+  {
+    "original_name": "sandraschi/filesystem-mcp",
+    "assigned_bin": 3,
+    "reasoning": "Ships a React webapp UI and duplicates Desktop Commander filesystem coverage—graveyard under zero-React + redundancy rules."
+  },
+  {
+    "original_name": "LiteDoc (0xovo/LiteDoc)",
+    "assigned_bin": 3,
+    "reasoning": "Speculative PDF utility overlapping Docling/MarkItDown; adds another converter without a FastMCP or EMPIRE-stack advantage."
+  },
+  {
+    "original_name": "deepdiy/pdf2md",
+    "assigned_bin": 3,
+    "reasoning": "Redundant PDF→MD path; Docling is the Bin 1 ingest winner and MarkItDown remains the lean CLI fallback."
+  },
+  {
+    "original_name": "nutlope/hallmark + usehallmark.com",
+    "assigned_bin": 2,
+    "reasoning": "Upstream rule-set/gallery for the already-installed hallmark-design-skill; reference only—do not duplicate as a second skill."
+  },
+  {
+    "original_name": "markitdown [az-doc-intel] / [az-content-understanding]",
+    "assigned_bin": 3,
+    "reasoning": "Paid Azure Document Intelligence / cloud content paths violate local Ollama–only inference policy."
+  },
+  {
+    "original_name": "cursor-playbook Next.js CVE skill",
+    "assigned_bin": 3,
+    "reasoning": "Targets banned Next.js/SPA frontend stack—out of Build1 policy."
+  },
+  {
+    "original_name": "MCP servers requiring OpenAI/Anthropic keys for core operation",
+    "assigned_bin": 3,
+    "reasoning": "Cloud LLM API dependency violates Build1 local-Ollama-only inference rule."
+  },
+  {
+    "original_name": "Any skill that scaffolds React/Next/Vue/Svelte SPAs",
+    "assigned_bin": 3,
+    "reasoning": "Banned frontend stack; distracts from HTMX+Alpine CDN-only UI."
+  },
+  {
+    "original_name": "Claude Status / Anthropic Support / anthropics cookbooks (as runtime deps)",
+    "assigned_bin": 3,
+    "reasoning": "Cloud vendor surface—not local Build1 runtime tooling."
+  },
+  {
+    "original_name": "topoteretes/cognee (upstream)",
+    "assigned_bin": 1,
+    "reasoning": "Already covered by installed cognee-memory-pipeline + empire-cognee MCP; keep existing skill—no new duplicate skill."
+  },
+  {
+    "original_name": "EMPIRE desktop-commander-mcp (redundancy scan)",
+    "assigned_bin": 1,
+    "reasoning": "Winner already installed for local FS/shell/MCP filesystem jobs; causes official filesystem MCP and sandraschi to Bin 3."
+  },
+  {
+    "original_name": "EMPIRE web-researcher (redundancy scan)",
+    "assigned_bin": 1,
+    "reasoning": "Winner for multi-round research/synthesis via Ollama; readable-mcp is only the one-shot SSRF-safe URL→MD MCP specialist."
+  },
+  {
+    "original_name": "EMPIRE data-processor (redundancy scan)",
+    "assigned_bin": 1,
+    "reasoning": "Keep for CSV/Excel/PocketBase SQLite wrangling; Docling skill owns heavy local document→Markdown ingest instead."
+  },
+  {
+    "original_name": "EMPIRE html5-boilerplate-reference / visual-designer (redundancy scan)",
+    "assigned_bin": 2,
+    "reasoning": "Reference/pattern skills already cover HTML scaffolding and node-graph UI DNA; no Pico/Hypermedia duplicate skills needed."
+  }
+]

@@ -1,0 +1,28 @@
+Use when the user asks about ingested curated primitives, Universal Primitives, learning/scaffolding
+parallels, Pattern Weaver memory, or dataset `primitives_test`. Also use for mock Slack/GitHub/email
+fixtures when those are named.
+
+## Fuel vs Directives (critical)
+
+- **Fuel** lives in `data/curated_primitives/raw_materials/` and is stored in Cognee dataset **`primitives_test`**.
+- **Directives** live in `data/curated_primitives/directives/SYSTEM.md` (and `LENS_*.md`). They are the
+  query lens — do **not** treat them as graph documents.
+- Wikipedia dataset `wikipedia_2017` may exist but is halted for this pilot; prefer `primitives_test`
+  unless the user explicitly asks about Wikipedia.
+
+## Workflow
+
+1. If the user has not loaded the lexicon, remind them to open/paste `directives/SYSTEM.md`.
+2. Call `cognee_recall` with a focused query and **`dataset=primitives_test`**.
+3. Synthesize using Pattern Weaver vocabulary (Scanner's Finish, Nexus Points, Friction & Flow, etc.).
+4. Cite concrete passages/entities from recall; do not invent facts.
+
+## Prerequisites
+
+- Curated ingest: `.\scripts\ingest-curated-primitives.ps1`
+- Ollama: `huihui_ai/qwen2.5-coder-abliterate:14b` (graph) + `nomic-embed-text` (embeddings)
+- Dashboard: http://127.0.0.1:8080/primitives.html
+
+## If recall is empty
+
+Suggest running curated ingest, confirm dataset name `primitives_test`, then retry.

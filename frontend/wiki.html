@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPIRE Wiki Ops</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+      body { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+      .bar { height: 0.65rem; background: #e9ecef; border-radius: 4px; overflow: hidden; margin: 0.5rem 0 1rem; }
+      .bar > span { display: block; height: 100%; background: #2a6f97; }
+      .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+      .badge-ingest { background: #cfe2ff; color: #084298; }
+      .badge-idle { background: #d1e7dd; color: #0f5132; }
+      .badge-stopped { background: #fff3cd; color: #664d03; }
+      .badge-maint { background: #e2e3e5; color: #41464b; }
+      .meta { opacity: 0.75; font-size: 0.85rem; }
+      table { font-size: 0.9rem; }
+      .row-actions button { margin-right: 0.25rem; margin-bottom: 0.25rem; padding: 0.15rem 0.45rem; font-size: 0.75rem; }
+      #toast {
+        position: fixed; bottom: 1.25rem; right: 1.25rem; background: #212529; color: #fff;
+        padding: 0.65rem 1rem; border-radius: 6px; display: none; z-index: 50;
+      }
+      .confirm-box { border: 1px solid #dee2e6; padding: 0.75rem; margin-bottom: 0.75rem; border-radius: 4px; }
+      .letter-bar { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.75rem 0; }
+      .letter-bar button { padding: 0.25rem 0.5rem; font-size: 0.8rem; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="wiki"></nav>
+    <main
+      x-data="wikiOps()"
+      x-init="init()"
+    >
+      <header>
+        <h1>Wiki Ops</h1>
+        <p class="meta">Ranked subject queue + checkpoint progress. No Cognee from this page.</p>
+        <div class="grid">
+          <label>
+            Year
+            <select x-model="year" @change="refreshAll()">
+              <option>2017</option>
+              <option>2021</option>
+              <option>2026</option>
+            </select>
+          </label>
+          <label>
+            &nbsp;
+            <button type="button" @click="refreshAll()">Refresh</button>
+          </label>
+        </div>
+      </header>
+
+      <section>
+        <h2>Progress</h2>
+        <p>
+          <strong x-text="fmt(status.progress?.docs_processed)"></strong>
+          /
+          <span x-text="fmt(status.progress?.corpus_total)"></span>
+          (<span x-text="status.progress?.percent_complete ?? 0"></span>%)
+          <span
+            class="badge"
+            :class="phaseClass(status.phase)"
+            x-text="status.phase || '…'"
+          ></span>
+        </p>
+        <div class="bar"><span :style="`width:${Math.min(100, status.progress?.percent_complete || 0)}%`"></span></div>
+        <p class="meta">
+          Batches <span x-text="status.progress?.batches_complete ?? 0"></span>
+          /
+          <span x-text="status.progress?.batches_total ?? 0"></span>
+          · PID alive: <span x-text="status.overnight_pid_alive ? 'yes' : 'no'"></span>
+          · Updated <span x-text="status.updated_at || '—'"></span>
+        </p>
+      </section>
+
+      <section>
+        <h2>Window meta</h2>
+        <p class="meta">
+          Stop reason: <code x-text="status.ingest?.stop_reason || '—'"></code>
+          · Slices: <span x-text="status.ingest?.slices_done ?? '—'"></span>
+          · Maintenance complete:
+          <span x-text="status.maintenance?.complete ? 'yes' : 'no'"></span>
+        </p>
+        <p class="meta">Log: <code x-text="status.maintenance?.log_path || status.ingest?.log_glob || 'I:\\EMPIRE_DATA\\logs\\wiki-ingest-overnight-*'"></code></p>
+      </section>
+
+      <section>
+        <h2>Browse titles A–Z</h2>
+        <p class="meta">
+          Select articles you <strong>do not have yet</strong> (default filter hides already-ingested).
+          Index mode: <code x-text="letterIndex.mode || '—'"></code>
+          · catalog <span x-text="fmt(letterIndex.total || 0)"></span>
+          · already ingested <span x-text="fmt(letterIndex.ingested_paths || 0)"></span>.
+          Full dump letter packs are built during <strong>maintenance</strong> (after overnight stops).
+          <span x-text="letterIndex.note || ''"></span>
+        </p>
+        <label>
+          <input type="checkbox" x-model="onlyMissing" @change="letter && loadLetter(true)" />
+          Only show titles not yet ingested
+        </label>
+        <div class="letter-bar">
+          <template x-for="L in letterKeys" :key="L">
+            <button
+              type="button"
+              class="outline"
+              :class="{ 'contrast': letter === L }"
+              @click="pickLetter(L)"
+              x-text="L + ((letterIndex.letters||{})[L] ? ' ' + (letterIndex.letters||{})[L] : '')"
+            ></button>
+          </template>
+        </div>
+        <div class="grid" x-show="letter">
+          <label>Filter within <span x-text="letter"></span>
+            <input type="search" x-model="letterQ" @keydown.enter.prevent="loadLetter(true)" placeholder="narrow list" />
+          </label>
+          <label>&nbsp;<button type="button" class="outline" @click="loadLetter(true)">Filter</button></label>
+        </div>
+        <p class="meta" x-show="letter">
+          <span x-text="(letterPage.items||[]).length"></span> shown /
+          <span x-text="fmt(letterPage.total || 0)"></span> matching filter
+          · checked <span x-text="selectedLetterCount()"></span>
+        </p>
+        <div class="confirm-box" x-show="letter" style="max-height: 22rem; overflow: auto;">
+          <template x-for="item in letterPage.items || []" :key="item.p">
+            <label style="display:block; margin:0.15rem 0;" :style="item.have ? 'opacity:0.45' : ''">
+              <input type="checkbox" x-model="letterSel[item.p]" :disabled="!!item.have && onlyMissing" />
+              <span x-text="item.t"></span>
+              <span class="meta" x-show="item.have"> (have)</span>
+            </label>
+          </template>
+        </div>
+        <div x-show="letter" style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button type="button" @click="queueSelectedLetters()">Queue selected for next drain</button>
+          <button type="button" class="outline" @click="letterMore()" x-show="(letterPage.items||[]).length < (letterPage.total||0)">Load more</button>
+          <button type="button" class="secondary" @click="clearLetterSel()">Clear checks</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Titles</h2>
+        <div class="grid">
+          <label>Search <input type="search" x-model="titleQ" @keydown.enter.prevent="loadTitles()" /></label>
+          <label>&nbsp;<button type="button" @click="loadTitles()">Search</button></label>
+        </div>
+        <p class="meta" x-text="titles.message || (`${titles.total || 0} matches`)"></p>
+        <ul>
+          <template x-for="item in titles.items || []" :key="item.p + item.i">
+            <li x-text="item.t"></li>
+          </template>
+        </ul>
+        <button type="button" class="outline" @click="titlesMore()" x-show="(titles.items||[]).length < (titles.total||0)">Load more</button>
+      </section>
+
+      <section>
+        <h2>New titles</h2>
+        <p class="meta" x-text="`${newTitles.total || 0} new`"></p>
+        <ul>
+          <template x-for="item in newTitles.items || []" :key="'n'+item.p + item.i">
+            <li x-text="item.t"></li>
+          </template>
+        </ul>
+        <button type="button" class="outline" @click="newMore()" x-show="(newTitles.items||[]).length < (newTitles.total||0)">Load more</button>
+      </section>
+
+      <section>
+        <h2>Priority subjects</h2>
+        <p class="meta">
+          Codex/primitive names often need a Wikipedia <strong>article title</strong> pick.
+          Confirming queues full articles for the <strong>next</strong> priority drain (start of next overnight / after maintenance) — not mid-slice of the run already in progress.
+          Awaiting ingest: <span x-text="(awaiting||[]).length"></span>
+        </p>
+
+        <template x-if="needsConfirm.length">
+          <div>
+            <h3>Needs confirmation (<span x-text="needsConfirm.length"></span>)</h3>
+            <p class="meta">Check the article(s) you want, then press <strong>Confirm selected</strong>. Bad candidates? Skip and add a better Wikipedia title below.</p>
+            <template x-for="row in needsConfirm" :key="'c'+row.id">
+              <div class="confirm-box">
+                <strong x-text="row.subject"></strong>
+                <span class="meta" x-text="row.intent ? (' · ' + row.intent) : ''"></span>
+                <template x-for="(c, idx) in row.candidates || []" :key="(c.path || c.title) + '-' + idx">
+                  <label style="display:block; margin:0.25rem 0;">
+                    <input type="checkbox" :value="idx" x-model="confirmSel[row.id]" />
+                    <span x-text="(c.title || '?') + ' — ' + (c.match_tier || '') + ' (' + (c.score || '') + ')'"></span>
+                  </label>
+                </template>
+                <p class="meta" x-show="!(row.candidates && row.candidates.length)">No candidates listed — Skip or add a real wiki title as a new subject.</p>
+                <div style="margin-top:0.5rem;">
+                  <button type="button" @click="confirmRow(row)">Confirm selected</button>
+                  <button type="button" class="secondary" @click="skipRow(row)">Skip</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="unmatched.length">
+          <div>
+            <h3>Unmatched (<span x-text="unmatched.length"></span>)</h3>
+            <ul>
+              <template x-for="row in unmatched" :key="'u'+row.id">
+                <li>
+                  <span x-text="row.subject"></span>
+                  <span class="meta" x-show="(row.suggestions||[]).length"
+                    x-text="' — try: ' + (row.suggestions||[]).map(s => s.title || s).join(', ')"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+
+        <label>
+          Add subjects (one per line); optional intent after <code>|</code>
+          <textarea x-model="bulkAdd" rows="3" placeholder="Feedback (cybernetics) | codex_primitive&#10;Homeostasis | systems"></textarea>
+        </label>
+        <button type="button" @click="addBulk()">Add</button>
+
+        <h3>Full queue</h3>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Subject</th><th>Intent / notes</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <template x-for="row in queue.subjects || []" :key="row.id">
+              <tr>
+                <td x-text="row.rank"></td>
+                <td>
+                  <input type="text" x-model="row.subject" @change="patch(row.id, { subject: row.subject })" />
+                </td>
+                <td>
+                  <input type="text" x-model="row.intent" @change="patch(row.id, { intent: row.intent })" />
+                </td>
+                <td><code x-text="row.status"></code></td>
+                <td class="row-actions">
+                  <button type="button" class="outline" @click="patch(row.id, { direction: 'up' })">↑</button>
+                  <button type="button" class="outline" @click="patch(row.id, { direction: 'down' })">↓</button>
+                  <button type="button" class="secondary" @click="remove(row.id)">Delete</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <p class="meta">Store: <code x-text="subjectsPath"></code></p>
+      </section>
+    </main>
+    <div id="toast"></div>
+    <script src="empire-nav.js"></script>
+    <script>
+      function toast(msg) {
+        var el = document.getElementById("toast");
+        el.textContent = msg;
+        el.style.display = "block";
+        setTimeout(function () { el.style.display = "none"; }, 2200);
+      }
+
+      function wikiOps() {
+        return {
+          year: "2017",
+          status: { progress: {} },
+          titles: { items: [], total: 0 },
+          newTitles: { items: [], total: 0 },
+          titleQ: "",
+          titleOffset: 0,
+          newOffset: 0,
+          queue: { subjects: [] },
+          awaiting: [],
+          subjectsPath: "",
+          bulkAdd: "",
+          confirmSel: {},
+          letterIndex: { letters: {}, total: 0 },
+          letterKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split(""),
+          letter: "",
+          letterQ: "",
+          letterOffset: 0,
+          letterPage: { items: [], total: 0 },
+          letterSel: {},
+          letterByPath: {},
+          onlyMissing: true,
+          pollTimer: null,
+          get needsConfirm() {
+            return (this.queue.subjects || []).filter(function (s) { return s.status === "needs_confirm"; });
+          },
+          get unmatched() {
+            return (this.queue.subjects || []).filter(function (s) { return s.status === "unmatched"; });
+          },
+          fmt: function (n) {
+            if (n == null) return "—";
+            return Number(n).toLocaleString();
+          },
+          phaseClass: function (phase) {
+            if (phase === "ingest") return "badge-ingest";
+            if (phase === "ingest_stopped") return "badge-stopped";
+            if (phase === "maintenance") return "badge-maint";
+            return "badge-idle";
+          },
+          init: function () {
+            this.refreshAll();
+          },
+          schedulePoll: function () {
+            var self = this;
+            if (this.pollTimer) clearInterval(this.pollTimer);
+            this.pollTimer = setInterval(function () {
+              if (self.status.overnight_pid_alive || self.status.phase === "ingest") {
+                self.loadStatus();
+              }
+            }, 30000);
+          },
+          refreshAll: async function () {
+            await Promise.all([
+              this.loadStatus(),
+              this.loadTitles(true),
+              this.loadNew(true),
+              this.loadPriorities(),
+              this.loadLetterIndex(),
+            ]);
+            this.schedulePoll();
+          },
+          loadLetterIndex: async function () {
+            var r = await fetch("/api/wiki/titles/letters?year=" + encodeURIComponent(this.year));
+            this.letterIndex = await r.json();
+          },
+          pickLetter: function (L) {
+            this.letter = L;
+            this.letterQ = "";
+            this.clearLetterSel();
+            this.loadLetter(true);
+          },
+          loadLetter: async function (reset) {
+            if (!this.letter) return;
+            if (reset) this.letterOffset = 0;
+            var url = "/api/wiki/titles/by-letter?year=" + encodeURIComponent(this.year)
+              + "&letter=" + encodeURIComponent(this.letter)
+              + "&q=" + encodeURIComponent(this.letterQ)
+              + "&offset=" + this.letterOffset + "&limit=100"
+              + "&only_missing=" + (this.onlyMissing ? "1" : "0");
+            var r = await fetch(url);
+            var data = await r.json();
+            var self = this;
+            (data.items || []).forEach(function (it) { self.letterByPath[it.p] = it; });
+            if (reset || this.letterOffset === 0) this.letterPage = data;
+            else this.letterPage = Object.assign({}, data, {
+              items: (this.letterPage.items || []).concat(data.items || []),
+            });
+          },
+          letterMore: function () {
+            this.letterOffset = (this.letterPage.items || []).length;
+            this.loadLetter(false);
+          },
+          selectedLetterCount: function () {
+            var n = 0;
+            var sel = this.letterSel || {};
+            Object.keys(sel).forEach(function (k) { if (sel[k]) n += 1; });
+            return n;
+          },
+          clearLetterSel: function () {
+            this.letterSel = {};
+          },
+          queueSelectedLetters: async function () {
+            var self = this;
+            var articles = [];
+            Object.keys(this.letterSel || {}).forEach(function (p) {
+              if (!self.letterSel[p]) return;
+              var it = self.letterByPath[p];
+              if (!it) return;
+              articles.push({ title: it.t, path: it.p, page_id: it.id || "", p: it.p, t: it.t });
+            });
+            if (!articles.length) { toast("Select at least one title"); return; }
+            var r = await fetch("/api/wiki/titles/queue", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ year: this.year, articles: articles }),
+            });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Queue failed"); return; }
+            toast("Queued " + data.queued + " article(s) (awaiting=" + data.awaiting + ")");
+            this.clearLetterSel();
+            this.loadPriorities();
+          },
+          loadStatus: async function () {
+            var r = await fetch("/api/wiki/status?year=" + encodeURIComponent(this.year));
+            this.status = await r.json();
+          },
+          loadTitles: async function (reset) {
+            if (reset) this.titleOffset = 0;
+            var url = "/api/wiki/titles?year=" + encodeURIComponent(this.year)
+              + "&q=" + encodeURIComponent(this.titleQ)
+              + "&offset=" + this.titleOffset + "&limit=50";
+            var r = await fetch(url);
+            var data = await r.json();
+            if (reset || this.titleOffset === 0) this.titles = data;
+            else this.titles = Object.assign({}, data, { items: (this.titles.items || []).concat(data.items || []) });
+          },
+          titlesMore: function () {
+            this.titleOffset = (this.titles.items || []).length;
+            this.loadTitles(false);
+          },
+          loadNew: async function (reset) {
+            if (reset) this.newOffset = 0;
+            var url = "/api/wiki/new-titles?year=" + encodeURIComponent(this.year)
+              + "&offset=" + this.newOffset + "&limit=50";
+            var r = await fetch(url);
+            var data = await r.json();
+            if (reset || this.newOffset === 0) this.newTitles = data;
+            else this.newTitles = Object.assign({}, data, { items: (this.newTitles.items || []).concat(data.items || []) });
+          },
+          newMore: function () {
+            this.newOffset = (this.newTitles.items || []).length;
+            this.loadNew(false);
+          },
+          loadPriorities: async function () {
+            var r = await fetch("/api/wiki/priorities");
+            var data = await r.json();
+            this.queue = data.queue || { subjects: [] };
+            this.awaiting = data.awaiting_head || [];
+            this.subjectsPath = data.subjects_path || "";
+            this.confirmSel = {};
+            (this.queue.subjects || []).forEach(function (s) {
+              if (s.status === "needs_confirm") this.confirmSel[s.id] = [];
+            }.bind(this));
+          },
+          addBulk: async function () {
+            var lines = (this.bulkAdd || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+            if (!lines.length) return;
+            var subjects = lines.map(function (line) {
+              var parts = line.split("|");
+              if (parts.length > 1) {
+                return { subject: parts[0].trim(), intent: parts.slice(1).join("|").trim() };
+              }
+              return line;
+            });
+            var r = await fetch("/api/wiki/priorities", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ year_hint: this.year, subjects: subjects }),
+            });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Add failed"); return; }
+            this.bulkAdd = "";
+            this.queue = data.queue;
+            toast("Subjects added");
+          },
+          patch: async function (id, body) {
+            var r = await fetch("/api/wiki/priorities/" + encodeURIComponent(id), {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Patch failed"); return; }
+            this.queue = data.queue;
+          },
+          remove: async function (id) {
+            var r = await fetch("/api/wiki/priorities/" + encodeURIComponent(id), { method: "DELETE" });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Delete failed"); return; }
+            this.queue = data.queue;
+            toast("Deleted");
+          },
+          confirmRow: async function (row) {
+            var idxs = this.confirmSel[row.id] || [];
+            var articles = idxs.map(function (i) { return row.candidates[i]; }).filter(Boolean);
+            var r = await fetch("/api/wiki/priorities/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subject_id: row.id, articles: articles }),
+            });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Confirm failed"); return; }
+            this.queue = data.queue;
+            toast("Queued " + articles.length + " article(s)");
+            this.loadPriorities();
+          },
+          skipRow: async function (row) {
+            var r = await fetch("/api/wiki/priorities/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subject_id: row.id, skip: true, articles: [] }),
+            });
+            var data = await r.json();
+            if (!data.ok) { toast(data.error || "Skip failed"); return; }
+            this.queue = data.queue;
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

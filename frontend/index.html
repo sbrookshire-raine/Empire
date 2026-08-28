@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="htmx-config" content='{"selfRequestsOnly":false}' />
+    <title>EMPIRE Tasks</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <style>
+      :root {
+        --pico-font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+      }
+      body {
+        max-width: 52rem;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem;
+      }
+      header {
+        margin-bottom: 1.5rem;
+      }
+      header p {
+        margin-bottom: 0;
+        opacity: 0.75;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .badge-todo {
+        background: #e8eef7;
+        color: #1e3a5f;
+      }
+      .badge-in_progress {
+        background: #fff3cd;
+        color: #664d03;
+      }
+      .badge-done {
+        background: #d1e7dd;
+        color: #0f5132;
+      }
+      .task-card {
+        margin-bottom: 0.75rem;
+        padding: 1rem 1.1rem;
+      }
+      .task-card header {
+        margin-bottom: 0.5rem;
+      }
+      .task-meta {
+        font-size: 0.85rem;
+        opacity: 0.7;
+        margin-top: 0.35rem;
+      }
+      .task-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .task-edit-form {
+        margin-top: 0.5rem;
+      }
+      .task-edit-form label {
+        margin-bottom: 0.65rem;
+      }
+      .task-edit-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+      }
+      .htmx-indicator {
+        display: none;
+        margin-left: 0.5rem;
+      }
+      .htmx-request .htmx-indicator {
+        display: inline;
+      }
+      .empty-state {
+        text-align: center;
+        opacity: 0.7;
+        padding: 2rem 1rem;
+      }
+      #toast {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        background: #212529;
+        color: #fff;
+        padding: 0.65rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 100;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      .page-header {
+        margin-bottom: 1.25rem;
+      }
+      .page-header h1 {
+        margin-bottom: 0.35rem;
+      }
+      [x-cloak] {
+        display: none !important;
+      }
+    </style>
+    <link rel="stylesheet" href="empire-nav.css" />
+    <script defer src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script
+      defer
+      src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"
+    ></script>
+  </head>
+  <body
+    x-data="tasksApp()"
+    x-init="init()"
+    @tasks-changed.window="refresh()"
+  >
+    <nav id="empire-nav" data-current="tasks"></nav>
+
+    <header class="page-header">
+      <h1>Tasks</h1>
+      <p>
+        PocketBase CRUD · HTMX + Alpine
+        <span
+          id="pb-status"
+          style="margin-left: 0.5rem; font-size: 0.85rem"
+        ></span>
+      </p>
+    </header>
+
+    <article>
+      <header><strong>New task</strong></header>
+      <form
+        id="create-form"
+        hx-post="http://127.0.0.1:8090/api/collections/tasks/records"
+        hx-ext="json-enc"
+        hx-swap="none"
+        hx-indicator="#create-spinner"
+        @htmx:after-request="onCreated($event)"
+      >
+        <div class="grid">
+          <label>
+            Title
+            <input
+              name="title"
+              type="text"
+              placeholder="What needs doing?"
+              required
+              minlength="1"
+              maxlength="255"
+            />
+          </label>
+          <label>
+            Status
+            <select name="status" required>
+              <option value="todo" selected>todo</option>
+              <option value="in_progress">in progress</option>
+              <option value="done">done</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Description
+          <textarea
+            name="description"
+            rows="2"
+            placeholder="Optional details"
+            maxlength="5000"
+          ></textarea>
+        </label>
+        <label>
+          Priority
+          <input name="priority" type="number" value="1" min="0" max="999" />
+        </label>
+        <button type="submit">
+          Create task
+          <span id="create-spinner" class="htmx-indicator" aria-hidden="true"
+            >…</span
+          >
+        </button>
+      </form>
+    </article>
+
+    <section style="margin-top: 2rem">
+      <header
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        <strong>Tasks</strong>
+        <button class="outline secondary" @click="refresh()" :disabled="loading">
+          Refresh
+        </button>
+      </header>
+
+      <p x-show="loading" aria-live="polite">Loading tasks…</p>
+      <p x-show="error" class="empty-state" x-text="error" style="color: var(--pico-del-color)"></p>
+
+      <div x-show="!loading && !error && tasks.length === 0" class="empty-state">
+        No tasks yet. Create one above.
+      </div>
+
+      <template x-for="task in tasks" :key="task.id">
+        <article class="task-card">
+          <div x-show="editingId !== task.id">
+            <header
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 0.75rem;
+              "
+            >
+              <strong x-text="task.title"></strong>
+              <span
+                class="badge"
+                :class="'badge-' + task.status"
+                x-text="task.status.replace('_', ' ')"
+              ></span>
+            </header>
+            <p x-show="task.description" x-text="task.description"></p>
+            <div class="task-meta">
+              Priority: <span x-text="task.priority ?? '—'"></span>
+              · Updated: <span x-text="formatDate(task.updated)"></span>
+            </div>
+            <div class="task-actions">
+              <button class="outline" type="button" @click="startEdit(task)">
+                Edit
+              </button>
+              <button
+                class="outline contrast"
+                type="button"
+                :hx-delete="apiBase + '/api/collections/tasks/records/' + task.id"
+                hx-swap="none"
+                hx-indicator="closest .task-card"
+                @htmx:after-request="onDeleted($event)"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <template x-if="editingId === task.id && editDraft">
+            <form
+              class="task-edit-form"
+              :hx-patch="apiBase + '/api/collections/tasks/records/' + task.id"
+              hx-ext="json-enc"
+              hx-swap="none"
+              hx-indicator="closest .task-card"
+              @htmx:after-request="onUpdated($event)"
+            >
+              <label>
+                Title
+                <input
+                  name="title"
+                  type="text"
+                  x-model="editDraft.title"
+                  required
+                  minlength="1"
+                  maxlength="255"
+                />
+              </label>
+              <div class="grid">
+                <label>
+                  Status
+                  <select name="status" x-model="editDraft.status" required>
+                    <option value="todo">todo</option>
+                    <option value="in_progress">in progress</option>
+                    <option value="done">done</option>
+                  </select>
+                </label>
+                <label>
+                  Priority
+                  <input
+                    name="priority"
+                    type="number"
+                    x-model.number="editDraft.priority"
+                    min="0"
+                    max="999"
+                  />
+                </label>
+              </div>
+              <label>
+                Description
+                <textarea
+                  name="description"
+                  rows="2"
+                  maxlength="5000"
+                  x-model="editDraft.description"
+                ></textarea>
+              </label>
+              <div class="task-edit-actions">
+                <button type="submit">Save</button>
+                <button
+                  class="outline secondary"
+                  type="button"
+                  @click="cancelEdit()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </template>
+        </article>
+      </template>
+    </section>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script src="empire-nav.js"></script>
+    <script>
+      const POCKETBASE_URL = "http://127.0.0.1:8090";
+
+      function tasksApp() {
+        return {
+          apiBase: POCKETBASE_URL,
+          tasks: [],
+          loading: false,
+          error: "",
+          editingId: null,
+          editDraft: null,
+
+          init() {
+            this.checkHealth();
+            this.refresh();
+          },
+
+          async checkHealth() {
+            const el = document.getElementById("pb-status");
+            try {
+              const res = await fetch(`${this.apiBase}/api/health`);
+              if (!res.ok) throw new Error(String(res.status));
+              const data = await res.json();
+              el.textContent = "· PocketBase " + data.message;
+              el.style.color = "#0f5132";
+            } catch {
+              el.textContent = "· PocketBase offline — run .\\scripts\\start-pocketbase-background.ps1";
+              el.style.color = "var(--pico-del-color)";
+            }
+          },
+
+          async refresh() {
+            this.loading = true;
+            this.error = "";
+            try {
+              const res = await fetch(
+                `${this.apiBase}/api/collections/tasks/records?sort=-created&perPage=50`
+              );
+              if (!res.ok) {
+                throw new Error(`PocketBase returned ${res.status}`);
+              }
+              const data = await res.json();
+              this.tasks = data.items || [];
+              this.clearEditState();
+              this.$nextTick(() => {
+                if (window.htmx) window.htmx.process(this.$root);
+              });
+            } catch (err) {
+              this.error =
+                "Could not reach PocketBase at " +
+                this.apiBase +
+                ". Start it with .\\scripts\\start-pocketbase.ps1";
+              console.error(err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          onCreated(event) {
+            if (event.detail.successful) {
+              document.getElementById("create-form").reset();
+              showToast("Task created");
+              window.dispatchEvent(new CustomEvent("tasks-changed"));
+            } else {
+              const xhr = event.detail.xhr;
+              let detail = "";
+              try {
+                const body = JSON.parse(xhr.responseText || "{}");
+                detail = body.message || body.data?.title?.message || "";
+              } catch {
+                /* ignore parse errors */
+              }
+              showToast(
+                detail ? `Failed: ${detail}` : `Failed to create (${xhr.status})`
+              );
+              console.error("Create task failed", xhr.status, xhr.responseText);
+            }
+          },
+
+          startEdit(task) {
+            this.editDraft = {
+              title: task.title,
+              description: task.description || "",
+              status: task.status,
+              priority: task.priority ?? 0,
+            };
+            this.editingId = task.id;
+            this.$nextTick(() => {
+              if (window.htmx) window.htmx.process(this.$root);
+            });
+          },
+
+          clearEditState() {
+            this.editingId = null;
+            this.editDraft = null;
+          },
+
+          cancelEdit() {
+            this.clearEditState();
+          },
+
+          onUpdated(event) {
+            if (event.detail.successful) {
+              this.clearEditState();
+              showToast("Task updated");
+              window.dispatchEvent(new CustomEvent("tasks-changed"));
+            } else {
+              const xhr = event.detail.xhr;
+              let detail = "";
+              try {
+                const body = JSON.parse(xhr.responseText || "{}");
+                detail = body.message || body.data?.title?.message || "";
+              } catch {
+                /* ignore parse errors */
+              }
+              showToast(
+                detail ? `Update failed: ${detail}` : `Update failed (${xhr.status})`
+              );
+              console.error("Update task failed", xhr.status, xhr.responseText);
+            }
+          },
+
+          onDeleted(event) {
+            if (event.detail.successful) {
+              this.clearEditState();
+              showToast("Task deleted");
+              window.dispatchEvent(new CustomEvent("tasks-changed"));
+            } else {
+              showToast("Failed to delete task");
+            }
+          },
+
+          formatDate(value) {
+            if (!value) return "—";
+            try {
+              return new Date(value.replace(" ", "T")).toLocaleString();
+            } catch {
+              return value;
+            }
+          },
+        };
+      }
+
+      function showToast(message) {
+        const el = document.getElementById("toast");
+        el.textContent = message;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2200);
+      }
+    </script>
+  </body>
+</html>

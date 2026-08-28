@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>EMPIRE Eve Workbench</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <link rel="stylesheet" href="eve-workbench.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="eve" aria-label="EMPIRE"></nav>
+
+    <main class="workbench" x-data="eveWorkbench()" x-init="init()" x-cloak>
+      <header class="workbench__header">
+        <div>
+          <h1>Eve Workbench</h1>
+          <p>Chat, tasks, and memory — one tab at a time.</p>
+        </div>
+      </header>
+
+      <nav class="workbench-tabs" aria-label="Workbench sections">
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
+          id="tab-chat"
+          aria-controls="panel-chat"
+          :aria-selected="activeTab === 'chat'"
+          @click="setTab('chat')"
+        >
+          Chat
+        </button>
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
+          id="tab-tasks"
+          aria-controls="panel-tasks"
+          :aria-selected="activeTab === 'tasks'"
+          @click="setTab('tasks')"
+        >
+          Tasks
+        </button>
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
+          id="tab-memory"
+          aria-controls="panel-memory"
+          :aria-selected="activeTab === 'memory'"
+          @click="setTab('memory')"
+        >
+          Memory
+        </button>
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
+          id="tab-models"
+          aria-controls="panel-models"
+          :aria-selected="activeTab === 'models'"
+          @click="setTab('models')"
+        >
+          Models
+        </button>
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
+          id="tab-more"
+          aria-controls="panel-more"
+          :aria-selected="activeTab === 'more'"
+          @click="setTab('more')"
+        >
+          More
+        </button>
+      </nav>
+
+      <section
+        id="panel-chat"
+        class="panel tab-panel chat"
+        role="tabpanel"
+        aria-labelledby="tab-chat"
+        x-show="activeTab === 'chat'"
+        x-cloak
+      >
+        <header class="panel__header chat__header">
+          <div class="chat__intro">
+            <h2>Chat with Eve</h2>
+            <p id="ollama-model-status" class="model-status" aria-live="polite" x-text="chatLineStatus"></p>
+          </div>
+          <div class="chat__controls">
+            <label for="ollama-model">Model</label>
+            <select
+              id="ollama-model"
+              name="ollama_model"
+              x-model="selectedModel"
+              @change="applyOllamaModel()"
+              :disabled="sending || switchingModel || !ollamaConnected || ollamaModels.length === 0"
+              aria-describedby="ollama-model-status"
+            >
+              <template x-for="model in ollamaModels" :key="model.id">
+                <option :value="model.id" x-text="model.label"></option>
+              </template>
+            </select>
+            <button class="button button--quiet" type="button" @click="newChat()">New chat</button>
+          </div>
+        </header>
+
+        <details class="task-overview" @toggle="onTaskOverviewToggle($event)">
+          <summary>Task overview</summary>
+          <div class="task-overview__body">
+            <p class="task-overview__hint" x-show="!taskSummary && !taskSummaryLoading && !taskSummaryError">
+              Open to get a local Ollama summary of your PocketBase tasks before you chat.
+            </p>
+            <p class="form-message" x-show="taskSummaryLoading" aria-live="polite">Summarizing tasks…</p>
+            <p
+              class="form-message form-message--error"
+              x-show="taskSummaryError"
+              aria-live="polite"
+              x-text="taskSummaryError"
+            ></p>
+            <p
+              class="task-overview__meta"
+              x-show="taskSummaryModel && taskSummary && !taskSummaryLoading"
+              x-text="'Summary via ' + taskSummaryModel"
+            ></p>
+            <p
+              class="task-overview__text"
+              x-show="taskSummary && !taskSummaryLoading"
+              x-text="taskSummary"
+            ></p>
+            <div class="button-row" x-show="taskOverviewOpen">
+              <button
+                class="button button--quiet"
+                type="button"
+                @click="refreshTaskSummary(true)"
+                :disabled="taskSummaryLoading"
+              >
+                Refresh summary
+              </button>
+              <button class="button button--quiet" type="button" @click="setTab('tasks')">
+                Open Tasks tab
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <div
+          class="transcript"
+          x-ref="transcript"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+        >
+          <div class="empty-state" x-show="messages.length === 0 && pendingInputs.length === 0">
+            <p>No messages yet.</p>
+            <p>Ask about memory or a PocketBase task.</p>
+          </div>
+          <template x-for="message in messages" :key="message.id">
+            <article
+              class="turn"
+              :class="'turn--' + message.role"
+              :data-state="message.state || ''"
+            >
+              <p
+                class="turn__role"
+                x-text="message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Eve' : 'Tool'"
+              ></p>
+              <p
+                class="turn__text"
+                x-show="message.role !== 'activity'"
+                x-text="message.text"
+              ></p>
+              <p class="turn__activity" x-show="message.role === 'activity'">
+                <span class="status-mark" aria-hidden="true" x-text="message.symbol"></span>
+                <span x-text="message.label"></span>
+              </p>
+            </article>
+          </template>
+
+          <template x-for="request in pendingInputs" :key="request.requestId">
+            <section class="input-request" :aria-labelledby="'input-request-' + request.requestId">
+              <h3 :id="'input-request-' + request.requestId" x-text="request.prompt"></h3>
+              <div class="button-row">
+                <template x-for="option in request.options" :key="option.id">
+                  <button
+                    class="button button--quiet"
+                    type="button"
+                    :disabled="sending"
+                    @click="answerInput(request.requestId, option.id, option.label)"
+                    x-text="option.label"
+                  ></button>
+                </template>
+              </div>
+            </section>
+          </template>
+        </div>
+
+        <form id="chat-form" class="composer" @submit.prevent="sendMessage()">
+          <label class="visually-hidden" for="chat-message">Message Eve</label>
+          <div class="composer__row">
+            <textarea
+              id="chat-message"
+              name="message"
+              rows="2"
+              x-model="draft"
+              :disabled="sending"
+              @keydown="onComposerKeydown($event)"
+              aria-describedby="composer-hint chat-error"
+              placeholder="Ask about a file or task"
+            ></textarea>
+            <div class="composer__actions">
+              <button
+                class="button button--primary"
+                type="submit"
+                :disabled="sending || !draft.trim()"
+                :aria-busy="sending"
+              >
+                Send
+              </button>
+              <button class="button button--danger" type="button" :disabled="!sending" @click="stopChat()">
+                Stop
+              </button>
+            </div>
+          </div>
+          <p id="composer-hint" class="composer__hint">Enter sends · Shift+Enter for a new line</p>
+          <p
+            id="chat-error"
+            class="form-message form-message--error"
+            aria-live="polite"
+            x-show="chatError"
+            x-text="chatError"
+          ></p>
+        </form>
+      </section>
+
+      <section
+        id="panel-tasks"
+        class="panel tab-panel tasks"
+        role="tabpanel"
+        aria-labelledby="tab-tasks"
+        x-show="activeTab === 'tasks'"
+        x-cloak
+      >
+        <header class="panel__header tasks__header">
+          <div>
+            <h2>PocketBase tasks</h2>
+            <p>Project organization Eve can recall or carry out.</p>
+          </div>
+          <div class="tasks__toolbar">
+            <label for="task-filter">Show</label>
+            <select id="task-filter" x-model="taskFilter" :disabled="tasksLoading">
+              <option value="all">All tasks</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="done">Done</option>
+            </select>
+            <button class="button button--quiet" type="button" @click="refreshTasks()" :disabled="tasksLoading">
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        <form class="task-create" @submit.prevent="createTask()">
+          <label class="task-create__title" for="task-title">Title</label>
+          <input
+            id="task-title"
+            name="title"
+            type="text"
+            maxlength="255"
+            x-model.trim="taskDraft.title"
+            :disabled="tasksLoading"
+            placeholder="What should Eve remember or do?"
+          />
+          <label class="task-create__status" for="task-status">Status</label>
+          <select id="task-status" name="status" x-model="taskDraft.status" :disabled="tasksLoading">
+            <option value="todo">To do</option>
+            <option value="in_progress">In progress</option>
+            <option value="done">Done</option>
+          </select>
+          <label class="task-create__priority" for="task-priority">Priority</label>
+          <input
+            id="task-priority"
+            name="priority"
+            type="number"
+            min="0"
+            max="999"
+            x-model.number="taskDraft.priority"
+            :disabled="tasksLoading"
+          />
+          <label class="task-create__directions" for="task-description">Directions</label>
+          <textarea
+            id="task-description"
+            name="description"
+            rows="2"
+            maxlength="5000"
+            x-model="taskDraft.description"
+            :disabled="tasksLoading"
+            placeholder="Optional details Eve should follow"
+          ></textarea>
+          <button
+            class="button button--primary task-create__submit"
+            type="submit"
+            :disabled="tasksLoading || !taskDraft.title"
+          >
+            Add task
+          </button>
+        </form>
+
+        <p class="form-message form-message--error" aria-live="polite" x-show="taskError" x-text="taskError"></p>
+        <p class="form-message" x-show="tasksLoading">Loading tasks…</p>
+        <p class="empty-state" x-show="!tasksLoading && !visibleTasks.length && !taskError">
+          No tasks yet. Add one, then ask Eve about it or have Eve do it.
+        </p>
+
+        <ul class="task-list" aria-label="PocketBase tasks">
+          <template x-for="task in visibleTasks" :key="task.id">
+            <li class="task-card" :data-status="task.status">
+              <template x-if="editingId !== task.id">
+                <div class="task-card__view">
+                  <div class="task-card__top">
+                    <strong x-text="task.title"></strong>
+                    <label class="task-status-label">
+                      Status
+                      <select
+                        :aria-label="'Status for ' + task.title"
+                        :value="task.status"
+                        @change="setTaskStatus(task, $event.target.value)"
+                        :disabled="tasksLoading"
+                      >
+                        <option value="todo">To do</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="done">Done</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p class="task-card__body" x-show="task.description" x-text="task.description"></p>
+                  <p class="task-card__meta">
+                    Priority <span x-text="task.priority ?? '—'"></span>
+                  </p>
+                  <div class="button-row">
+                    <button class="button button--quiet" type="button" @click="askEveAboutTask(task)">
+                      Ask Eve
+                    </button>
+                    <button class="button button--quiet" type="button" @click="haveEveDoTask(task)" :disabled="sending">
+                      Have Eve do this
+                    </button>
+                    <button class="button button--quiet" type="button" @click="startEditTask(task)">Edit</button>
+                    <button
+                      class="button button--danger"
+                      type="button"
+                      x-show="pendingDeleteId !== task.id"
+                      @click="pendingDeleteId = task.id"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      class="button button--danger"
+                      type="button"
+                      x-show="pendingDeleteId === task.id"
+                      @click="deleteTask(task.id)"
+                    >
+                      Confirm delete
+                    </button>
+                    <button
+                      class="button button--quiet"
+                      type="button"
+                      x-show="pendingDeleteId === task.id"
+                      @click="pendingDeleteId = ''"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template x-if="editingId === task.id">
+                <form class="task-edit" @submit.prevent="saveTask()">
+                  <label>
+                    Title
+                    <input type="text" maxlength="255" x-model.trim="editDraft.title" required />
+                  </label>
+                  <label>
+                    Status
+                    <select x-model="editDraft.status">
+                      <option value="todo">To do</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </label>
+                  <label>
+                    Priority
+                    <input type="number" min="0" max="999" x-model.number="editDraft.priority" />
+                  </label>
+                  <label>
+                    Directions
+                    <textarea rows="2" maxlength="5000" x-model="editDraft.description"></textarea>
+                  </label>
+                  <div class="button-row">
+                    <button class="button button--quiet" type="submit">Save</button>
+                    <button class="button button--quiet" type="button" @click="cancelEditTask()">Cancel</button>
+                  </div>
+                </form>
+              </template>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <section
+        id="panel-memory"
+        class="panel tab-panel memory"
+        role="tabpanel"
+        aria-labelledby="tab-memory"
+        x-show="activeTab === 'memory'"
+        x-cloak
+      >
+        <header class="panel__header">
+          <h2>Memory &amp; indexing</h2>
+          <p>Upload documents for Cognee. Embedding uses a separate Ollama model from chat.</p>
+        </header>
+
+        <p class="memory-stack" aria-live="polite">
+          <span>Embed model: <strong x-text="memoryConfig.embeddingModel || 'nomic-embed-text:latest'"></strong></span>
+          <span>Dataset: <strong x-text="dataset"></strong></span>
+        </p>
+
+        <form @submit.prevent="uploadFiles()" novalidate>
+          <div
+            class="drop-zone"
+            :class="{ 'drop-zone--active': dragActive, 'drop-zone--error': memoryError }"
+            @dragenter.prevent="setDrag(true)"
+            @dragover.prevent="setDrag(true)"
+            @dragleave.prevent="setDrag(false)"
+            @drop.prevent="handleDrop($event)"
+          >
+            <input
+              id="memory-files"
+              class="visually-hidden"
+              type="file"
+              accept=".md,.txt,.pdf"
+              multiple
+              :disabled="memoryLocked"
+              @change="handleFileInput($event)"
+              aria-describedby="file-help memory-error"
+            />
+            <label class="button button--quiet" for="memory-files">Choose files</label>
+            <p id="file-help">or drop up to 20 files here · 50 MiB each</p>
+          </div>
+
+          <p id="memory-error" class="form-message form-message--error" aria-live="polite" x-show="memoryError" x-text="memoryError"></p>
+
+          <ul class="file-list" x-show="selectedFiles.length" aria-label="Selected files">
+            <template x-for="file in selectedFiles" :key="file.key">
+              <li class="file-row" :data-state="file.state">
+                <span class="status-mark" aria-hidden="true" x-text="file.symbol"></span>
+                <span class="file-row__name" x-text="file.name"></span>
+                <span class="file-row__size" x-text="file.sizeLabel"></span>
+                <span class="file-row__status" x-text="file.status"></span>
+              </li>
+            </template>
+          </ul>
+
+          <details class="advanced">
+            <summary>Advanced options</summary>
+            <label for="dataset">Dataset</label>
+            <input
+              id="dataset"
+              name="dataset"
+              type="text"
+              pattern="[A-Za-z0-9_-]{1,64}"
+              maxlength="64"
+              x-model.trim="dataset"
+              :disabled="memoryLocked"
+              aria-describedby="dataset-help"
+            />
+            <small id="dataset-help">Letters, numbers, underscores, and hyphens.</small>
+            <label class="check-row">
+              <input name="full_graph" type="checkbox" x-model="fullGraph" :disabled="memoryLocked" />
+              <span>Build the full knowledge graph</span>
+            </label>
+          </details>
+
+          <button
+            class="button button--primary memory__submit"
+            type="submit"
+            :disabled="!canUpload"
+            :aria-busy="uploading"
+            x-text="uploading ? 'Adding to memory…' : 'Add to memory'"
+          ></button>
+        </form>
+
+        <div class="job-result" aria-live="polite" x-show="activeJob">
+          <p class="job-result__status">
+            <span class="status-mark" aria-hidden="true" x-text="jobSymbol(activeJob)"></span>
+            <strong x-text="activeJob ? activeJob.label : ''"></strong>
+          </p>
+          <p x-show="activeJob && activeJob.status === 'ready'">
+            Eve can now use this file in chat.
+          </p>
+          <p
+            class="form-message form-message--error"
+            x-show="activeJob && activeJob.status === 'failed'"
+            x-text="activeJob ? activeJob.error : ''"
+          ></p>
+          <div class="button-row">
+            <button
+              class="button button--quiet"
+              type="button"
+              x-show="activeJob && activeJob.status === 'failed'"
+              @click="retryJob(activeJob.id)"
+            >
+              Try again
+            </button>
+            <button
+              class="button button--quiet"
+              type="button"
+              x-show="activeJob && activeJob.status === 'ready'"
+              @click="askAboutFilesInChat()"
+            >
+              Ask Eve about these files
+            </button>
+          </div>
+        </div>
+
+        <details class="recent" x-show="recentJobs.length">
+          <summary>Recent memory jobs</summary>
+          <ul>
+            <template x-for="job in recentJobs" :key="job.id">
+              <li>
+                <span class="status-mark" aria-hidden="true" x-text="jobSymbol(job)"></span>
+                <span x-text="jobFileSummary(job)"></span>
+                <strong x-text="job.label"></strong>
+              </li>
+            </template>
+          </ul>
+        </details>
+      </section>
+
+      <section
+        id="panel-models"
+        class="panel tab-panel models"
+        role="tabpanel"
+        aria-labelledby="tab-models"
+        x-show="activeTab === 'models'"
+        x-cloak
+      >
+        <header class="panel__header models__header">
+          <div>
+            <h2>Model suite</h2>
+            <p>Target one strong model per skill on 16 GB VRAM. Pull gaps, remove duplicates, route Eve by task.</p>
+          </div>
+          <button
+            class="button button--quiet"
+            type="button"
+            @click="refreshModelInventory(true)"
+            :disabled="modelInventoryLoading"
+          >
+            Refresh
+          </button>
+        </header>
+
+        <p class="form-message" x-show="modelInventoryLoading" aria-live="polite">Loading models…</p>
+        <p
+          class="form-message form-message--error"
+          x-show="modelInventoryError"
+          aria-live="polite"
+          x-text="modelInventoryError"
+        ></p>
+        <p
+          class="model-roster__summary"
+          x-show="modelRecommendations.summary && !modelInventoryLoading"
+          x-text="modelRecommendations.summary"
+        ></p>
+
+        <div class="skill-grid" x-show="(modelRecommendations.suite || modelRecommendations.skills || []).length && !modelInventoryLoading">
+          <template x-for="skill in (modelRecommendations.suite || modelRecommendations.skills)" :key="skill.id">
+            <article class="skill-card" :data-skill="skill.id" :data-status="skill.status">
+              <header class="skill-card__header">
+                <div class="skill-card__title-row">
+                  <h3 x-text="skill.label"></h3>
+                  <span class="skill-card__status" x-text="suiteStatusLabel(skill.status)"></span>
+                </div>
+                <p x-text="skill.description"></p>
+              </header>
+
+              <div class="model-card model-card--ideal">
+                <p class="model-card__label">Target</p>
+                <div class="model-card__top">
+                  <strong x-text="skill.ideal.id"></strong>
+                  <span class="model-card__badge" x-text="fitLabel(skill.ideal.fit16gb)"></span>
+                </div>
+                <p class="model-card__meta">
+                  ~<span x-text="skill.ideal.sizeGb"></span> GB
+                </p>
+                <p class="model-card__strengths" x-text="skill.ideal.why"></p>
+                <p class="model-card__tradeoffs" x-text="skill.ideal.whenToUse"></p>
+                <p class="model-card__command" x-show="skill.pull">
+                  <code x-text="skill.pull.command"></code>
+                </p>
+              </div>
+
+              <template x-if="skill.installed">
+                <div class="model-card model-card--featured" :data-fit="skill.installed.fit16gb">
+                  <p class="model-card__label">Installed</p>
+                  <div class="model-card__top">
+                    <strong x-text="skill.installed.id"></strong>
+                    <span class="model-card__badge" x-text="fitLabel(skill.installed.fit16gb)"></span>
+                  </div>
+                  <p class="model-card__meta">
+                    <span x-text="skill.installed.role === 'embed' ? 'Embed' : 'Chat'"></span>
+                    · <span x-text="skill.installed.sizeGb + ' GB'"></span>
+                    <span x-show="skill.installed.parameterSize"> · <span x-text="skill.installed.parameterSize"></span></span>
+                  </p>
+                  <p class="model-card__active" x-show="isActiveChatModel(skill.installed.id)">Active in Chat</p>
+                  <div class="button-row" x-show="skill.installed.role === 'chat'">
+                    <button
+                      class="button button--quiet"
+                      type="button"
+                      @click="selectChatModel(skill.installed.id)"
+                      :disabled="switchingModel || !ollamaConnected || isActiveChatModel(skill.installed.id)"
+                    >
+                      Use in Chat
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <p class="skill-card__missing" x-show="!skill.installed">Not installed — pull the target above.</p>
+            </article>
+          </template>
+        </div>
+
+        <section class="model-actions" x-show="!modelInventoryLoading">
+          <div class="model-actions__block" x-show="(modelRecommendations.pullGaps || []).length">
+            <h3>Pull to fill gaps</h3>
+            <p class="model-roster__hint">Install these only for skills your current roster does not cover well.</p>
+            <ul class="model-action-list">
+              <template x-for="pull in modelRecommendations.pullGaps" :key="'pull-' + pull.id">
+                <li>
+                  <p><strong x-text="pull.label"></strong></p>
+                  <p><code x-text="pull.command"></code></p>
+                  <p class="model-card__strengths" x-text="pull.why"></p>
+                </li>
+              </template>
+            </ul>
+          </div>
+
+          <div class="model-actions__block" x-show="(modelRecommendations.removeSuggestions || []).length">
+            <h3>Remove duplicates &amp; overlap</h3>
+            <p class="model-roster__hint">Free disk space and reduce confusion — one keeper per skill.</p>
+            <ul class="model-action-list">
+              <template x-for="item in modelRecommendations.removeSuggestions" :key="'remove-' + item.id">
+                <li>
+                  <p><code x-text="item.command"></code></p>
+                  <p class="model-card__tradeoffs" x-text="item.reason"></p>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </section>
+
+        <details class="model-roster model-roster--briefing" x-show="modelRecommendations.eveBriefing && !modelInventoryLoading">
+          <summary>Eve routing briefing</summary>
+          <p class="model-roster__hint">Share this with Eve or paste into memory so she can pick models by task later.</p>
+          <pre class="model-briefing" x-text="modelRecommendations.eveBriefing"></pre>
+          <button class="button button--quiet" type="button" @click="copyEveBriefing()">Copy briefing</button>
+        </details>
+
+        <details class="model-roster" x-show="(modelRecommendations.recommendedKeep || []).length && !modelInventoryLoading">
+          <summary>Recommended keep list</summary>
+          <ul>
+            <template x-for="modelId in modelRecommendations.recommendedKeep" :key="'keep-' + modelId">
+              <li x-text="modelId"></li>
+            </template>
+          </ul>
+        </details>
+
+        <section class="model-inventory" x-show="modelInventory.length && !modelInventoryLoading">
+          <h3>All installed</h3>
+          <ul class="model-roster__list" aria-label="Installed Ollama models">
+            <template x-for="model in modelInventory" :key="model.id">
+              <li class="model-card" :data-fit="model.fit16gb" :data-role="model.role">
+                <div class="model-card__top">
+                  <strong x-text="model.id"></strong>
+                  <span class="model-card__badge" x-text="fitLabel(model.fit16gb)"></span>
+                </div>
+                <p class="model-card__meta">
+                  <span x-text="model.role === 'embed' ? 'Embed' : 'Chat'"></span>
+                  · <span x-text="model.sizeGb + ' GB'"></span>
+                  <span x-show="model.parameterSize"> · <span x-text="model.parameterSize"></span></span>
+                  <span x-show="model.quantization"> · <span x-text="model.quantization"></span></span>
+                </p>
+                <p class="model-card__skills" x-show="(model.skills || []).length">
+                  Skills: <span x-text="formatModelSkills(model)"></span>
+                </p>
+                <p class="model-card__strengths" x-text="(model.strengths || []).join(' · ')"></p>
+                <div class="button-row" x-show="model.role === 'chat'">
+                  <button
+                    class="button button--quiet"
+                    type="button"
+                    @click="selectChatModel(model.id)"
+                    :disabled="switchingModel || !ollamaConnected || isActiveChatModel(model.id)"
+                  >
+                    Use in Chat
+                  </button>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </section>
+
+      <section
+        id="panel-more"
+        class="panel tab-panel more"
+        role="tabpanel"
+        aria-labelledby="tab-more"
+        x-show="activeTab === 'more'"
+        x-cloak
+      >
+        <header class="panel__header">
+          <h2>More</h2>
+          <p>Services, curated ingest, and other EMPIRE pages.</p>
+        </header>
+
+        <section class="health" aria-labelledby="health-title">
+          <h3 id="health-title">Local services</h3>
+          <p class="health__summary" aria-live="polite" x-text="health.summary"></p>
+          <ul class="health__list" aria-label="Service status">
+            <template x-for="service in health.services" :key="service.id">
+              <li class="health__item" :data-state="service.state">
+                <span class="status-mark" aria-hidden="true" x-text="service.symbol"></span>
+                <span x-text="service.label"></span>
+                <strong x-text="service.status"></strong>
+              </li>
+            </template>
+          </ul>
+          <button
+            class="button button--quiet health__repair"
+            type="button"
+            @click="repairServices()"
+            :disabled="health.repairing"
+            :aria-busy="health.repairing"
+            x-text="health.repairing ? 'Starting local services…' : 'Start / repair local services'"
+          ></button>
+        </section>
+
+        <ul class="more-links">
+          <li><a class="button button--quiet" href="/dashboard.html">Dashboard</a></li>
+          <li><a class="button button--quiet" href="/primitives.html">Curated primitives ingest</a></li>
+          <li><a class="button button--quiet" href="/index.html">Classic tasks UI</a></li>
+          <li><a class="button button--quiet" href="http://127.0.0.1:8090/_/" target="_blank" rel="noopener">PocketBase admin</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="empire-nav.js"></script>
+    <script src="eve-workbench.js"></script>
+  </body>
+</html>

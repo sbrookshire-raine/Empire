@@ -1,0 +1,158 @@
+{
+  "ok": true,
+  "dataset": "primitives_test",
+  "docs": 2,
+  "llm_model": "huihui_ai/qwen2.5-coder-abliterate:14b",
+  "embedding_model": "nomic-embed-text:latest",
+  "smoke_query": "Friction and Flow reinforcing loop scaffolding memory encoding learning transfer",
+  "smoke_hits_count": 5,
+  "smoke_hits": [
+    {
+      "id": "b5749013-3d12-5ca4-b290-dbc93a8b0728",
+      "text": "Title: learning-techniques-accelerated\nsource_file: learning-techniques-accelerated.md\ndataset: primitives_test\nfuel: curated_primitives\n\n## LEARNING\n\n## 300% FASTER\n\n25 Learning Techniques\n\n## Learning\n\n## 25\tLearning\tTechniques\tof\tAccelerated\n\n## 300%\tFaster Learning\tMasters\n\n## \u00a9\tCopyright\t2015\t-\tAll\trights\treserved\n\nIn\tno\tway\tis\tit\tlegal\tto\treproduce,\tduplicate,\tor\ttransmit\tany\tpart\tof this document\t in\t either electronic means\t or\t in printed\t format. Recording\tof\tthis\tpublication\tis\tstrictly\tprohibited\tand\tany\tstorage\tof this\tdocument\tis\tnot\tallowed\tunless\twith\twritten\tpermission\tfrom\tthe publisher.\tAll\trights\treserved. The\tinformation\tprovided\therein\tis\tstated\tto\tbe\ttruthful\tand\tconsistent, in\tthat\tany\tliability,\tin\tterms\tof\tinattention\tor\totherwise,\tby\tany\tusage or\tabuse\tof\tany\tpolicies,\tprocesses,\tor\tdirections\tcontained\twithin\tis the\tsolitary\tand\tutter\tresponsibility\tof\tthe\trecipient\treader.\tUnder\tno circumstances\twill\tany\tlegal\tresponsibility\t or\t blame\t be\t held\t against the\tpublisher\tfor\tany\treparation,\tdamages,\tor\tmonetary\tloss\tdue\tto\tthe information\therein,\teither\tdirectly\tor\tindirectly. Respective\tauthors\town\tall\tcopyrights\tnot\theld\tby\tthe\tpublisher.\n\n## Legal\tNotice:\n\nThis\tebook\tis\tcopyright\tprotected.\tThis\tis\tonly\tfor\tpersonal\tuse.\tYou cannot\tamend,\tdistribute,\tsell,\tuse,\tquote\tor\tparaphrase\tany\tpart\tor\tthe content\t within\t this\t ebook\t without\t the\t consent\t of\t the\t author\t or copyright\towner.\tLegal\taction\twill\tbe\tpursued\tif\tthis\tis\tbreached.\n\n## Disclaimer\tNotice:\n\nPlease\t note\t the\t information\t contained\t within\t this\t document\t is\t for educational\tand\tentertainment\tpurposes\tonly.\tEvery\tattempt\thas\tbeen made to provide accurate, up to date and reliable complete information.\t No\t warranties\t of\t any\t kind\t are\t expressed\t or\t implied. Readers\tacknowledge\tthat\tthe\tauthor\tis\tnot\tengaging\tin\tthe\trendering of\tlegal,\tfinancial,\tmedical\tor\tprofessional\tadvice. By reading this document, the reader agrees that under no circumstances\t are\t we\t responsible\t for\t any\t losses,\t direct\t or\t indirect, which\t are\t incurred\t as\t a\t result\t of\t the\t use\t of\t information\t contained within\tthis\tdocument,\tincluding,\tbut\tnot\tlimited\tto,\terrors,\tomissions, or\tinaccuracies.\n\n## Table\tof\tContents\n\nIntroduction:\t\tWhy\tYou\tCan\tLearn\t300%\tFaster\u2026\tStarting\tToday!\n\n## Section\tOne:\t\tMindset\t&amp;\tOverall\tLearning\tStrategy\n\nChapter\tOne:\t\tDevelop\ta\tNurturing\tMindset\tfor\tIncremental\tProgress\tChapter Two:\t\tLearn\tto\tHandle\tMistakes\tand\tFailure\tWell Chapter\tThree:\t\tSet\tMeasurable\tGoals Chapter\tFour:\t\tAdd\tStakes\t&amp;\tAccountability\tto\tYour\tLearning\tGoals\tChapter Five:\t\tUse\tRewards\tand\tCelebration,\tRight\tfrom\tGo\tChapter\tSix:\t\tGet\tthe\tBest Models,\tMentors\t&amp;\tTeachers Section\tTwo:\t\tRapid\tSkill\tAcquisition\n\n## Techniques\n\nChapter\tSeven:\t\tDestroy\tDistractions Chapter\tEight:\t\tDeconstruct\tto\tDestroy\tOverwhelm Chapter\tNine:\t\tFocus\ton\tthe\t20%\tthat\tGives\tYou\t80%\tof\tthe\tResults\tChapter Ten:\t\tFind\tYour\tPreferred\tLearning\tStyle Chapter\tEleven:\t\tLearn\tin\tthe\tRight\tSequence Chapter\tTwelve:\t\tOne-Page\tYour\tCrucial\tElements Chapter\tThirteen:\t\tPlan\tOut\tYour\tRegular\tLearning\tPeriods\tChapter\tFourteen: Reps\t&amp;\tSets,\tReps\t&amp;\tSets Chapter\tFifteen:\t\t\tNote-Take\tin\tColourful\tMindmaps Chapter\tSixteen:\t\tYour\tSecret\tLearning\tWeapon\t-\tNLP\tModelling\tto\tReplicate\ta Master\tChapter\tSeventeen:\t\tHow\tto\tRead\ta\tBook\tin\tan\tHour Chapter\tEighteen:\t\tSpeed\tReading\tMade\tEasy\n\n## Section\tThree:\t\tThe\tMemory\tTechniques\tof\tMemory\tWorld\tChampions\n\nChapter\tNineteen:\t\tHow\tto\tPermanently\tMemorize\tAnything Chapter\tTwenty:\tRemember\tAny\tNumber\tof\tFacts\tfor\tQuick\tRecall\tChapter Twenty\tOne:\t\tBuilding\tYour\tVery\tOwn\tMemory\tPalace\tChapter\tTwenty\tTwo: How\tto\tInstantly\tMemorise\tVocabulary\tin\tAny\tLanguage\tChapter\tTwenty Three:\t\tMemorising\tNames\tEasily\tand\tPermanently\tChapter\tTwenty\tFour: Never\tNeed\tNotes\tAgain\tfor\ta\tSpeech\tor\tPresentation\tChapter\tTwenty\tFive: How\tto\tRemember\tNumbers,\tPermanently\tConclusion:\t\tHow\tto\tImplement these\tTechniques\tto\tStart\tLearning\t300%\tFaster\tToday\n\n## Introduction:\tWhy\tYou\tCan\tLearn 300%\tFaster\u2026\tStarting\tToday!\n\n## \"Live\tas\tif\tyou\twere\tto\tdie\ttomorrow.\tLearn\tas\tif\tyou\twere\tto\tlive\tforever.\" -Mahatma\tGandhi\n\n## 'Your\tbrain\tis\tlike\ta\tsleeping\tgiant.\tLearn\thow\tto\tlearn\t-\tit's\tthe\tmost\timportant skill.' -\tTony\tBuzan\n\nYou\tare\ta\tbeautiful\tlearning\tmachine. However\tyou\tfeel\tabout\tlearning\tnew\tskills\tand\tsubjects\tat\tthis\tmoment,\tknow that\tyour\tbrain\tand\tbody\thas\tevolved\tover\tmillions\tof\tyears\tto\tbe\tthe\tgreatest skill\tand\tknowledge\tacquisition\ttool\ton\tthe\tplanet.\tIt's\tthe\tsimple\ttruth. But\tlike\twith\tany\tsupercomputer,\twithout\ta\tmanual\twe\thave\tno\tidea\thow\tto\tuse it\tproperly\tto\tits\thighest\tpotential.\tIt's\tthe\tsame\twith\tthe\thuman\tmind\tand\tbody. For\tmost\tof\thuman\thistory,\twe\thave\tnot\tmade\toptimal\tuse\tof\tour\tcapacity\tto learn.\tWe\tsimply\thaven't\tknown\thow. Also,\tunfortunately\tthe\tway\tthings\tare\ttaught\tat\tschool\toften\tcreates\tnegative feelings\tin\tmany\tof\tus\trelated\tto\tlearning\tnew\tthings.\tWhile\talso\timprinting strange\tand\tineffective\tstrategies\tfor\tlearning\tin\tour\tbrains.\tThe\teducation system\tis\tusually\tbased\ton\toutdated\tmethodology\twhich\twas\tdeveloped\tover\t100 years\tago,\twhen\tpeople\thad\teven\tless\tunderstanding\tof\thow\tthe\thuman\tmind works\tand\tlearns.",
+      "type": "IndexSchema",
+      "version": 1,
+      "metadata": {
+        "index_fields": [
+          "text"
+        ]
+      },
+      "created_at": 1784997633622,
+      "updated_at": 1784997633622,
+      "chunk_index": 0,
+      "document_id": "1c99f0d8-85ce-585c-8f81-833aa46d9208",
+      "source_task": null,
+      "source_user": null,
+      "ontology_uri": null,
+      "document_name": "text_a49d71d70f9af7ca723c4d1d780e6a0b",
+      "belongs_to_set": [],
+      "ontology_valid": false,
+      "feedback_weight": 0.5,
+      "source_chunk_id": null,
+      "source_node_set": null,
+      "source_pipeline": null,
+      "topological_rank": 0,
+      "importance_weight": 0.5,
+      "source_content_hash": null
+    },
+    {
+      "id": "e686aa6f-2bae-517f-ab39-c4a3f66a255f",
+      "text": "Instantly\tsnow\t-\trandom\tdistracting\tthoughts and\temotions\t-\tfills\tthe\tglobe.\tThen,\twhen\tyou\tturn\tback\tto\tthe\tsubject,\tit\ttakes another\t25\tminutes\tagain\tfor\tall\tthe\tsnow\tto\tfully\tsettle.\tFor\tyour\tmind\tto\tget back\tinto\tthat\tcalm,\tfocused\toptimal\tlearning\tstate. Do\tnot\tallow\tthose\tdistractions\tto\thappen. Most\tdistractions\tthese\tdays\tare\tfrom\tdigital\tfactors\tand\thuman\tfactors.\tTrain other\tpeople\tto\trespect\tyour\tlearning\ttime\tas\tmuch\tas\tyou\tdo.\tExplain\tto\tthem that\tyou\tcannot\tbe\tdisturbed\tor\trespond\tto\ttheir\tmessages\tin\tthis\tperiod.\tPeople will\tunderstand\tand\trespect\tyou\tfor\tit. And\tturn\toff\tall\tdigital\tthings\tthat\tcould\tdistract\tyou.\tIf\tsomething\tis\tleft\topen even\tthe\tanticipation\tof\ta\tpotential\tdistraction\twill\thold\tback\tyour\tmind\tfrom fully\tfocusing\tand\tlearning\toptimally.\tTurn\tit\toff.\tNothing\tis\tso\turgent\tit\tcannot wait\tan\thour\tor\ttwo. The\tworld's\tgreatest\tand\tfastest\tlearners\tstudy\tthis\tway.\tYou\tmust\ttoo. In\tthe\tnext\tchapter\tyou\twill\tlearn\tan\textremely\timportant\tlearning\ttechnique. One\tthat\talmost\teveryone\tmisses\tout.\tHow\tto\tbreak\tdown\tand\tdeconstruct\tany skill\tor\ttopic\tso\tthat\tyou\tknow\twhat\tyou\tmust\tlearn\tfirst,\tso\tthat\tyou\tnever\tfeel overwhelmed,\tand\tyou\tlearn\tmost\tefficiently.\tBoosting\tyour\tmotivation\tand cutting\tyour\tlearning\tcurve\tin\thalf\twith\tone\tblow.\n\n## Chapter\tEight:\t\tDeconstruct\tto\tDestroy Overwhelm\n\n## \"The\tjourney\tof\ta\tthousand\tmiles\tbegins\twith\tone\tstep.\" -\tLao\tTzu\n\nAny\tskill\tcan\tseem\toverwhelming\tto\tbegin\twith.\tJust\tso\tmany\tthings\tto\tlearn and\tinternalize.\tSo\tmany\tbits\tof\tknowledge\tto\tmemorise.\tTo\tdeal\twith\tthis,\tmost people\tsimply\tcan't\tthink\tabout\tthe\tend\tresult.\tThey\tfocus\ton\tonly\tthe beginning,\twhich\tis\tgood\tin\tsome\tsense,\tbut\tit\tmeans\tslow,\trandom,\tunfocused progress. Instead,\tyou\tcan\tdeconstruct\tthe\tskill. This\tmeans\tbreaking\tdown\twhat\tfirst\tappears\tcomplex\tinto\tsmall,\tsimple\tparts. Small\tenough\twhere\teach\tpart\tis\teasily\tmanageable. Ask\tyourself,\t'what\tare\tthe\tminimal\tlearnable\tunits\tof\tthis\tskill?'\tThe\t'Lego blocks'\tas\tTim\tFerriss\tcalls\tthem.\tYou\tcan\tdo\tthis\twith\tfour\tmethods\t-\tby reducing,\tinterviewing,\treversal\tand\ttranslating. Reversal\tis\tstarting\tat\tthe\tpoint\tof\tvisualisation\twe\tpreviously\ttalked\tabout\tin\tthe goals\tchapter.\tLook\tat\tthe\tfinal\tproduct\tof\tyour\tskill\tand\tbacktrack\tall\tthe\tway back\tto\tnow\tto\tfind\tthe\tbest\tway\tto\tbegin\tthe\ttask.\tEach\tstage\tand\tstep\tbecomes smaller\tand\tmore\tmanageable,\tless\tintimidating.\tIf\tany\tof\tthe\tsteps\tstill\tseem\ttoo large,\tbreak\tthem\tdown\teven\tfurther.\tThere\tis\tno\tlimit\tto\thow\tsmall\tyou\tcan\tgo. In\tfact,\tthis\tis\tthe\tnext\tmethod\tto\tdeconstructing\t-\treducing. Reducing\tis\tbreaking\tdown\teach\tcomponent,\teach\tmove,\teach\tpart\tor\tstep\tin\ta skill,\tand\treducing\tit\tfurther\tstill.\tInto\tvery,\tvery\ttiny\tlittle\tpieces.\tNLP modelling\tlater\ton\twill\tteach\tyou\tone\tway\tto\tdo\tthis\tmasterfully. Another\tfantastic\tway\tto\tdeconstruct\tanything\tyou\tare\tlearning\tis\tto\tinterview experts\tand\task\tthem\tfor\tthe\tmost\tcommon\tmistakes,\tand\tthe\tmain\tprinciples\tof the\tskill.\tExplain\tto\tthem\texactly\twhat\tyou\tare\ttrying\tto\tachieve.\tAnd\tthey\twill help\tyou\tto\tbreak\tit\tdown. The\tfourth\tmethod\tis\ttranslating,\twhich\tmeans\tfinding\tways\tyour\texisting\tskills can\thelp\tyou\tto\tshortcut\tlearning\tthings\tin\tthe\tnew\tskill.\tFor\texample\twith languages,\tif\tyou\tare\tlearning\tPolish\tyou\tcan\tremember\tthat\tall\twords\tin\tEnglish ending\tin\t'tion'\tare\tthe\tsame\tand\tend\tin\t'cja'\tin\tPolish. Many\tphysical\tskills\tand\tknowledge-based\tskills\tshare\tcomponents\ttoo.\tLook for\tany\tsimilarities,\tand\tagain\tyou\tcan\task\tthe\texperts.\tIf\tyou\tare\tlearning\tMuay Thai\tBoxing,\tand\tyou\tare\talready\tgood\tat\tfootball,\tperhaps\tyou\tcan\tfind\tsome similarity\tin\tthe\tdynamics\tof\tswinging\tyour\tleg\tand\tturning\tyour\thips\twith power\tto\tkick\taccurately\tand\teffectively.\tAsk\tyour\tteacher\tand\tthey\twill\tconfirm if\tthis\tis\ttrue\tor\tnot.\tIf\tit\tis\tyou\thave\tleaped\tforward\tin\tlearning\tMuay\tThai, because\tyour\tmind\tand\tbody\tis\talready\tfamiliar\twith\tthe\tkicking\tpart\tof\tit.\tYou have\ttranslated\tsomething\tacross\tfrom\tone\tskill\tto\tthe\tother.\n\n## Use\tfirst\tprinciple-based\tthinking\n\nThe\tentire\tlearning\tstrategy\tof\tdeconstruction\tis\tvery\tsimilar\tto\t'first\tprinciplebased\tthinking'\tas\tElon\tMusk\tdescribes\tit.\tThis\tis\twhere\tyou\tmake\ta\tconscious step\tto\tseparate\tyourself\tfrom\tthe\tgeneral\tview\tof\twhat\tis\tnecessary\tto\tachieve something.\tCommon\tknowledge\tis\trarely\tthe\tmost\tefficient\tand\teffective\tway\tto get\tfrom\tA\tto\tB. But\twe\tusually\tjust\tlook\tat\twhat\teveryone\tis\tdoing\tand\tthink\tthat's\tthe\tbest\tway to\tdo\tit.\tIt's\thuman\tnature.\tBut\tit's\tnot\tthe\tway\tworld-class\tlearners\tdo\tthings.\tI hope\tyou\thave\tgathered\tby\tnow\tthat\tto\tlearn\tquickly\tyou\tmust\tignore\tthe\tway most\tpeople\tlearn.\tEscape\tby\treasoning\tfrom\tfirst\tprinciples. \"It's\timportant\tto\treason\tfrom\tfirst\tprinciples,\trather\tthan\tby\tanalogy.\tThe normal\tway\twe\tconduct\tour\tlives\tis\twe\treason\tby\tanalogy.\tWe\tlook\tat\twhat others\tare\tdoing,\tat\thow\tothers\thave\tdone\tit.",
+      "type": "IndexSchema",
+      "version": 1,
+      "metadata": {
+        "index_fields": [
+          "text"
+        ]
+      },
+      "created_at": 1784997633622,
+      "updated_at": 1784997633622,
+      "chunk_index": 8,
+      "document_id": "1c99f0d8-85ce-585c-8f81-833aa46d9208",
+      "source_task": null,
+      "source_user": null,
+      "ontology_uri": null,
+      "document_name": "text_a49d71d70f9af7ca723c4d1d780e6a0b",
+      "belongs_to_set": [],
+      "ontology_valid": false,
+      "feedback_weight": 0.5,
+      "source_chunk_id": null,
+      "source_node_set": null,
+      "source_pipeline": null,
+      "topological_rank": 0,
+      "importance_weight": 0.5,
+      "source_content_hash": null
+    },
+    {
+      "id": "9f65cda4-015a-5bb0-be6d-9d9b61588626",
+      "text": "In\tthe\tnext\tchapter,\tyou'll\tlearn\tthe\tmost\tpowerful\tlearning\tconcept\ttaken\tfrom NLP.\tHow\tto\tmodel\ta\tmaster\tto\tabsorb\this\tor\ther\tskill\tat\tincredible\tspeed.\n\n## Chapter\tSixteen:\t\tYour\tSecret\tLearning Weapon\t-\tNLP\tModelling\tto\tReplicate\ta Master\n\n'Success\tleaves\tclues.\tAnd\tpeople\twho\tproduce\toutstanding\tresults\tdo\tspecific things\tto\tcreate\tthose\tresults.\tIf\tyou\tprecisely\tduplicate\tthe\tactions\tof\tothers,\tyou can\treproduce\tthe\tsame\tquality\tof\tresults\tthat\tthey\thave.' -\tTony\tRobbins An\texceptionally\tgood\ttechnique\tto\tabsorb\tthe\tskills\tof\tan\texpert\tin\ta\tskill\tyou want\tto\tlearn\tis\tby\tmodelling\tthem.\tThis\teffectively\tmeans\tbreaking\tdown\tone single\telement\tof\ta\tskill,\tbreaking\tit\tdown\tinto\ttiny\tpieces,\tand\tthen\tcarefully replicating\teach\ttiny\tstep.\tEven\tto\tthe\tpoint\tof\thow\tthey\tare\tbreathing,\twhat\tthey are\tthinking\tand\tbelieving\tas\tthey\tdo\tit. This\tadvanced\tskill\tis\tsomething\tthat\tNLP\tmaster\tpractitioners\tstudy.\tBut\teven for\tnon-NLP\tpractitioners,\tif\tyou\tstart\tto\tobserve\tskilled\tpeople\twith\tanything near\tto\tthis\tdepth\tof\tattention\tyou\twill\tcertainly\temulate\tthem\tfar\tmore accurately.\tAnd\tas\ta\tresult,\tyou'll\tlearn\tfaster. I'll\tillustrate\twith\tgolf\t(modelling\tcan\tbe\tused\tfor\tall\tskills,\tbut\tfor\tbeginners\tit's far\tbetter\tto\twork\twith\tphysical\tskills).\tIf\tI\tfind\ta\tmaster\tgolfer,\tand\tI\twant\tto model\this\tputting\tskills\tfrom\tnear\tthe\thole\t(forgive\tmy\tbad\tgolfing\tterminology any\tavid\tgolfers\treading\tthis!)\tI'll\task\thim\tto\tdo\tthe\taction\ta\tfew\ttimes\tfor\tme. Then,\tby\tasking\thim\tto\trepeat\tit\tagain\tand\tagain,\tand\tby\tasking\thim,\tI'll\twork out\thow\tmany\tsmaller\tmicro-stages\tthat\tone\taction\tmight\ttake.\tAnd\twith\tthese micro-stages,\tyou\tcan't\tgo\ttoo\tsmall.\tOne\tputt\tmay\tbe\t6\tor\t7\tstages. The\tfirst\tstage\tmight\tbe\thim\tstanding\tback\tfrom\tthe\tball\tand\tlining\tup\twith\tthe hole\tusing\this\teye.\tThen\tstepping\tforward,\tstanding\tsideways\tover\tthe\tball\tand lining\tup\tagain.\tThen\ttaking\ta\tfew\tpractice\tswings\tand\tshuffling\this\tfeet\ta certain\tway.\tOne\tlast\tpause\tand\tline\tup.\tThen\tswinging\tthrough\tand\tputting. That's\tfive\tmicro-stages. I\twould\tthen\tstudy\teach\tof\tthose\tmicro-stages\tone\tby\tone\tin\tturn.\tSo\tlet's\tsay\tthe last\tstage\t-\tputting.\tI'd\task\thim\tto\tdo\tit\tagain,\tand\tagain,\tand\tagain.\tAnd\tI'd\task him\tvery\tdetailed\tquestions. 'I\tnotice\tyour\tlegs\tare\tabout\t1.5\tfeet\tapart,\tis\tthat\timportant?' 'I\tnotice\tthe\tfirst\ttwo\tfingers\tof\tyour\tright\thand\toverlap\tyour\tleft\thand,\tis\tthat important?' 'I\tnotice\tyou\tbreathe\ttwice,\tthen\tyou\ttake\ta\tdeeper\tbreath,\tthen\tyou\texhale\tas you\tswing,\tis\tthat\timportant?' 'First\tyou\tdo\tthis,\tthen\tthis,\tthen\tthis.\tIs\tthat\tcorrect?' And\tso\ton. As\tyou\textract\tthis\tdetailed\tinformation,\twrite\tit\tall\tdown.\tDo\tnot\tmiss\teven\tthe tiniest\tthing\tout.\tEven\task\thim\twhat\the\tthinks\tat\tevery\tmini-stage\tof\tthat\tone action\t-\tputting.\tIs\this\tmind\tclear?\tDoes\the\tvisualise\tanything?\tDoes\the\thear anything\tin\this\tmind?\tDoes\the\tsay\tsomething\tto\thimself? Write\tit\tall\tdown. I\twould\tthen\tgo\tthrough\tthe\tsame\tprocess\tfor\teach\tof\tthe\t5\tstages\tof\tputting.\tIt might\ttake\t1\thour\tor\ttwo\thours\tto\tget\tall\tthis\tinfo.\tBut\ttrust\tme,\tit's\tworth\tit. Afterwards,\tI\twould\task\thim\twhat\this\tbeliefs\tare\taround\tputting.\tHe\tmight\ttell me\t'I'm\tan\texcellent\tgolfer'\t'the\tball\talways\tgoes\tin'\t'this\tis\tfun'\t'calm,\tpresent, patient',\tor\tanything\tat\tall.\tLet\tthem\ttell\tyou,\tnever\tput\twords\tin\tsomeone's mouth.\tThere\tis\tno\twrong\tanswer. Write\tthose\tbeliefs\tand\tself-talk\tdown\ttoo. Once\tyou\thave\tfinished,\twrite\tall\tthose\tminute\tdetails\tto\teach\tof\tthe\t5\tstages down\tin\tthe\tcorrect\tsequence.\tWrite\tthe\tbeliefs\tat\tthe\tbeginning. Now\tit\tis\ttime\tfor\tyou\tto\tmodel\tit. Take\tstage\tone,\ttell\tyourself\tyou\tare\tgoing\tto\tbelieve\tthose\tbeliefs\tyou\twrote down\tjust\tfor\tthe\tnext\thour.\tThen\tvery,\tvery\tslowly\tdo\tevery\tlittle\tbit Exactly as they\tdid.\tYour\tfeet\tare\tin\tthe\tsame\tplace,\tyou\tbreathe\tin\tat\tthat\tpoint,\tyou\tlook up\tthere\tjust\tin\tthat\tway,\tyou\tbreathe\tout,\tyou\tvisualise\twhat\the\tvisualises,\tyou put\tyour\tright\tfingers\tover\tyour\tleft\tlike\the\tdid. Modelling\tis Exact replication.\tNot\tvague\tcopying.\tIt\tis\texact,\tperfect replication.\tInside\tthe\tmind,\tnot\tonly\tin\tthe\tbody.\tThat\tis\twhy\tyou\tcopy\ttheir exact\tposture\tand\tbody\tmovements\tand\tbreathing.\tIt's\tvery\thard\tto\tstand\tand breathe\tsame\tway\tas\tsomeone\twithout\tfeeling\tand\tbelieving\twhat\tthey\tfeel\tand believe. Keep\ton\tdoing\tit,\tagain\tand\tagain.\tRemember,\treps\tand\tsets.\tReps\tand\tsets.\tUntil you\tare\tdoing\tit\tautomatically.\tYou\tmight\thave\tto\trepeat\tit\t20\ttimes\tor\t50\ttimes. Or\t100\ttimes.\tBut\tkeep\ton\tgoing. And\tyou\twill\tbe\tamazed\tat\tthe\tresults\tyou\tget.",
+      "type": "IndexSchema",
+      "version": 1,
+      "metadata": {
+        "index_fields": [
+          "text"
+        ]
+      },
+      "created_at": 1784997633625,
+      "updated_at": 1784997633625,
+      "chunk_index": 13,
+      "document_id": "1c99f0d8-85ce-585c-8f81-833aa46d9208",
+      "source_task": null,
+      "source_user": null,
+      "ontology_uri": null,
+      "document_name": "text_a49d71d70f9af7ca723c4d1d780e6a0b",
+      "belongs_to_set": [],
+      "ontology_valid": false,
+      "feedback_weight": 0.5,
+      "source_chunk_id": null,
+      "source_node_set": null,
+      "source_pipeline": null,
+      "topological_rank": 0,
+      "importance_weight": 0.5,
+      "source_content_hash": null
+    },
+    {
+      "id": "527ff131-f88a-5489-865c-c0c92ed052c0",
+      "text": "We've\tcovered\tthe\tfoundational\tstrategies\tto\tspeed-learning.\tAnd\tyou've\talso learned\tmany\tof\tthe\tmost\tpowerful\ttechniques\tfor\tlearning\tskills\tand\tabsorbing knowledge\tever\tdeveloped. The\tlast\tsection\tof\tthe\tbook\tlooks\tinto\ta\tcritical\tcomponent\tof\tlearning\t-\tyour memory.\tWith\t6\textremely\tpowerful\tlife-changing\tmemory\ttechniques\tthat could\tcertainly\thelp\tyou\tlearn\t5\tor\t10\ttimes\tfaster\tthan\tyou\tever\thave\tbefore.\n\n## Section\tThree:\t\tThe\tMemory Techniques\tof\tWorld\tMemory Champions\n\n## Chapter\tNineteen:\t\tHow\tto\tPermanently Memorize\tAnything\n\n## 'Your\tmemory\tworks\twith\timages\tand\tjourneys.\tThe\tmore\tvivid\tand\tinteresting these\timages\tare,\tthe\tbetter.' -\tDominic\tO'Brien,\t8-time\tWorld\tMemory Champion\n\nOne\tof\tthe\tgreatest\tskills\tyou\tcan\tmaster\tto\thelp\tyou\tlearn\tquickly\tand permanently\tis\tthe\tskill\tof\tmemory.\tThis\tis\ta\tskill\teasier\tto\tmaster\tquickly\tthan you\tmight\timagine.\tAnd\tit\tcan\tbe\tan\tincredible\tboost\tto\tyour\tlearning\tspeed. With\tthe\tfollowing\tmemory\ttechniques\tand\ta\tlittle\tpractice\tyou\twill\tbe\table\tto instantly\tmemorize\tand\tpermanently\trecall\tnames\tand\tfacts,\tfor\tany\tsubject\tyou study,\tor\tany\tsequence\tof\tactions,\tkey\tlessons,\tnew\twords\tin\tany\tlanguage, speeches,\tpresentations,\tand\tnumbers.\tAll\tto\tan\tincredible\tlevel\tof\taccuracy. Sounds\ttoo\tgood\tto\tbe\ttrue?\tTry\tthese\ttechniques\tout\tas\tsoon\tas\tyou\tlearn\tthem. And\tprepare\tto\tbe\tamazed. Before\twe\tbegin,\tthink\tabout\thow\tyour\twonderful\tlearning\tbrain\tevolved.\tOver hundreds\tof\tthousands,\teven\tmillions\tof\tyears,\tit\tevolved\tin\tthe\tAfrican Savanah,\twhere\tall\thuman\tancestors\tfirst\tcame\tfrom.\tOut\tthere\tin\tthe\twilderness, the\tonly\tinformation\tyou\tever\tneeded\twas\tphysical.\tThings\tof\tsight,\tsound, smell,\ttaste. You\tremembered\tjourneys,\tlocations,\tlandmarks.\tPlants,\tanimals,\ttracks\tand signs.\tThat\tis\twhat\tthe\thuman\tmind\tevolved\tto\tremember\tand\tto\tmemorize. Numbers\tare\tnew,\tmost\tabstract\tideas\tof\tknowledge\tare\tnew,\teven\tpeople's names\tare\tquite\tnew.\tBack\tthen\tyou\twould\tonly\tknow\t100\tpeople\tyour\twhole life. As\ta\tresult\tof\tthis\tevolution,\tyour\tmind\tand\tits\tpowers\tof\tmemorizing\tand\trecall all\twork\twith\timagery,\tand\tjourneys.\tWe\tare\tjust\tstarting\tto\tunderstand\tthis. Right\tnow,\tthink\tof\tthe\thome\tyou\tlived\tin\tas\ta\tchild\t-\tnow\tin\tyour\tmind's\teye walk\tthrough\tthat\thome.\tGo\tinto\tevery\troom.\tNow,\tgo\toutside\tand\twalk\tdown the\tstreet\tto\tthe\tnearest\tsweet\tshop\t(every\tchild\tremembers\tthat\tjourney!)\n\nSee\thow\teasy\tit\twas?\tAnd\tyou\tmay\tnot\thave\tthought\tof\tyour\tchildhood\thome\tin that\tkind\tof\tdetail\tin\tyears.\tBut\tit\tquickly\tcame\taccurately\tto\tyour\tmind.\tAnd\tit's not\tonly\tphysical\tplaces\tand\tjourneys\twe're\tfamiliar\twith\tthat\twe\tremember permanently.\tThink\tof\tthe\tbest\tholiday\tyou\tever\twent\ton. Where\tdid\tyou\tstay?\tIn\thotel,\tcamping\tsite,\thouse?\tGo\tthere\tright\tnow.\tAnd walk\talong\ta\tlittle\tjourney\taround\tthe\tinside\tof\tyour\tholiday\thome,\tthen\tfrom your\tholiday\thome\tgo\tto\ta\tnearby\tplace\tyou\tremember.\tNotice\tthe\tlittle landmarks\talong\tthe\tway\t-\tperhaps\tthe\tporch,\tthen\tthe\tdriveway,\tthen\tthe\tbig tree\ton\tthe\tcorner,\tthe\tpainted\twall\tof\tthe\tfirst\thome\tyou\twalk\tpast. See\thow\teasily\tit\tcomes\tto\tmind?\tAnd\tit's\trather\tpleasant\ttoo,\tisn't\tit. That\tis\tthe\tawesome\tpower\tof\tyour\tmemory\tright\tthere.\tThe\tsimple\ttrick\tto mastering\tyour\tmemory,\tused\tby\tmemory\tworld\tchampions\tlike\tDominic O'Brien\twho\tcould\tmemorize\tthe\torder\tof\tevery\tcard\tpiled\tup\tfrom\t50\tdecks\tof cards,\tand\trecall\tthem\tinstantly\ttoo. The\tsimple\ttrick\tis\tto\tuse\tyour\tnatural\tability\tto\tremember\tvisual,\tphysical journeys\tquite\tclearly.\tThat\tis\tkey\tto\tremembering\tanything.\tThis\tchapter\tand the\tfollowing\twill\tshow\tyou\thow\tyou\tcan\tuse\tthis\tto\tgreatly\tspeed\tup\tyour progress\tin\tany\tskill\tat\tall. First,\tlet's\tdo\ta\tlittle\texercise\tjust\tas\tan\tintroduction.\tTo\tillustrate\tthe\tprocess, please\tcarry\tout\tthis\texercise.\tTake\ta\tlook\tat\tthe\tfollowing\tshopping\tlist\tof items:\n\n1. Tomato\tsauce\n2. Sausages\n3. Apricots\n4. Milk\n5. Gravy\n6. Chocolate\tbar\n7. Chicken\tfillets\n8. Dog\tfood\n9. Broccoli\n10.  Pasta\n\nNow,\tclose\tyour\teyes\tand\trecall\tthe\tlist\tin\tthe\tcorrect\torder\tfrom\tnumber\tone. How\twas\tit;\teasy\tor\thard?\tProbably\ta\tbit\ttricky.\tBut\tin\ta\tcouple\tof\tminutes\tyou will\tnot\tonly\tremember\tit\tperfectly,\tyou'll\tremember\tthis\tlist\tpermanently.\tIf you\tchoose\tto.\tForwards\tand\tbackwards. To\tbegin,\tthink\tof\tyour\thome.\tIn\tyour\tmind's\teye\tquickly\twalk\tthrough\tyour home,\tstart\tin\ta\tplace\tat\tthe\ttop\t-\tperhaps\tyour\tbedroom.\tThen\twalk\tthrough\ton a\troute\tthat\ttakes\tyou\tpast\tevery\troom,\tor\tinto\tevery\troom\tof\tthe\thouse.\tYou\tcan lead\tout\tinto\tthe\tgarden\tor\tonto\tthe\tdriveway\tat\tthe\tend. Go\tback\tover\tthis\troute\tand\twalk\tthrough\tit\tagain.\tMake\tsure\tyou\thave\tat\tleast 10\tsteps\ton\tthat\tjourney. So\tthe\tfirst\tstep\tcould\tbe\tyour\tbedroom,\tthe\tsecond\tstep\tthe\tcorridor\toutside your\tbedroom,\tthe\tthird\tstep\tthe\tupstairs\tbathroom,\tthen\tthe\tfourth\tstep\tthe\tnext bedroom,\tthen\tthe\tstairs\tleading\tdown,\tand\tso\ton. Got\tall\t10\tsteps?",
+      "type": "IndexSchema",
+      "version": 1,
+      "metadata": {
+        "index_fields": [
+          "text"
+        ]
+      },
+      "created_at": 1784997633625,
+      "updated_at": 1784997633625,
+      "chunk_index": 16,
+      "document_id": "1c99f0d8-85ce-585c-8f81-833aa46d9208",
+      "source_task": null,
+      "source_user": null,
+      "ontology_uri": null,
+      "document_name": "text_a49d71d70f9af7ca723c4d1d780e6a0b",
+      "belongs_to_set": [],
+      "ontology_valid": false,
+      "feedback_weight": 0.5,
+      "source_chunk_id": null,
+      "source_node_set": null,
+      "source_pipeline": null,
+      "topological_rank": 0,
+      "importance_weight": 0.5,
+      "source_content_hash": null
+    },
+    {
+      "id": "c9614462-4b73-5210-b90c-702deab553b1",
+      "text": "Title: master-codex-50-universal-primitives\nsource_file: master-codex-50-universal-primitives.md\ndataset: primitives_test\nfuel: curated_primitives\n\n# THE MASTER CODEX: 50 UNIVERSAL PRIMITIVES\n\n*The finite mechanical building blocks of reality.*\n\n## I. CYBERNETICS & SYSTEM DYNAMICS (Feedback & Flow)\n\n*How systems self-regulate, adapt, and spin out of control.*\n\n1. **The Reinforcing Loop:** Output feeds back into input, causing exponential, runaway amplification (Microphone feedback, compound interest, viral algorithms).\n\n2. **The Balancing Pendulum:** A mechanism that automatically pushes back against change to maintain a stable center point (Thermostats, sweating, supply/demand).\n\n3. **Asymmetric Leverage:** A tiny physical input applied to a highly sensitive joint triggers a disproportionately massive system shift (Climate tipping points, keystone habits).\n\n4. **Friction & Flow:** The unavoidable resistance that dictates the speed and volume of movement through any channel (Aerodynamic drag, bureaucracy, electrical resistance).\n\n5. **Throughput Bottlenecking:** A system's maximum speed is dictated entirely by its single narrowest point (Traffic jams, CPU bottlenecks, weak links in supply chains).\n\n6. **The Choke Valve:** Intentional regulation of flow to prevent overwhelming the receiver (Engine throttles, pacing in a video game, IV drip rates).\n\n7. **The Trophic Cascade:** A change at the very top of a hierarchy ripples down to alter the behavior of every layer below it (Removing wolves from an ecosystem, CEO replacements).\n\n8. **Emergent Swarming:** Complex, highly coordinated global behavior created solely by individual units following 2 or 3 blind, local rules (Bird flocking, stock market panics).\n\n## II. ARCHITECTURE & SPACE (Structure & Boundaries)\n\n*How physical and logical objects are built, separated, and scaled.*\n\n1. **The Structural Echo (Conway\u2019s Law):** A created object perfectly mirrors the communication pathways of the team that built it (Layered software monoliths, disjointed customer service).\n\n2. **The Abstraction Shell:** Hiding a hyper-complex internal system behind a simple, standardized plug (Cell membranes, Web APIs, restaurant front desks).\n\n3. **The Hierarchical Tree:** High-level nodes make abstract decisions, delegating the physical execution to specialized lower branches (Brain/spinal cord, Generals/Sergeants).\n\n4. **The Decoupled Interface:** The surface you touch is entirely physically separated from the engine doing the work (MIDI drum pads, remote controls, Fly-by-wire jets).\n\n5. **Distributed Redundancy:** Replicating critical pathways so the system survives if one node is severed (RAID hard drives, neural plasticity, multiple supply vendors).\n\n6. **The Keystone Pin:** A single, central structural element whose removal causes the entire architecture to collapse (Roman arches, a team's lead engineer, a primary database).\n\n7. **Boundary Osmosis:** A selectively permeable wall that allows certain beneficial elements in while keeping toxins out (Water filters, border control, cellular walls).\n\n8. **Kinematic Chains:** A series of rigid links connected by joints, where moving the base affects the entire appendage (Robotic arms, human skeletons, logistical supply chains).\n\n9. **Phase Transition:** A system reaching a critical threshold where its physical properties fundamentally and instantly change (Ice melting to water, water boiling to steam, cultural revolutions).\n\n## III. EPISTEMOLOGY & LOGIC (Information & State)\n\n*How systems process truth, memory, and decisions.*\n\n1. **The Mechanical Ratchet:** Progress locks in verified \"clicks\" and cannot flow backwards (Git commits, double-entry accounting, ratchet wrenches).\n\n2. **Binary Gating:** An absolute, true/false junction that allows or denies progression based on a rigid condition (Water valves, silicon transistors, VIP bouncers).\n\n3. **Memory Encoding:** The physical alteration of a substrate to store information for delayed retrieval (Carving stone, magnetic hard drives, synaptic strengthening).\n\n4. **Signal-to-Noise Filtering:** Isolating a specific, valuable frequency from a chaotic background environment (Noise-canceling headphones, human visual attention, data cleaning).\n\n5. **Information Asymmetry:** A structural imbalance where one node possesses critical data that another node lacks, creating an imbalance of power (Insider trading, poker, predator/prey stealth).",
+      "type": "IndexSchema",
+      "version": 1,
+      "metadata": {
+        "index_fields": [
+          "text"
+        ]
+      },
+      "created_at": 1784997660009,
+      "updated_at": 1784997660009,
+      "chunk_index": 0,
+      "document_id": "1b41dc7c-1fdc-581b-b88b-5604187fcb4a",
+      "source_task": null,
+      "source_user": null,
+      "ontology_uri": null,
+      "document_name": "text_159070588e79a784a19b0d5f1c5e6164",
+      "belongs_to_set": [],
+      "ontology_valid": false,
+      "feedback_weight": 0.5,
+      "source_chunk_id": null,
+      "source_node_set": null,
+      "source_pipeline": null,
+      "topological_rank": 0,
+      "importance_weight": 0.5,
+      "source_content_hash": null
+    }
+  ],
+  "files": [
+    "data/curated_primitives/raw_materials/learning-techniques-accelerated.md",
+    "data/curated_primitives/raw_materials/master-codex-50-universal-primitives.md"
+  ],
+  "directives_path": "data/curated_primitives/directives/SYSTEM.md",
+  "elapsed_seconds": 11.1,
+  "finished_at": "2026-07-25T17:05:51Z"
+}

@@ -1,0 +1,23 @@
+{
+  "source_type": "mock",
+  "external_id": "slack-thread-empire-001",
+  "channel": "#empire-dev",
+  "thread_id": "1710000000.001",
+  "messages": [
+    {
+      "author": "Alex Chen",
+      "timestamp": "2026-07-18T09:15:00Z",
+      "text": "We should pipe Slack threads into Cognee for graph memory."
+    },
+    {
+      "author": "Jordan Lee",
+      "timestamp": "2026-07-18T09:16:30Z",
+      "text": "Agreed. Person: Alex Chen is leading the ingestion pipeline design."
+    },
+    {
+      "author": "Alex Chen",
+      "timestamp": "2026-07-18T09:18:00Z",
+      "text": "Thread: empire-ingestion-v1 will track mock files first, no live Slack API yet."
+    }
+  ]
+}

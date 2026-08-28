@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "updated": "2026-07-20T21:03:21Z",
+  "ok": true,
+  "passed": 13,
+  "failed": 0,
+  "skipped": 1,
+  "checks": [
+    {
+      "id": "ollama.tags",
+      "label": "Ollama API reachable",
+      "ok": true,
+      "detail": "HTTP 200",
+      "skipped": false,
+      "duration_ms": 8
+    },
+    {
+      "id": "ollama.model",
+      "label": "Ollama chat model present",
+      "ok": true,
+      "detail": "compatible model found for llama3.1:8b",
+      "skipped": false,
+      "duration_ms": 2
+    },
+    {
+      "id": "pocketbase.health",
+      "label": "PocketBase health endpoint",
+      "ok": true,
+      "detail": "HTTP 200",
+      "skipped": false,
+      "duration_ms": 11
+    },
+    {
+      "id": "pocketbase.tasks",
+      "label": "PocketBase tasks API",
+      "ok": true,
+      "detail": "tasks collection readable (totalItems=6)",
+      "skipped": false,
+      "duration_ms": 1
+    },
+    {
+      "id": "frontend.static",
+      "label": "Tasks UI static server",
+      "ok": true,
+      "detail": "HTTP 200",
+      "skipped": false,
+      "duration_ms": 11
+    },
+    {
+      "id": "frontend.to_pocketbase",
+      "label": "Tasks UI -> PocketBase",
+      "ok": true,
+      "detail": "Tasks UI can reach PocketBase (same API path as index.html)",
+      "skipped": false,
+      "duration_ms": 12
+    },
+    {
+      "id": "frontend.control_api",
+      "label": "Dashboard control API",
+      "ok": true,
+      "detail": "Control API unavailable (restart with .\\scripts\\start-frontend.ps1 for dashboard Start/Stop)",
+      "skipped": true,
+      "duration_ms": 14
+    },
+    {
+      "id": "eve.info",
+      "label": "Eve agent API",
+      "ok": true,
+      "detail": "HTTP 200",
+      "skipped": false,
+      "duration_ms": 7
+    },
+    {
+      "id": "eve.to_pocketbase",
+      "label": "Eve -> PocketBase path",
+      "ok": true,
+      "detail": "Eve configured PocketBase reachable at http://127.0.0.1:8090",
+      "skipped": false,
+      "duration_ms": 11
+    },
+    {
+      "id": "eve.to_ollama",
+      "label": "Eve -> Ollama path",
+      "ok": true,
+      "detail": "Eve configured Ollama reachable at http://localhost:11434/v1",
+      "skipped": false,
+      "duration_ms": 1
+    },
+    {
+      "id": "eve.to_cognee_worker",
+      "label": "Eve -> Python/Cognee worker",
+      "ok": true,
+      "detail": "Eve Python/Cognee worker subprocess ok",
+      "skipped": false,
+      "duration_ms": 7665
+    },
+    {
+      "id": "mcp.pocketbase",
+      "label": "MCP empire-pocketbase -> PocketBase",
+      "ok": true,
+      "detail": "MCP PocketBase tools ok (1991 chars)",
+      "skipped": false,
+      "duration_ms": 610
+    },
+    {
+      "id": "mcp.cognee",
+      "label": "MCP empire-cognee -> Cognee",
+      "ok": true,
+      "detail": "MCP Cognee recall ok (82 chars)",
+      "skipped": false,
+      "duration_ms": 7781
+    },
+    {
+      "id": "integration.task_roundtrip",
+      "label": "Task write/read/delete round-trip",
+      "ok": true,
+      "detail": "task create -> read -> delete round-trip ok",
+      "skipped": false,
+      "duration_ms": 14
+    }
+  ],
+  "summary": {
+    "passed": 13,
+    "failed": 0,
+    "skipped": 1,
+    "total": 14,
+    "allPassed": true
+  }
+}

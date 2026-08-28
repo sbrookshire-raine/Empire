@@ -1,0 +1,27 @@
+# EMPIRE local Cognee backend — Postgres + pgvector (replaces embedded SQLite/Kuzu/LanceDB).
+# Start: docker compose up -d
+# Stop:  docker compose down
+
+services:
+  cognee-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: empire-cognee-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: cognee
+      POSTGRES_PASSWORD: cognee
+      # Matches Cognee DB_NAME=cognee_db (Just Postgres / pgvector setup).
+      POSTGRES_DB: cognee_db
+    volumes:
+      - empire_cognee_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-pgvector.sql:/docker-entrypoint-initdb.d/01-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cognee -d cognee_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  empire_cognee_pgdata:

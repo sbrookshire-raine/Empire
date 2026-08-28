@@ -1,0 +1,25 @@
+---
+description: Enforce EMPIRE zero-cloud local stack (HTMX, Alpine, PocketBase, Ollama, Cognee, FastMCP)
+alwaysApply: true
+---
+
+# EMPIRE Stack Rules
+
+## Banned technologies
+
+- React, Next.js, Vue, Svelte, or any SPA framework
+- Firebase, Supabase, or other cloud BaaS backends
+- Paid cloud LLM APIs in application code
+- Frontend build steps for the core UI
+- Cloud deployment targets in runtime configuration
+
+## Required stack
+
+- Frontend: plain HTML + HTMX + Alpine.js via CDN only
+- Backend: PocketBase at http://127.0.0.1:8090
+- Inference: http://localhost:11434/v1 (Ollama)
+- Memory: Cognee 1.0 remember/recall/improve/forget
+- MCP: Python FastMCP in mcp/ registered in .cursor/mcp.json
+- Eve agents only under agents/* with local Ollama provider
+
+Do not instruct changing Cursor Base URL to Ollama during the build phase.

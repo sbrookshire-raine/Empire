@@ -1,0 +1,23 @@
+{
+  "source_type": "mock",
+  "external_id": "github-issue-empire-42",
+  "repo": "empire/local-stack",
+  "issue": {
+    "number": 42,
+    "title": "Add stub ingestion pipeline for mock data",
+    "state": "open",
+    "author": "Jordan Lee",
+    "labels": ["ingestion", "cognee", "phase-3"],
+    "body": "Implement a local-file ingestion path that reads mock JSON and pushes entity relationships into Cognee graph memory."
+  },
+  "comments": [
+    {
+      "author": "Alex Chen",
+      "body": "Repo: empire/local-stack. Issue: 42 tracks the mock ingest Definition of Done."
+    },
+    {
+      "author": "Jordan Lee",
+      "body": "Person: Jordan Lee will verify recall returns Issue and Repo entities after ingest."
+    }
+  ]
+}

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPIRE Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <style>
+      body {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem;
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .summary strong {
+        font-size: 1.25rem;
+      }
+      .badge-ok {
+        background: #d1e7dd;
+        color: #0f5132;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .badge-down {
+        background: #f8d7da;
+        color: #842029;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .badge-warn {
+        background: #fff3cd;
+        color: #664d03;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      table {
+        font-size: 0.92rem;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: end;
+        margin-bottom: 1.25rem;
+      }
+      .controls label {
+        margin: 0;
+      }
+      .meta {
+        opacity: 0.75;
+        font-size: 0.85rem;
+      }
+      code {
+        font-size: 0.85rem;
+      }
+      .actions-cell button {
+        margin-right: 0.35rem;
+        margin-bottom: 0.25rem;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.78rem;
+      }
+      #action-toast {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        background: #212529;
+        color: #fff;
+        padding: 0.65rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 100;
+        max-width: 24rem;
+      }
+      #action-toast.show {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="dashboard"></nav>
+
+    <header>
+      <h1>Service Dashboard</h1>
+      <p class="meta">
+        Status board for local services. Day-to-day work is on
+        <a href="http://127.0.0.1:8080/primitives.html">Primitives</a>
+        (feed Eve), not this page.
+      </p>
+    </header>
+
+    <article>
+      <header><strong>Do this</strong></header>
+      <ol>
+        <li>
+          Cold start from the repo root (UAC if <code>V:</code> is missing):
+          <code>.\scripts\start-stack.ps1</code>
+        </li>
+        <li>
+          Open <a href="http://127.0.0.1:8080/primitives.html">Primitives</a>.
+          Drop Markdown into <code>data\curated_primitives\raw_materials\</code>
+          (never ingest <code>directives\</code>).
+        </li>
+        <li>Click <strong>Run curated ingest</strong>.</li>
+        <li>
+          Ask Cursor or Eve to recall dataset <code>primitives_test</code>.
+          Eve is the API on port 2000 — not this Cursor chat.
+        </li>
+      </ol>
+      <p class="meta">
+        Ollama must already be running (<code>ollama serve</code>). Plug in the T7
+        (<code>I:</code>) before start-stack. Wiki Ops is halted.
+      </p>
+    </article>
+
+    <section class="summary" aria-live="polite">
+      <div>
+        <strong id="summary-count">—</strong>
+        <span class="meta"> services healthy</span>
+      </div>
+      <span id="summary-badge" class="badge-warn">Loading…</span>
+      <span id="summary-updated" class="meta"></span>
+    </section>
+
+    <p id="load-error" class="meta" style="color: var(--pico-del-color); display: none"></p>
+
+    <div class="controls">
+      <button id="btn-start-all" type="button" class="outline">Start all</button>
+      <button id="btn-stop-all" type="button" class="outline secondary">Stop all</button>
+      <button id="btn-verify" type="button" class="outline">Verify integration</button>
+      <button id="btn-refresh" type="button">Refresh now</button>
+      <label>
+        Auto-refresh (sec)
+        <select id="interval-select">
+          <option value="0">Off</option>
+          <option value="5">5</option>
+          <option value="15" selected>15</option>
+          <option value="30">30</option>
+          <option value="60">60</option>
+        </select>
+      </label>
+    </div>
+
+    <article id="verify-panel" style="margin-top: 1rem; display: none">
+      <header><strong>Integration verification</strong></header>
+      <p id="verify-summary" class="meta"></p>
+      <ul id="verify-checks" style="font-size: 0.9rem"></ul>
+    </article>
+
+    <article>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Port</th>
+            <th>Status</th>
+            <th>Detail</th>
+            <th>Actions</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody id="service-rows">
+          <tr>
+            <td colspan="6">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article style="margin-top: 1.5rem">
+      <header><strong>Operational commands</strong></header>
+      <ul>
+        <li><code>.\scripts\start-stack.ps1</code> — preferred cold start (V: + Postgres + UI + Eve)</li>
+        <li><code>.\scripts\roll-in.ps1</code> — start managed services in order</li>
+        <li><code>.\scripts\roll-out.ps1</code> — stop managed services gracefully</li>
+        <li><code>.\scripts\start-eve.ps1</code> — Eve headless API (port 2000, from repo root)</li>
+        <li><code>.\scripts\verify-stack.ps1</code> — automated integration checks (communication paths)</li>
+        <li><code>.\scripts\refresh-dashboard.ps1</code> — update status snapshot only</li>
+      </ul>
+      <p class="meta">
+        Start-stack order: V: mount → Docker Postgres → Ollama (verify) → PocketBase →
+        Tasks UI → Eve. Roll-out reverses managed services; Ollama is left running.
+      </p>
+    </article>
+
+    <details>
+      <summary>Advanced — raw snapshot</summary>
+      <pre
+        id="raw-json"
+        style="font-size: 0.75rem; overflow: auto; max-height: 20rem"
+      ></pre>
+    </details>
+
+    <div id="action-toast" role="status" aria-live="polite"></div>
+
+    <script src="empire-nav.js"></script>
+    <script>
+      const PROBE_TIMEOUT_MS = 4000;
+      const CONTROL_TIMEOUT_MS = 180000;
+
+      const FALLBACK_SERVICES = [
+        {
+          id: "ollama",
+          label: "Ollama",
+          port: 11434,
+          healthUrl: "http://127.0.0.1:11434/api/tags",
+          dashboardUrl: "http://127.0.0.1:11434/",
+          managed: false,
+        },
+        {
+          id: "pocketbase",
+          label: "PocketBase",
+          port: 8090,
+          healthUrl: "http://127.0.0.1:8090/api/health",
+          dashboardUrl: "http://127.0.0.1:8090/",
+          managed: true,
+        },
+        {
+          id: "frontend",
+          label: "Tasks UI",
+          port: 8080,
+          healthUrl: "http://127.0.0.1:8080/",
+          dashboardUrl: "http://127.0.0.1:8080/",
+          managed: true,
+        },
+        {
+          id: "eve",
+          label: "Eve Agent",
+          port: 2000,
+          healthUrl: "http://127.0.0.1:2000/eve/v1/info",
+          dashboardUrl: "http://127.0.0.1:2000/",
+          managed: true,
+          dashboardControl: true,
+          startScript: "scripts/start-eve.ps1",
+        },
+      ];
+
+      let timer = null;
+
+      function snapshotUrls() {
+        return ["/api/services/status", "dashboard-status.json", "http://127.0.0.1:8090/dashboard/status.json"];
+      }
+
+      function showToast(message) {
+        var el = document.getElementById("action-toast");
+        el.textContent = message;
+        el.classList.add("show");
+        setTimeout(function () {
+          el.classList.remove("show");
+        }, 3500);
+      }
+
+      async function controlService(action, payload) {
+        var controller = new AbortController();
+        var timeout = setTimeout(function () {
+          controller.abort();
+        }, CONTROL_TIMEOUT_MS);
+        var res;
+        try {
+          res = await fetch("/api/services/" + action, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload || {}),
+            cache: "no-store",
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+        var data = {};
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = { ok: false, error: "Invalid control API response" };
+        }
+        if (!res.ok || !data.ok) {
+          var detail = data.error || data.stderr || data.stdout || ("HTTP " + res.status);
+          throw new Error(detail);
+        }
+        return data;
+      }
+
+      async function fetchWithTimeout(url, options) {
+        const controller = new AbortController();
+        const timeout = setTimeout(function () {
+          controller.abort();
+        }, PROBE_TIMEOUT_MS);
+        try {
+          return await fetch(
+            url,
+            Object.assign({ cache: "no-store", signal: controller.signal }, options || {})
+          );
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      async function fetchSnapshot() {
+        for (const url of snapshotUrls()) {
+          try {
+            const res = await fetchWithTimeout(url);
+            if (!res.ok) continue;
+            return await res.json();
+          } catch (err) {
+            /* try next */
+          }
+        }
+        return null;
+      }
+
+      async function probeService(svc) {
+        try {
+          const res = await fetchWithTimeout(svc.healthUrl);
+          return {
+            id: svc.id,
+            label: svc.label,
+            port: svc.port,
+            managed: svc.managed,
+            healthy: res.ok,
+            healthDetail: "HTTP " + res.status,
+            dashboardUrl: svc.dashboardUrl,
+            listening: res.ok,
+          };
+        } catch (err) {
+          const msg =
+            err && err.name === "AbortError" ? "timeout" : String(err.message || err);
+          return {
+            id: svc.id,
+            label: svc.label,
+            port: svc.port,
+            managed: svc.managed,
+            healthy: false,
+            healthDetail: msg,
+            dashboardUrl: svc.dashboardUrl,
+            listening: false,
+          };
+        }
+      }
+
+      async function loadLiveFallback() {
+        const services = await Promise.all(
+          FALLBACK_SERVICES.map(function (svc) {
+            return probeService(svc);
+          })
+        );
+        const healthy = services.filter(function (s) {
+          return s.healthy;
+        }).length;
+        return {
+          updated: new Date().toISOString(),
+          phase: "idle",
+          message: "Live probe (run scripts/refresh-dashboard.ps1 for snapshot)",
+          summary: {
+            healthy: healthy,
+            total: services.length,
+            allHealthy: healthy === services.length,
+          },
+          services: services,
+        };
+      }
+
+      function showError(message) {
+        const el = document.getElementById("load-error");
+        if (!message) {
+          el.style.display = "none";
+          el.textContent = "";
+          return;
+        }
+        el.style.display = "block";
+        el.textContent = message;
+      }
+
+      function statusBadge(svc) {
+        if (svc.healthy) return '<span class="badge-ok">healthy</span>';
+        if (svc.listening) return '<span class="badge-warn">unhealthy</span>';
+        return '<span class="badge-down">down</span>';
+      }
+
+      function render(data) {
+        if (!data || !Array.isArray(data.services)) {
+          throw new Error("Invalid dashboard data");
+        }
+
+        const healthy =
+          (data.summary && data.summary.healthy) || 0;
+        const total =
+          (data.summary && data.summary.total) || data.services.length;
+        document.getElementById("summary-count").textContent =
+          healthy + "/" + total;
+        const badge = document.getElementById("summary-badge");
+        if (data.summary && data.summary.allHealthy) {
+          badge.textContent = "All healthy";
+          badge.className = "badge-ok";
+        } else if (healthy > 0) {
+          badge.textContent = "Partial";
+          badge.className = "badge-warn";
+        } else {
+          badge.textContent = "Down";
+          badge.className = "badge-down";
+        }
+        const phase =
+          data.phase && data.phase !== "idle" ? " - " + data.phase : "";
+        document.getElementById("summary-updated").textContent =
+          "Updated " +
+          (data.updated ? new Date(data.updated).toLocaleString() : "-") +
+          phase;
+
+        const tbody = document.getElementById("service-rows");
+        tbody.innerHTML = "";
+        data.services.forEach(function (svc) {
+          const tr = document.createElement("tr");
+          var hint = "";
+          if (svc.startHint) {
+            hint = '<br><small>' + svc.startHint + "</small>";
+          } else if (svc.startScript) {
+            hint = '<br><small>.\\' + svc.startScript + "</small>";
+          }
+          var actionsHtml = "";
+          if (svc.dashboardControl) {
+            actionsHtml =
+              '<button type="button" class="outline" data-action="start" data-service="' +
+              svc.id +
+              '">Start</button>' +
+              '<button type="button" class="outline secondary" data-action="stop" data-service="' +
+              svc.id +
+              '">Stop</button>';
+          } else if (svc.startHint) {
+            actionsHtml = "<small>external</small>";
+          } else if (svc.id === "frontend") {
+            actionsHtml = "<small>this page</small>";
+          } else {
+            actionsHtml = "<small>n/a</small>";
+          }
+          tr.innerHTML =
+            "<td><strong>" +
+            svc.label +
+            "</strong><br><small>" +
+            (svc.managed ? "managed" : "external") +
+            "</small>" +
+            hint +
+            "</td>" +
+            "<td>" +
+            svc.port +
+            "</td>" +
+            "<td>" +
+            statusBadge(svc) +
+            "</td>" +
+            '<td><small>' +
+            (svc.healthDetail || "-") +
+            "</small></td>" +
+            '<td class="actions-cell">' +
+            actionsHtml +
+            "</td>" +
+            '<td><a href="' +
+            (svc.dashboardUrl || "#") +
+            '" target="_blank" rel="noopener">Open</a></td>';
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll("button[data-action]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            runServiceButton(btn.getAttribute("data-action"), btn.getAttribute("data-service"), btn);
+          });
+        });
+
+        document.getElementById("raw-json").textContent = JSON.stringify(
+          data,
+          null,
+          2
+        );
+        showError("");
+      }
+
+      async function runServiceButton(action, serviceId, button) {
+        var label = action === "start" ? "Starting" : "Stopping";
+        if (button) {
+          button.disabled = true;
+          button.textContent = label + "...";
+        }
+        try {
+          await controlService(action, { service: serviceId });
+          showToast(serviceId + " " + action + " complete");
+          await refresh();
+        } catch (err) {
+          showToast("Failed: " + (err.message || err));
+        } finally {
+          if (button) {
+            button.disabled = false;
+            button.textContent = action === "start" ? "Start" : "Stop";
+          }
+        }
+      }
+
+      async function runBulk(action) {
+        var btn = action === "start" ? document.getElementById("btn-start-all") : document.getElementById("btn-stop-all");
+        var oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = action === "start" ? "Starting..." : "Stopping...";
+        try {
+          await controlService(action, { all: true });
+          showToast("Roll-" + (action === "start" ? "in" : "out") + " complete");
+          await refresh();
+        } catch (err) {
+          showToast("Failed: " + (err.message || err));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      }
+
+      async function runVerify() {
+        var btn = document.getElementById("btn-verify");
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+        try {
+          var res = await fetch("/api/verify/stack", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ skipCognee: false }),
+          });
+          var data = await res.json();
+          renderVerify(data);
+          showToast(data.ok ? "Integration checks passed" : "Integration checks failed");
+        } catch (err) {
+          showToast("Verify failed: " + (err.message || err));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Verify integration";
+        }
+      }
+
+      function renderVerify(data) {
+        var panel = document.getElementById("verify-panel");
+        var summary = document.getElementById("verify-summary");
+        var list = document.getElementById("verify-checks");
+        if (!data || !Array.isArray(data.checks)) {
+          panel.style.display = "none";
+          return;
+        }
+        panel.style.display = "block";
+        var s = data.summary || {};
+        summary.textContent =
+          (data.ok ? "All checks passed" : "Some checks failed") +
+          " — " +
+          (s.passed || 0) +
+          " passed, " +
+          (s.failed || 0) +
+          " failed, " +
+          (s.skipped || 0) +
+          " skipped";
+        list.innerHTML = "";
+        data.checks.forEach(function (check) {
+          var li = document.createElement("li");
+          var mark = check.skipped ? "skip" : check.ok ? "ok" : "fail";
+          li.textContent = "[" + mark + "] " + check.label + " — " + check.detail;
+          list.appendChild(li);
+        });
+      }
+
+      async function controlApiAvailable() {
+        try {
+          var res = await fetch("/api/services/status", { cache: "no-store" });
+          return res.ok;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      async function refresh() {
+        try {
+          const snap = await fetchSnapshot();
+          const data = snap || (await loadLiveFallback());
+          render(data);
+        } catch (err) {
+          showError("Dashboard failed to load: " + (err.message || err));
+          document.getElementById("summary-badge").textContent = "Error";
+          document.getElementById("summary-badge").className = "badge-down";
+          document.getElementById("service-rows").innerHTML =
+            '<tr><td colspan="6">Run scripts/start-frontend.ps1 with serve.py, then refresh.</td></tr>';
+        }
+      }
+
+      function setIntervalSeconds(sec) {
+        if (timer) clearInterval(timer);
+        timer = null;
+        const n = Number(sec);
+        if (n > 0) timer = setInterval(refresh, n * 1000);
+      }
+
+      document.getElementById("btn-verify").addEventListener("click", runVerify);
+      document.getElementById("btn-refresh").addEventListener("click", refresh);
+      document.getElementById("btn-start-all").addEventListener("click", function () {
+        runBulk("start");
+      });
+      document.getElementById("btn-stop-all").addEventListener("click", function () {
+        runBulk("stop");
+      });
+      document.getElementById("interval-select").addEventListener("change", function (e) {
+        setIntervalSeconds(e.target.value);
+      });
+
+      refresh();
+      fetch("verify-stack.json", { cache: "no-store" })
+        .then(function (res) {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(renderVerify)
+        .catch(function () {});
+      controlApiAvailable().then(function (ok) {
+        if (ok) return;
+        showError(
+          "Start/Stop buttons need the control API. Restart with .\\scripts\\start-frontend.ps1 (serve.py), not python -m http.server."
+        );
+        ["btn-start-all", "btn-stop-all"].forEach(function (id) {
+          document.getElementById(id).disabled = true;
+        });
+      });
+      setIntervalSeconds(document.getElementById("interval-select").value);
+    </script>
+  </body>
+</html>

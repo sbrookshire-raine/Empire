@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "empire-pocketbase": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/pocketbase_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "POCKETBASE_URL": "http://127.0.0.1:8090",
+        "POCKETBASE_ADMIN_EMAIL": "admin@empire.local",
+        "POCKETBASE_ADMIN_PASSWORD": "empire-admin-change-me"
+      }
+    },
+    "empire-cognee": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/cognee_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE"
+      }
+    },
+    "empire-wiki": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/wiki_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "POCKETBASE_URL": "http://127.0.0.1:8090",
+        "WIKI_ROOT": "D:/wiki_md",
+        "WEAVIATE_DUMP_DIR": "I:/EMPIRE_DATA/weaviate_dump",
+        "EMPIRE_COGNEE_ROOT": "V:/Cognee",
+        "OLLAMA_BASE_URL": "http://localhost:11434/v1",
+        "OLLAMA_MODEL": "llama3.1:latest"
+      }
+    }
+  }
+}

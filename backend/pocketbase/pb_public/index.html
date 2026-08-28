@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPIRE PocketBase</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="/empire-nav.css" />
+  </head>
+  <body>
+    <main class="container">
+      <nav id="empire-nav" data-current="backend"></nav>
+
+      <h1>PocketBase Backend</h1>
+      <p>SQLite API running on port <strong>8090</strong>.</p>
+
+      <article id="health">Checking API health…</article>
+
+      <p><small>Admin login: admin@empire.local</small></p>
+    </main>
+    <script src="/empire-nav.js"></script>
+    <script>
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((d) => {
+          document.getElementById("health").innerHTML =
+            "<strong>Status:</strong> " +
+            d.message +
+            " <small>(HTTP " +
+            d.code +
+            ")</small>";
+        })
+        .catch(() => {
+          document.getElementById("health").textContent =
+            "API health check failed.";
+        });
+    </script>
+  </body>
+</html>

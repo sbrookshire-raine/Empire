@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "updated": "2026-08-27T13:25:52.4211861Z",
+  "phase": "idle",
+  "message": "Manual refresh",
+  "summary": {
+    "healthy": 4,
+    "total": 4,
+    "allHealthy": true
+  },
+  "rollInOrder": [
+    "ollama",
+    "pocketbase",
+    "frontend",
+    "eve"
+  ],
+  "rollOutOrder": [
+    "eve",
+    "frontend",
+    "pocketbase"
+  ],
+  "services": [
+    {
+      "id": "ollama",
+      "label": "Ollama",
+      "description": "Local LLM inference",
+      "port": 11434,
+      "managed": false,
+      "dashboardControl": false,
+      "startScript": null,
+      "startHint": "ollama serve",
+      "listening": true,
+      "healthy": true,
+      "healthDetail": "HTTP 200",
+      "dashboardUrl": "http://127.0.0.1:11434/",
+      "pid": null
+    },
+    {
+      "id": "pocketbase",
+      "label": "PocketBase",
+      "description": "SQLite API + admin",
+      "port": 8090,
+      "managed": true,
+      "dashboardControl": true,
+      "startScript": "scripts/start-pocketbase-background.ps1",
+      "startHint": null,
+      "listening": true,
+      "healthy": true,
+      "healthDetail": "HTTP 200",
+      "dashboardUrl": "http://127.0.0.1:8090/",
+      "pid": null
+    },
+    {
+      "id": "frontend",
+      "label": "Tasks UI",
+      "description": "Zero-build HTMX frontend + dashboard control API",
+      "port": 8080,
+      "managed": true,
+      "dashboardControl": false,
+      "startScript": "scripts/start-frontend.ps1",
+      "startHint": null,
+      "listening": true,
+      "healthy": true,
+      "healthDetail": "HTTP 200",
+      "dashboardUrl": "http://127.0.0.1:8080/",
+      "pid": null
+    },
+    {
+      "id": "eve",
+      "label": "Eve Agent",
+      "description": "Local task + memory agent",
+      "port": 2000,
+      "managed": true,
+      "dashboardControl": true,
+      "startScript": "scripts/start-eve.ps1",
+      "startHint": null,
+      "listening": true,
+      "healthy": true,
+      "healthDetail": "HTTP 200",
+      "dashboardUrl": "http://127.0.0.1:2000/",
+      "pid": null
+    }
+  ],
+  "commands": {
+    "rollIn": ".\\scripts\\roll-in.ps1",
+    "rollOut": ".\\scripts\\roll-out.ps1",
+    "refresh": ".\\scripts\\refresh-dashboard.ps1",
+    "status": ".\\scripts\\check-status.ps1"
+  }
+}

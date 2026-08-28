@@ -1,0 +1,1466 @@
+(function () {
+  "use strict";
+
+  var MAX_FILE_BYTES = 50 * 1024 * 1024;
+  var MAX_FILES = 20;
+  var ALLOWED_EXTENSIONS = [".md", ".txt", ".pdf"];
+  var DIRECTIVE_FILENAME = "SYSTEM.md";
+  var TOOL_LABELS = {
+    cognee_recall: "Searching memory…",
+    cognee_remember: "Saving memory…",
+    cognee_improve: "Improving memory graph…",
+    cognee_forget: "Preparing to clear memory…",
+    list_tasks: "Reading PocketBase tasks…",
+    search_tasks: "Searching PocketBase tasks…",
+    create_task: "Creating a PocketBase task…",
+    update_task: "Updating a PocketBase task…",
+    delete_task: "Preparing to delete a PocketBase task…",
+    get_model_suite: "Reading model suite plan…",
+    list_models: "Listing Ollama models…",
+    switch_chat_model: "Switching chat model…",
+    ollama_health: "Checking Ollama…",
+    pb_health: "Checking PocketBase…",
+  };
+  var SERVICE_LABELS = {
+    eve: "Eve",
+    memory: "Memory",
+    pocketbase: "PocketBase",
+    ollama: "Ollama",
+  };
+
+  function plainText(value) {
+    var node = document.createElement("span");
+    node.textContent = typeof value === "string" ? value : "";
+    return node.textContent;
+  }
+
+  function errorMessage(payload, fallback) {
+    return plainText(payload && (payload.error || payload.message)) || fallback;
+  }
+
+  function fileExtension(name) {
+    var normalized = String(name || "").toLowerCase();
+    var dot = normalized.lastIndexOf(".");
+    return dot >= 0 ? normalized.slice(dot) : "";
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KiB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MiB";
+  }
+
+  function validateFiles(files) {
+    if (!files.length) return "Choose at least one Markdown, text, or PDF file.";
+    if (files.length > MAX_FILES) return "Choose 20 files or fewer, then try again.";
+    for (var index = 0; index < files.length; index += 1) {
+      var file = files[index];
+      var normalizedPath = String(file.webkitRelativePath || file.name).replace(/\\/g, "/");
+      var basename = String(file.name || "");
+      var upperName = basename.toUpperCase();
+      if (
+        upperName === DIRECTIVE_FILENAME.toUpperCase() ||
+        upperName.indexOf("LENS_") === 0 ||
+        normalizedPath.toLowerCase().split("/").indexOf("directives") >= 0
+      ) {
+        return basename + " is a directive file and cannot be added to memory.";
+      }
+      if (ALLOWED_EXTENSIONS.indexOf(fileExtension(basename)) < 0) {
+        return basename + " must be a .md, .txt, or .pdf file.";
+      }
+      if (file.size <= 0) return basename + " is empty. Choose a file with content.";
+      if (file.size > MAX_FILE_BYTES) {
+        return basename + " is larger than 50 MiB. Choose a smaller file.";
+      }
+    }
+    return "";
+  }
+
+  function displayToolName(name) {
+    return String(name || "local tool")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, function (letter) {
+        return letter.toUpperCase();
+      });
+  }
+
+  function isPrivateEventType(type) {
+    var normalized = String(type || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+|\.+$/g, "");
+    var tokens = normalized.split(".");
+    return tokens.indexOf("reasoning") >= 0 || tokens.indexOf("thinking") >= 0;
+  }
+
+  function actionToolName(action) {
+    if (!action || typeof action !== "object") return "";
+    return plainText(
+      action.toolName ||
+        action.actionName ||
+        action.name ||
+        (action.tool && action.tool.name) ||
+        ""
+    );
+  }
+
+  function normalizeOptions(request) {
+    var options = Array.isArray(request && request.options) ? request.options : [];
+    if (!options.length && request && request.type === "approval") {
+      options = [
+        { id: "approve", label: "Approve" },
+        { id: "deny", label: "Deny" },
+      ];
+    }
+    return options.map(function (option, index) {
+      if (typeof option === "string") {
+        return { id: option, label: option };
+      }
+      return {
+        id: plainText(option && (option.optionId || option.id || option.value)) || String(index + 1),
+        label:
+          plainText(option && (option.label || option.title || option.value || option.id)) ||
+          "Option " + String(index + 1),
+      };
+    });
+  }
+
+  function initialHealth() {
+    return Object.keys(SERVICE_LABELS).map(function (id) {
+      return {
+        id: id,
+        label: SERVICE_LABELS[id],
+        state: "checking",
+        status: "Checking",
+        symbol: "·",
+      };
+    });
+  }
+
+  var POCKETBASE_URL = "http://127.0.0.1:8090";
+  var TASK_STATUSES = ["todo", "in_progress", "done"];
+
+  function emptyTaskDraft() {
+    return { title: "", description: "", status: "todo", priority: 1 };
+  }
+
+  window.eveWorkbench = function () {
+    return {
+      selectedFiles: [],
+      rawFiles: [],
+      dragActive: false,
+      dataset: "eve_memory",
+      fullGraph: false,
+      uploading: false,
+      activeJob: null,
+      uploadedContext: null,
+      recentJobs: [],
+      memoryError: "",
+      pollTimer: null,
+      pollInFlight: false,
+      pollGeneration: 0,
+      draft: "",
+      sessionId: null,
+      continuationToken: null,
+      streamIndex: 0,
+      messages: [],
+      activities: [],
+      pendingInputs: [],
+      sending: false,
+      chatError: "",
+      chatStatus: "Ready for a local conversation.",
+      streamController: null,
+      requestController: null,
+      cancelController: null,
+      chatGeneration: 0,
+      streamReader: null,
+      currentAssistantId: null,
+      nextId: 1,
+      ollamaModels: [],
+      selectedModel: "",
+      activeOllamaModel: "",
+      ollamaConnected: false,
+      ollamaStatus: "Checking Ollama…",
+      switchingModel: false,
+      tasks: [],
+      taskFilter: "all",
+      tasksLoading: false,
+      taskError: "",
+      taskDraft: emptyTaskDraft(),
+      editingId: "",
+      editDraft: emptyTaskDraft(),
+      pendingDeleteId: "",
+      activeTab: "chat",
+      taskSummary: "",
+      taskSummaryLoading: false,
+      taskSummaryError: "",
+      taskSummaryModel: "",
+      taskOverviewOpen: false,
+      taskSummaryStamp: "",
+      memoryConfig: {
+        embeddingModel: "nomic-embed-text:latest",
+        embeddingProvider: "ollama",
+        defaultDataset: "eve_memory",
+      },
+      modelInventory: [],
+      modelRecommendations: {
+        summary: "",
+        suite: [],
+        skills: [],
+        pullGaps: [],
+        removeSuggestions: [],
+        recommendedKeep: [],
+        eveBriefing: "",
+        optionalCleanup: [],
+        eveGuidance: {},
+      },
+      modelInventoryLoading: false,
+      modelInventoryError: "",
+      health: {
+        services: initialHealth(),
+        summary: "Checking local services…",
+        repairing: false,
+      },
+
+      get canUpload() {
+        return this.rawFiles.length > 0 && !this.memoryError && !this.memoryLocked;
+      },
+
+      get memoryLocked() {
+        return this.uploading || this.pollTimer !== null || this.pollInFlight;
+      },
+
+      get pendingInput() {
+        return this.pendingInputs.length ? this.pendingInputs[0] : null;
+      },
+
+      get visibleTasks() {
+        var filter = this.taskFilter;
+        if (filter === "all") return this.tasks;
+        return this.tasks.filter(function (task) {
+          return task.status === filter;
+        });
+      },
+
+      get chatLineStatus() {
+        var model = this.activeOllamaModel || this.selectedModel;
+        var modelPart = this.ollamaConnected
+          ? model
+            ? "Ollama · " + model
+            : "Ollama connected"
+          : this.ollamaStatus || "Ollama unavailable";
+        var chatPart = plainText(this.chatStatus);
+        if (!chatPart || chatPart === modelPart) return modelPart;
+        if (/^ready\.?$/i.test(chatPart) || /^ready for a (new )?local conversation\.?$/i.test(chatPart)) {
+          return modelPart;
+        }
+        return modelPart + " · " + chatPart;
+      },
+
+      init: function () {
+        try {
+          var saved = localStorage.getItem("eve-workbench-tab");
+          if (saved && ["chat", "tasks", "memory", "models", "more"].indexOf(saved) >= 0) {
+            this.activeTab = saved;
+          }
+        } catch (_error) {
+          /* ignore storage errors */
+        }
+        this.refreshMemoryStatus();
+        this.refreshHealth();
+        this.refreshTasks();
+      },
+
+      setTab: function (tab) {
+        var allowed = ["chat", "tasks", "memory", "models", "more"];
+        if (allowed.indexOf(tab) < 0) tab = "chat";
+        this.activeTab = tab;
+        try {
+          localStorage.setItem("eve-workbench-tab", tab);
+        } catch (_error) {
+          /* ignore storage errors */
+        }
+        if (tab === "chat") this.scrollTranscript();
+        if (tab === "models") this.refreshModelInventory(false);
+      },
+
+      applyModelInventory: function (payload) {
+        if (!payload || typeof payload !== "object") return;
+        this.modelInventory = Array.isArray(payload.models) ? payload.models : [];
+        if (payload.recommendations && typeof payload.recommendations === "object") {
+          this.modelRecommendations = payload.recommendations;
+        }
+        this.modelInventoryError = "";
+      },
+
+      fitLabel: function (fit) {
+        var labels = {
+          excellent: "Excellent fit",
+          good: "Good fit",
+          tight: "Tight fit",
+          heavy: "Heavy (RAM offload)",
+          embed: "Embed only",
+        };
+        return labels[fit] || "Unknown fit";
+      },
+
+      isActiveChatModel: function (modelId) {
+        var active = plainText(this.activeOllamaModel || this.selectedModel);
+        return Boolean(modelId) && active === plainText(modelId);
+      },
+
+      formatModelSkills: function (model) {
+        var labels = {
+          dailyChat: "Daily chat",
+          coding: "Coding",
+          reasoning: "Reasoning",
+          deepQuality: "Deep quality",
+          embedding: "Embed",
+        };
+        return (model && Array.isArray(model.skills) ? model.skills : [])
+          .map(function (skill) {
+            return labels[skill] || skill;
+          })
+          .join(", ");
+      },
+
+      suiteStatusLabel: function (status) {
+        var labels = {
+          covered: "Covered",
+          weak: "Workable",
+          gap: "Gap",
+        };
+        return labels[status] || status;
+      },
+
+      copyEveBriefing: async function () {
+        var text = plainText(this.modelRecommendations.eveBriefing);
+        if (!text) return;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            this.modelInventoryError = "";
+            this.chatStatus = "Eve briefing copied.";
+            return;
+          }
+        } catch (_error) {
+          /* fall through */
+        }
+        this.modelInventoryError = "Could not copy — select the briefing text manually.";
+      },
+
+      refreshModelInventory: async function (force) {
+        if (
+          !force &&
+          this.modelInventory.length &&
+          plainText(this.modelRecommendations.summary)
+        ) {
+          return;
+        }
+        this.modelInventoryLoading = true;
+        this.modelInventoryError = "";
+        try {
+          var response = await fetch("/api/ollama/inventory", { cache: "no-store" });
+          if (response.status === 404) {
+            response = await fetch("/api/ollama/models", { cache: "no-store" });
+          }
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false) {
+            throw new Error(errorMessage(payload, "Model roster is unavailable."));
+          }
+          if (payload.inventory) {
+            this.applyModelInventory(payload.inventory);
+          } else {
+            this.applyModelInventory(payload);
+          }
+        } catch (error) {
+          this.modelInventoryError =
+            plainText(error.message) || "Model roster is unavailable.";
+        } finally {
+          this.modelInventoryLoading = false;
+        }
+      },
+
+      selectChatModel: async function (modelId) {
+        var model = plainText(modelId);
+        if (!model || !this.ollamaModels.some(function (item) { return item.id === model; })) {
+          this.modelInventoryError = "That model is not available for Eve chat.";
+          return;
+        }
+        this.selectedModel = model;
+        this.setTab("chat");
+        await this.applyOllamaModel();
+      },
+
+      taskSummaryKey: function () {
+        return this.tasks
+          .map(function (task) {
+            return [
+              plainText(task.id),
+              plainText(task.status),
+              plainText(task.title),
+              String(task.priority),
+              plainText(task.description),
+            ].join("|");
+          })
+          .join(";");
+      },
+
+      onTaskOverviewToggle: function (event) {
+        var open = Boolean(event.target && event.target.open);
+        this.taskOverviewOpen = open;
+        if (open) this.refreshTaskSummary(false);
+      },
+
+      refreshTaskSummary: async function (force) {
+        if (!this.taskOverviewOpen && !force) return;
+        var stamp = this.taskSummaryKey();
+        if (!force && stamp === this.taskSummaryStamp && this.taskSummary) return;
+        this.taskSummaryLoading = true;
+        this.taskSummaryError = "";
+        try {
+          if (!this.tasks.length && !this.tasksLoading) await this.refreshTasks();
+          var response = await fetch("/api/ollama/summarize-tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tasks: this.tasks,
+              model: this.activeOllamaModel || this.selectedModel || undefined,
+            }),
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false) {
+            throw new Error(errorMessage(payload, "Task summary is unavailable."));
+          }
+          this.taskSummary = plainText(payload.summary);
+          this.taskSummaryModel = plainText(payload.model);
+          this.taskSummaryStamp = stamp;
+        } catch (error) {
+          this.taskSummaryError =
+            plainText(error.message) || "Task summary is unavailable.";
+        } finally {
+          this.taskSummaryLoading = false;
+        }
+      },
+
+      setDrag: function (active) {
+        if (this.memoryLocked) return;
+        this.dragActive = active;
+      },
+
+      handleFileInput: function (event) {
+        if (this.memoryLocked) {
+          event.target.value = "";
+          this.memoryError = "Wait for the active memory job before changing files.";
+          return;
+        }
+        this.selectFiles(Array.from(event.target.files || []));
+      },
+
+      handleDrop: function (event) {
+        this.dragActive = false;
+        if (this.memoryLocked) {
+          this.memoryError = "Wait for the active memory job before changing files.";
+          return;
+        }
+        this.selectFiles(Array.from(event.dataTransfer.files || []));
+      },
+
+      selectFiles: function (files) {
+        if (this.memoryLocked) {
+          this.memoryError = "Wait for the active memory job before changing files.";
+          return;
+        }
+        this.activeJob = null;
+        this.uploadedContext = null;
+        this.memoryError = validateFiles(files);
+        this.rawFiles = this.memoryError ? [] : files;
+        this.selectedFiles = files.map(function (file, index) {
+          return {
+            key: file.name + ":" + file.size + ":" + index,
+            name: plainText(file.name),
+            sizeLabel: formatBytes(file.size),
+            status: "Selected",
+            state: "selected",
+            symbol: "○",
+          };
+        });
+      },
+
+      uploadFiles: async function () {
+        if (this.memoryLocked) return;
+        this.memoryError = validateFiles(this.rawFiles);
+        if (this.memoryError) return;
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(this.dataset)) {
+          this.memoryError =
+            "The dataset name must use 1–64 letters, numbers, underscores, or hyphens.";
+          return;
+        }
+
+        this.uploading = true;
+        this.updateSelectedStatus("Uploading", "working", "↻");
+        var uploadDataset = this.dataset;
+        var form = new FormData();
+        this.rawFiles.forEach(function (file) {
+          form.append("files", file, file.name);
+        });
+        form.append("dataset", this.dataset);
+        form.append("full_graph", this.fullGraph ? "true" : "false");
+
+        try {
+          var response = await fetch("/api/memory/upload", {
+            method: "POST",
+            body: form,
+          });
+          var payload = await response.json();
+          if (!response.ok || !payload.ok || !payload.job) {
+            throw new Error(errorMessage(payload, "The files could not be added to memory."));
+          }
+          this.activeJob = payload.job;
+          this.uploadedContext = {
+            jobId: plainText(payload.job.id),
+            dataset: plainText(payload.job.dataset) || uploadDataset,
+            files: Array.isArray(payload.job.files)
+              ? payload.job.files.map(function (file) {
+                  return plainText(file && file.name);
+                })
+              : [],
+          };
+          this.upsertRecentJob(payload.job);
+          this.applyJobToFiles(payload.job);
+          this.startPolling(payload.job.id);
+        } catch (error) {
+          this.memoryError = plainText(error.message) || "The files could not be added to memory.";
+          this.updateSelectedStatus("Failed", "failed", "×");
+        } finally {
+          this.uploading = false;
+        }
+      },
+
+      updateSelectedStatus: function (status, state, symbol) {
+        this.selectedFiles.forEach(function (file) {
+          file.status = status;
+          file.state = state;
+          file.symbol = symbol;
+        });
+      },
+
+      applyJobToFiles: function (job) {
+        var label = plainText(job.label) || "Learning";
+        var state = job.status === "ready" ? "ready" : job.status === "failed" ? "failed" : "working";
+        var symbol = job.status === "ready" ? "✓" : job.status === "failed" ? "×" : "↻";
+        this.updateSelectedStatus(label, state, symbol);
+      },
+
+      startPolling: function (jobId) {
+        this.stopPolling();
+        this.schedulePoll(jobId, this.pollGeneration, 0);
+      },
+
+      schedulePoll: function (jobId, generation, delay) {
+        if (generation !== this.pollGeneration) return;
+        var workbench = this;
+        this.pollTimer = setTimeout(function () {
+          workbench.pollTimer = null;
+          workbench.pollJob(jobId, generation);
+        }, delay);
+      },
+
+      stopPolling: function () {
+        this.pollGeneration += 1;
+        if (this.pollTimer !== null) {
+          clearTimeout(this.pollTimer);
+          this.pollTimer = null;
+        }
+      },
+
+      pollJob: async function (jobId, generation) {
+        if (generation !== this.pollGeneration) return;
+        if (this.pollInFlight) {
+          this.schedulePoll(jobId, generation, 100);
+          return;
+        }
+        this.pollInFlight = true;
+        var keepPolling = false;
+        try {
+          var response = await fetch("/api/memory/jobs/" + encodeURIComponent(jobId), {
+            cache: "no-store",
+          });
+          var payload = await response.json();
+          if (generation !== this.pollGeneration) return;
+          if (!response.ok || !payload.ok || !payload.job) {
+            throw new Error(errorMessage(payload, "Memory progress is unavailable."));
+          }
+          this.activeJob = payload.job;
+          this.upsertRecentJob(payload.job);
+          this.applyJobToFiles(payload.job);
+          if (payload.job.status === "ready" || payload.job.status === "failed") {
+            this.stopPolling();
+          } else {
+            keepPolling = true;
+          }
+        } catch (error) {
+          if (generation !== this.pollGeneration) return;
+          this.memoryError = plainText(error.message) || "Memory progress is unavailable.";
+          this.stopPolling();
+        } finally {
+          this.pollInFlight = false;
+          if (keepPolling && generation === this.pollGeneration) {
+            this.schedulePoll(jobId, generation, 1000);
+          }
+        }
+      },
+
+      retryJob: async function (jobId) {
+        this.memoryError = "";
+        try {
+          var response = await fetch(
+            "/api/memory/jobs/" + encodeURIComponent(jobId) + "/retry",
+            { method: "POST" }
+          );
+          var payload = await response.json();
+          if (!response.ok || !payload.ok || !payload.job) {
+            throw new Error(errorMessage(payload, "The memory job could not be retried."));
+          }
+          this.activeJob = payload.job;
+          this.upsertRecentJob(payload.job);
+          this.applyJobToFiles(payload.job);
+          this.startPolling(jobId);
+        } catch (error) {
+          this.memoryError = plainText(error.message) || "The memory job could not be retried.";
+        }
+      },
+
+      refreshMemoryStatus: async function () {
+        try {
+          var response = await fetch("/api/memory/status", { cache: "no-store" });
+          var payload = await response.json();
+          if (!response.ok || !payload.ok) return;
+          if (payload.config && typeof payload.config === "object") {
+            this.memoryConfig = Object.assign({}, this.memoryConfig, payload.config);
+          }
+          this.recentJobs = Array.isArray(payload.jobs)
+            ? payload.jobs
+                .slice()
+                .sort(function (left, right) {
+                  return String(right.updated_at || "").localeCompare(String(left.updated_at || ""));
+                })
+                .slice(0, 8)
+            : [];
+        } catch (_error) {
+          return;
+        }
+      },
+
+      upsertRecentJob: function (job) {
+        this.recentJobs = [job]
+          .concat(
+            this.recentJobs.filter(function (recent) {
+              return recent.id !== job.id;
+            })
+          )
+          .slice(0, 8);
+      },
+
+      jobSymbol: function (job) {
+        if (!job) return "·";
+        if (job.status === "ready") return "✓";
+        if (job.status === "failed") return "×";
+        return "↻";
+      },
+
+      jobFileSummary: function (job) {
+        var files = Array.isArray(job && job.files) ? job.files : [];
+        return files.length
+          ? files
+              .map(function (file) {
+                return plainText(file.name);
+              })
+              .join(", ")
+          : "Memory job";
+      },
+
+      askAboutFiles: function () {
+        if (!this.uploadedContext || !this.activeJob || this.activeJob.status !== "ready") return;
+        var names = this.uploadedContext.files;
+        this.draft =
+          "Summarize the files I just added" +
+          (names.length ? " (" + names.join(", ") + ")" : "") +
+          " from dataset " +
+          this.uploadedContext.dataset +
+          ".";
+        this.sendMessage();
+      },
+
+      askAboutFilesInChat: function () {
+        this.setTab("chat");
+        this.askAboutFiles();
+      },
+
+      beginChatOperation: function () {
+        if (this.requestController) this.requestController.abort();
+        this.chatGeneration += 1;
+        this.requestController = new AbortController();
+        return this.chatGeneration;
+      },
+
+      isCurrentChatOperation: function (generation) {
+        return generation === this.chatGeneration;
+      },
+
+      invalidateChatOperation: async function () {
+        this.chatGeneration += 1;
+        if (this.requestController) this.requestController.abort();
+        this.requestController = null;
+        if (this.streamController) this.streamController.abort();
+        this.streamController = null;
+        if (this.streamReader) {
+          await this.streamReader.cancel().catch(function () {});
+        }
+        this.streamReader = null;
+      },
+
+      scrollTranscript: function () {
+        if (typeof this.$nextTick !== "function") return;
+        this.$nextTick(
+          function () {
+            var transcript = this.$refs && this.$refs.transcript;
+            if (!transcript) return;
+            transcript.scrollTo({ top: transcript.scrollHeight, behavior: "auto" });
+          }.bind(this)
+        );
+      },
+
+      onComposerKeydown: function (event) {
+        if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+        if (event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        this.sendMessage();
+      },
+
+      sendMessage: async function () {
+        var text = plainText(this.draft).trim();
+        if (!text || this.sending) return;
+        var generation = this.beginChatOperation();
+        this.chatError = "";
+        this.messages.push({ id: this.makeId("message"), role: "user", text: text });
+        this.scrollTranscript();
+        this.draft = "";
+        this.sending = true;
+        this.chatStatus = "Eve is working…";
+
+        try {
+          var path = this.sessionId
+            ? "/api/eve/session/" + encodeURIComponent(this.sessionId)
+            : "/api/eve/session";
+          var body = this.sessionId
+            ? { continuationToken: this.continuationToken, message: text }
+            : { message: text };
+          var response = await fetch(path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: this.requestController.signal,
+          });
+          if (!this.isCurrentChatOperation(generation)) return;
+          var payload = await response.json();
+          if (!this.isCurrentChatOperation(generation)) return;
+          if (!response.ok) {
+            throw new Error(errorMessage(payload, "Eve could not start this message."));
+          }
+          this.sessionId =
+            plainText(payload.sessionId) ||
+            plainText(response.headers.get("X-Eve-Session-Id")) ||
+            this.sessionId;
+          this.continuationToken =
+            plainText(payload.continuationToken) || this.continuationToken;
+          if (!this.sessionId) throw new Error("Eve did not return a conversation ID.");
+          await this.readStream(generation);
+        } catch (error) {
+          if (this.isCurrentChatOperation(generation) && error.name !== "AbortError") {
+            this.chatError = plainText(error.message) || "Eve could not answer this message.";
+            this.chatStatus = "Eve needs attention.";
+          }
+        } finally {
+          if (this.isCurrentChatOperation(generation)) {
+            this.sending = false;
+            this.streamReader = null;
+            this.streamController = null;
+            this.requestController = null;
+          }
+        }
+      },
+
+      readStream: async function (generation) {
+        if (!this.isCurrentChatOperation(generation) || !this.requestController) return;
+        this.streamController = this.requestController;
+        var response = await fetch(
+          "/api/eve/session/" +
+            encodeURIComponent(this.sessionId) +
+            "/stream?startIndex=" +
+            encodeURIComponent(this.streamIndex),
+          { cache: "no-store", signal: this.streamController.signal }
+        );
+        if (!this.isCurrentChatOperation(generation)) return;
+        if (!response.ok || !response.body) {
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          throw new Error(errorMessage(payload, "Eve’s response stream is unavailable."));
+        }
+
+        var reader = response.body.getReader();
+        this.streamReader = reader;
+        var decoder = new TextDecoder();
+        var buffer = "";
+        while (true) {
+          var result = await reader.read();
+          if (!this.isCurrentChatOperation(generation)) return;
+          buffer += decoder.decode(result.value || new Uint8Array(), { stream: !result.done });
+          var newline = buffer.indexOf("\n");
+          while (newline >= 0) {
+            var line = buffer.slice(0, newline).trim();
+            buffer = buffer.slice(newline + 1);
+            if (line && this.consumeEventLine(line)) return;
+            newline = buffer.indexOf("\n");
+          }
+          if (result.done) break;
+        }
+        if (buffer.trim()) this.consumeEventLine(buffer.trim());
+      },
+
+      consumeEventLine: function (line) {
+        var event;
+        try {
+          event = JSON.parse(line);
+        } catch (_error) {
+          return false;
+        }
+        if (!event || typeof event !== "object" || typeof event.type !== "string") return false;
+        var upstreamNextIndex =
+          event._proxy && Number.isInteger(event._proxy.upstreamNextIndex)
+            ? event._proxy.upstreamNextIndex
+            : null;
+        this.streamIndex =
+          upstreamNextIndex !== null ? upstreamNextIndex : this.streamIndex + 1;
+        this.projectEvent(event.type, event.data && typeof event.data === "object" ? event.data : {});
+        if (event.type === "session.waiting") {
+          this.sending = false;
+          if (this.streamReader) this.streamReader.cancel().catch(function () {});
+          return true;
+        }
+        return false;
+      },
+
+      projectEvent: function (type, data) {
+        if (isPrivateEventType(type) || type === "message.received") return;
+        if (type === "message.appended") {
+          this.updateAssistantMessage(data);
+          this.chatStatus = "Eve is responding…";
+          return;
+        }
+        if (type === "message.completed") {
+          this.updateAssistantMessage(data);
+          this.currentAssistantId = null;
+          return;
+        }
+        if (type === "actions.requested") {
+          this.addActions(data.actions || data.requests || []);
+          return;
+        }
+        if (type === "action.result") {
+          this.completeAction(data);
+          return;
+        }
+        if (type === "input.requested") {
+          this.setPendingInput(data.requests || []);
+          return;
+        }
+        if (type === "session.waiting") {
+          this.continuationToken =
+            plainText(data.continuationToken) || this.continuationToken;
+          this.chatStatus = this.pendingInput ? "Eve is waiting for your choice." : "Ready.";
+          this.refreshTasks();
+          return;
+        }
+        if (type === "turn.cancelled") {
+          this.chatStatus = "Stopped. You can send another message.";
+          return;
+        }
+        if (
+          type === "turn.failed" ||
+          type === "session.failed" ||
+          type === "step.failed" ||
+          type === "proxy.error"
+        ) {
+          this.chatError = plainText(data.message) || "Eve could not complete this turn.";
+          this.chatStatus = "Eve needs attention.";
+        }
+      },
+
+      updateAssistantMessage: function (data) {
+        if (plainText(data.role).toLowerCase() === "user") return;
+        var cumulative = plainText(data.messageSoFar || data.message);
+        var delta = plainText(data.messageDelta || data.delta);
+        if (!cumulative && !delta) return;
+        var message = null;
+        if (this.currentAssistantId) {
+          message = this.messages.find(
+            function (item) {
+              return item.id === this.currentAssistantId;
+            }.bind(this)
+          );
+        }
+        if (!message) {
+          message = { id: this.makeId("message"), role: "assistant", text: "" };
+          this.messages.push(message);
+          this.currentAssistantId = message.id;
+        }
+        message.text = cumulative || message.text + delta;
+        this.scrollTranscript();
+      },
+
+      addActions: function (actions) {
+        var list = Array.isArray(actions) ? actions : [];
+        var workbench = this;
+        list.forEach(function (action) {
+          var name = actionToolName(action);
+          var activity = {
+            id: plainText(action.callId || action.id) || workbench.makeId("activity"),
+            role: "activity",
+            label: TOOL_LABELS[name] || "Using " + displayToolName(name) + "…",
+            state: "working",
+            symbol: "↻",
+          };
+          workbench.messages.push(activity);
+          workbench.activities.push(activity);
+        });
+        this.scrollTranscript();
+      },
+
+      completeAction: function (data) {
+        var result = data.result && typeof data.result === "object" ? data.result : {};
+        var id = plainText(result.callId);
+        var activity = this.activities.find(function (item) {
+          return item.id === id;
+        }) || this.messages.find(function (item) {
+          return item.role === "activity" && item.id === id;
+        });
+        if (!activity) {
+          var name = actionToolName(result);
+          activity = {
+            id: id || this.makeId("activity"),
+            role: "activity",
+            label: TOOL_LABELS[name] || "Used " + displayToolName(name) + ".",
+            state: data.status === "completed" ? "ready" : "failed",
+            symbol: data.status === "completed" ? "✓" : "×",
+          };
+          this.messages.push(activity);
+          this.activities.push(activity);
+          this.scrollTranscript();
+          return;
+        }
+        activity.state = data.status === "completed" ? "ready" : "failed";
+        activity.symbol = data.status === "completed" ? "✓" : "×";
+        activity.label = activity.label.replace(
+          /…$/,
+          data.status === "completed" ? " complete." : " did not run."
+        );
+        this.scrollTranscript();
+      },
+
+      setPendingInput: function (requests) {
+        var list = Array.isArray(requests) ? requests : [];
+        var workbench = this;
+        list.forEach(function (request) {
+          if (!request || typeof request !== "object") return;
+          var requestId = plainText(request.requestId || request.id);
+          if (
+            !requestId ||
+            workbench.pendingInputs.some(function (pending) {
+              return pending.requestId === requestId;
+            })
+          ) {
+            return;
+          }
+          workbench.pendingInputs.push({
+            requestId: requestId,
+            prompt: plainText(request.prompt || request.message) || "Eve needs your approval.",
+            options: normalizeOptions(request),
+          });
+        });
+        if (!this.pendingInputs.length) return;
+        this.chatStatus = "Eve is waiting for your choice.";
+        this.scrollTranscript();
+      },
+
+      answerInput: async function (requestId, optionId, label) {
+        var pending = this.pendingInputs.find(function (request) {
+          return request.requestId === requestId;
+        });
+        if (!pending || this.sending) return;
+        var generation = this.beginChatOperation();
+        this.sending = true;
+        this.chatError = "";
+        this.chatStatus = "Sending your choice…";
+        try {
+          var response = await fetch(
+            "/api/eve/session/" + encodeURIComponent(this.sessionId),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                continuationToken: this.continuationToken,
+                inputResponses: [{ requestId: requestId, optionId: optionId }],
+              }),
+              signal: this.requestController.signal,
+            }
+          );
+          if (!this.isCurrentChatOperation(generation)) return;
+          var payload = await response.json();
+          if (!this.isCurrentChatOperation(generation)) return;
+          if (!response.ok) {
+            throw new Error(errorMessage(payload, "Eve could not accept that choice."));
+          }
+          this.pendingInputs = this.pendingInputs.filter(function (request) {
+            return request.requestId !== requestId;
+          });
+          this.messages.push({ id: this.makeId("message"), role: "user", text: plainText(label) });
+          this.scrollTranscript();
+          this.continuationToken =
+            plainText(payload.continuationToken) || this.continuationToken;
+          await this.readStream(generation);
+        } catch (error) {
+          if (this.isCurrentChatOperation(generation) && error.name !== "AbortError") {
+            this.chatError = plainText(error.message) || "Eve could not accept that choice.";
+            this.chatStatus = "Eve needs attention.";
+          }
+        } finally {
+          if (this.isCurrentChatOperation(generation)) {
+            this.sending = false;
+            this.streamReader = null;
+            this.streamController = null;
+            this.requestController = null;
+          }
+        }
+      },
+
+      stopChat: async function () {
+        if (!this.sending) return;
+        var sessionId = this.sessionId;
+        await this.invalidateChatOperation();
+        this.sending = false;
+        this.chatStatus = sessionId ? "Stopping Eve…" : "Stopped before Eve started.";
+        if (!sessionId) return;
+        var cancelController = new AbortController();
+        this.cancelController = cancelController;
+        var generation = this.chatGeneration;
+        try {
+          var response = await fetch(
+            "/api/eve/session/" + encodeURIComponent(sessionId) + "/cancel",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: "{}",
+              signal: cancelController.signal,
+            }
+          );
+          if (!this.isCurrentChatOperation(generation)) return;
+          if (!response.ok) {
+            var payload = await response.json().catch(function () {
+              return {};
+            });
+            throw new Error(errorMessage(payload, "Eve could not be stopped."));
+          }
+          if (this.isCurrentChatOperation(generation)) {
+            this.chatStatus = "Stopped. You can send another message.";
+          }
+        } catch (error) {
+          if (
+            this.isCurrentChatOperation(generation) &&
+            !cancelController.signal.aborted
+          ) {
+            this.chatError =
+              plainText(error.message) ||
+              "Eve could not be stopped. The local service may be unavailable.";
+            this.chatStatus = "Eve needs attention.";
+          }
+        } finally {
+          if (this.isCurrentChatOperation(generation)) this.cancelController = null;
+        }
+      },
+
+      newChat: async function () {
+        if (this.cancelController) this.cancelController.abort();
+        this.cancelController = null;
+        await this.invalidateChatOperation();
+        this.sessionId = null;
+        this.continuationToken = null;
+        this.streamIndex = 0;
+        this.messages = [];
+        this.activities = [];
+        this.pendingInputs = [];
+        this.sending = false;
+        this.chatError = "";
+        this.chatStatus = "Ready for a new local conversation.";
+        this.currentAssistantId = null;
+      },
+
+      applyOllamaModels: function (payload) {
+        var models = Array.isArray(payload && payload.models) ? payload.models : [];
+        this.ollamaModels = models.map(function (model) {
+          return {
+            id: plainText(model && model.id),
+            label: plainText(model && model.label) || plainText(model && model.id),
+            tools: Boolean(model && model.tools),
+          };
+        }).filter(function (model) {
+          return Boolean(model.id);
+        });
+        this.ollamaConnected = Boolean(payload && payload.connected);
+        this.activeOllamaModel = plainText(payload && payload.active);
+        if (
+          this.activeOllamaModel &&
+          this.ollamaModels.some(
+            function (model) {
+              return model.id === this.activeOllamaModel;
+            }.bind(this)
+          )
+        ) {
+          this.selectedModel = this.activeOllamaModel;
+        } else if (!this.selectedModel && this.ollamaModels.length) {
+          this.selectedModel = this.ollamaModels[0].id;
+        }
+        this.ollamaStatus = this.ollamaConnected
+          ? "Ollama connected · " + (this.activeOllamaModel || "choose a chat model")
+          : plainText(payload && payload.error) || "Ollama is unavailable.";
+        if (payload && payload.inventory) {
+          this.applyModelInventory(payload.inventory);
+        }
+      },
+
+      applyOllamaModel: async function () {
+        var model = plainText(this.selectedModel);
+        if (!model || model === this.activeOllamaModel || this.switchingModel) return;
+        this.switchingModel = true;
+        this.chatError = "";
+        this.ollamaStatus = "Switching Ollama model…";
+        try {
+          var response = await fetch("/api/ollama/model", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: model }),
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false) {
+            throw new Error(errorMessage(payload, "Ollama could not switch models."));
+          }
+          this.applyOllamaModels(payload);
+          await this.newChat();
+          this.chatStatus =
+            "Using " + (this.activeOllamaModel || model) + ". Ready for a new local conversation.";
+        } catch (error) {
+          this.selectedModel = this.activeOllamaModel;
+          this.chatError = plainText(error.message) || "Ollama could not switch models.";
+          this.ollamaStatus = this.chatError;
+        } finally {
+          this.switchingModel = false;
+        }
+      },
+
+      taskUrl: function (id) {
+        var path = "/api/collections/tasks/records";
+        return POCKETBASE_URL + path + (id ? "/" + encodeURIComponent(id) : "");
+      },
+
+      refreshTasks: async function () {
+        this.tasksLoading = true;
+        this.taskError = "";
+        try {
+          var response = await fetch(this.taskUrl() + "?sort=-created&perPage=50", {
+            cache: "no-store",
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok) {
+            throw new Error(errorMessage(payload, "PocketBase tasks are unavailable."));
+          }
+          this.tasks = Array.isArray(payload.items) ? payload.items : [];
+          if (this.taskSummaryStamp !== this.taskSummaryKey()) {
+            this.taskSummary = "";
+            this.taskSummaryStamp = "";
+            if (this.taskOverviewOpen) this.refreshTaskSummary(true);
+          }
+        } catch (error) {
+          this.taskError =
+            plainText(error.message) ||
+            "PocketBase is unavailable. Start it, then click Refresh.";
+        } finally {
+          this.tasksLoading = false;
+        }
+      },
+
+      createTask: async function () {
+        var title = plainText(this.taskDraft.title).trim();
+        if (!title || this.tasksLoading) return;
+        this.tasksLoading = true;
+        this.taskError = "";
+        try {
+          var response = await fetch(this.taskUrl(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: title,
+              description: plainText(this.taskDraft.description),
+              status: TASK_STATUSES.indexOf(this.taskDraft.status) >= 0 ? this.taskDraft.status : "todo",
+              priority: Number.isFinite(this.taskDraft.priority) ? this.taskDraft.priority : 1,
+            }),
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok) {
+            throw new Error(errorMessage(payload, "The task could not be added."));
+          }
+          this.taskDraft = emptyTaskDraft();
+          await this.refreshTasks();
+        } catch (error) {
+          this.taskError = plainText(error.message) || "The task could not be added.";
+          this.tasksLoading = false;
+        }
+      },
+
+      startEditTask: function (task) {
+        if (!task || !task.id) return;
+        this.pendingDeleteId = "";
+        this.editingId = task.id;
+        this.editDraft = {
+          title: plainText(task.title),
+          description: plainText(task.description),
+          status: TASK_STATUSES.indexOf(task.status) >= 0 ? task.status : "todo",
+          priority: Number.isFinite(task.priority) ? task.priority : 1,
+        };
+      },
+
+      cancelEditTask: function () {
+        this.editingId = "";
+        this.editDraft = emptyTaskDraft();
+      },
+
+      saveTask: async function () {
+        var id = plainText(this.editingId);
+        var title = plainText(this.editDraft.title).trim();
+        if (!id || !title || this.tasksLoading) return;
+        this.tasksLoading = true;
+        this.taskError = "";
+        try {
+          var response = await fetch(this.taskUrl(id), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: title,
+              description: plainText(this.editDraft.description),
+              status: TASK_STATUSES.indexOf(this.editDraft.status) >= 0 ? this.editDraft.status : "todo",
+              priority: Number.isFinite(this.editDraft.priority) ? this.editDraft.priority : 1,
+            }),
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok) {
+            throw new Error(errorMessage(payload, "The task could not be saved."));
+          }
+          this.cancelEditTask();
+          await this.refreshTasks();
+        } catch (error) {
+          this.taskError = plainText(error.message) || "The task could not be saved.";
+          this.tasksLoading = false;
+        }
+      },
+
+      setTaskStatus: async function (task, status) {
+        if (!task || !task.id || TASK_STATUSES.indexOf(status) < 0) return;
+        if (task.status === status) return;
+        this.tasksLoading = true;
+        this.taskError = "";
+        try {
+          var response = await fetch(this.taskUrl(task.id), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: status }),
+          });
+          if (!response.ok) {
+            var payload = await response.json().catch(function () {
+              return {};
+            });
+            throw new Error(errorMessage(payload, "The task status could not be changed."));
+          }
+          await this.refreshTasks();
+        } catch (error) {
+          this.taskError = plainText(error.message) || "The task status could not be changed.";
+          this.tasksLoading = false;
+        }
+      },
+
+      deleteTask: async function (id) {
+        var taskId = plainText(id);
+        if (!taskId) return;
+        if (this.pendingDeleteId !== taskId) {
+          this.pendingDeleteId = taskId;
+          return;
+        }
+        this.tasksLoading = true;
+        this.taskError = "";
+        try {
+          var response = await fetch(this.taskUrl(taskId), { method: "DELETE" });
+          if (!response.ok && response.status !== 204) {
+            var payload = await response.json().catch(function () {
+              return {};
+            });
+            throw new Error(errorMessage(payload, "The task could not be deleted."));
+          }
+          this.pendingDeleteId = "";
+          if (this.editingId === taskId) this.cancelEditTask();
+          await this.refreshTasks();
+        } catch (error) {
+          this.taskError = plainText(error.message) || "The task could not be deleted.";
+          this.tasksLoading = false;
+        }
+      },
+
+      askEveAboutTask: function (task) {
+        if (!task) return;
+        this.setTab("chat");
+        this.draft =
+          "Tell me about PocketBase task \"" +
+          plainText(task.title) +
+          "\" (id " +
+          plainText(task.id) +
+          ", status " +
+          plainText(task.status) +
+          "). Use list_tasks or search_tasks, then summarize it and suggest next steps.";
+      },
+
+      haveEveDoTask: function (task) {
+        if (!task || this.sending) return;
+        this.setTab("chat");
+        this.draft =
+          "Have Eve do this PocketBase task now. Use PocketBase tools. Task id: " +
+          plainText(task.id) +
+          ". Title: " +
+          plainText(task.title) +
+          ". Status: " +
+          plainText(task.status) +
+          ". Directions: " +
+          (plainText(task.description) || "No extra directions.") +
+          " Execute the directions, update the task status as you go, and summarize what you did.";
+        this.sendMessage();
+      },
+
+      refreshHealth: async function () {
+        var statusServices = [];
+        var memoryApiAvailable = false;
+        var memoryReady = false;
+        var eveReady = false;
+        var ollamaPayload = {};
+        try {
+          var results = await Promise.all([
+            fetch("/api/services/status", { cache: "no-store" }),
+            fetch("/api/memory/status", { cache: "no-store" }),
+            fetch("/api/eve/info", { cache: "no-store" }),
+            fetch("/api/ollama/models", { cache: "no-store" }),
+          ]);
+          if (results[0].ok) {
+            var statusPayload = await results[0].json();
+            statusServices = Array.isArray(statusPayload.services) ? statusPayload.services : [];
+          }
+          var memoryPayload = results[1].ok ? await results[1].json() : {};
+          memoryApiAvailable = results[1].ok && memoryPayload.ok === true;
+          memoryReady =
+            memoryApiAvailable &&
+            memoryPayload.readiness &&
+            memoryPayload.readiness.ready === true;
+          eveReady = results[2].ok;
+          ollamaPayload = results[3].ok || results[3].status === 503
+            ? await results[3].json()
+            : {};
+          this.applyOllamaModels(ollamaPayload);
+        } catch (_error) {
+          statusServices = [];
+          this.applyOllamaModels({ connected: false, error: "Ollama is unavailable." });
+        }
+        var states = {
+          eve: eveReady,
+          memory: memoryReady,
+          pocketbase: false,
+          ollama: false,
+        };
+        statusServices.forEach(function (service) {
+          if (service.id === "eve") states.eve = Boolean(service.healthy) && eveReady;
+          if (service.id === "pocketbase") states.pocketbase = Boolean(service.healthy);
+        });
+        states.ollama = this.ollamaConnected;
+        this.health.services = Object.keys(SERVICE_LABELS).map(function (id) {
+          var ready = states[id];
+          var status =
+            id === "memory" && memoryApiAvailable && !memoryReady
+              ? "API available; dependencies unavailable"
+              : ready
+                ? "Ready"
+                : "Unavailable";
+          return {
+            id: id,
+            label: SERVICE_LABELS[id],
+            state: ready ? "ready" : "failed",
+            status: status,
+            symbol: ready ? "✓" : "×",
+          };
+        });
+        var unavailable = this.health.services
+          .filter(function (service) {
+            return service.state !== "ready";
+          })
+          .map(function (service) {
+            return service.label;
+          });
+        this.health.summary = unavailable.length
+          ? unavailable.join(", ") + (unavailable.length === 1 ? " is unavailable." : " are unavailable.")
+          : "Eve and local memory services are ready.";
+      },
+
+      repairServices: async function () {
+        this.health.repairing = true;
+        this.health.summary = "Starting local services…";
+        try {
+          var response = await fetch("/api/services/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ all: true }),
+          });
+          if (!response.ok) throw new Error("Local services could not be started.");
+          await this.refreshHealth();
+        } catch (error) {
+          this.health.summary =
+            plainText(error.message) || "Local services could not be started. Open Dashboard for details.";
+        } finally {
+          this.health.repairing = false;
+        }
+      },
+
+      makeId: function (prefix) {
+        var id = prefix + "-" + String(this.nextId);
+        this.nextId += 1;
+        return id;
+      },
+    };
+  };
+})();

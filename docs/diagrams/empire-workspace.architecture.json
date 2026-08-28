@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "EMPIRE Local AI Workspace",
+    "subtitle": "Zero-cloud Build1 stack + Wikipedia Fast Mode ingest",
+    "output": "docs/diagrams/empire-workspace.architecture.html",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "standard",
+    "viewBox": [1180, 720]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [36, 88],
+    "cols": 5,
+    "gapX": 44,
+    "gapY": 78,
+    "cellW": 168,
+    "cellH": 68
+  },
+  "components": [
+    { "id": "operator", "type": "external", "label": "Operator", "sublabel": "Cursor · Browser", "row": 0, "col": 0 },
+    { "id": "frontend", "type": "frontend", "label": "Frontend", "sublabel": "HTMX · Alpine · :8080", "row": 0, "col": 1 },
+    { "id": "mcp", "type": "messagebus", "label": "FastMCP", "sublabel": "pb · cognee · wiki", "row": 0, "col": 2 },
+    { "id": "eve", "type": "backend", "label": "Eve Agent", "sublabel": ":2000 headless", "row": 0, "col": 3 },
+    { "id": "ollama", "type": "backend", "label": "Ollama", "sublabel": "llama3.1 · nomic", "row": 0, "col": 4 },
+
+    { "id": "pocketbase", "type": "database", "label": "PocketBase", "sublabel": "tasks · jobs · :8090", "row": 1, "col": 1 },
+    { "id": "pipeline", "type": "backend", "label": "Wiki Pipeline", "sublabel": "Fast Mode ingest", "row": 1, "col": 2 },
+    { "id": "cognee", "type": "database", "label": "Cognee 1.0", "sublabel": "Truth Drift graph", "row": 1, "col": 3 },
+
+    { "id": "wiki_md", "type": "external", "label": "D:\\wiki_md", "sublabel": "2017 · 2021 · 2026", "row": 2, "col": 1 },
+    { "id": "empire_data", "type": "external", "label": "I:\\EMPIRE_DATA", "sublabel": "logs · xml staging", "row": 2, "col": 2 },
+    { "id": "vhdx", "type": "cloud", "label": "V:\\Cognee", "sublabel": "NTFS VHDX on I:", "row": 2, "col": 3 },
+    { "id": "control", "type": "security", "label": "Control", "sublabel": "lock · checkpoint", "row": 2, "col": 4 }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Build1 runtime (local-only)",
+      "wraps": ["frontend", "mcp", "eve", "ollama", "pocketbase", "pipeline", "cognee"],
+      "pad": 22
+    },
+    {
+      "kind": "security-group",
+      "label": "Heavy storage off C:",
+      "wraps": ["wiki_md", "empire_data", "vhdx"],
+      "pad": 16
+    }
+  ],
+  "connections": [
+    { "id": "c1", "from": "operator", "to": "frontend", "label": "UI", "variant": "emphasis", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": -16 },
+    { "id": "c2", "from": "frontend", "to": "mcp", "label": "ops", "variant": "dashed", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": -16 },
+    { "id": "c3", "from": "mcp", "to": "eve", "label": "tools", "variant": "default", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": -16 },
+    { "id": "c4", "from": "eve", "to": "ollama", "label": "chat", "variant": "emphasis", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": -16 },
+
+    { "id": "c5", "from": "frontend", "to": "pocketbase", "label": "REST", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "orthogonal-v", "labelDx": 20 },
+    { "id": "c6", "from": "mcp", "to": "pipeline", "label": "wiki MCP", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "orthogonal-v", "labelDx": -24 },
+    { "id": "c7", "from": "eve", "to": "cognee", "label": "recall", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "orthogonal-v", "labelDx": 20 },
+    { "id": "c8", "from": "ollama", "to": "cognee", "label": "nomic embed", "variant": "default", "fromSide": "bottom", "toSide": "right", "route": "orthogonal-v", "via": [[920, 200]], "labelDx": 28, "labelDy": -10 },
+
+    { "id": "c9", "from": "pocketbase", "to": "pipeline", "label": "jobs", "variant": "dashed", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": -14 },
+    { "id": "c10", "from": "pipeline", "to": "cognee", "label": "remember+embed", "variant": "emphasis", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": 16 },
+
+    { "id": "c11", "from": "wiki_md", "to": "pipeline", "label": "markdown", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "route": "orthogonal-v", "labelDx": -30 },
+    { "id": "c12", "from": "pipeline", "to": "empire_data", "label": "logs", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "orthogonal-v", "labelDx": 22 },
+    { "id": "c13", "from": "cognee", "to": "vhdx", "label": "SYSTEM_ROOT", "variant": "security", "fromSide": "bottom", "toSide": "top", "route": "orthogonal-v", "labelDx": 34 },
+    { "id": "c14", "from": "vhdx", "to": "control", "label": "meta", "variant": "security", "fromSide": "right", "toSide": "left", "route": "orthogonal-h", "labelDy": 16 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Build1 stack",
+      "items": [
+        "Ollama inference · PocketBase SQLite",
+        "Cognee graph on V:\\Cognee VHDX",
+        "FastMCP nervous system · HTMX/Alpine UI"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Wiki Fast Mode",
+      "items": [
+        "Truth Drift frontmatter → remember",
+        "nomic-embed-text only (no llama cognify)",
+        "ingestion_jobs + checkpoint resume intact"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Deferred",
+      "items": [
+        "llama3.1 graph extract / improve at runtime",
+        "Full wikipedia_2017/2021/2026 scale-out"
+      ]
+    }
+  ]
+}
