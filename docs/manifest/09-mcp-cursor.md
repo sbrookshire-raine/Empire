@@ -12,7 +12,7 @@ File: `.cursor/mcp.json`
 | `empire-cognee` | `mcp/cognee_mcp.py` | Cognee remember/recall/improve/forget/ingest |
 | `empire-wiki` | `mcp/wiki_mcp.py` | Wiki ingest (pilot **halted**) |
 
-Paths in `mcp.json` use absolute Windows paths — **update after clone** to match your repo location.
+After clone, update `.cursor/mcp.json` paths if the repo is not at `C:\EMPIRE`. See [16-github-prep](../manifest/16-github-prep.md).
 
 Env loads from `.env.local` for PocketBase admin credentials.
 

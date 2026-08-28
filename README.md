@@ -2,10 +2,9 @@
 
 **Local-first AI workbench** — tasks, graph memory, and an Eve agent, all on your machine. No paid cloud LLM APIs in application code.
 
-| What | Where |
-|------|--------|
+| **GitHub** | https://github.com/sbrookshire-raine/Empire |
 | **Daily use** | http://127.0.0.1:8080/eve.html (Eve Workbench) |
-| **Cold start** | `.\scripts\start-stack.ps1` |
+| **Daily start** | Double-click `Start-EMPIRE.bat` |
 | **Full documentation** | [docs/manifest/README.md](docs/manifest/README.md) |
 | **Agent quick ref** | [AGENTS.md](AGENTS.md) |
 
@@ -31,15 +30,20 @@
 ## First-time setup
 
 ```powershell
-git clone <your-repo-url> C:\EMPIRE
+git clone git@github.com:sbrookshire-raine/Empire.git C:\EMPIRE
 cd C:\EMPIRE
 .\scripts\setup.ps1
+copy .env.example .env.local
 copy config\cognee.env.example config\cognee.env   # then edit paths/models
+# Edit .cursor\mcp.json if not cloning to C:\EMPIRE
+cd agents\empire-task-agent && npm install && npm run build && cd ..\..
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text:latest
 ```
 
 **Daily start:** double-click **`Start-EMPIRE.bat`** (or `.\scripts\launch-empire.ps1`).
+
+Backup and clone details: [docs/manifest/16-github-prep.md](docs/manifest/16-github-prep.md).
 
 ## Documentation map
 
@@ -61,7 +65,7 @@ ollama pull nomic-embed-text:latest
 | [Development](docs/manifest/13-development.md) | Tests, conventions, extending |
 | [Configuration](docs/manifest/14-configuration.md) | Env files, secrets |
 | [Glossary](docs/manifest/15-glossary.md) | Terms |
-| [GitHub prep](docs/manifest/16-github-prep.md) | Before you push |
+| [GitHub backup & clone](docs/manifest/16-github-prep.md) | Remote, push, what stays local |
 
 Also see [docs/OPERATIONAL_HANDOFF.md](docs/OPERATIONAL_HANDOFF.md) for operational-phase checklist.
 

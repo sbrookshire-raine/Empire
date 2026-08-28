@@ -49,6 +49,7 @@ See [OPERATIONAL_HANDOFF.md](../OPERATIONAL_HANDOFF.md) for the operational chec
 
 | Surface | URL / entry | User |
 |---------|-------------|------|
+| **GitHub** | https://github.com/sbrookshire-raine/Empire | Source backup |
 | **Start launcher** | `Start-EMPIRE.bat` (repo root) | One-click start + browser |
 | Eve Workbench | http://127.0.0.1:8080/eve.html | Daily chat, tasks, memory, models |
 | Dashboard | http://127.0.0.1:8080/dashboard.html | Service health and links |

@@ -2,7 +2,8 @@
 
 Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; runtime code hardwires local tools for the Operational Phase.
 
-**Full project manifest (architecture, APIs, Eve tools, GitHub prep):** [docs/manifest/README.md](docs/manifest/README.md)
+**Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
+**Canonical repo:** https://github.com/sbrookshire-raine/Empire
 
 ## Start here (day-to-day)
 

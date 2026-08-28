@@ -14,6 +14,15 @@
 
 Optional: external drive `I:` for VHDX backing file per [COGNEE_VHDX.md](../COGNEE_VHDX.md).
 
+## Clone from GitHub
+
+```powershell
+git clone git@github.com:sbrookshire-raine/Empire.git C:\EMPIRE
+cd C:\EMPIRE
+```
+
+Full post-clone steps (env files, MCP paths, npm, models): [16-github-prep](16-github-prep.md).
+
 ## One-time setup
 
 ```powershell

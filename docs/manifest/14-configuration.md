@@ -55,12 +55,12 @@ Critical keys:
 | `%LOCALAPPDATA%\EMPIRE\cognee.lock` | Cognee process lock |
 | `%LOCALAPPDATA%\EMPIRE\wiki-checkpoint.json` | Wiki checkpoint (if used) |
 | `backend/pocketbase/pb_data/` | PocketBase SQLite |
-| `data/eve_memory/` | Upload + job state |
+| `data/eve_memory/uploads/`, `jobs/` | Workbench upload staging (gitignored) |
 | `V:\Cognee` | Cognee databases (VHDX) |
 
 ## Cursor MCP paths
 
-`.cursor/mcp.json` uses absolute paths to `venv/Scripts/python.exe` and `mcp/*.py`. After clone, update to your repo path (e.g. `C:/EMPIRE/...`).
+`.cursor/mcp.json` uses absolute paths to `venv/Scripts/python.exe` and `mcp/*.py`. After clone, update to your repo path (e.g. `C:/EMPIRE/...`). Full checklist: [16-github-prep](16-github-prep.md).
 
 ## Eve agent env
 

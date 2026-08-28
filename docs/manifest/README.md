@@ -21,7 +21,7 @@ Complete reference for understanding, using, and continuing work on EMPIRE. Read
 | Develop / test | [13-development](13-development.md) |
 | Configure env | [14-configuration](14-configuration.md) |
 | Look up a term | [15-glossary](15-glossary.md) |
-| Push to GitHub | [16-github-prep](16-github-prep.md) |
+| Push / backup / clone from GitHub | [16-github-prep](16-github-prep.md) |
 
 ## Manifest contents
 
@@ -40,7 +40,7 @@ Complete reference for understanding, using, and continuing work on EMPIRE. Read
 13. [Development](13-development.md) — repo layout, tests, stack rules, extending
 14. [Configuration](14-configuration.md) — `.env.local`, `cognee.env`, paths
 15. [Glossary](15-glossary.md) — terms used across the project
-16. [GitHub prep](16-github-prep.md) — secrets, gitignore, clone checklist
+16. [GitHub, backup & clone](16-github-prep.md) — canonical repo, clone, push, what stays local
 
 ## Related docs (outside manifest)
 
