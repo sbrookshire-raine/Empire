@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 EVE_HOST = "127.0.0.1"
 EVE_PORT = 2000
 EVE_TIMEOUT_SECONDS = 15
-EVE_STREAM_READ_TIMEOUT_SECONDS = 30
+EVE_STREAM_READ_TIMEOUT_SECONDS = 300
 MAX_NDJSON_LINE_BYTES = 1024 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
@@ -259,6 +259,71 @@ def _parse_event_line(raw_line: bytes) -> dict | None:
     return event
 
 
+_THINK_BLOCK_RE = re.compile(r"<think\b[^>]*>.*?</think>", re.DOTALL | re.IGNORECASE)
+_META_TOOL_NARRATION_RE = re.compile(
+    r"\b(?:will not call any tools?|no tools? (?:are )?needed|without (?:using|calling) tools?)\b",
+    re.IGNORECASE,
+)
+_META_PREAMBLE_RE = re.compile(
+    r"^(?:since|because)\b.+?(?:\.\s*|\s+)",
+    re.IGNORECASE | re.DOTALL,
+)
+_QUOTED_REPLY_RE = re.compile(
+    r'(?:A simple response would be|The (?:best )?response (?:is|would be)|I should (?:say|respond with)):\s*["“](.+?)["”]\.?\s*$',
+    re.IGNORECASE | re.DOTALL,
+)
+_INSTRUCTION_LEAK_RE = re.compile(
+    r"\b(?:according to (?:my )?instructions|as per (?:the )?guidelines|per my (?:system )?prompt)\b",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_meta_preamble(text: str) -> bool:
+    lowered = text.casefold()
+    if _META_TOOL_NARRATION_RE.search(text):
+        return True
+    if _INSTRUCTION_LEAK_RE.search(text):
+        return True
+    if "since the input" in lowered or "since this is a question" in lowered:
+        return True
+    if "a simple response would be" in lowered:
+        return True
+    return False
+
+
+def sanitize_assistant_text(text: str) -> str:
+    """Strip leaked reasoning / meta-commentary from assistant-visible text."""
+
+    if not text:
+        return text
+    cleaned = _THINK_BLOCK_RE.sub("", text).strip()
+    if not cleaned:
+        return cleaned
+
+    quoted = _QUOTED_REPLY_RE.search(cleaned)
+    if quoted and _looks_like_meta_preamble(cleaned[: quoted.start()]):
+        return quoted.group(1).strip()
+
+    if _looks_like_meta_preamble(cleaned):
+        stripped = _META_PREAMBLE_RE.sub("", cleaned, count=1).strip()
+        quoted_after = _QUOTED_REPLY_RE.search(stripped)
+        if quoted_after:
+            return quoted_after.group(1).strip()
+        if stripped and stripped != cleaned:
+            return stripped
+
+    return cleaned
+
+
+def _sanitize_message_data(data: dict) -> dict:
+    sanitized = dict(data)
+    for key in ("message", "messageSoFar", "messageDelta", "delta"):
+        value = sanitized.get(key)
+        if isinstance(value, str):
+            sanitized[key] = sanitize_assistant_text(value)
+    return sanitized
+
+
 def project_event(event: dict) -> dict | None:
     """Remove private reasoning events and reject malformed event envelopes."""
 
@@ -272,4 +337,10 @@ def project_event(event: dict) -> dict | None:
     tokens = normalized.split(".")
     if "reasoning" in tokens or "thinking" in tokens:
         return None
+    if event_type in {"message.appended", "message.completed"} and isinstance(data, dict):
+        role = data.get("role")
+        if role is None or (isinstance(role, str) and role.casefold() != "user"):
+            projected = dict(event)
+            projected["data"] = _sanitize_message_data(data)
+            return projected
     return event

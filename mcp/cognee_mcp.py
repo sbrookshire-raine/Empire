@@ -21,7 +21,7 @@ def _json(data: Any) -> str:
 
 
 @mcp.tool()
-async def cognee_remember(content: str, dataset: str = "mock", session_id: str = "") -> str:
+async def cognee_remember(content: str, dataset: str = "eve_memory", session_id: str = "") -> str:
     """Store content in Cognee graph memory for the given dataset."""
     _ = session_id
     result = await run_cognee_worker("remember", "--content", content, "--dataset", dataset)
@@ -29,8 +29,12 @@ async def cognee_remember(content: str, dataset: str = "mock", session_id: str =
 
 
 @mcp.tool()
-async def cognee_recall(query: str, dataset: str = "", session_id: str = "") -> str:
-    """Query Cognee graph memory. Returns retrieval context for the query."""
+async def cognee_recall(
+    query: str,
+    dataset: str = "eve_core",
+    session_id: str = "",
+) -> str:
+    """Query Cognee graph memory. Prefer eve_core for chat recall; eve_memory for archive."""
     _ = session_id
     args = ["recall", "--query", query]
     if dataset:
@@ -40,14 +44,14 @@ async def cognee_recall(query: str, dataset: str = "", session_id: str = "") -> 
 
 
 @mcp.tool()
-async def cognee_improve(dataset: str = "mock") -> str:
+async def cognee_improve(dataset: str = "eve_memory") -> str:
     """Run Cognee enrichment/improvement pass on a dataset."""
     result = await run_cognee_worker("improve", "--dataset", dataset)
     return _json(result)
 
 
 @mcp.tool()
-async def cognee_forget(dataset: str = "mock") -> str:
+async def cognee_forget(dataset: str = "eve_memory") -> str:
     """Remove dataset memory from Cognee (best-effort on local install)."""
     result = await run_cognee_worker("forget", "--dataset", dataset)
     return _json(result)

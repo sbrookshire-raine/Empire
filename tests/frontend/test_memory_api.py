@@ -19,9 +19,18 @@ from frontend.memory_api import (
     MemoryJobRunner,
     MemoryJobStore,
     UploadPolicy,
+    build_enriched_chat_message,
+    format_recall_context,
+    is_memory_chat_query,
+    MEMORY_ANSWER_SYSTEM,
     public_job,
+    recall_for_chat,
+    answer_memory_chat,
+    load_eve_instructions_text,
+    memory_answer_system_prompt,
     sanitize_filename,
 )
+import frontend.memory_api as memory_api
 from frontend.serve import EmpireHandler
 
 
@@ -737,6 +746,165 @@ class MemoryHttpTests(unittest.TestCase):
         self.thread.join(timeout=2)
         self.server.server_close()
         self.assertTrue(self.runner.closed)
+
+
+class MemoryRecallTests(unittest.TestCase):
+    def test_is_memory_chat_query_matches_interest_questions(self) -> None:
+        self.assertTrue(
+            is_memory_chat_query(
+                "Looking at your graph, tell me what you can see from what I'm interested in for my projects."
+            )
+        )
+        self.assertFalse(is_memory_chat_query("Create a task called buy milk"))
+
+    def test_format_recall_context_builds_snippets(self) -> None:
+        block, count = format_recall_context(
+            [{"text": "local AI stack", "document_name": "notes.md"}]
+        )
+        self.assertEqual(count, 1)
+        self.assertIn("local AI stack", block)
+        self.assertIn("notes.md", block)
+
+    def test_build_enriched_chat_message_includes_marker(self) -> None:
+        message = build_enriched_chat_message("What are my interests?", "snippet body")
+        self.assertIn("[EMPIRE memory recall", message)
+        self.assertIn("THIS USER's interests", message)
+        self.assertIn("snippet body", message)
+
+    def test_memory_recall_queries_for_interest_questions(self) -> None:
+        from frontend.memory_api import memory_recall_queries_for_chat
+
+        queries = memory_recall_queries_for_chat(
+            "when reviewing my files, what can you tell me about the things I'm interested in?"
+        )
+        self.assertEqual(len(queries), 3)
+        self.assertIn("EMPIRE FORGE", queries[0])
+
+    @patch("frontend.memory_api.recall_in_subprocess")
+    def test_recall_for_chat_formats_worker_payload(self, mock_recall) -> None:
+        mock_recall.return_value = {
+            "query": "interests",
+            "dataset": "eve_memory",
+            "results": [
+                {
+                    "text": (
+                        "source_file: FORGE.md\n"
+                        "EMPIRE workbench with Eve, Cognee graph memory, and PocketBase tasks."
+                    )
+                }
+            ],
+        }
+        result = recall_for_chat("what are my interests in projects?")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["chunkCount"], 1)
+        self.assertIn("EMPIRE workbench", result["contextBlock"])
+        self.assertEqual(mock_recall.call_count, 6)
+
+    @patch("frontend.serve.memory_api.recall_for_chat")
+    def test_memory_recall_endpoint(self, mock_recall) -> None:
+        mock_recall.return_value = {
+            "ok": True,
+            "query": "projects",
+            "dataset": "eve_memory",
+            "chunkCount": 2,
+            "contextBlock": "snippet body",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            server = serve.EmpireHTTPServer(
+                ("127.0.0.1", 0),
+                serve.EmpireHandler,
+                memory_runner=MemoryJobRunner(MemoryJobStore(Path(tmp) / "jobs")),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                conn = http.client.HTTPConnection(host, port, timeout=5)
+                conn.request(
+                    "POST",
+                    "/api/memory/recall",
+                    json.dumps({"query": "projects", "dataset": "eve_memory"}),
+                    {"Content-Type": "application/json", "Origin": "http://127.0.0.1:8080"},
+                )
+                response = conn.getresponse()
+                payload = json.loads(response.read().decode())
+                self.assertEqual(response.status, 200)
+                self.assertTrue(payload["ok"])
+                self.assertEqual(payload["chunkCount"], 2)
+                self.assertEqual(payload["contextBlock"], "snippet body")
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
+                server.server_close()
+
+    @patch("frontend.ollama_api.chat_completion")
+    @patch("frontend.memory_api.recall_for_chat")
+    def test_answer_memory_chat(self, mock_recall, mock_chat) -> None:
+        mock_recall.return_value = {
+            "ok": True,
+            "contextBlock": "EMPIRE local AI workbench",
+            "chunkCount": 2,
+        }
+        mock_chat.return_value = {"content": "Your projects include EMPIRE.", "model": "llama3.1:8b"}
+        result = memory_api.answer_memory_chat("what projects do i have in your memory")
+        self.assertTrue(result["ok"])
+        self.assertIn("EMPIRE", result["answer"])
+        mock_chat.assert_called_once()
+        system_prompt = mock_chat.call_args.kwargs["system_prompt"]
+        self.assertIn(MEMORY_ANSWER_SYSTEM, system_prompt)
+        eve_instructions = load_eve_instructions_text()
+        if eve_instructions:
+            self.assertTrue(system_prompt.startswith(eve_instructions))
+
+    def test_memory_answer_system_prompt_without_file_uses_base(self) -> None:
+        with patch.object(memory_api, "load_eve_instructions_text", return_value=""):
+            self.assertEqual(memory_answer_system_prompt(), MEMORY_ANSWER_SYSTEM)
+
+    def test_memory_answer_system_prompt_prepends_eve_instructions(self) -> None:
+        persona = "<core_directive>You are Eve.</core_directive>"
+        with patch.object(memory_api, "load_eve_instructions_text", return_value=persona):
+            prompt = memory_answer_system_prompt()
+        self.assertTrue(prompt.startswith(persona))
+        self.assertIn(MEMORY_ANSWER_SYSTEM, prompt)
+        self.assertIn("---", prompt)
+
+    def test_load_eve_instructions_text_handles_missing_file(self) -> None:
+        with patch.object(memory_api, "EVE_INSTRUCTIONS_PATH", Path("/nonexistent/eve_instructions.md")):
+            self.assertEqual(load_eve_instructions_text(), "")
+
+    @patch("frontend.serve.memory_api.answer_memory_chat")
+    def test_memory_answer_endpoint(self, mock_answer) -> None:
+        mock_answer.return_value = {
+            "ok": True,
+            "answer": "Projects: EMPIRE, FORGE.",
+            "chunkCount": 3,
+            "model": "llama3.1:8b",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            server = serve.EmpireHTTPServer(
+                ("127.0.0.1", 0),
+                serve.EmpireHandler,
+                memory_runner=MemoryJobRunner(MemoryJobStore(Path(tmp) / "jobs")),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                conn = http.client.HTTPConnection(host, port, timeout=5)
+                conn.request(
+                    "POST",
+                    "/api/memory/answer",
+                    json.dumps({"query": "what projects do i have in your memory"}),
+                    {"Content-Type": "application/json", "Origin": "http://127.0.0.1:8080"},
+                )
+                response = conn.getresponse()
+                payload = json.loads(response.read().decode())
+                self.assertEqual(response.status, 200)
+                self.assertIn("EMPIRE", payload["answer"])
+            finally:
+                server.shutdown()
+                thread.join(timeout=2)
+                server.server_close()
 
 
 if __name__ == "__main__":

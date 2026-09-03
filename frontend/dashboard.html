@@ -102,8 +102,8 @@
       <h1>Service Dashboard</h1>
       <p class="meta">
         Status board for local services. Day-to-day work is on
-        <a href="http://127.0.0.1:8080/primitives.html">Primitives</a>
-        (feed Eve), not this page.
+        <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a>
+        (chat, tasks, memory uploads).
       </p>
     </header>
 
@@ -111,18 +111,21 @@
       <header><strong>Do this</strong></header>
       <ol>
         <li>
-          Cold start from the repo root (UAC if <code>V:</code> is missing):
-          <code>.\scripts\start-stack.ps1</code>
+          Cold start: double-click <code>Start-EMPIRE.bat</code> at the repo root
+          (or <code>.\scripts\launch-empire.ps1</code>).
         </li>
         <li>
-          Open <a href="http://127.0.0.1:8080/primitives.html">Primitives</a>.
-          Drop Markdown into <code>data\curated_primitives\raw_materials\</code>
-          (never ingest <code>directives\</code>).
+          Open <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a> — chat,
+          tasks, and memory uploads.
         </li>
-        <li>Click <strong>Run curated ingest</strong>.</li>
         <li>
-          Ask Cursor or Eve to recall dataset <code>primitives_test</code>.
-          Eve is the API on port 2000 — not this Cursor chat.
+          After bulk workbench ingest, click <strong>Optimize recall</strong> on the
+          Memory tab (builds fast <code>eve_core</code> dataset).
+        </li>
+        <li>
+          Optional curated pilot:
+          <a href="http://127.0.0.1:8080/primitives.html">Primitives</a> → dataset
+          <code>primitives_test</code>.
         </li>
       </ol>
       <p class="meta">

@@ -68,15 +68,20 @@ See [docs/manifest/06-eve-agent.md](../../docs/manifest/06-eve-agent.md) and [do
 | `switch_chat_model` | Set active chat model |
 | `ollama_health` | Ollama reachability |
 
-## Skills (3)
+## Skills (4)
 
 | Skill | Purpose |
 |-------|---------|
+| `empire-operations` | Tasks, memory, models — loaded on demand |
 | `manage-tasks` | Multi-step PocketBase workflows |
 | `recall-ingested-context` | Curated primitives / `primitives_test` |
 | `route-local-models` | Model selection and switching |
 
-Built-in Eve `ask_question` is **disabled** — use normal chat for clarifications. See `agent/instructions.md` for voice vs internal rules.
+Built-in Eve `ask_question` is **disabled** — use normal chat for clarifications. System prompt loads from repo-root `eve_instructions.md` plus `agent/empire-routing.md` via `agent/instructions.ts`; see `empire-operations` for tool routing.
+
+### Cursor skills vs Eve skills
+
+Skills under `.cursor/skills/` are for **Cursor** (this IDE agent). Eve only sees skills in `agent/skills/`. To reuse a Cursor skill, copy or adapt its `SKILL.md` into `agent/skills/` (Eve supports the same Agent Skills `SKILL.md` format). Python/bash scripts in a skill package are **not** callable until you wrap them in an Eve `defineTool` — skills add instructions to context, not new execution surfaces.
 
 ## MCP parity
 

@@ -12,27 +12,27 @@ from frontend import ollama_api
 TAGS = {
     "models": [
         {
-            "name": "llama3.1:8b",
-            "model": "llama3.1:8b",
-            "details": {"parameter_size": "8.0B", "family": "llama"},
+            "name": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            "model": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            "details": {"parameter_size": "14.0B", "family": "qwen2"},
             "capabilities": ["completion", "tools"],
         },
         {
-            "name": "qwen3.8:latest",
-            "model": "qwen3.8:latest",
-            "details": {"parameter_size": "27B", "family": "qwen3"},
-            "capabilities": ["completion"],
+            "name": "qwen2.5:32b",
+            "model": "qwen2.5:32b",
+            "details": {"parameter_size": "32.0B", "family": "qwen2"},
+            "capabilities": ["completion", "tools"],
+        },
+        {
+            "name": "command-r:35b",
+            "model": "command-r:35b",
+            "details": {"parameter_size": "35.0B", "family": "command-r"},
+            "capabilities": ["completion", "tools"],
         },
         {
             "name": "nomic-embed-text:latest",
             "model": "nomic-embed-text:latest",
             "details": {"family": "nomic-bert"},
-            "capabilities": ["embedding"],
-        },
-        {
-            "name": "all-minilm:latest",
-            "model": "all-minilm:latest",
-            "details": {"family": "bert"},
             "capabilities": ["embedding"],
         },
     ]
@@ -43,17 +43,46 @@ class OllamaApiTests(unittest.TestCase):
     def test_lists_only_chat_models_and_keeps_active_selection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "ollama-active-model.json"
-            path.write_text(json.dumps({"model": "qwen3.8:latest"}), encoding="utf-8")
+            path.write_text(
+                json.dumps(
+                    {
+                        "mode": "deep",
+                        "model": "qwen2.5:32b",
+                    }
+                ),
+                encoding="utf-8",
+            )
             with patch.object(ollama_api, "active_model_path", return_value=path):
                 payload = ollama_api.models_status(TAGS, connected=True)
 
         ids = [model["id"] for model in payload["models"]]
         self.assertEqual(payload["ok"], True)
         self.assertEqual(payload["connected"], True)
-        self.assertEqual(payload["active"], "qwen3.8:latest")
-        self.assertEqual(ids, ["llama3.1:8b", "qwen3.8:latest"])
+        self.assertEqual(payload["active"], "qwen2.5:32b")
+        self.assertEqual(payload["activeMode"], "deep")
+        self.assertEqual(len(payload["chatModes"]), 3)
+        self.assertEqual(
+            ids,
+            [
+                "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+                "qwen2.5:32b",
+                "command-r:35b",
+            ],
+        )
         self.assertTrue(payload["models"][0]["tools"])
-        self.assertFalse(payload["models"][1]["tools"])
+
+    def test_set_active_mode_writes_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ollama-active-model.json"
+            with patch.object(ollama_api, "active_model_path", return_value=path):
+                saved = ollama_api.set_active_model("", TAGS, mode="librarian")
+
+            self.assertEqual(saved["activeMode"], "librarian")
+            self.assertEqual(saved["active"], "command-r:35b")
+            stored = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["mode"], "librarian")
+            self.assertEqual(stored["options"]["temperature"], 0.35)
+            self.assertEqual(stored["options"]["num_ctx"], 8192)
 
     def test_rejects_embedding_models_and_unknown_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -63,12 +92,19 @@ class OllamaApiTests(unittest.TestCase):
                     ollama_api.set_active_model("nomic-embed-text:latest", TAGS)
                 with self.assertRaises(ollama_api.OllamaRequestError) as missing:
                     ollama_api.set_active_model("not-a-real-model", TAGS)
-                saved = ollama_api.set_active_model("llama3.1:8b", TAGS)
+                saved = ollama_api.set_active_model(
+                    "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+                    TAGS,
+                )
 
             self.assertEqual(embed.exception.status, 400)
             self.assertEqual(missing.exception.status, 400)
-            self.assertEqual(saved["active"], "llama3.1:8b")
-            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["model"], "llama3.1:8b")
+            self.assertEqual(saved["active"], "richardyoung/qwen2.5-14b-instruct-abliterated:latest")
+            self.assertEqual(saved["activeMode"], "fast")
+            self.assertEqual(
+                json.loads(path.read_text(encoding="utf-8"))["model"],
+                "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            )
 
     def test_unavailable_ollama_keeps_fallback_without_pretending_connected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

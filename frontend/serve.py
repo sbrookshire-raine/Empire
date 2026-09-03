@@ -17,12 +17,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 try:
-    from frontend import eve_proxy, memory_api, ollama_api, ollama_inventory, primitives_api, wiki_api
+    from frontend import eve_proxy, memory_api, ollama_api, ollama_inventory, primitives_api, project_catalog, wiki_api
 except ModuleNotFoundError:
     import eve_proxy  # type: ignore[no-redef]
     import memory_api  # type: ignore[no-redef]
     import ollama_api  # type: ignore[no-redef]
     import ollama_inventory  # type: ignore[no-redef]
+    import project_catalog  # type: ignore[no-redef]
     import primitives_api  # type: ignore[no-redef]
     import wiki_api  # type: ignore[no-redef]
 
@@ -288,6 +289,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         origin = self.headers.get("Origin")
         local_only_api = (
             path.startswith("/api/memory/")
+            or path.startswith("/api/projects/")
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
         )
@@ -310,6 +312,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         if (
             path.startswith("/api/memory/")
+            or path.startswith("/api/projects/")
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
         ) and not self._memory_origin_allowed():
@@ -336,6 +339,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._ollama_inventory()
         if path == "/api/memory/status":
             return self._memory_status()
+        if path == "/api/projects/catalog":
+            return self._projects_catalog_get()
         if path.startswith("/api/memory/jobs/"):
             return self._memory_job_get(path)
         if path.startswith("/api/wiki/"):
@@ -376,9 +381,18 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = self._read_eve_json()
             if payload is None:
                 return None
+            payload = memory_api.enrich_eve_message_payload(payload)
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        if path == "/api/memory/recall":
+            return self._memory_recall()
+        if path == "/api/memory/answer":
+            return self._memory_answer()
+        if path == "/api/memory/optimize":
+            return self._memory_optimize()
+        if path == "/api/projects/catalog/refresh":
+            return self._projects_catalog_refresh()
         if path == "/api/memory/upload":
             return self._memory_upload()
         if path == "/api/ollama/summarize-tasks":
@@ -521,6 +535,141 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         finally:
             response.close()
 
+    def _memory_recall(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send_json(400, {"ok": False, "error": "Invalid Content-Length."})
+        if content_length <= 0:
+            return self._send_json(400, {"ok": False, "error": "Request body is required."})
+        try:
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return self._send_json(400, {"ok": False, "error": "Could not parse JSON body."})
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON body must be an object."})
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            return self._send_json(400, {"ok": False, "error": "Query is required."})
+        dataset = str(payload.get("dataset") or memory_api.DEFAULT_CHAT_RECALL_DATASET)
+        try:
+            result = memory_api.recall_for_chat(query, dataset=dataset)
+        except ValueError as exc:
+            return self._send_json(400, {"ok": False, "error": str(exc)})
+        if not result.get("ok"):
+            return self._send_json(503, result)
+        return self._send_json(
+            200,
+            {
+                "ok": True,
+                "query": result.get("query"),
+                "dataset": result.get("dataset"),
+                "chunkCount": result.get("chunkCount", 0),
+                "contextBlock": result.get("contextBlock", ""),
+            },
+        )
+
+    def _memory_answer(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send_json(400, {"ok": False, "error": "Invalid Content-Length."})
+        if content_length <= 0:
+            return self._send_json(400, {"ok": False, "error": "Request body is required."})
+        try:
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return self._send_json(400, {"ok": False, "error": "Could not parse JSON body."})
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON body must be an object."})
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            return self._send_json(400, {"ok": False, "error": "Query is required."})
+        fast = bool(payload.get("fast"))
+        result = memory_api.answer_memory_chat(query, fast=fast)
+        if not result.get("ok"):
+            return self._send_json(503, result)
+        return self._send_json(
+            200,
+            {
+                "ok": True,
+                "answer": result.get("answer", ""),
+                "chunkCount": result.get("chunkCount", 0),
+                "model": result.get("model"),
+                "sources": result.get("sources") or [],
+            },
+        )
+
+    def _memory_optimize(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            content_length = 0
+        payload: dict[str, object] = {}
+        if content_length > 0:
+            try:
+                body = self.rfile.read(content_length)
+                parsed = json.loads(body.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    payload = parsed
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                return self._send_json(400, {"ok": False, "error": "Could not parse JSON body."})
+        max_files = payload.get("maxFiles", 60)
+        fresh = bool(payload.get("fresh"))
+        try:
+            max_files_int = int(max_files)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            max_files_int = 60
+        try:
+            result = memory_api.run_optimize_eve_core(
+                max_files=max_files_int,
+                fresh=fresh,
+            )
+        except RuntimeError as exc:
+            return self._send_json(503, {"ok": False, "error": str(exc)})
+        return self._send_json(200, result)
+
+    def _projects_catalog_get(self) -> None:
+        rebuild = urlparse(self.path).query.find("rebuild=1") >= 0
+        catalog = project_catalog.load_project_catalog(rebuild=rebuild)
+        projects = [
+            project_catalog.public_project(item)
+            for item in catalog.get("projects", [])
+            if isinstance(item, dict)
+        ]
+        return self._send_json(
+            200,
+            {
+                "ok": True,
+                "generatedAt": catalog.get("generated_at"),
+                "projectCount": catalog.get("project_count", len(projects)),
+                "inEveCoreCount": catalog.get("in_eve_core_count"),
+                "flattenedCount": catalog.get("flattened_count"),
+                "projects": projects,
+            },
+        )
+
+    def _projects_catalog_refresh(self) -> None:
+        if not self._memory_origin_allowed():
+            return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        catalog = project_catalog.save_project_catalog()
+        projects = [
+            project_catalog.public_project(item)
+            for item in catalog.get("projects", [])
+            if isinstance(item, dict)
+        ]
+        return self._send_json(
+            200,
+            {
+                "ok": True,
+                "generatedAt": catalog.get("generated_at"),
+                "projectCount": len(projects),
+                "projects": projects,
+            },
+        )
+
     def _memory_status(self) -> None:
         jobs = [memory_api.public_job(job) for job in memory_api.JOB_STORE.list()]
         return self._send_json(
@@ -530,6 +679,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 "readiness": memory_api.memory_readiness(),
                 "statuses": memory_api.STATUS_LABELS,
                 "config": memory_api.memory_stack_config(),
+                "eveCore": memory_api.eve_core_status(),
                 "jobs": jobs,
             },
         )
@@ -700,11 +850,16 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         payload = self._read_json()
         try:
             tags = ollama_api.fetch_tags()
-            result = ollama_api.set_active_model(str(payload.get("model") or ""), tags)
+            mode = payload.get("mode")
+            if isinstance(mode, str) and mode.strip():
+                result = ollama_api.set_active_model("", tags, mode=mode.strip())
+            else:
+                result = ollama_api.set_active_model(str(payload.get("model") or ""), tags)
         except ollama_api.OllamaConnectionError:
             return self._send_json(503, {"ok": False, "error": "Ollama is unavailable."})
         except ollama_api.OllamaRequestError as exc:
             return self._send_json(exc.status, {"ok": False, "error": str(exc)})
+        result["inventory"] = ollama_inventory.build_inventory(tags)
         return self._send_json(200, result)
 
     def _ollama_summarize_tasks(self) -> None:

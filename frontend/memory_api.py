@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -22,6 +23,7 @@ import psycopg
 from pipeline.ingest_files import validate_dataset, validate_memory_file
 
 ROOT = Path(__file__).resolve().parents[1]
+logger = logging.getLogger(__name__)
 COGNEE_ENV_PATH = ROOT / "config" / "cognee.env"
 UPLOAD_ROOT = ROOT / "data" / "eve_memory" / "uploads"
 JOB_ROOT = ROOT / "data" / "eve_memory" / "jobs"
@@ -197,6 +199,72 @@ def memory_stack_config() -> dict[str, str]:
         "embeddingModel": settings.get("EMBEDDING_MODEL", "nomic-embed-text:latest"),
         "llmModel": settings.get("LLM_MODEL", "llama3.1:latest"),
         "defaultDataset": "eve_memory",
+        "chatRecallDatasets": "eve_core, eve_memory",
+    }
+
+
+def eve_core_status() -> dict[str, object]:
+    """Read the last optimize run manifest, if present."""
+
+    manifest_path = Path(r"C:\Empire_Workbench\00_Core_Profile\eve_core_manifest.json")
+    if not manifest_path.is_file():
+        return {"ready": False, "fileCount": 0, "profilePath": ""}
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"ready": False, "fileCount": 0, "profilePath": ""}
+    if not isinstance(payload, dict):
+        return {"ready": False, "fileCount": 0, "profilePath": ""}
+    return {
+        "ready": True,
+        "fileCount": int(payload.get("file_count") or 0),
+        "profilePath": str(payload.get("profile") or ""),
+    }
+
+
+OPTIMIZE_TIMEOUT_SECONDS = 900
+
+
+def run_optimize_eve_core(*, max_files: int = 60, fresh: bool = False) -> dict[str, object]:
+    """Rebuild the scored eve_core dataset from Empire Workbench."""
+
+    script = ROOT / "scripts" / "optimize_eve_memory.py"
+    command = [
+        sys.executable,
+        str(script),
+        "--max-files",
+        str(max(1, min(max_files, 200))),
+    ]
+    if fresh:
+        command.append("--fresh")
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT)
+    env["PYTHONUNBUFFERED"] = "1"
+    env["CACHING"] = "false"
+    env["COGNEE_SKIP_CONNECTION_TEST"] = "true"
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=OPTIMIZE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"Memory optimize timed out after {OPTIMIZE_TIMEOUT_SECONDS}s."
+        ) from exc
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "optimize failed"
+        raise RuntimeError(detail)
+    status = eve_core_status()
+    return {
+        "ok": True,
+        "dataset": "eve_core",
+        "fileCount": status.get("fileCount", 0),
+        "message": "Chat recall now prefers eve_core over eve_memory.",
     }
 
 
@@ -578,3 +646,420 @@ def save_uploads(parts: list, dataset: str, full_graph: bool) -> MemoryJob:
             pass
         raise MemoryJobQueueError("Memory job queue is unavailable.") from exc
     return stored
+
+
+RECALL_TIMEOUT_SECONDS = 120
+MEMORY_RECALL_MARKER = "[EMPIRE memory recall"
+DEFAULT_CHAT_RECALL_DATASET = "eve_memory"
+CHAT_RECALL_DATASETS = ("eve_core", "eve_memory")
+MEMORY_CHAT_RE = re.compile(
+    r"\b(?:"
+    r"memory|memories|interests?|interested|graph|recall|recalled|"
+    r"what do you know|what can you (?:tell|see)|what am i|"
+    r"my projects?|projects?|research|themes?|workbench|knowledge|"
+    r"from what|notes?|uploaded"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def is_memory_chat_query(text: str) -> bool:
+    """True when a chat message should trigger automatic Cognee recall."""
+
+    return bool(MEMORY_CHAT_RE.search(text.strip()))
+
+
+def _recall_hit_text(hit: object) -> str:
+    if not isinstance(hit, dict):
+        return str(hit).strip()
+    payload = hit.get("payload")
+    if isinstance(payload, dict):
+        for key in ("text", "content", "page_content"):
+            value = payload.get(key)
+            if value:
+                return str(value).strip()
+    for key in ("text", "content", "page_content"):
+        value = hit.get(key)
+        if value:
+            return str(value).strip()
+    return ""
+
+
+def _recall_hit_source(hit: object) -> str:
+    text = _recall_hit_text(hit)
+    for line in text.splitlines():
+        if line.startswith("source_file:"):
+            return line.split(":", 1)[1].strip()
+    return _recall_hit_label(hit)
+
+
+def _recall_hit_body(hit: object) -> str:
+    text = _recall_hit_text(hit)
+    lines: list[str] = []
+    for line in text.splitlines():
+        if line.startswith(
+            ("source_file:", "dataset:", "upload_job_id:", "content_hash:")
+        ):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _recall_hit_dedupe_key(hit: object) -> str:
+    text = _recall_hit_text(hit)
+    for line in text.splitlines():
+        if line.startswith("content_hash:"):
+            return line.strip()
+    body = _recall_hit_body(hit)
+    return body[:240] if body else text[:240]
+
+
+def _recall_hit_label(hit: object) -> str:
+    if not isinstance(hit, dict):
+        return ""
+    payload = hit.get("payload") if isinstance(hit.get("payload"), dict) else {}
+    for key in ("document_name", "source", "title"):
+        for source in (hit, payload):
+            if not isinstance(source, dict):
+                continue
+            value = source.get(key)
+            if value:
+                return str(value).strip()
+    return ""
+
+
+def format_recall_context(
+    results: object,
+    *,
+    max_chunks: int = 12,
+    max_chars: int = 12000,
+) -> tuple[str, int]:
+    """Turn Cognee recall hits into a compact context block for chat injection."""
+
+    hits = results if isinstance(results, list) else []
+    parts: list[str] = []
+    total = 0
+    for index, hit in enumerate(hits[:max_chunks], start=1):
+        body = _recall_hit_body(hit)
+        if not body:
+            continue
+        label = _recall_hit_source(hit)
+        block = f"--- snippet {index}"
+        if label:
+            block += f" ({label})"
+        block += f" ---\n{body}"
+        if total + len(block) > max_chars:
+            break
+        parts.append(block)
+        total += len(block)
+    return "\n\n".join(parts), len(parts)
+
+
+def recall_in_subprocess(query: str, dataset: str = DEFAULT_CHAT_RECALL_DATASET) -> dict[str, object]:
+    """Run one Cognee recall in a fresh process."""
+
+    safe_dataset = validate_dataset(dataset)
+    command = [
+        sys.executable,
+        "-m",
+        "pipeline.cognee_worker",
+        "recall",
+        "--query",
+        query,
+        "--dataset",
+        safe_dataset,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=RECALL_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"Memory recall timed out after {RECALL_TIMEOUT_SECONDS}s."
+        ) from exc
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "Memory recall worker failed.")
+    for line in reversed(result.stdout.splitlines()):
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    raise RuntimeError("Memory recall worker returned no JSON payload.")
+
+
+INTEREST_RECALL_QUERIES = (
+    "EMPIRE FORGE workbench Rain to Empire Eve Cognee PocketBase local AI agent",
+    "user projects tools building workbench whiteboard experiments combinations",
+    "knowledge management zettelkasten Heptabase Scrintal workflow notes journal",
+)
+JUNK_RECALL_RE = re.compile(
+    r"(?:"
+    r"Nobel Prize winners|heat-seeking missile|Set Measurable Goals|"
+    r"\(00:\d{2}:\d{2}\)|youtube\.com/watch|Software Application"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def memory_recall_queries_for_chat(user_message: str) -> tuple[str, ...]:
+    """Build Cognee search queries — literal user text often retrieves junk."""
+
+    cleaned = user_message.strip()
+    if re.search(
+        r"\b(?:"
+        r"interests?|interested|projects?|themes?|research|hobbies?|"
+        r"what do you know|know about me|my files?|reviewing|files?|graph"
+        r")\b",
+        cleaned,
+        re.IGNORECASE,
+    ):
+        return INTEREST_RECALL_QUERIES
+    return (f"{cleaned} EMPIRE workbench projects interests",)
+
+
+def _is_junk_recall_hit(hit: object) -> bool:
+    body = _recall_hit_body(hit)
+    if not body or body.strip() in {"|", "---"}:
+        return True
+    if len(body.strip()) < 48:
+        return True
+    return bool(JUNK_RECALL_RE.search(body))
+
+
+def merge_recall_hits(
+    payloads: list[dict[str, object]],
+    *,
+    per_query: int = 6,
+    max_hits: int = 18,
+) -> list[object]:
+    """Interleave top hits from each query so one bad query cannot dominate."""
+
+    hit_lists: list[list[object]] = []
+    for payload in payloads:
+        results = payload.get("results")
+        if not isinstance(results, list):
+            hit_lists.append([])
+            continue
+        cleaned: list[object] = []
+        for hit in results:
+            if _is_junk_recall_hit(hit):
+                continue
+            cleaned.append(hit)
+            if len(cleaned) >= per_query:
+                break
+        hit_lists.append(cleaned)
+
+    merged: list[object] = []
+    seen: set[str] = set()
+    for index in range(per_query):
+        for hits in hit_lists:
+            if index >= len(hits):
+                continue
+            hit = hits[index]
+            key = _recall_hit_dedupe_key(hit)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged.append(hit)
+            if len(merged) >= max_hits:
+                return merged
+    return merged
+
+
+def recall_for_chat(
+    query: str,
+    dataset: str = DEFAULT_CHAT_RECALL_DATASET,
+    *,
+    fast: bool = False,
+) -> dict[str, object]:
+    """Recall workbench snippets for chat prefetch (prefers eve_core, then eve_memory)."""
+
+    cleaned = query.strip()
+    if not cleaned:
+        return {"ok": False, "error": "Query is required."}
+    if fast:
+        search_queries = (cleaned,)
+        datasets: tuple[str, ...] = ("eve_core",)
+        max_chunks = 6
+        per_query = 4
+        max_hits = 10
+    else:
+        search_queries = memory_recall_queries_for_chat(cleaned)
+        datasets = (
+            CHAT_RECALL_DATASETS
+            if dataset in {DEFAULT_CHAT_RECALL_DATASET, "eve_core"}
+            else (validate_dataset(dataset),)
+        )
+        max_chunks = 18
+        per_query = 6
+        max_hits = 18
+    try:
+        payloads = [
+            recall_in_subprocess(search_query, recall_dataset)
+            for recall_dataset in datasets
+            for search_query in search_queries
+        ]
+    except Exception as exc:
+        return {"ok": False, "error": _concise_error(exc)}
+    merged_hits = merge_recall_hits(payloads, per_query=per_query, max_hits=max_hits)
+    context_block, chunk_count = format_recall_context(
+        merged_hits,
+        max_chunks=max_chunks,
+        max_chars=6000 if fast else 12000,
+    )
+    sources: list[str] = []
+    for hit in merged_hits[:chunk_count]:
+        label = _recall_hit_source(hit)
+        if label and label not in sources:
+            sources.append(label)
+    return {
+        "ok": True,
+        "query": cleaned,
+        "dataset": "+".join(datasets),
+        "chunkCount": chunk_count,
+        "contextBlock": context_block,
+        "searchQueries": list(search_queries),
+        "sources": sources,
+    }
+
+
+def build_enriched_chat_message(user_message: str, context_block: str) -> str:
+    """Attach recalled memory to the user message Eve receives."""
+
+    return (
+        f"{MEMORY_RECALL_MARKER} — operational instructions for Eve]\n"
+        f"User question: {user_message.strip()}\n\n"
+        "Answer about THIS USER's interests, projects, themes, and tools using only "
+        "the memory below. Synthesize across many snippets — do NOT summarize one "
+        "random book chapter or article. Group related themes. Name concrete projects "
+        "and tools when they appear. Speak as Eve in plain language. Never mention "
+        "snippets, recall, datasets, or embeddings.\n\n"
+        f"{context_block.strip()}"
+    )
+
+
+def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
+    """Server-side backup: prefetch memory when the model might skip tool calls."""
+
+    message = payload.get("message")
+    if not isinstance(message, str) or not message.strip():
+        return payload
+    if MEMORY_RECALL_MARKER in message:
+        return payload
+    if not is_memory_chat_query(message):
+        return payload
+    recall = recall_for_chat(message)
+    if not recall.get("ok"):
+        return payload
+    context_block = str(recall.get("contextBlock") or "").strip()
+    if not context_block:
+        return payload
+    enriched = dict(payload)
+    enriched["message"] = build_enriched_chat_message(message, context_block)
+    return enriched
+
+
+MEMORY_ANSWER_SYSTEM = (
+    "You are Eve, the local EMPIRE workbench assistant. Answer only from the supplied "
+    "memory snippets about THIS USER's projects. Explain purpose, evolution, and themes — "
+    "how ideas connect across Rain/Empire/FORGE/NLM notes and codebases. "
+    "Speak warmly and concretely, like a collaborator who has read their project history. "
+    "Never mention PocketBase tasks, tools, datasets, recall, or embeddings. "
+    "Never tell the user you created or updated a task."
+)
+EVE_INSTRUCTIONS_PATH = Path(r"C:\EMPIRE\eve_instructions.md")
+
+
+def load_eve_instructions_text() -> str:
+    """Read Eve persona from disk at runtime; return empty string on any read failure."""
+
+    override = os.environ.get("EMPIRE_EVE_INSTRUCTIONS_PATH", "").strip()
+    path = Path(override) if override else EVE_INSTRUCTIONS_PATH
+    try:
+        if not path.is_file():
+            return ""
+        return path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        logger.warning(
+            "Could not read Eve instructions from %s (%s); using fallback system prompt.",
+            path,
+            exc,
+        )
+        return ""
+    except UnicodeDecodeError as exc:
+        logger.warning(
+            "Eve instructions at %s are not valid UTF-8 (%s); using fallback system prompt.",
+            path,
+            exc,
+        )
+        return ""
+
+
+def memory_answer_system_prompt() -> str:
+    """Prepend Eve's persona file, then add memory-route operational guidance."""
+
+    eve_instructions = load_eve_instructions_text()
+    if not eve_instructions:
+        return MEMORY_ANSWER_SYSTEM
+    return f"{eve_instructions}\n\n---\n\n{MEMORY_ANSWER_SYSTEM}"
+
+
+def answer_memory_chat(query: str, *, fast: bool = False) -> dict[str, object]:
+    """Recall workbench memory and answer directly via Ollama (no Eve tool calls)."""
+
+    from frontend.ollama_api import OllamaConnectionError, chat_completion
+
+    cleaned = query.strip()
+    if not cleaned:
+        return {"ok": False, "error": "Query is required."}
+    recall = recall_for_chat(cleaned, fast=fast)
+    if not recall.get("ok"):
+        return {"ok": False, "error": str(recall.get("error") or "Memory recall failed.")}
+    context_block = str(recall.get("contextBlock") or "").strip()
+    chunk_count = int(recall.get("chunkCount") or 0)
+    if not context_block:
+        return {
+            "ok": True,
+            "answer": (
+                "I don't have much in memory that matches that yet. "
+                "Try naming a project like EMPIRE, FORGE, DAZE, or an NLM topic."
+            ),
+            "chunkCount": 0,
+            "model": None,
+        }
+    if fast:
+        user_prompt = (
+            f"User question: {cleaned}\n\n"
+            "Answer in 2–4 short paragraphs. Name concrete projects and how they connect. "
+            "Be warm and direct — no preamble.\n\n"
+            f"Memory snippets:\n{context_block}"
+        )
+    else:
+        user_prompt = (
+            f"User question: {cleaned}\n\n"
+            "Describe the user's projects: purpose, evolution, current direction, and how "
+            "related efforts connect. Name concrete projects and tools. If snippets include "
+            "Rain to Empire parts or NLM notes, treat those as authoritative narrative.\n\n"
+            f"Memory snippets:\n{context_block}"
+        )
+    try:
+        completion = chat_completion(
+            system_prompt=memory_answer_system_prompt(),
+            user_prompt=user_prompt,
+        )
+    except OllamaConnectionError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {
+        "ok": True,
+        "answer": str(completion.get("content") or "").strip(),
+        "chunkCount": chunk_count,
+        "model": completion.get("model"),
+        "sources": recall.get("sources") or [],
+    }

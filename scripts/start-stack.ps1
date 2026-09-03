@@ -17,7 +17,7 @@ function Test-Url {
 
 function Wait-Url {
     param([string]$Name, [string]$Url)
-    for ($attempt = 1; $attempt -le 20; $attempt++) {
+    for ($attempt = 1; $attempt -le 45; $attempt++) {
         if (Test-Url $Url) {
             Write-Host "  $Name healthy"
             return
@@ -50,26 +50,21 @@ if (-not $SkipOllamaCheck -and -not (Test-Url "http://127.0.0.1:11434/api/tags")
 Write-Host "  Ollama healthy"
 
 if (-not (Test-Url "http://127.0.0.1:8090/api/health")) {
-    Start-Process `
-        -FilePath (Join-Path $Root "backend\pocketbase\pocketbase.exe") `
-        -ArgumentList @("serve", "--http=127.0.0.1:8090") `
-        -WorkingDirectory (Join-Path $Root "backend\pocketbase") `
-        -WindowStyle Hidden | Out-Null
+    Start-Process -FilePath (Join-Path $Root "backend\pocketbase\pocketbase.exe") `
+        -ArgumentList "serve","--http=127.0.0.1:8090" `
+        -WorkingDirectory (Join-Path $Root "backend\pocketbase")
 }
 Wait-Url "PocketBase" "http://127.0.0.1:8090/api/health"
 
 if (-not (Test-Url "http://127.0.0.1:8080/api/memory/status")) {
-    Start-Process `
-        -FilePath (Join-Path $Root "venv\Scripts\python.exe") `
-        -ArgumentList @("-m", "frontend.serve") `
-        -WorkingDirectory $Root `
-        -WindowStyle Hidden | Out-Null
+    Start-Process -FilePath (Join-Path $Root "venv\Scripts\python.exe") `
+        -ArgumentList "-m","frontend.serve" `
+        -WorkingDirectory $Root
 }
 Wait-Url "Eve Workbench" "http://127.0.0.1:8080/api/memory/status"
 
 if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
-    & (Join-Path $Root "venv\Scripts\python.exe") `
-        (Join-Path $Root "scripts\ensure-eve-build.py")
+    & (Join-Path $Root "venv\Scripts\python.exe") (Join-Path $Root "scripts\ensure-eve-build.py")
     if ($LASTEXITCODE -ne 0) {
         throw "Eve production build preparation failed."
     }
@@ -78,11 +73,9 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
     $env:OLLAMA_BASE_URL = "http://localhost:11434/v1"
     $env:OLLAMA_MODEL = "llama3.1:8b"
     $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
-    Start-Process `
-        -FilePath $npm `
-        -ArgumentList @("exec", "--", "eve", "start", "--host", "127.0.0.1", "--port", "2000") `
-        -WorkingDirectory (Join-Path $Root "agents\empire-task-agent") `
-        -WindowStyle Hidden | Out-Null
+    Start-Process -FilePath $npm `
+        -ArgumentList "exec","--","eve","start","--host","127.0.0.1","--port","2000" `
+        -WorkingDirectory (Join-Path $Root "agents\empire-task-agent")
 }
 Wait-Url "Eve" "http://127.0.0.1:2000/eve/v1/info"
 

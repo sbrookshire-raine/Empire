@@ -12,10 +12,11 @@ fixtures when those are named.
 
 ## Workflow
 
-1. If the user has not loaded the lexicon, remind them to open/paste `directives/SYSTEM.md`.
-2. Call `cognee_recall` with a focused query and **`dataset=primitives_test`**.
-3. Synthesize using Pattern Weaver vocabulary (Scanner's Finish, Nexus Points, Friction & Flow, etc.).
-4. Cite concrete passages/entities from recall; do not invent facts.
+1. Call `cognee_recall` with a focused query and **`dataset=primitives_test`**.
+2. Synthesize using Pattern Weaver vocabulary when relevant.
+3. Cite concrete passages from recall; do not invent facts.
+
+Do **not** use this skill for general user interests or `eve_memory` — use `memory-recall` instead.
 
 ## Prerequisites
 

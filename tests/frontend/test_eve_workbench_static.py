@@ -16,21 +16,24 @@ class EveWorkbenchStaticTests(unittest.TestCase):
     def test_primary_labels_are_clear(self) -> None:
         for text in (
             "Add to memory",
-            "Chat with Eve",
-            ">Model</label>",
+            "Eve",
+            "mode-picker",
             "PocketBase tasks",
             "Memory &amp; indexing",
             "Add task",
-            "Send",
             "Stop",
             "New chat",
-            "Enter sends",
-            "Task overview",
+            "Message Eve",
+            "AI task summary",
             "workbench-tabs",
         ):
             self.assertIn(text, self.html)
         for token in (
             "chatLineStatus",
+            "compactChatStatus",
+            "visibleMessages",
+            "askSuggestion",
+            "selectMode",
             "onComposerKeydown",
             "refreshTaskSummary",
             "setTab",
@@ -66,8 +69,8 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertIn('accept=".md,.txt,.pdf"', self.html)
         self.assertIn("multiple", self.html)
         self.assertIn('id="chat-form"', self.html)
-        self.assertIn('id="ollama-model"', self.html)
-        self.assertIn("<select", self.html)
+        self.assertIn('class="mode-picker"', self.html)
+        self.assertIn('class="bubble"', self.html)
         self.assertGreaterEqual(self.html.count("<section"), 2)
         self.assertGreaterEqual(self.html.count("aria-labelledby="), 2)
         self.assertIn('aria-live="polite"', self.html)
@@ -154,8 +157,8 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertIn('type === "session.waiting"', self.js)
         self.assertIn('type === "message.received"', self.js)
         self.assertIn("return true", self.js)
-        self.assertIn("applyOllamaModel", self.js)
-        self.assertIn("selectedModel", self.js)
+        self.assertIn("applyChatMode", self.js)
+        self.assertIn("chatModes", self.js)
 
     def test_projected_event_shapes_have_safe_human_projection(self) -> None:
         for event_type in (
@@ -185,6 +188,8 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "create_task",
             "update_task",
             "delete_task",
+            "workbench_list_dir",
+            "workbench_read_file",
         ):
             self.assertIn(tool_name, self.js)
         self.assertIn("inputResponses", self.js)
@@ -258,7 +263,7 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         for token in (
             "Hallmark",
             "macrostructure: Workbench",
-            "theme: Terminal",
+            "theme: Neon Storm Arcade",
             "audience: local Eve experimenter",
             "pre-emit critique:",
         ):
@@ -275,22 +280,22 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere", self.css)
         self.assertIn(":focus-visible", self.css)
         self.assertIn("prefers-reduced-motion: reduce", self.css)
+        self.assertIn("storm-reply-flash", self.css)
+        self.assertIn("triggerReplyFlash", self.js)
         self.assertRegex(self.css, r"@media\s*\(min-width:\s*50rem\)")
 
     def test_composer_enter_sends_and_shift_enter_stays(self) -> None:
         self.assertIn("onComposerKeydown", self.html + self.js)
         self.assertIn('@keydown="onComposerKeydown($event)"', self.html)
-        self.assertIn("Enter sends", self.html)
         self.assertIn("event.shiftKey", self.js)
         self.assertIn("event.isComposing", self.js)
         self.assertIn('event.key !== "Enter"', self.js)
         self.assertIn("this.sendMessage()", self.js)
 
     def test_transcript_is_a_sequential_log(self) -> None:
-        self.assertIn('class="turn"', self.html)
-        self.assertIn("turn--", self.html)
-        self.assertIn("role: \"activity\"", self.js)
-        self.assertIn("workbench.messages.push(activity)", self.js)
+        self.assertIn('class="bubble"', self.html)
+        self.assertIn("bubble--", self.html)
+        self.assertIn("visibleMessages", self.js)
         self.assertNotIn('class="message"', self.html)
         self.assertNotIn("activity-list", self.html)
 

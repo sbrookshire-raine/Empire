@@ -28,7 +28,7 @@ Eve tool `switch_chat_model` writes the same file via `frontend/ollama_cli.py`.
 
 ### Voice vs instructions
 
-`agent/instructions.md` separates **Voice** (what users see as Eve) from **Tool usage** (internal). Eve must not quote system rules, tool names, or framework errors in chat. Personality can grow in the Voice section over time.
+`agent/instructions.md` is **voice-only** (what users see). Operational tool routing lives in the on-demand `empire-operations` skill so rules do not leak into chat. Eve must not quote system rules, tool names, or framework errors in replies.
 
 ### Disabled harness tools
 
@@ -60,23 +60,22 @@ Clarifications belong in **plain chat text**, not a separate question tool.
 Tool files: `agent/tools/*.ts`  
 Libraries: `agent/lib/pocketbase.ts`, `agent/lib/cognee.ts`, `agent/lib/ollama.ts`
 
-## Skills (3)
-
-Eve **framework skills** — markdown in `agent/skills/`, loaded on demand via `ctx.getSkill()`:
+## Skills (4)
 
 | Skill | File | When to load |
 |-------|------|--------------|
+| `empire-operations` | `empire-operations.md` | Tasks, memory, models — main operational playbook |
 | `manage-tasks` | `manage-tasks.md` | Multi-step PocketBase workflows, "Have Eve do this" |
 | `recall-ingested-context` | `recall-ingested-context.md` | Curated primitives, `primitives_test` |
 | `route-local-models` | `route-local-models.md` | Model choice, suite gaps, switching |
 
-System instructions: `agent/instructions.md` (voice + internal tool rules).
+System instructions: `agent/instructions.md` (voice only). Tool routing: `empire-operations` skill.
 
 **Note:** Workbench "skills" in `ollama_inventory.py` (dailyChat, coding, etc.) are **model routing slots**, not Eve framework skills.
 
 ## System instructions
 
-`agent/instructions.md` — responsibilities, tool routing rules, dataset defaults, response style.
+`agent/instructions.md` — voice, output contract, personality. Operational procedures: `agent/skills/empire-operations.md` (loaded on demand).
 
 After adding tools or skills:
 
@@ -103,14 +102,14 @@ Session contract: NDJSON events (`message.delta`, `actions.requested`, `input.re
 
 1. Create `agent/tools/my_tool.ts` with `defineTool({ ... })`
 2. Add backend in `agent/lib/` if needed
-3. Update `agent/instructions.md`
+3. Document it in `agent/skills/empire-operations.md`
 4. Add label in `frontend/eve-workbench.js` → `TOOL_LABELS`
 5. `npm run typecheck && npm run build`
 
 ### Add a skill
 
 1. Create `agent/skills/my-skill.md` with workflow steps
-2. Reference it in `instructions.md` ("Load `my-skill` when…")
+2. Reference it in `empire-operations.md` or `instructions.md` ("Load `my-skill` when…")
 3. Rebuild Eve
 
 ### MCP parity

@@ -13,7 +13,8 @@ This repo is already built. You **feed documents into Cognee** so Eve (and Curso
 
 Plug in the T7 (`I:`). Then either:
 
-- **Double-click** `Start-EMPIRE.bat` at the repo root (starts Ollama if needed, full stack, opens browser), or
+- **Double-click** `Start-EMPIRE.bat` at the repo root (starts Ollama if needed, full stack, opens browser)
+- **Double-click** `Stop-EMPIRE.bat` to shut down (batch-only; no PowerShell stop scripts — AV-safe), or
 - From PowerShell:
 
 ```powershell
@@ -35,6 +36,8 @@ Open **http://127.0.0.1:8080/eve.html**
 ### Give Eve data
 
 On the Eve Workbench, choose or drop `.md`, `.txt`, or `.pdf` files and click **Add to memory**. Workbench uploads use dataset **`eve_memory`** by default.
+
+**Fast chat recall:** after bulk workbench ingest, run `.\scripts\optimize-eve-memory.ps1` (or **Optimize recall** on the Memory tab). That builds dataset **`eve_core`** — a small curated set Eve searches first.
 
 For curated primitives, continue to use http://127.0.0.1:8080/primitives.html:
 
@@ -145,7 +148,8 @@ Tools wrap PocketBase REST and Cognee (Python subprocess), matching Cursor MCP b
 # Graceful service orchestration (dashboard-ready)
 .\scripts\start-stack.ps1      # preferred cold start: V: + Postgres + PocketBase + UI + Eve
 .\scripts\roll-in.ps1          # start: Ollama verify → PocketBase → UI → Eve
-.\scripts\roll-out.ps1         # stop managed services in reverse order
+.\scripts\stop-empire.ps1      # calls Stop-EMPIRE.bat (or double-click Stop-EMPIRE.bat)
+.\scripts\roll-out.ps1         # Eve + Workbench + PocketBase only
 .\scripts\refresh-dashboard.ps1
 .\scripts\verify-stack.ps1     # integration checks (services talking to each other)
 .\venv\Scripts\python.exe .\scripts\verify-eve-workbench.py # full Workbench workflow

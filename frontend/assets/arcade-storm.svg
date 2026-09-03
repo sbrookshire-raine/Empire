@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1030"/>
+      <stop offset="45%" stop-color="#121828"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
+    </linearGradient>
+    <linearGradient id="grid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00ffc833"/>
+      <stop offset="100%" stop-color="#7b2fff00"/>
+    </linearGradient>
+    <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="900" fill="url(#sky)"/>
+  <ellipse cx="360" cy="120" rx="280" ry="90" fill="#2a3040" opacity="0.85"/>
+  <ellipse cx="720" cy="80" rx="340" ry="110" fill="#323848" opacity="0.9"/>
+  <ellipse cx="1080" cy="130" rx="300" ry="95" fill="#252b38" opacity="0.8"/>
+  <ellipse cx="520" cy="200" rx="220" ry="70" fill="#1e2430" opacity="0.75"/>
+  <ellipse cx="980" cy="210" rx="260" ry="80" fill="#1a2030" opacity="0.7"/>
+  <g filter="url(#softglow)" opacity="0.35">
+    <path d="M620 40 L640 180 L600 178 L660 320 L590 160 L630 162 Z" fill="#b44fff"/>
+    <path d="M900 60 L915 200 L885 198 L930 350 L870 185 L905 187 Z" fill="#4fd9ff"/>
+    <path d="M380 90 L395 220 L365 218 L410 360 L355 205 L390 207 Z" fill="#5dffa8"/>
+  </g>
+  <g filter="url(#neon)">
+    <path d="M620 40 L640 180 L600 178 L660 320 L590 160 L630 162 Z" fill="none" stroke="#e066ff" stroke-width="3"/>
+    <path d="M900 60 L915 200 L885 198 L930 350 L870 185 L905 187 Z" fill="none" stroke="#66e8ff" stroke-width="3"/>
+    <path d="M380 90 L395 220 L365 218 L410 360 L355 205 L390 207 Z" fill="none" stroke="#7dffb8" stroke-width="2.5"/>
+    <path d="M1100 100 L1110 210 L1095 208 L1125 300 L1088 205 L1108 207 Z" fill="none" stroke="#c77dff" stroke-width="2"/>
+  </g>
+  <g opacity="0.45">
+    <path d="M0 620 L1440 620" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M0 660 L1440 660" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M0 700 L1440 700" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M0 740 L1440 740" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M0 780 L1440 780" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M0 820 L1440 820" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M180 620 L180 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M360 620 L360 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M540 620 L540 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M720 620 L720 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M900 620 L900 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M1080 620 L1080 900" stroke="url(#grid)" stroke-width="1"/>
+    <path d="M1260 620 L1260 900" stroke="url(#grid)" stroke-width="1"/>
+  </g>
+  <rect x="0" y="600" width="1440" height="300" fill="url(#grid)" opacity="0.12"/>
+</svg>

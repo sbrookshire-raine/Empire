@@ -12,8 +12,8 @@
   <body>
     <nav id="empire-nav" data-current="eve" aria-label="EMPIRE"></nav>
 
-    <main class="workbench" x-data="eveWorkbench()" x-init="init()" x-cloak>
-      <header class="workbench__header">
+    <main class="workbench" :class="{ 'workbench--chat': activeTab === 'chat' }" x-data="eveWorkbench()" x-init="init()" x-cloak>
+      <header class="workbench__header" x-show="activeTab !== 'chat'" x-cloak>
         <div>
           <h1>Eve Workbench</h1>
           <p>Chat, tasks, and memory — one tab at a time.</p>
@@ -58,6 +58,17 @@
           type="button"
           class="workbench-tabs__tab"
           role="tab"
+          id="tab-projects"
+          aria-controls="panel-projects"
+          :aria-selected="activeTab === 'projects'"
+          @click="setTab('projects')"
+        >
+          Projects
+        </button>
+        <button
+          type="button"
+          class="workbench-tabs__tab"
+          role="tab"
           id="tab-models"
           aria-controls="panel-models"
           :aria-selected="activeTab === 'models'"
@@ -86,100 +97,95 @@
         x-show="activeTab === 'chat'"
         x-cloak
       >
-        <header class="panel__header chat__header">
-          <div class="chat__intro">
-            <h2>Chat with Eve</h2>
-            <p id="ollama-model-status" class="model-status" aria-live="polite" x-text="chatLineStatus"></p>
+        <header class="chat__toolbar">
+          <div class="chat__brand">
+            <h2>Eve</h2>
+            <p class="chat__status" aria-live="polite" x-text="compactChatStatus"></p>
           </div>
-          <div class="chat__controls">
-            <label for="ollama-model">Model</label>
-            <select
-              id="ollama-model"
-              name="ollama_model"
-              x-model="selectedModel"
-              @change="applyOllamaModel()"
-              :disabled="sending || switchingModel || !ollamaConnected || ollamaModels.length === 0"
-              aria-describedby="ollama-model-status"
+          <div class="chat__toolbar-actions">
+            <details class="mode-picker">
+              <summary
+                class="mode-picker__toggle"
+                :aria-disabled="sending || switchingModel || !ollamaConnected"
+                x-text="activeModeShortLabel"
+              ></summary>
+              <div class="mode-picker__menu" role="listbox" aria-label="Chat mode">
+                <template x-for="mode in chatModes" :key="mode.id">
+                  <button
+                    type="button"
+                    class="mode-picker__option"
+                    role="option"
+                    :aria-selected="selectedMode === mode.id"
+                    @click="selectMode(mode.id)"
+                    :disabled="sending || switchingModel || !ollamaConnected"
+                  >
+                    <span class="mode-picker__label" x-text="mode.label"></span>
+                    <span class="mode-picker__desc" x-text="mode.description"></span>
+                  </button>
+                </template>
+              </div>
+            </details>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="New chat"
+              aria-label="New chat"
+              @click="newChat()"
             >
-              <template x-for="model in ollamaModels" :key="model.id">
-                <option :value="model.id" x-text="model.label"></option>
-              </template>
-            </select>
-            <button class="button button--quiet" type="button" @click="newChat()">New chat</button>
+              +
+            </button>
           </div>
         </header>
 
-        <details class="task-overview" @toggle="onTaskOverviewToggle($event)">
-          <summary>Task overview</summary>
-          <div class="task-overview__body">
-            <p class="task-overview__hint" x-show="!taskSummary && !taskSummaryLoading && !taskSummaryError">
-              Open to get a local Ollama summary of your PocketBase tasks before you chat.
-            </p>
-            <p class="form-message" x-show="taskSummaryLoading" aria-live="polite">Summarizing tasks…</p>
-            <p
-              class="form-message form-message--error"
-              x-show="taskSummaryError"
-              aria-live="polite"
-              x-text="taskSummaryError"
-            ></p>
-            <p
-              class="task-overview__meta"
-              x-show="taskSummaryModel && taskSummary && !taskSummaryLoading"
-              x-text="'Summary via ' + taskSummaryModel"
-            ></p>
-            <p
-              class="task-overview__text"
-              x-show="taskSummary && !taskSummaryLoading"
-              x-text="taskSummary"
-            ></p>
-            <div class="button-row" x-show="taskOverviewOpen">
-              <button
-                class="button button--quiet"
-                type="button"
-                @click="refreshTaskSummary(true)"
-                :disabled="taskSummaryLoading"
-              >
-                Refresh summary
-              </button>
-              <button class="button button--quiet" type="button" @click="setTab('tasks')">
-                Open Tasks tab
-              </button>
-            </div>
-          </div>
-        </details>
+        <p class="chat__activity" x-show="chatActivityLabel" x-text="chatActivityLabel" aria-live="polite"></p>
 
         <div
-          class="transcript"
+          class="transcript chat__transcript"
           x-ref="transcript"
           role="log"
           aria-live="polite"
           aria-relevant="additions text"
         >
-          <div class="empty-state" x-show="messages.length === 0 && pendingInputs.length === 0">
-            <p>No messages yet.</p>
-            <p>Ask about memory or a PocketBase task.</p>
+          <div class="chat-welcome" x-show="messages.length === 0 && pendingInputs.length === 0">
+            <p class="chat-welcome__lead">Hey — what are we working on?</p>
+            <p class="chat-welcome__sub">I remember your projects, notes, and code. Pick a starter or just ask.</p>
+            <div class="chat-suggestions">
+              <button type="button" class="chat-suggestion" @click="askSuggestion('What projects do you know about?')">
+                What projects do you know?
+              </button>
+              <button type="button" class="chat-suggestion" @click="askSuggestion('How did EMPIRE evolve from Rain?')">
+                EMPIRE from Rain
+              </button>
+              <button type="button" class="chat-suggestion" @click="askSuggestion('What themes show up in my workbench?')">
+                Workbench themes
+              </button>
+            </div>
           </div>
-          <template x-for="message in messages" :key="message.id">
-            <article
-              class="turn"
-              :class="'turn--' + message.role"
-              :data-state="message.state || ''"
-            >
-              <p
-                class="turn__role"
-                x-text="message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Eve' : 'Tool'"
-              ></p>
-              <p
-                class="turn__text"
-                x-show="message.role !== 'activity'"
-                x-text="message.text"
-              ></p>
-              <p class="turn__activity" x-show="message.role === 'activity'">
-                <span class="status-mark" aria-hidden="true" x-text="message.symbol"></span>
-                <span x-text="message.label"></span>
-              </p>
+          <template x-for="message in visibleMessages" :key="message.id">
+            <article class="bubble" :class="'bubble--' + message.role">
+              <p class="bubble__text" x-text="message.text"></p>
+              <details class="bubble__sources" x-show="message.sources && message.sources.length">
+                <summary x-text="message.sources.length + ' source' + (message.sources.length === 1 ? '' : 's')"></summary>
+                <ul>
+                  <template x-for="source in message.sources" :key="source">
+                    <li x-text="source"></li>
+                  </template>
+                </ul>
+              </details>
             </article>
           </template>
+
+          <article
+            class="bubble bubble--assistant bubble--thinking"
+            x-show="showThinkingIndicator"
+            x-cloak
+            aria-live="polite"
+          >
+            <p class="bubble__text bubble__text--thinking">
+              <span class="thinking-dots" aria-hidden="true"></span>
+              <span x-text="thinkingLabel"></span>
+            </p>
+          </article>
 
           <template x-for="request in pendingInputs" :key="request.requestId">
             <section class="input-request" :aria-labelledby="'input-request-' + request.requestId">
@@ -199,34 +205,40 @@
           </template>
         </div>
 
-        <form id="chat-form" class="composer" @submit.prevent="sendMessage()">
+        <form id="chat-form" class="composer chat-composer" @submit.prevent="sendMessage()">
           <label class="visually-hidden" for="chat-message">Message Eve</label>
           <div class="composer__row">
             <textarea
               id="chat-message"
               name="message"
-              rows="2"
+              rows="1"
               x-model="draft"
               :disabled="sending"
               @keydown="onComposerKeydown($event)"
-              aria-describedby="composer-hint chat-error"
-              placeholder="Ask about a file or task"
+              aria-describedby="chat-error"
+              placeholder="Message Eve…"
             ></textarea>
             <div class="composer__actions">
               <button
-                class="button button--primary"
+                class="button button--primary composer__send"
                 type="submit"
                 :disabled="sending || !draft.trim()"
                 :aria-busy="sending"
+                aria-label="Send message"
               >
-                Send
+                ↑
               </button>
-              <button class="button button--danger" type="button" :disabled="!sending" @click="stopChat()">
+              <button
+                class="button button--quiet composer__stop"
+                type="button"
+                :disabled="!sending"
+                @click="stopChat()"
+                aria-label="Stop response"
+              >
                 Stop
               </button>
             </div>
           </div>
-          <p id="composer-hint" class="composer__hint">Enter sends · Shift+Enter for a new line</p>
           <p
             id="chat-error"
             class="form-message form-message--error"
@@ -263,6 +275,42 @@
             </button>
           </div>
         </header>
+
+        <details class="task-overview" @toggle="onTaskOverviewToggle($event)">
+          <summary>AI task summary</summary>
+          <div class="task-overview__body">
+            <p class="task-overview__hint" x-show="!taskSummary && !taskSummaryLoading && !taskSummaryError">
+              Open to get a local Ollama summary of your PocketBase tasks.
+            </p>
+            <p class="form-message" x-show="taskSummaryLoading" aria-live="polite">Summarizing tasks…</p>
+            <p
+              class="form-message form-message--error"
+              x-show="taskSummaryError"
+              aria-live="polite"
+              x-text="taskSummaryError"
+            ></p>
+            <p
+              class="task-overview__meta"
+              x-show="taskSummaryModel && taskSummary && !taskSummaryLoading"
+              x-text="'Summary via ' + taskSummaryModel"
+            ></p>
+            <p
+              class="task-overview__text"
+              x-show="taskSummary && !taskSummaryLoading"
+              x-text="taskSummary"
+            ></p>
+            <div class="button-row" x-show="taskOverviewOpen">
+              <button
+                class="button button--quiet"
+                type="button"
+                @click="refreshTaskSummary(true)"
+                :disabled="taskSummaryLoading"
+              >
+                Refresh summary
+              </button>
+            </div>
+          </div>
+        </details>
 
         <form class="task-create" @submit.prevent="createTask()">
           <label class="task-create__title" for="task-title">Title</label>
@@ -424,8 +472,47 @@
 
         <p class="memory-stack" aria-live="polite">
           <span>Embed model: <strong x-text="memoryConfig.embeddingModel || 'nomic-embed-text:latest'"></strong></span>
-          <span>Dataset: <strong x-text="dataset"></strong></span>
+          <span>Upload dataset: <strong x-text="dataset"></strong></span>
+          <span>Chat recall: <strong x-text="memoryConfig.chatRecallDatasets || 'eve_core, eve_memory'"></strong></span>
         </p>
+
+        <article class="memory-core" aria-live="polite">
+          <header>
+            <h3>Fast recall (eve_core)</h3>
+            <p>
+              Bulk workbench files live in <code>eve_memory</code>. After adding notes, run
+              <strong>Optimize recall</strong> to rebuild a small high-signal
+              <code>eve_core</code> dataset for chat.
+            </p>
+          </header>
+          <p class="memory-core__status">
+            <span x-show="eveCoreStatus.ready">
+              <strong x-text="eveCoreStatus.fileCount"></strong> curated files in
+              <code>eve_core</code>.
+            </span>
+            <span x-show="!eveCoreStatus.ready">No <code>eve_core</code> profile yet — optimize after bulk ingest.</span>
+          </p>
+          <p class="form-message" x-show="memoryOptimizeMessage" x-text="memoryOptimizeMessage"></p>
+          <div class="button-row">
+            <button
+              class="button button--quiet"
+              type="button"
+              @click="optimizeMemory(false)"
+              :disabled="memoryOptimizing"
+              :aria-busy="memoryOptimizing"
+            >
+              <span x-text="memoryOptimizing ? 'Optimizing recall…' : 'Optimize recall'"></span>
+            </button>
+            <button
+              class="button button--quiet"
+              type="button"
+              @click="optimizeMemory(true)"
+              :disabled="memoryOptimizing"
+            >
+              Rebuild from scratch
+            </button>
+          </div>
+        </article>
 
         <form @submit.prevent="uploadFiles()" novalidate>
           <div
@@ -540,6 +627,72 @@
       </section>
 
       <section
+        id="panel-projects"
+        class="panel tab-panel projects"
+        role="tabpanel"
+        aria-labelledby="tab-projects"
+        x-show="activeTab === 'projects'"
+        x-cloak
+      >
+        <header class="panel__header projects__header">
+          <div>
+            <h2>Your projects</h2>
+            <p>What EMPIRE has harvested: flattened codebases, NLM notes, and eve_core memory.</p>
+          </div>
+          <button
+            class="button button--quiet"
+            type="button"
+            @click="refreshProjectsCatalog(true)"
+            :disabled="projectsLoading"
+          >
+            Refresh catalog
+          </button>
+        </header>
+
+        <p class="projects__meta" x-show="projectsMeta.projectCount">
+          <strong x-text="projectsMeta.projectCount"></strong> projects ·
+          <strong x-text="projectsMeta.inEveCoreCount"></strong> in fast recall (eve_core) ·
+          <strong x-text="projectsMeta.flattenedCount"></strong> with flattened code
+        </p>
+        <p class="form-message" x-show="projectsLoading" aria-live="polite">Building project catalog…</p>
+        <p
+          class="form-message form-message--error"
+          x-show="projectsError"
+          aria-live="polite"
+          x-text="projectsError"
+        ></p>
+
+        <div class="project-grid" x-show="projects.length && !projectsLoading">
+          <template x-for="project in projects" :key="project.id">
+            <article class="project-card" :data-kind="project.kind">
+              <header>
+                <h3 x-text="project.displayName"></h3>
+                <span class="project-card__badge" x-show="project.inEveCore">eve_core</span>
+                <span class="project-card__badge project-card__badge--muted" x-show="project.hasCode">code</span>
+              </header>
+              <p class="project-card__meta">
+                <span x-show="project.sourceFileCount" x-text="project.sourceFileCount + ' source files'"></span>
+                <span x-show="project.memoryFileCount" x-text="project.memoryFileCount + ' memory files'"></span>
+              </p>
+              <p class="project-card__source" x-show="project.flattenedSource" x-text="project.flattenedSource"></p>
+              <ul class="project-card__files" x-show="project.memoryFiles && project.memoryFiles.length">
+                <template x-for="file in project.memoryFiles" :key="file">
+                  <li x-text="file"></li>
+                </template>
+              </ul>
+              <button
+                class="button button--quiet"
+                type="button"
+                @click="askAboutProject(project.displayName)"
+              >
+                Ask about this
+              </button>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section
         id="panel-models"
         class="panel tab-panel models"
         role="tabpanel"
@@ -550,7 +703,7 @@
         <header class="panel__header models__header">
           <div>
             <h2>Model suite</h2>
-            <p>Target one strong model per skill on 16 GB VRAM. Pull gaps, remove duplicates, route Eve by task.</p>
+            <p>Pick a mode for Eve chat. You choose when to load heavier models — Eve never auto-switches.</p>
           </div>
           <button
             class="button button--quiet"
@@ -663,7 +816,7 @@
 
         <details class="model-roster model-roster--briefing" x-show="modelRecommendations.eveBriefing && !modelInventoryLoading">
           <summary>Eve routing briefing</summary>
-          <p class="model-roster__hint">Share this with Eve or paste into memory so she can pick models by task later.</p>
+          <p class="model-roster__hint">Manual mode reference — Eve never auto-switches models.</p>
           <pre class="model-briefing" x-text="modelRecommendations.eveBriefing"></pre>
           <button class="button button--quiet" type="button" @click="copyEveBriefing()">Copy briefing</button>
         </details>

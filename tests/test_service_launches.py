@@ -105,7 +105,7 @@ class EveBuildStalenessTests(unittest.TestCase):
             (root / "agent").mkdir()
             wanted = [
                 root / "agent" / "agent.ts",
-                root / "agent" / "instructions.md",
+                root / "agent" / "instructions.ts",
                 root / "package.json",
                 root / "package-lock.json",
                 root / "tsconfig.json",

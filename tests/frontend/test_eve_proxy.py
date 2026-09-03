@@ -180,8 +180,52 @@ class EveProxyProjectionTests(unittest.TestCase):
             "data": {"messageDelta": "<img src=x onerror=alert(1)>", "messageSoFar": "<b>Hello</b>"},
         }
         projected = project_event(event)
-        self.assertEqual(projected, event)
+        self.assertIsNotNone(projected)
+        assert projected is not None
+        self.assertEqual(projected["data"]["messageDelta"], "<img src=x onerror=alert(1)>")
+        self.assertEqual(projected["data"]["messageSoFar"], "<b>Hello</b>")
         self.assertIsInstance(projected["data"]["messageDelta"], str)
+
+    def test_sanitize_assistant_text_strips_meta_preamble_and_keeps_reply(self) -> None:
+        leaked = (
+            'Since the input is a question and not a request for the user to perform an action, '
+            'we will not call any tools. A simple response would be: "Yes, I\'m ready!"'
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Yes, I'm ready!",
+        )
+
+    def test_sanitize_assistant_text_strips_think_blocks(self) -> None:
+        leaked = "<think>Planning tools.</think>Yes — ready when you are."
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Yes — ready when you are.",
+        )
+
+    def test_project_event_sanitizes_assistant_messages(self) -> None:
+        event = {
+            "type": "message.completed",
+            "data": {
+                "role": "assistant",
+                "message": (
+                    "Since this is a question, we will not call any tools. "
+                    'A simple response would be: "Hey there."'
+                ),
+            },
+        }
+        projected = project_event(event)
+        self.assertIsNotNone(projected)
+        assert projected is not None
+        self.assertEqual(projected["data"]["message"], "Hey there.")
+
+    def test_project_event_leaves_user_messages_untouched(self) -> None:
+        event = {
+            "type": "message.appended",
+            "data": {"role": "user", "messageDelta": "are you ready?"},
+        }
+        projected = project_event(event)
+        self.assertEqual(projected, event)
 
     def test_invalid_event_shape_is_not_exposed(self) -> None:
         for event in ({}, {"type": 3}, {"type": "message.appended", "data": "secret"}):

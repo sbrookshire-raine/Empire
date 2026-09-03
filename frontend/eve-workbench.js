@@ -20,7 +20,34 @@
     switch_chat_model: "Switching chat model…",
     ollama_health: "Checking Ollama…",
     pb_health: "Checking PocketBase…",
+    workbench_list_dir: "Scanning workbench folders…",
+    workbench_read_file: "Reading workbench file…",
   };
+  var DEFAULT_CHAT_MODES = [
+    {
+      id: "fast",
+      label: "Fast Mode (14b)",
+      description:
+        "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
+      model: "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+      numCtx: 16384,
+    },
+    {
+      id: "deep",
+      label: "Deep Mode (32b)",
+      description: "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
+      model: "qwen2.5:32b",
+      numCtx: 8192,
+    },
+    {
+      id: "librarian",
+      label: "Librarian (Command-R 35b)",
+      description:
+        "Mass synthesis — cross-reference many flattened files and long memory snippets.",
+      model: "command-r:35b",
+      numCtx: 8192,
+    },
+  ];
   var SERVICE_LABELS = {
     eve: "Eve",
     memory: "Memory",
@@ -36,6 +63,22 @@
 
   function errorMessage(payload, fallback) {
     return plainText(payload && (payload.error || payload.message)) || fallback;
+  }
+
+  var REPLY_FLASH_MS = 900;
+
+  function triggerReplyFlash() {
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    var body = document.body;
+    if (!body) return;
+    body.classList.remove("storm-reply-flash");
+    void body.offsetWidth;
+    body.classList.add("storm-reply-flash");
+    window.setTimeout(function () {
+      body.classList.remove("storm-reply-flash");
+    }, REPLY_FLASH_MS);
   }
 
   function fileExtension(name) {
@@ -177,6 +220,11 @@
       currentAssistantId: null,
       nextId: 1,
       ollamaModels: [],
+      chatModes: [],
+      selectedMode: "fast",
+      activeMode: "fast",
+      activeModeLabel: "Fast Mode (14b)",
+      activeModeDescription: "",
       selectedModel: "",
       activeOllamaModel: "",
       ollamaConnected: false,
@@ -201,7 +249,15 @@
         embeddingModel: "nomic-embed-text:latest",
         embeddingProvider: "ollama",
         defaultDataset: "eve_memory",
+        chatRecallDatasets: "eve_core, eve_memory",
       },
+      eveCoreStatus: { ready: false, fileCount: 0 },
+      memoryOptimizing: false,
+      memoryOptimizeMessage: "",
+      projects: [],
+      projectsLoading: false,
+      projectsError: "",
+      projectsMeta: { projectCount: 0, inEveCoreCount: 0, flattenedCount: 0 },
       modelInventory: [],
       modelRecommendations: {
         summary: "",
@@ -242,13 +298,53 @@
         });
       },
 
+      get modeHintText() {
+        var modeId = plainText(this.selectedMode) || plainText(this.activeMode);
+        var mode = (this.chatModes || []).find(function (item) {
+          return item.id === modeId;
+        });
+        return plainText(mode && mode.description) || plainText(this.activeModeDescription);
+      },
+
+      get activeModeShortLabel() {
+        var labels = { fast: "Fast", deep: "Deep", librarian: "Librarian" };
+        return labels[this.activeMode] || labels[this.selectedMode] || "Mode";
+      },
+
+      get compactChatStatus() {
+        if (this.switchingModel) return "Switching mode…";
+        if (!this.ollamaConnected) return this.ollamaStatus || "Ollama offline";
+        return this.activeModeShortLabel + " · " + (this.activeOllamaModel || "ready");
+      },
+
+      get chatActivityLabel() {
+        if (!this.sending) return "";
+        var status = plainText(this.chatStatus);
+        if (!status || /^ready/i.test(status)) return "Eve is thinking…";
+        return status;
+      },
+
+      get thinkingLabel() {
+        return this.chatActivityLabel || "Eve is thinking…";
+      },
+
+      get visibleMessages() {
+        return (this.messages || []).filter(function (message) {
+          return message.role === "user" || message.role === "assistant";
+        });
+      },
+
       get chatLineStatus() {
+        var modeLabel = plainText(this.activeModeLabel) || "Eve chat";
         var model = this.activeOllamaModel || this.selectedModel;
         var modelPart = this.ollamaConnected
           ? model
-            ? "Ollama · " + model
-            : "Ollama connected"
+            ? modeLabel + " · " + model
+            : modeLabel + " · Ollama connected"
           : this.ollamaStatus || "Ollama unavailable";
+        if (this.sending) {
+          return modelPart + " · " + (plainText(this.chatStatus) || "Eve is working…");
+        }
         var chatPart = plainText(this.chatStatus);
         if (!chatPart || chatPart === modelPart) return modelPart;
         if (/^ready\.?$/i.test(chatPart) || /^ready for a (new )?local conversation\.?$/i.test(chatPart)) {
@@ -257,10 +353,30 @@
         return modelPart + " · " + chatPart;
       },
 
+      get hasWorkingActivity() {
+        return (this.activities || []).some(function (item) {
+          return item.state === "working";
+        });
+      },
+
+      get showThinkingIndicator() {
+        return this.sending && !this.hasWorkingActivity && !this.currentAssistantText();
+      },
+
+      currentAssistantText: function () {
+        if (!this.currentAssistantId) return "";
+        var message = this.messages.find(
+          function (item) {
+            return item.id === this.currentAssistantId;
+          }.bind(this)
+        );
+        return message ? plainText(message.text) : "";
+      },
+
       init: function () {
         try {
           var saved = localStorage.getItem("eve-workbench-tab");
-          if (saved && ["chat", "tasks", "memory", "models", "more"].indexOf(saved) >= 0) {
+          if (saved && ["chat", "tasks", "memory", "projects", "models", "more"].indexOf(saved) >= 0) {
             this.activeTab = saved;
           }
         } catch (_error) {
@@ -272,7 +388,7 @@
       },
 
       setTab: function (tab) {
-        var allowed = ["chat", "tasks", "memory", "models", "more"];
+        var allowed = ["chat", "tasks", "memory", "projects", "models", "more"];
         if (allowed.indexOf(tab) < 0) tab = "chat";
         this.activeTab = tab;
         try {
@@ -282,6 +398,48 @@
         }
         if (tab === "chat") this.scrollTranscript();
         if (tab === "models") this.refreshModelInventory(false);
+        if (tab === "projects") this.refreshProjectsCatalog(false);
+      },
+
+      refreshProjectsCatalog: async function (rebuild) {
+        this.projectsLoading = true;
+        this.projectsError = "";
+        try {
+          var url = "/api/projects/catalog" + (rebuild ? "?rebuild=1" : "");
+          var response = await fetch(url, { cache: "no-store" });
+          var raw = await response.text();
+          var payload;
+          try {
+            payload = JSON.parse(raw);
+          } catch (_parseError) {
+            throw new Error(
+              response.ok
+                ? "Projects API returned invalid JSON."
+                : "Projects API unavailable — restart the frontend (port 8080) to load the latest server."
+            );
+          }
+          if (!response.ok || !payload.ok) {
+            throw new Error(errorMessage(payload, "Could not load project catalog."));
+          }
+          this.projects = Array.isArray(payload.projects) ? payload.projects : [];
+          this.projectsMeta = {
+            projectCount: payload.projectCount || this.projects.length,
+            inEveCoreCount: payload.inEveCoreCount || 0,
+            flattenedCount: payload.flattenedCount || 0,
+          };
+        } catch (error) {
+          this.projectsError = plainText(error.message) || "Could not load project catalog.";
+        } finally {
+          this.projectsLoading = false;
+        }
+      },
+
+      askAboutProject: function (displayName) {
+        this.setTab("chat");
+        this.draft =
+          "Tell me about my " +
+          plainText(displayName) +
+          " project — purpose, evolution, and what you know from memory.";
       },
 
       applyModelInventory: function (payload) {
@@ -385,6 +543,14 @@
 
       selectChatModel: async function (modelId) {
         var model = plainText(modelId);
+        var mode = (this.chatModes || []).find(function (item) {
+          return item.model === model;
+        });
+        if (mode) {
+          this.selectedMode = mode.id;
+          this.setTab("chat");
+          return this.applyChatMode();
+        }
         if (!model || !this.ollamaModels.some(function (item) { return item.id === model; })) {
           this.modelInventoryError = "That model is not available for Eve chat.";
           return;
@@ -643,6 +809,9 @@
           if (payload.config && typeof payload.config === "object") {
             this.memoryConfig = Object.assign({}, this.memoryConfig, payload.config);
           }
+          if (payload.eveCore && typeof payload.eveCore === "object") {
+            this.eveCoreStatus = Object.assign({}, this.eveCoreStatus, payload.eveCore);
+          }
           this.recentJobs = Array.isArray(payload.jobs)
             ? payload.jobs
                 .slice()
@@ -653,6 +822,30 @@
             : [];
         } catch (_error) {
           return;
+        }
+      },
+
+      optimizeMemory: async function (fresh) {
+        this.memoryOptimizeMessage = "";
+        this.memoryOptimizing = true;
+        try {
+          var response = await fetch("/api/memory/optimize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fresh: !!fresh, maxFiles: 75 }),
+          });
+          var payload = await response.json();
+          if (!response.ok || !payload.ok) {
+            throw new Error(errorMessage(payload, "Memory optimize failed."));
+          }
+          this.memoryOptimizeMessage =
+            plainText(payload.message) ||
+            "eve_core updated (" + String(payload.fileCount || 0) + " files).";
+          await this.refreshMemoryStatus();
+        } catch (error) {
+          this.memoryOptimizeMessage = plainText(error.message) || "Memory optimize failed.";
+        } finally {
+          this.memoryOptimizing = false;
         }
       },
 
@@ -730,9 +923,56 @@
           function () {
             var transcript = this.$refs && this.$refs.transcript;
             if (!transcript) return;
-            transcript.scrollTo({ top: transcript.scrollHeight, behavior: "auto" });
+            window.requestAnimationFrame(function () {
+              transcript.scrollTop = transcript.scrollHeight;
+            });
           }.bind(this)
         );
+      },
+
+      isMemoryQuery: function (text) {
+        return /\b(?:memory|memories|interests?|interested|graph|recall|recalled|what do you know|what can you (?:tell|see)|what am i|my projects?|projects?|research|themes?|workbench|knowledge|from what|notes?|uploaded)\b/i.test(
+          text
+        );
+      },
+
+      answerFromMemory: async function (text, generation) {
+        this.chatStatus = "Searching memory…";
+        this.scrollTranscript();
+        try {
+          var response = await fetch("/api/memory/answer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: text,
+              fast: this.activeMode === "fast",
+            }),
+            signal: this.requestController.signal,
+          });
+          if (!this.isCurrentChatOperation(generation)) return;
+          var payload = await response.json();
+          if (!response.ok || !payload.ok) {
+            throw new Error(errorMessage(payload, "Memory answer failed."));
+          }
+          triggerReplyFlash();
+          this.messages.push({
+            id: this.makeId("message"),
+            role: "assistant",
+            text: plainText(payload.answer) || "I could not form an answer from memory yet.",
+            sources: Array.isArray(payload.sources) ? payload.sources : [],
+          });
+          this.chatStatus = "Ready.";
+        } catch (error) {
+          if (this.isCurrentChatOperation(generation) && error.name !== "AbortError") {
+            this.chatError = plainText(error.message) || "Memory answer failed.";
+            this.chatStatus = "Eve needs attention.";
+          }
+        } finally {
+          if (this.isCurrentChatOperation(generation)) {
+            this.sending = false;
+            this.scrollTranscript();
+          }
+        }
       },
 
       onComposerKeydown: function (event) {
@@ -756,6 +996,10 @@
         this.chatStatus = "Eve is working…";
 
         try {
+          if (this.isMemoryQuery(text)) {
+            await this.answerFromMemory(text, generation);
+            return;
+          }
           var path = this.sessionId
             ? "/api/eve/session/" + encodeURIComponent(this.sessionId)
             : "/api/eve/session";
@@ -787,9 +1031,11 @@
             this.chatError = plainText(error.message) || "Eve could not answer this message.";
             this.chatStatus = "Eve needs attention.";
           }
-        } finally {
           if (this.isCurrentChatOperation(generation)) {
             this.sending = false;
+          }
+        } finally {
+          if (this.isCurrentChatOperation(generation)) {
             this.streamReader = null;
             this.streamController = null;
             this.requestController = null;
@@ -860,6 +1106,10 @@
 
       projectEvent: function (type, data) {
         if (isPrivateEventType(type) || type === "message.received") return;
+        if (type === "step.started" || type === "turn.started") {
+          this.chatStatus = "Eve is working…";
+          return;
+        }
         if (type === "message.appended") {
           this.updateAssistantMessage(data);
           this.chatStatus = "Eve is responding…";
@@ -885,7 +1135,10 @@
         if (type === "session.waiting") {
           this.continuationToken =
             plainText(data.continuationToken) || this.continuationToken;
-          this.chatStatus = this.pendingInput ? "Eve is waiting for your choice." : "Ready.";
+          this.sending = false;
+          this.chatStatus = this.pendingInputs.length
+            ? "Eve is waiting for your choice."
+            : "Ready.";
           this.refreshTasks();
           return;
         }
@@ -893,12 +1146,12 @@
           this.chatStatus = "Stopped. You can send another message.";
           return;
         }
-        if (
-          type === "turn.failed" ||
+        if (type === "turn.failed" ||
           type === "session.failed" ||
           type === "step.failed" ||
           type === "proxy.error"
         ) {
+          this.sending = false;
           this.chatError = plainText(data.message) || "Eve could not complete this turn.";
           this.chatStatus = "Eve needs attention.";
         }
@@ -921,6 +1174,7 @@
           message = { id: this.makeId("message"), role: "assistant", text: "" };
           this.messages.push(message);
           this.currentAssistantId = message.id;
+          triggerReplyFlash();
         }
         message.text = cumulative || message.text + delta;
         this.scrollTranscript();
@@ -941,6 +1195,9 @@
           workbench.messages.push(activity);
           workbench.activities.push(activity);
         });
+        if (list.length) {
+          this.chatStatus = "Running local tools…";
+        }
         this.scrollTranscript();
       },
 
@@ -1123,8 +1380,54 @@
         }).filter(function (model) {
           return Boolean(model.id);
         });
+        this.chatModes = (Array.isArray(payload && payload.chatModes) ? payload.chatModes : []).map(
+          function (mode) {
+            return {
+              id: plainText(mode && mode.id),
+              label: plainText(mode && mode.label) || plainText(mode && mode.id),
+              description: plainText(mode && mode.description),
+              model: plainText(mode && mode.model),
+              numCtx: Number(mode && mode.numCtx) || 0,
+            };
+          }
+        ).filter(function (mode) {
+          return Boolean(mode.id);
+        });
+        if (!this.chatModes.length) {
+          this.chatModes = DEFAULT_CHAT_MODES.map(function (mode) {
+            return {
+              id: mode.id,
+              label: mode.label,
+              description: mode.description,
+              model: mode.model,
+              numCtx: mode.numCtx,
+            };
+          });
+        }
         this.ollamaConnected = Boolean(payload && payload.connected);
         this.activeOllamaModel = plainText(payload && payload.active);
+        this.activeMode = plainText(payload && payload.activeMode) || "fast";
+        this.activeModeLabel =
+          plainText(payload && payload.activeModeLabel) || this.activeMode;
+        this.activeModeDescription =
+          plainText(payload && payload.activeModeDescription) ||
+          (this.chatModes.find(function (mode) {
+            return mode.id === this.activeMode;
+          }, this) || {}).description ||
+          "";
+        if (!this.activeModeLabel || this.activeModeLabel === this.activeMode) {
+          var activeModeEntry = this.chatModes.find(function (mode) {
+            return mode.id === this.activeMode;
+          }, this);
+          if (activeModeEntry && activeModeEntry.label) {
+            this.activeModeLabel = activeModeEntry.label;
+          }
+        }
+        if (this.chatModes.some(function (mode) { return mode.id === this.activeMode; }.bind(this))) {
+          this.selectedMode = this.activeMode;
+        } else if (this.chatModes.length) {
+          this.selectedMode = this.chatModes[0].id;
+        }
         if (
           this.activeOllamaModel &&
           this.ollamaModels.some(
@@ -1138,42 +1441,63 @@
           this.selectedModel = this.ollamaModels[0].id;
         }
         this.ollamaStatus = this.ollamaConnected
-          ? "Ollama connected · " + (this.activeOllamaModel || "choose a chat model")
+          ? "Ollama connected · " + (this.activeModeLabel || this.activeOllamaModel || "choose a mode")
           : plainText(payload && payload.error) || "Ollama is unavailable.";
         if (payload && payload.inventory) {
           this.applyModelInventory(payload.inventory);
         }
       },
 
-      applyOllamaModel: async function () {
-        var model = plainText(this.selectedModel);
-        if (!model || model === this.activeOllamaModel || this.switchingModel) return;
+      applyChatMode: async function () {
+        var mode = plainText(this.selectedMode);
+        if (!mode || mode === this.activeMode || this.switchingModel) return;
         this.switchingModel = true;
         this.chatError = "";
-        this.ollamaStatus = "Switching Ollama model…";
+        this.ollamaStatus = "Loading " + (this.chatModes.find(function (item) {
+          return item.id === mode;
+        }) || {}).label + "…";
         try {
           var response = await fetch("/api/ollama/model", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: model }),
+            body: JSON.stringify({ mode: mode }),
           });
           var payload = await response.json().catch(function () {
             return {};
           });
           if (!response.ok || payload.ok === false) {
-            throw new Error(errorMessage(payload, "Ollama could not switch models."));
+            throw new Error(errorMessage(payload, "Ollama could not switch modes."));
           }
           this.applyOllamaModels(payload);
           await this.newChat();
-          this.chatStatus =
-            "Using " + (this.activeOllamaModel || model) + ". Ready for a new local conversation.";
+          this.chatStatus = "Ready.";
         } catch (error) {
-          this.selectedModel = this.activeOllamaModel;
-          this.chatError = plainText(error.message) || "Ollama could not switch models.";
+          this.selectedMode = this.activeMode;
+          this.chatError = plainText(error.message) || "Ollama could not switch modes.";
           this.ollamaStatus = this.chatError;
         } finally {
           this.switchingModel = false;
         }
+      },
+
+      selectMode: async function (modeId) {
+        var mode = plainText(modeId);
+        if (!mode || mode === this.selectedMode) return;
+        this.selectedMode = mode;
+        var details = this.$root.querySelector(".mode-picker");
+        if (details) details.open = false;
+        await this.applyChatMode();
+      },
+
+      askSuggestion: function (text) {
+        var cleaned = plainText(text);
+        if (!cleaned || this.sending) return;
+        this.draft = cleaned;
+        this.sendMessage();
+      },
+
+      applyOllamaModel: async function () {
+        return this.applyChatMode();
       },
 
       taskUrl: function (id) {

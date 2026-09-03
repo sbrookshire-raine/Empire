@@ -5,6 +5,7 @@
 | **GitHub** | https://github.com/sbrookshire-raine/Empire |
 | **Daily use** | http://127.0.0.1:8080/eve.html (Eve Workbench) |
 | **Daily start** | Double-click `Start-EMPIRE.bat` |
+| **Daily stop** | Double-click `Stop-EMPIRE.bat` |
 | **Full documentation** | [docs/manifest/README.md](docs/manifest/README.md) |
 | **Agent quick ref** | [AGENTS.md](AGENTS.md) |
 

@@ -1,0 +1,6 @@
+04_Infrastructure/
+*.db
+*.sqlite
+*.gguf
+*.bin
+node_modules/

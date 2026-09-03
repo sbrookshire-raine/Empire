@@ -1,19 +1,4 @@
 #Requires -Version 5.1
-<#
-.SYNOPSIS
-    Start all EMPIRE services and open the Eve Workbench in the default browser.
-
-.DESCRIPTION
-    1. Ensures Ollama is running (starts ollama serve if needed)
-    2. Runs scripts/start-stack.ps1 (V:, Postgres, PocketBase, frontend, Eve)
-    3. Opens http://127.0.0.1:8080/eve.html
-
-.PARAMETER NoBrowser
-    Start services only; do not open a browser tab.
-
-.PARAMETER SkipOllamaCheck
-    Do not verify or start Ollama (passed through to start-stack.ps1).
-#>
 param(
     [switch]$NoBrowser,
     [switch]$SkipOllamaCheck
@@ -60,14 +45,11 @@ function Ensure-OllamaRunning {
 
     $ollamaExe = Get-OllamaExecutable
     if (-not $ollamaExe) {
-        throw @"
-Ollama is not running and ollama.exe was not found.
-Install Ollama from https://ollama.com/ or start it manually, then run this launcher again.
-"@
+        throw "Ollama is not running and ollama.exe was not found. Install from https://ollama.com/ or start manually."
     }
 
-    Write-Host "  Starting Ollama ($ollamaExe serve)..."
-    Start-Process -FilePath $ollamaExe -ArgumentList @("serve") -WindowStyle Hidden | Out-Null
+    Write-Host "  Starting Ollama..."
+    Start-Process -FilePath $ollamaExe -ArgumentList "serve"
 
     for ($attempt = 1; $attempt -le 30; $attempt++) {
         if (Test-Url "http://127.0.0.1:11434/api/tags") {

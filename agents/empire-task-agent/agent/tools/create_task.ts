@@ -3,7 +3,8 @@ import { z } from "zod";
 import { createTask } from "#lib/pocketbase";
 
 export default defineTool({
-  description: "Create a new task in PocketBase.",
+  description:
+    "Create a new PocketBase task. Never use for questions about projects in Cognee memory or workbench knowledge.",
   inputSchema: z.object({
     title: z.string().min(1).max(255),
     description: z.string().max(5000).optional(),

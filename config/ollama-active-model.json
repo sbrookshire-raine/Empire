@@ -1,0 +1,9 @@
+{
+  "mode": "fast",
+  "model": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+  "options": {
+    "num_ctx": 16384,
+    "temperature": 0.35,
+    "top_p": 0.9
+  }
+}

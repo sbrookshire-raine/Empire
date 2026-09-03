@@ -17,17 +17,12 @@
         "PYTHONPATH": "C:/EMPIRE"
       }
     },
-    "empire-wiki": {
+    "empire-workbench": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/wiki_mcp.py"],
+      "args": ["C:/EMPIRE/mcp/workbench_mcp.py"],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
-        "POCKETBASE_URL": "http://127.0.0.1:8090",
-        "WIKI_ROOT": "D:/wiki_md",
-        "WEAVIATE_DUMP_DIR": "I:/EMPIRE_DATA/weaviate_dump",
-        "EMPIRE_COGNEE_ROOT": "V:/Cognee",
-        "OLLAMA_BASE_URL": "http://localhost:11434/v1",
-        "OLLAMA_MODEL": "llama3.1:latest"
+        "EMPIRE_ACTIVE_TOOLS_DIR": "C:/Empire_Workbench/03_Active_Tools"
       }
     }
   }

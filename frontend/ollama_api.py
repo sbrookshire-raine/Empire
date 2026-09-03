@@ -9,7 +9,17 @@ import tempfile
 from http.client import HTTPConnection, HTTPException
 from pathlib import Path
 
-DEFAULT_MODEL = "llama3.1:8b"
+from frontend.ollama_chat_profiles import (
+    CHAT_MODES,
+    DEFAULT_CHAT_MODE,
+    DEFAULT_MODEL,
+    chat_options_for_mode,
+    mode_for_model,
+    public_chat_mode,
+    resolve_mode,
+    resolve_mode_for_installed,
+)
+
 OLLAMA_HOST = "127.0.0.1"
 OLLAMA_PORT = 11434
 OLLAMA_TIMEOUT_SECONDS = 5
@@ -39,24 +49,52 @@ def active_model_path() -> Path:
     return Path(__file__).resolve().parents[1] / "config" / "ollama-active-model.json"
 
 
-def load_active_model() -> str:
+def load_active_config() -> dict[str, object]:
     path = active_model_path()
+    mode = DEFAULT_CHAT_MODE
+    model = DEFAULT_MODEL
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return DEFAULT_MODEL
-    if not isinstance(payload, dict):
-        return DEFAULT_MODEL
-    model = payload.get("model")
-    if isinstance(model, str) and MODEL_ID_PATTERN.fullmatch(model.strip()):
-        return model.strip()
-    return DEFAULT_MODEL
+        payload = {}
+    if isinstance(payload, dict):
+        stored_mode = payload.get("mode")
+        if isinstance(stored_mode, str) and stored_mode.strip() in CHAT_MODES:
+            mode = stored_mode.strip()
+        stored_model = payload.get("model")
+        if isinstance(stored_model, str) and MODEL_ID_PATTERN.fullmatch(stored_model.strip()):
+            model = stored_model.strip()
+    options = chat_options_for_mode(mode)
+    resolved_mode = resolve_mode(mode)
+    return {
+        "mode": resolved_mode["id"],
+        "model": model,
+        "options": options,
+        "numCtx": resolved_mode["num_ctx"],
+        "label": resolved_mode["label"],
+        "description": resolved_mode["description"],
+    }
 
 
-def save_active_model(model: str) -> None:
+def load_active_model() -> str:
+    return str(load_active_config()["model"])
+
+
+def save_active_config(*, mode: str, model: str) -> None:
     path = active_model_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = json.dumps({"model": model}, indent=2, sort_keys=True) + "\n"
+    encoded = (
+        json.dumps(
+            {
+                "mode": mode,
+                "model": model,
+                "options": chat_options_for_mode(mode),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
     handle, tmp_name = tempfile.mkstemp(
         prefix="ollama-model-",
         suffix=".json",
@@ -72,6 +110,11 @@ def save_active_model(model: str) -> None:
     except Exception:
         tmp_path.unlink(missing_ok=True)
         raise
+
+
+def save_active_model(model: str, *, mode: str | None = None) -> None:
+    resolved_mode = mode or mode_for_model(model) or DEFAULT_CHAT_MODE
+    save_active_config(mode=resolved_mode, model=model)
 
 
 def is_chat_model(entry: dict) -> bool:
@@ -121,21 +164,52 @@ def list_chat_models(tags: dict) -> list[dict]:
 
 
 def models_status(tags: dict | None, *, connected: bool, error: str = "") -> dict:
+    active = load_active_config()
+    installed_ids = {item["id"] for item in list_chat_models(tags or {})}
+    active_mode = resolve_mode(str(active["mode"]))
+    active_model = str(active["model"])
+    if installed_ids:
+        active_mode, active_model = resolve_mode_for_installed(active_mode["id"], installed_ids)
     return {
         "ok": connected,
         "connected": connected,
-        "active": load_active_model(),
+        "active": active_model,
+        "activeMode": active_mode["id"],
+        "activeModeLabel": active_mode["label"],
+        "activeModeDescription": active_mode["description"],
+        "chatModes": [
+            public_chat_mode(
+                resolve_mode(mode["id"]),
+                installed_model=resolve_mode_for_installed(mode["id"], installed_ids)[1]
+                if installed_ids
+                else mode["model"],
+            )
+            for mode in CHAT_MODES.values()
+        ],
+        "chatOptions": chat_options_for_mode(active_mode["id"]),
         "models": list_chat_models(tags or {}),
         "error": error if not connected else "",
     }
 
 
-def set_active_model(model: str, tags: dict) -> dict:
+def set_active_model(model: str, tags: dict, *, mode: str | None = None) -> dict:
+    installed_ids = {item["id"] for item in list_chat_models(tags)}
+    if mode is not None:
+        cleaned_mode = mode.strip()
+        if cleaned_mode not in CHAT_MODES:
+            raise OllamaRequestError("Choose a valid Eve chat mode.")
+        resolved_mode, candidate = resolve_mode_for_installed(cleaned_mode, installed_ids)
+        if candidate not in installed_ids:
+            raise OllamaRequestError(
+                f"{resolved_mode['label']} is not installed. Run: ollama pull {resolved_mode['model']}"
+            )
+        save_active_config(mode=resolved_mode["id"], model=candidate)
+        return models_status(tags, connected=True)
+
     candidate = model.strip() if isinstance(model, str) else ""
     if not MODEL_ID_PATTERN.fullmatch(candidate):
         raise OllamaRequestError("Choose a local Ollama chat model.")
-    allowed = {item["id"] for item in list_chat_models(tags)}
-    if candidate not in allowed:
+    if candidate not in installed_ids:
         raise OllamaRequestError("That model is not a local Ollama chat model.")
     save_active_model(candidate)
     return models_status(tags, connected=True)
@@ -182,6 +256,8 @@ def summarize_tasks(tasks: list[dict], *, model: str | None = None) -> dict:
         "Under 120 words. Plain bullets only. No preamble.\n\n"
         f"Tasks:\n{task_block}"
     )
+    active = load_active_config()
+    options = active["options"] if isinstance(active.get("options"), dict) else {}
     body = json.dumps(
         {
             "model": model_id,
@@ -190,7 +266,9 @@ def summarize_tasks(tasks: list[dict], *, model: str | None = None) -> dict:
                 {"role": "user", "content": prompt},
             ],
             "stream": False,
-            "options": {"temperature": 0.3},
+            "temperature": options.get("temperature", 0.35),
+            "top_p": options.get("top_p", 0.9),
+            "options": {"num_ctx": options.get("num_ctx", 16_384)},
         }
     ).encode("utf-8")
     connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)
@@ -225,6 +303,64 @@ def summarize_tasks(tasks: list[dict], *, model: str | None = None) -> dict:
         }
     except (HTTPException, OSError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise OllamaConnectionError("Ollama could not summarize tasks.") from exc
+    finally:
+        connection.close()
+
+
+def chat_completion(
+    *,
+    system_prompt: str,
+    user_prompt: str,
+    model: str | None = None,
+    temperature: float | None = None,
+) -> dict[str, object]:
+    """Run one non-streaming Ollama chat completion on the active Workbench model."""
+
+    model_id = (model or load_active_model()).strip()
+    if not MODEL_ID_PATTERN.fullmatch(model_id):
+        raise OllamaRequestError("Choose a local Ollama chat model.")
+    active = load_active_config()
+    options = active["options"] if isinstance(active.get("options"), dict) else {}
+    body = json.dumps(
+        {
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "stream": False,
+            "temperature": temperature if temperature is not None else options.get("temperature", 0.35),
+            "top_p": options.get("top_p", 0.9),
+            "options": {"num_ctx": options.get("num_ctx", 16_384)},
+        }
+    ).encode("utf-8")
+    connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)
+    try:
+        connection.request(
+            "POST",
+            "/v1/chat/completions",
+            body=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
+        response = connection.getresponse()
+        raw = response.read(512 * 1024)
+        if response.status >= 400:
+            raise OllamaConnectionError("Ollama could not complete this chat request.")
+        payload = json.loads(raw.decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise OllamaConnectionError("Ollama chat response was invalid.")
+        choices = payload.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise OllamaConnectionError("Ollama chat response was empty.")
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
+        content = ""
+        if isinstance(message, dict):
+            content = str(message.get("content") or "").strip()
+        if not content:
+            raise OllamaConnectionError("Ollama chat response was empty.")
+        return {"ok": True, "content": content, "model": model_id}
+    except (HTTPException, OSError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise OllamaConnectionError("Ollama could not complete this chat request.") from exc
     finally:
         connection.close()
 

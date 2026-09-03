@@ -6,14 +6,23 @@
   flex-wrap: wrap;
   margin-bottom: 1.5rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid
+    color-mix(
+      in oklch,
+      var(--color-neon-purple, var(--pico-muted-border-color)) 45%,
+      var(--color-rule, var(--pico-muted-border-color))
+    );
   border-radius: 0.75rem;
-  background: var(--pico-card-background-color, #fff);
+  background: var(--color-glass, var(--pico-card-background-color, #fff));
+  box-shadow: var(--glow-accent, none);
+  backdrop-filter: blur(10px);
 }
 
 .empire-nav .empire-brand {
   font-size: 1rem;
   letter-spacing: 0.08em;
+  color: var(--color-neon-purple, inherit);
+  text-shadow: var(--glow-heading, none);
 }
 
 .empire-nav ul {
@@ -28,14 +37,23 @@
 .empire-nav a {
   text-decoration: none;
   padding: 0.2rem 0;
+  color: var(--color-muted, inherit);
 }
 
 .empire-nav a[aria-current="page"] {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.2rem;
+  color: var(--color-neon-cyan, inherit);
+  text-shadow: 0 0 8px
+    color-mix(in oklch, var(--color-neon-cyan, transparent) 50%, transparent);
 }
 
 .empire-nav a:hover {
   opacity: 0.85;
+}
+
+.empire-nav a:focus-visible {
+  outline: 2px solid var(--color-focus, var(--pico-primary-focus, currentColor));
+  outline-offset: 0.2rem;
 }

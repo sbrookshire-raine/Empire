@@ -3,29 +3,31 @@ or when a task clearly needs a different local model than the current chat defau
 
 ## Workflow
 
-1. Call `get_model_suite` to read `eveGuidance`, suite status (covered / workable / gap), and pull/remove hints.
-2. Call `list_models` if you need the raw installed chat model ids.
-3. Before heavy work, call `switch_chat_model` with the best model for the task type.
-4. Tell the user which model you switched to and why. Subsequent Eve steps use that model.
+1. Call `get_model_suite` or `list_models` only when diagnosing install gaps or Ollama health.
+2. Tell the user which **Workbench mode** fits the task — never call `switch_chat_model`.
+3. The user switches modes manually in the chat header:
+   - **Fast Mode (14b)** — default daily driver
+   - **Deep Mode (32b)** — complex planning and architecture
+   - **Librarian (Command-R 35b)** — massive cross-file synthesis
+4. After they switch, continue in the new session they started.
 
 ## Routing map (16 GB VRAM laptop)
 
-| Task type | Prefer | Examples |
-|-----------|--------|----------|
-| Daily chat, tools, tasks | `llama3.1:8b` | Greetings, PocketBase CRUD, quick answers |
-| Coding / repo work | `qwen2.5-coder:14b` or `huihui_ai/qwen2.5-coder-abliterate:14b` | Edits, refactors, scripts |
-| Reasoning / planning | `deepseek-r1:8b` or `deepseek-r1:latest` | Multi-step plans, math, strategy |
-| Deep quality | One 27B or `qwen3:8b` | Hardest analysis when user accepts slower replies |
-| Memory embed | `nomic-embed-text:latest` | Cognee only — not switched via chat tools |
+| Task type | Tell the user to choose |
+|-----------|-------------------------|
+| Daily chat, tools, tasks | Fast Mode (14b) |
+| Deep planning, complex MCP, ARC sessions | Deep Mode (32b) |
+| Many flattened files at once, heavy RAG | Librarian (Command-R 35b) |
+| Memory embed | `nomic-embed-text:latest` in Cognee only — not a chat mode |
 
 ## Rules
 
+- **Never** call `switch_chat_model` — it is disabled. Model hot-swapping causes VRAM thrashing.
 - Do not switch models for greetings or one-line answers.
-- Switch before starting coding or reasoning work, not after finishing.
+- Sampling is fixed at temperature **0.35** and top_p **0.90** for reliable tool JSON plus EQ voice.
 - If `get_model_suite` shows a gap, tell the user the `ollama pull …` command from `pullGaps`.
-- If the user mentions duplicates or disk space, summarize `removeSuggestions` with `ollama rm …` commands.
-- Embedding model is configured in Cognee (`config/cognee.env`), not via `switch_chat_model`.
+- Embedding model is configured in Cognee (`config/cognee.env`), not via chat tools.
 
 ## If Ollama is down
 
-Call `ollama_health`, report the error, and point to `ollama serve` plus `.\scripts\start-stack.ps1`.
+Call `ollama_health`, report the error, and point to `ollama serve` plus `.\\scripts\\start-stack.ps1`.
