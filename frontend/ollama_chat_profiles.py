@@ -12,12 +12,16 @@ class ChatMode(TypedDict):
     model: str
     model_aliases: tuple[str, ...]
     num_ctx: int
+    temperature: float
 
 
+# Shared nucleus sampling; temperature is per-mode (strict tools vs creative).
 GLOBAL_CHAT_OPTIONS: dict[str, float] = {
-    "temperature": 0.35,
     "top_p": 0.90,
 }
+
+# Protect 16 GB VRAM — every mode uses the same context window.
+SHARED_NUM_CTX = 8_192
 
 CHAT_MODES: dict[str, ChatMode] = {
     "fast": {
@@ -28,7 +32,8 @@ CHAT_MODES: dict[str, ChatMode] = {
         ),
         "model": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
         "model_aliases": ("richardyoung/qwen2.5-14b-instruct-abliterated",),
-        "num_ctx": 16_384,
+        "num_ctx": SHARED_NUM_CTX,
+        "temperature": 0.2,
     },
     "deep": {
         "id": "deep",
@@ -38,7 +43,8 @@ CHAT_MODES: dict[str, ChatMode] = {
         ),
         "model": "qwen2.5:32b",
         "model_aliases": (),
-        "num_ctx": 8_192,
+        "num_ctx": SHARED_NUM_CTX,
+        "temperature": 0.7,
     },
     "librarian": {
         "id": "librarian",
@@ -48,7 +54,8 @@ CHAT_MODES: dict[str, ChatMode] = {
         ),
         "model": "command-r:35b",
         "model_aliases": (),
-        "num_ctx": 8_192,
+        "num_ctx": SHARED_NUM_CTX,
+        "temperature": 0.4,
     },
 }
 
@@ -64,7 +71,7 @@ def chat_mode_list() -> list[dict[str, Any]]:
             "description": mode["description"],
             "model": mode["model"],
             "numCtx": mode["num_ctx"],
-            "temperature": GLOBAL_CHAT_OPTIONS["temperature"],
+            "temperature": mode["temperature"],
             "topP": GLOBAL_CHAT_OPTIONS["top_p"],
         }
         for mode in CHAT_MODES.values()
@@ -120,7 +127,7 @@ def resolve_mode_for_installed(mode_id: str | None, installed_ids: set[str]) -> 
 def chat_options_for_mode(mode_id: str | None) -> dict[str, float | int]:
     mode = resolve_mode(mode_id)
     return {
-        "temperature": GLOBAL_CHAT_OPTIONS["temperature"],
+        "temperature": mode["temperature"],
         "top_p": GLOBAL_CHAT_OPTIONS["top_p"],
         "num_ctx": mode["num_ctx"],
     }
@@ -133,6 +140,6 @@ def public_chat_mode(mode: ChatMode, *, installed_model: str) -> dict[str, Any]:
         "description": mode["description"],
         "model": installed_model,
         "numCtx": mode["num_ctx"],
-        "temperature": GLOBAL_CHAT_OPTIONS["temperature"],
+        "temperature": mode["temperature"],
         "topP": GLOBAL_CHAT_OPTIONS["top_p"],
     }

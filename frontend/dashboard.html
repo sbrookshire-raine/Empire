@@ -2,215 +2,102 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>EMPIRE Dashboard</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
     />
     <link rel="stylesheet" href="empire-nav.css" />
-    <style>
-      body {
-        max-width: 56rem;
-        margin: 0 auto;
-        padding: 1.5rem 1rem 3rem;
-      }
-      .summary {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        align-items: center;
-        margin-bottom: 1.5rem;
-      }
-      .summary strong {
-        font-size: 1.25rem;
-      }
-      .badge-ok {
-        background: #d1e7dd;
-        color: #0f5132;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-      }
-      .badge-down {
-        background: #f8d7da;
-        color: #842029;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-      }
-      .badge-warn {
-        background: #fff3cd;
-        color: #664d03;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-      }
-      table {
-        font-size: 0.92rem;
-      }
-      .controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        align-items: end;
-        margin-bottom: 1.25rem;
-      }
-      .controls label {
-        margin: 0;
-      }
-      .meta {
-        opacity: 0.75;
-        font-size: 0.85rem;
-      }
-      code {
-        font-size: 0.85rem;
-      }
-      .actions-cell button {
-        margin-right: 0.35rem;
-        margin-bottom: 0.25rem;
-        padding: 0.2rem 0.55rem;
-        font-size: 0.78rem;
-      }
-      #action-toast {
-        position: fixed;
-        bottom: 1.25rem;
-        right: 1.25rem;
-        background: #212529;
-        color: #fff;
-        padding: 0.65rem 1rem;
-        border-radius: 0.5rem;
-        font-size: 0.9rem;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 100;
-        max-width: 24rem;
-      }
-      #action-toast.show {
-        opacity: 1;
-      }
-    </style>
+    <link rel="stylesheet" href="dashboard.css" />
   </head>
   <body>
-    <nav id="empire-nav" data-current="dashboard"></nav>
+    <div class="dash-shell">
+      <nav id="empire-nav" data-current="dashboard" aria-label="EMPIRE"></nav>
 
-    <header>
-      <h1>Service Dashboard</h1>
-      <p class="meta">
-        Status board for local services. Day-to-day work is on
-        <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a>
-        (chat, tasks, memory uploads).
-      </p>
-    </header>
+      <header class="dash-hero">
+        <h1>Service dashboard</h1>
+        <p>
+          Local health board. Day-to-day work is on
+          <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a>
+          (chat, tasks, memory).
+        </p>
+      </header>
 
-    <article>
-      <header><strong>Do this</strong></header>
-      <ol>
-        <li>
-          Cold start: double-click <code>Start-EMPIRE.bat</code> at the repo root
-          (or <code>.\scripts\launch-empire.ps1</code>).
-        </li>
-        <li>
-          Open <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a> — chat,
-          tasks, and memory uploads.
-        </li>
-        <li>
-          After bulk workbench ingest, click <strong>Optimize recall</strong> on the
-          Memory tab (builds fast <code>eve_core</code> dataset).
-        </li>
-        <li>
-          Optional curated pilot:
-          <a href="http://127.0.0.1:8080/primitives.html">Primitives</a> → dataset
-          <code>primitives_test</code>.
-        </li>
-      </ol>
-      <p class="meta">
-        Ollama must already be running (<code>ollama serve</code>). Plug in the T7
-        (<code>I:</code>) before start-stack. Wiki Ops is halted.
-      </p>
-    </article>
+      <section class="dash-status" aria-live="polite">
+        <span class="dash-status__count" id="summary-count">—</span>
+        <span class="dash-status__meta">services healthy</span>
+        <span id="summary-badge" class="badge-warn">Loading…</span>
+        <span id="summary-updated" class="dash-status__meta"></span>
+      </section>
 
-    <section class="summary" aria-live="polite">
-      <div>
-        <strong id="summary-count">—</strong>
-        <span class="meta"> services healthy</span>
+      <p id="load-error" class="dash-error" hidden></p>
+
+      <div class="dash-toolbar">
+        <button id="btn-start-all" type="button" class="outline">Start all</button>
+        <button id="btn-stop-all" type="button" class="outline secondary">Stop all</button>
+        <button id="btn-verify" type="button" class="outline">Verify</button>
+        <button id="btn-refresh" type="button">Refresh</button>
+        <label>
+          Auto-refresh
+          <select id="interval-select">
+            <option value="0">Off</option>
+            <option value="5">5 sec</option>
+            <option value="15" selected>15 sec</option>
+            <option value="30">30 sec</option>
+            <option value="60">60 sec</option>
+          </select>
+        </label>
       </div>
-      <span id="summary-badge" class="badge-warn">Loading…</span>
-      <span id="summary-updated" class="meta"></span>
-    </section>
 
-    <p id="load-error" class="meta" style="color: var(--pico-del-color); display: none"></p>
+      <section class="service-grid" id="service-rows" aria-label="Services"></section>
 
-    <div class="controls">
-      <button id="btn-start-all" type="button" class="outline">Start all</button>
-      <button id="btn-stop-all" type="button" class="outline secondary">Stop all</button>
-      <button id="btn-verify" type="button" class="outline">Verify integration</button>
-      <button id="btn-refresh" type="button">Refresh now</button>
-      <label>
-        Auto-refresh (sec)
-        <select id="interval-select">
-          <option value="0">Off</option>
-          <option value="5">5</option>
-          <option value="15" selected>15</option>
-          <option value="30">30</option>
-          <option value="60">60</option>
-        </select>
-      </label>
+      <article id="verify-panel" class="dash-panel" hidden>
+        <header>Integration verification</header>
+        <p id="verify-summary" class="dash-status__meta"></p>
+        <ul id="verify-checks"></ul>
+      </article>
+
+      <details class="dash-guide">
+        <summary>How to run EMPIRE</summary>
+        <div class="dash-guide__body">
+          <ol>
+            <li>
+              Cold start: double-click <code>Start-EMPIRE.bat</code> (or
+              <code>Restart-EMPIRE.bat</code> after Eve code changes).
+            </li>
+            <li>
+              Open <a href="http://127.0.0.1:8080/eve.html">Eve Workbench</a>.
+            </li>
+            <li>
+              After bulk ingest, use <strong>Optimize recall</strong> on the Memory tab.
+            </li>
+          </ol>
+          <p class="dash-status__meta">
+            Plug in the T7 (<code>I:</code>) first. Ollama should already be running.
+          </p>
+        </div>
+      </details>
+
+      <details class="dash-guide">
+        <summary>Operational commands</summary>
+        <div class="dash-guide__body">
+          <ul>
+            <li><code>.\scripts\start-stack.ps1</code> — V:, Postgres, UI, Eve</li>
+            <li><code>.\scripts\roll-in.ps1</code> / <code>.\scripts\roll-out.ps1</code></li>
+            <li><code>.\scripts\verify-stack.ps1</code> — integration checks</li>
+            <li><code>.\scripts\refresh-dashboard.ps1</code> — snapshot only</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="dash-guide">
+        <summary>Raw snapshot</summary>
+        <div class="dash-guide__body">
+          <pre id="raw-json"></pre>
+        </div>
+      </details>
     </div>
-
-    <article id="verify-panel" style="margin-top: 1rem; display: none">
-      <header><strong>Integration verification</strong></header>
-      <p id="verify-summary" class="meta"></p>
-      <ul id="verify-checks" style="font-size: 0.9rem"></ul>
-    </article>
-
-    <article>
-      <table>
-        <thead>
-          <tr>
-            <th>Service</th>
-            <th>Port</th>
-            <th>Status</th>
-            <th>Detail</th>
-            <th>Actions</th>
-            <th>Open</th>
-          </tr>
-        </thead>
-        <tbody id="service-rows">
-          <tr>
-            <td colspan="6">Loading…</td>
-          </tr>
-        </tbody>
-      </table>
-    </article>
-
-    <article style="margin-top: 1.5rem">
-      <header><strong>Operational commands</strong></header>
-      <ul>
-        <li><code>.\scripts\start-stack.ps1</code> — preferred cold start (V: + Postgres + UI + Eve)</li>
-        <li><code>.\scripts\roll-in.ps1</code> — start managed services in order</li>
-        <li><code>.\scripts\roll-out.ps1</code> — stop managed services gracefully</li>
-        <li><code>.\scripts\start-eve.ps1</code> — Eve headless API (port 2000, from repo root)</li>
-        <li><code>.\scripts\verify-stack.ps1</code> — automated integration checks (communication paths)</li>
-        <li><code>.\scripts\refresh-dashboard.ps1</code> — update status snapshot only</li>
-      </ul>
-      <p class="meta">
-        Start-stack order: V: mount → Docker Postgres → Ollama (verify) → PocketBase →
-        Tasks UI → Eve. Roll-out reverses managed services; Ollama is left running.
-      </p>
-    </article>
-
-    <details>
-      <summary>Advanced — raw snapshot</summary>
-      <pre
-        id="raw-json"
-        style="font-size: 0.75rem; overflow: auto; max-height: 20rem"
-      ></pre>
-    </details>
 
     <div id="action-toast" role="status" aria-live="polite"></div>
 
@@ -238,10 +125,10 @@
         },
         {
           id: "frontend",
-          label: "Tasks UI",
+          label: "Workbench UI",
           port: 8080,
           healthUrl: "http://127.0.0.1:8080/",
-          dashboardUrl: "http://127.0.0.1:8080/",
+          dashboardUrl: "http://127.0.0.1:8080/eve.html",
           managed: true,
         },
         {
@@ -341,6 +228,8 @@
             healthDetail: "HTTP " + res.status,
             dashboardUrl: svc.dashboardUrl,
             listening: res.ok,
+            dashboardControl: svc.dashboardControl,
+            startScript: svc.startScript,
           };
         } catch (err) {
           const msg =
@@ -354,6 +243,8 @@
             healthDetail: msg,
             dashboardUrl: svc.dashboardUrl,
             listening: false,
+            dashboardControl: svc.dashboardControl,
+            startScript: svc.startScript,
           };
         }
       }
@@ -383,18 +274,89 @@
       function showError(message) {
         const el = document.getElementById("load-error");
         if (!message) {
-          el.style.display = "none";
+          el.hidden = true;
           el.textContent = "";
           return;
         }
-        el.style.display = "block";
+        el.hidden = false;
         el.textContent = message;
       }
 
-      function statusBadge(svc) {
-        if (svc.healthy) return '<span class="badge-ok">healthy</span>';
-        if (svc.listening) return '<span class="badge-warn">unhealthy</span>';
-        return '<span class="badge-down">down</span>';
+      function statusClass(svc) {
+        if (svc.healthy) return "badge-ok";
+        if (svc.listening) return "badge-warn";
+        return "badge-down";
+      }
+
+      function statusLabel(svc) {
+        if (svc.healthy) return "healthy";
+        if (svc.listening) return "unhealthy";
+        return "down";
+      }
+
+      function renderServiceCard(svc) {
+        var card = document.createElement("article");
+        card.className = "service-card";
+
+        var top = document.createElement("div");
+        top.className = "service-card__top";
+        var title = document.createElement("h2");
+        title.textContent = svc.label || svc.id;
+        var badge = document.createElement("span");
+        badge.className = statusClass(svc);
+        badge.textContent = statusLabel(svc);
+        top.appendChild(title);
+        top.appendChild(badge);
+
+        var meta = document.createElement("p");
+        meta.className = "service-card__meta";
+        meta.textContent =
+          "Port " +
+          (svc.port || "—") +
+          " · " +
+          (svc.managed ? "managed" : "external");
+
+        var detail = document.createElement("p");
+        detail.className = "service-card__detail";
+        detail.textContent = svc.healthDetail || "No health detail";
+
+        var actions = document.createElement("div");
+        actions.className = "service-card__actions";
+
+        if (svc.dashboardControl) {
+          ["start", "stop"].forEach(function (action) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = action === "stop" ? "outline secondary" : "outline";
+            btn.textContent = action === "start" ? "Start" : "Stop";
+            btn.setAttribute("data-action", action);
+            btn.setAttribute("data-service", svc.id);
+            actions.appendChild(btn);
+          });
+        } else {
+          var note = document.createElement("span");
+          note.className = "service-card__note";
+          if (svc.startHint) note.textContent = "external";
+          else if (svc.id === "frontend") note.textContent = "this page";
+          else note.textContent = "no remote start";
+          actions.appendChild(note);
+        }
+
+        if (svc.dashboardUrl) {
+          var open = document.createElement("a");
+          open.href = svc.dashboardUrl;
+          open.target = "_blank";
+          open.rel = "noopener";
+          open.className = "outline";
+          open.textContent = "Open";
+          actions.appendChild(open);
+        }
+
+        card.appendChild(top);
+        card.appendChild(meta);
+        card.appendChild(detail);
+        card.appendChild(actions);
+        return card;
       }
 
       function render(data) {
@@ -420,65 +382,19 @@
           badge.className = "badge-down";
         }
         const phase =
-          data.phase && data.phase !== "idle" ? " - " + data.phase : "";
+          data.phase && data.phase !== "idle" ? " · " + data.phase : "";
         document.getElementById("summary-updated").textContent =
           "Updated " +
           (data.updated ? new Date(data.updated).toLocaleString() : "-") +
           phase;
 
-        const tbody = document.getElementById("service-rows");
-        tbody.innerHTML = "";
+        const grid = document.getElementById("service-rows");
+        grid.replaceChildren();
         data.services.forEach(function (svc) {
-          const tr = document.createElement("tr");
-          var hint = "";
-          if (svc.startHint) {
-            hint = '<br><small>' + svc.startHint + "</small>";
-          } else if (svc.startScript) {
-            hint = '<br><small>.\\' + svc.startScript + "</small>";
-          }
-          var actionsHtml = "";
-          if (svc.dashboardControl) {
-            actionsHtml =
-              '<button type="button" class="outline" data-action="start" data-service="' +
-              svc.id +
-              '">Start</button>' +
-              '<button type="button" class="outline secondary" data-action="stop" data-service="' +
-              svc.id +
-              '">Stop</button>';
-          } else if (svc.startHint) {
-            actionsHtml = "<small>external</small>";
-          } else if (svc.id === "frontend") {
-            actionsHtml = "<small>this page</small>";
-          } else {
-            actionsHtml = "<small>n/a</small>";
-          }
-          tr.innerHTML =
-            "<td><strong>" +
-            svc.label +
-            "</strong><br><small>" +
-            (svc.managed ? "managed" : "external") +
-            "</small>" +
-            hint +
-            "</td>" +
-            "<td>" +
-            svc.port +
-            "</td>" +
-            "<td>" +
-            statusBadge(svc) +
-            "</td>" +
-            '<td><small>' +
-            (svc.healthDetail || "-") +
-            "</small></td>" +
-            '<td class="actions-cell">' +
-            actionsHtml +
-            "</td>" +
-            '<td><a href="' +
-            (svc.dashboardUrl || "#") +
-            '" target="_blank" rel="noopener">Open</a></td>';
-          tbody.appendChild(tr);
+          grid.appendChild(renderServiceCard(svc));
         });
 
-        tbody.querySelectorAll("button[data-action]").forEach(function (btn) {
+        grid.querySelectorAll("button[data-action]").forEach(function (btn) {
           btn.addEventListener("click", function () {
             runServiceButton(btn.getAttribute("data-action"), btn.getAttribute("data-service"), btn);
           });
@@ -546,7 +462,7 @@
           showToast("Verify failed: " + (err.message || err));
         } finally {
           btn.disabled = false;
-          btn.textContent = "Verify integration";
+          btn.textContent = "Verify";
         }
       }
 
@@ -555,10 +471,10 @@
         var summary = document.getElementById("verify-summary");
         var list = document.getElementById("verify-checks");
         if (!data || !Array.isArray(data.checks)) {
-          panel.style.display = "none";
+          panel.hidden = true;
           return;
         }
-        panel.style.display = "block";
+        panel.hidden = false;
         var s = data.summary || {};
         summary.textContent =
           (data.ok ? "All checks passed" : "Some checks failed") +
@@ -569,7 +485,7 @@
           " failed, " +
           (s.skipped || 0) +
           " skipped";
-        list.innerHTML = "";
+        list.replaceChildren();
         data.checks.forEach(function (check) {
           var li = document.createElement("li");
           var mark = check.skipped ? "skip" : check.ok ? "ok" : "fail";
@@ -579,9 +495,12 @@
       }
 
       async function controlApiAvailable() {
+        // serve.py owns /api/services/*; a 503 on status only means the snapshot
+        // file is stale — Start/Stop can still work. Plain python -m http.server
+        // returns 404 for these routes.
         try {
           var res = await fetch("/api/services/status", { cache: "no-store" });
-          return res.ok;
+          return res.status !== 404 && res.status !== 405;
         } catch (err) {
           return false;
         }
@@ -596,8 +515,11 @@
           showError("Dashboard failed to load: " + (err.message || err));
           document.getElementById("summary-badge").textContent = "Error";
           document.getElementById("summary-badge").className = "badge-down";
-          document.getElementById("service-rows").innerHTML =
-            '<tr><td colspan="6">Run scripts/start-frontend.ps1 with serve.py, then refresh.</td></tr>';
+          document.getElementById("service-rows").replaceChildren();
+          var empty = document.createElement("p");
+          empty.className = "dash-error";
+          empty.textContent = "Run scripts/start-frontend.ps1, then refresh.";
+          document.getElementById("service-rows").appendChild(empty);
         }
       }
 
@@ -621,17 +543,10 @@
       });
 
       refresh();
-      fetch("verify-stack.json", { cache: "no-store" })
-        .then(function (res) {
-          if (!res.ok) return null;
-          return res.json();
-        })
-        .then(renderVerify)
-        .catch(function () {});
       controlApiAvailable().then(function (ok) {
         if (ok) return;
         showError(
-          "Start/Stop buttons need the control API. Restart with .\\scripts\\start-frontend.ps1 (serve.py), not python -m http.server."
+          "This page can show status, but Start/Stop only work when EMPIRE is serving the UI through serve.py (Start-EMPIRE.bat). A plain 'python -m http.server' cannot control services."
         );
         ["btn-start-all", "btn-stop-all"].forEach(function (id) {
           document.getElementById(id).disabled = true;

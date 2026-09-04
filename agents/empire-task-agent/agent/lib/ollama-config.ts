@@ -2,10 +2,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { EMPIRE_ROOT } from "./empire";
 
+/** Shared nucleus sampling; temperature is per chat mode. */
 export const GLOBAL_CHAT_OPTIONS = {
-  temperature: 0.35,
   topP: 0.9,
 } as const;
+
+/** Protect 16 GB VRAM — every mode shares this context window. */
+export const SHARED_NUM_CTX = 8_192;
 
 export type ChatModeId = "fast" | "deep" | "librarian";
 
@@ -16,6 +19,7 @@ export type ChatModeDefinition = {
   readonly model: string;
   readonly modelAliases: readonly string[];
   readonly numCtx: number;
+  readonly temperature: number;
 };
 
 export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
@@ -26,7 +30,8 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
       "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
     model: "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
     modelAliases: ["richardyoung/qwen2.5-14b-instruct-abliterated"],
-    numCtx: 16_384,
+    numCtx: SHARED_NUM_CTX,
+    temperature: 0.2,
   },
   deep: {
     id: "deep",
@@ -35,7 +40,8 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
       "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
     model: "qwen2.5:32b",
     modelAliases: [],
-    numCtx: 8_192,
+    numCtx: SHARED_NUM_CTX,
+    temperature: 0.7,
   },
   librarian: {
     id: "librarian",
@@ -44,7 +50,8 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
       "Mass synthesis — cross-reference many flattened files and long memory snippets.",
     model: "command-r:35b",
     modelAliases: [],
-    numCtx: 8_192,
+    numCtx: SHARED_NUM_CTX,
+    temperature: 0.4,
   },
 };
 
@@ -113,7 +120,7 @@ export function loadActiveChatConfig(): ActiveChatConfig {
     mode: mode.id,
     model,
     numCtx: mode.numCtx,
-    temperature: GLOBAL_CHAT_OPTIONS.temperature,
+    temperature: mode.temperature,
     topP: GLOBAL_CHAT_OPTIONS.topP,
   };
 }

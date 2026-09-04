@@ -10,7 +10,7 @@ if (-not (Test-Path (Join-Path $AgentDir "package.json"))) {
 $env:EMPIRE_ROOT = $Root
 $env:POCKETBASE_URL = if ($env:POCKETBASE_URL) { $env:POCKETBASE_URL } else { "http://127.0.0.1:8090" }
 $env:OLLAMA_BASE_URL = if ($env:OLLAMA_BASE_URL) { $env:OLLAMA_BASE_URL } else { "http://localhost:11434/v1" }
-$env:OLLAMA_MODEL = if ($env:OLLAMA_MODEL) { $env:OLLAMA_MODEL } else { "llama3.1:8b" }
+$env:OLLAMA_MODEL = if ($env:OLLAMA_MODEL) { $env:OLLAMA_MODEL } else { "richardyoung/qwen2.5-14b-instruct-abliterated:latest" }
 
 Write-Host "EMPIRE Eve agent (production API on 127.0.0.1:2000)"
 Write-Host "  Run from repo root: cd $Root"

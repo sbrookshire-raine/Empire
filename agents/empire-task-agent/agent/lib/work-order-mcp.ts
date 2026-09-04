@@ -1,16 +1,12 @@
 import path from "node:path";
 import { EMPIRE_ROOT, PYTHON_BIN } from "#lib/empire";
 
-const WORKBENCH_MCP_SCRIPT = path.join(EMPIRE_ROOT, "mcp", "workbench_mcp.py");
-const WORKBENCH_DIR =
-  process.env.EMPIRE_WORKBENCH_DIR ?? "C:/Empire_Workbench";
-const ACTIVE_TOOLS_DIR =
-  process.env.EMPIRE_ACTIVE_TOOLS_DIR ?? "C:/Empire_Workbench/03_Active_Tools";
+const WORK_ORDER_MCP_SCRIPT = path.join(EMPIRE_ROOT, "mcp", "work_order_mcp.py");
+const WORK_ORDERS_DIR =
+  process.env.EMPIRE_WORK_ORDERS_DIR ?? "C:/Empire_Workbench/05_Work_Orders";
+const RESOURCE_QUEUE_DIR =
+  process.env.EMPIRE_RESOURCE_QUEUE_DIR ?? "C:/Empire_Workbench/00_Resource_Queue";
 
-// Dynamic imports to avoid bundler resolving @modelcontextprotocol/sdk as a
-// Windows path at build time.  The package is listed in externalDependencies so
-// it stays as a runtime require, but the bundler still trips on the deep
-// subpath.  Lazy-loading sidesteps it entirely.
 async function loadSdk() {
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
   const { StdioClientTransport } = await import(
@@ -27,11 +23,11 @@ let transport: InstanceType<
 let connectPromise: Promise<void> | null = null;
 let sessionRefs = 0;
 
-function workbenchMcpEnv(): Record<string, string> {
+function workOrderMcpEnv(): Record<string, string> {
   const env: Record<string, string> = {
     PYTHONPATH: EMPIRE_ROOT,
-    EMPIRE_WORKBENCH_DIR: WORKBENCH_DIR,
-    EMPIRE_ACTIVE_TOOLS_DIR: ACTIVE_TOOLS_DIR,
+    EMPIRE_WORK_ORDERS_DIR: WORK_ORDERS_DIR,
+    EMPIRE_RESOURCE_QUEUE_DIR: RESOURCE_QUEUE_DIR,
   };
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === "string") {
@@ -43,7 +39,7 @@ function workbenchMcpEnv(): Record<string, string> {
 
 function parseMcpToolJson(result: unknown): unknown {
   if (!result || typeof result !== "object") {
-    return { ok: false, error: "Invalid empire-workbench MCP response." };
+    return { ok: false, error: "Invalid empire-work-orders MCP response." };
   }
 
   const payload = result as {
@@ -57,7 +53,7 @@ function parseMcpToolJson(result: unknown): unknown {
       .trim();
     return {
       ok: false,
-      error: message || "empire-workbench MCP tool returned an error.",
+      error: message || "empire-work-orders MCP tool returned an error.",
     };
   }
 
@@ -66,16 +62,20 @@ function parseMcpToolJson(result: unknown): unknown {
     .join("\n")
     .trim();
   if (!raw) {
-    return { ok: false, error: "Empty response from empire-workbench MCP." };
+    return { ok: false, error: "Empty response from empire-work-orders MCP." };
   }
   try {
     return JSON.parse(raw) as unknown;
   } catch {
-    return { ok: false, error: "Invalid JSON from empire-workbench MCP.", raw };
+    return {
+      ok: false,
+      error: "Invalid JSON from empire-work-orders MCP.",
+      raw,
+    };
   }
 }
 
-export async function connectEmpireWorkbenchMcp(): Promise<void> {
+export async function connectEmpireWorkOrdersMcp(): Promise<void> {
   sessionRefs += 1;
   if (client) {
     return;
@@ -85,12 +85,12 @@ export async function connectEmpireWorkbenchMcp(): Promise<void> {
       const { Client, StdioClientTransport } = await loadSdk();
       transport = new StdioClientTransport({
         command: PYTHON_BIN,
-        args: [WORKBENCH_MCP_SCRIPT],
-        env: workbenchMcpEnv(),
+        args: [WORK_ORDER_MCP_SCRIPT],
+        env: workOrderMcpEnv(),
         cwd: EMPIRE_ROOT,
         stderr: "pipe",
       });
-      client = new Client({ name: "eve-empire-workbench", version: "1.0.0" });
+      client = new Client({ name: "eve-empire-work-orders", version: "1.0.0" });
       await client.connect(transport);
     })().catch((error) => {
       client = null;
@@ -103,7 +103,7 @@ export async function connectEmpireWorkbenchMcp(): Promise<void> {
   await connectPromise;
 }
 
-export async function disconnectEmpireWorkbenchMcp(): Promise<void> {
+export async function disconnectEmpireWorkOrdersMcp(): Promise<void> {
   sessionRefs = Math.max(0, sessionRefs - 1);
   if (sessionRefs > 0 || !client) {
     return;
@@ -129,71 +129,43 @@ export async function disconnectEmpireWorkbenchMcp(): Promise<void> {
   }
 }
 
-export async function checkWorkbenchHealthViaMcp(): Promise<unknown> {
+export async function draftWorkOrderViaMcp(input: {
+  capability_needed: string;
+  justification: string;
+  source_file?: string;
+}): Promise<unknown> {
   try {
-    await connectEmpireWorkbenchMcp();
+    await connectEmpireWorkOrdersMcp();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
-      error: `Could not start empire-workbench MCP: ${message}`,
+      error: `Could not start empire-work-orders MCP: ${message}`,
     };
   }
 
   if (!client) {
     return {
       ok: false,
-      error: "empire-workbench MCP client is not connected.",
+      error: "empire-work-orders MCP client is not connected.",
     };
   }
 
   try {
     const result = await client.callTool({
-      name: "check_workbench_health",
-      arguments: {},
+      name: "draft_work_order",
+      arguments: {
+        capability_needed: input.capability_needed,
+        justification: input.justification,
+        source_file: input.source_file ?? "",
+      },
     });
     return parseMcpToolJson(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
-      error: `check_workbench_health failed: ${message}`,
-    };
-  }
-}
-
-export async function readActiveToolViaMcp(filename: string): Promise<unknown> {
-  try {
-    await connectEmpireWorkbenchMcp();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      error: `Could not start empire-workbench MCP: ${message}`,
-      filename,
-    };
-  }
-
-  if (!client) {
-    return {
-      ok: false,
-      error: "empire-workbench MCP client is not connected.",
-      filename,
-    };
-  }
-
-  try {
-    const result = await client.callTool({
-      name: "read_active_tool",
-      arguments: { filename },
-    });
-    return parseMcpToolJson(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      error: `read_active_tool failed: ${message}`,
-      filename,
+      error: `draft_work_order failed: ${message}`,
     };
   }
 }

@@ -24,7 +24,11 @@ or when a task clearly needs a different local model than the current chat defau
 
 - **Never** call `switch_chat_model` — it is disabled. Model hot-swapping causes VRAM thrashing.
 - Do not switch models for greetings or one-line answers.
-- Sampling is fixed at temperature **0.35** and top_p **0.90** for reliable tool JSON plus EQ voice.
+- Sampling is **per Workbench mode** (top_p **0.90** shared):
+  - Fast → temperature **0.2** (strict tool JSON)
+  - Deep → temperature **0.7** (creative brainstorming)
+  - Librarian → temperature **0.4** (balanced retrieval)
+- Every mode uses **num_ctx 8192** to protect 16 GB VRAM.
 - If `get_model_suite` shows a gap, tell the user the `ollama pull …` command from `pullGaps`.
 - Embedding model is configured in Cognee (`config/cognee.env`), not via chat tools.
 

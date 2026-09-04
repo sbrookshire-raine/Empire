@@ -22,6 +22,9 @@
     pb_health: "Checking PocketBase…",
     workbench_list_dir: "Scanning workbench folders…",
     workbench_read_file: "Reading workbench file…",
+    read_active_tool: "Reading Active Tools file…",
+    draft_work_order: "Filing a Work Order for the Mechanic…",
+    check_workbench_health: "Checking Workbench health…",
   };
   var DEFAULT_CHAT_MODES = [
     {
@@ -30,7 +33,8 @@
       description:
         "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
       model: "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
-      numCtx: 16384,
+      numCtx: 8192,
+      temperature: 0.2,
     },
     {
       id: "deep",
@@ -38,6 +42,7 @@
       description: "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
       model: "qwen2.5:32b",
       numCtx: 8192,
+      temperature: 0.7,
     },
     {
       id: "librarian",
@@ -46,6 +51,7 @@
         "Mass synthesis — cross-reference many flattened files and long memory snippets.",
       model: "command-r:35b",
       numCtx: 8192,
+      temperature: 0.4,
     },
   ];
   var SERVICE_LABELS = {
@@ -219,9 +225,38 @@
       streamReader: null,
       currentAssistantId: null,
       nextId: 1,
+      historyOpen: false,
+      historyLoading: false,
+      chatHistory: [],
+      historyChatId: null,
+      historyChatCreatedAt: null,
+      persistTimer: null,
       ollamaModels: [],
       chatModes: [],
       selectedMode: "fast",
+      toolbeltOpen: true,
+      toolbeltCategories: [
+        {
+          id: "gumloop_cloud",
+          label: "Gumloop Cloud",
+          description: "Heavy remote workflows via Gumloop (external).",
+        },
+        {
+          id: "web_research",
+          label: "Web Research",
+          description: "Firecrawl / Exa scraping and external web research.",
+        },
+        {
+          id: "tool_forge",
+          label: "Tool Forge",
+          description: "Execute / read harvested 03_Active_Tools flattened scripts.",
+        },
+      ],
+      activeTools: {
+        gumloop_cloud: false,
+        web_research: false,
+        tool_forge: false,
+      },
       activeMode: "fast",
       activeModeLabel: "Fast Mode (14b)",
       activeModeDescription: "",
@@ -311,6 +346,23 @@
         return labels[this.activeMode] || labels[this.selectedMode] || "Mode";
       },
 
+      get toolbeltToggleLabel() {
+        var count = this.activeToolIds().length;
+        if (!count) return "No tools selected";
+        if (count === 1) return "1 tool category active";
+        return count + " tool categories active";
+      },
+
+      activeToolIds: function () {
+        var ids = [];
+        var categories = this.toolbeltCategories || [];
+        for (var i = 0; i < categories.length; i += 1) {
+          var id = categories[i].id;
+          if (this.activeTools[id]) ids.push(id);
+        }
+        return ids;
+      },
+
       get compactChatStatus() {
         if (this.switchingModel) return "Switching mode…";
         if (!this.ollamaConnected) return this.ollamaStatus || "Ollama offline";
@@ -385,6 +437,7 @@
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshTasks();
+        this.restoreChatHistoryOnBoot();
       },
 
       setTab: function (tab) {
@@ -960,8 +1013,10 @@
             role: "assistant",
             text: plainText(payload.answer) || "I could not form an answer from memory yet.",
             sources: Array.isArray(payload.sources) ? payload.sources : [],
+            createdAt: new Date().toISOString(),
           });
           this.chatStatus = "Ready.";
+          this.persistCurrentChat(true);
         } catch (error) {
           if (this.isCurrentChatOperation(generation) && error.name !== "AbortError") {
             this.chatError = plainText(error.message) || "Memory answer failed.";
@@ -989,11 +1044,12 @@
         if (!text || this.sending) return;
         var generation = this.beginChatOperation();
         this.chatError = "";
-        this.messages.push({ id: this.makeId("message"), role: "user", text: text });
+        this.messages.push({ id: this.makeId("message"), role: "user", text: text, createdAt: new Date().toISOString() });
         this.scrollTranscript();
         this.draft = "";
         this.sending = true;
         this.chatStatus = "Eve is working…";
+        this.schedulePersistChat();
 
         try {
           if (this.isMemoryQuery(text)) {
@@ -1004,8 +1060,17 @@
             ? "/api/eve/session/" + encodeURIComponent(this.sessionId)
             : "/api/eve/session";
           var body = this.sessionId
-            ? { continuationToken: this.continuationToken, message: text }
-            : { message: text };
+            ? {
+                continuationToken: this.continuationToken,
+                message: text,
+                mode: this.selectedMode || this.activeMode || "fast",
+                active_tools: this.activeToolIds(),
+              }
+            : {
+                message: text,
+                mode: this.selectedMode || this.activeMode || "fast",
+                active_tools: this.activeToolIds(),
+              };
           var response = await fetch(path, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1118,6 +1183,7 @@
         if (type === "message.completed") {
           this.updateAssistantMessage(data);
           this.currentAssistantId = null;
+          this.schedulePersistChat();
           return;
         }
         if (type === "actions.requested") {
@@ -1140,6 +1206,7 @@
             ? "Eve is waiting for your choice."
             : "Ready.";
           this.refreshTasks();
+          this.persistCurrentChat(true);
           return;
         }
         if (type === "turn.cancelled") {
@@ -1171,7 +1238,12 @@
           );
         }
         if (!message) {
-          message = { id: this.makeId("message"), role: "assistant", text: "" };
+          message = {
+            id: this.makeId("message"),
+            role: "assistant",
+            text: "",
+            createdAt: new Date().toISOString(),
+          };
           this.messages.push(message);
           this.currentAssistantId = message.id;
           triggerReplyFlash();
@@ -1275,6 +1347,8 @@
               body: JSON.stringify({
                 continuationToken: this.continuationToken,
                 inputResponses: [{ requestId: requestId, optionId: optionId }],
+                mode: this.selectedMode || this.activeMode || "fast",
+                active_tools: this.activeToolIds(),
               }),
               signal: this.requestController.signal,
             }
@@ -1357,6 +1431,7 @@
         if (this.cancelController) this.cancelController.abort();
         this.cancelController = null;
         await this.invalidateChatOperation();
+        await this.archiveCurrentChat();
         this.sessionId = null;
         this.continuationToken = null;
         this.streamIndex = 0;
@@ -1367,6 +1442,250 @@
         this.chatError = "";
         this.chatStatus = "Ready for a new local conversation.";
         this.currentAssistantId = null;
+        this.historyChatId = null;
+        this.historyChatCreatedAt = null;
+        try {
+          await fetch("/api/chat-history/active", { method: "DELETE", cache: "no-store" });
+        } catch (_error) {
+          /* ignore */
+        }
+        await this.refreshChatHistory();
+      },
+
+      toggleHistory: async function () {
+        this.historyOpen = !this.historyOpen;
+        if (this.historyOpen) {
+          await this.refreshChatHistory();
+        }
+      },
+
+      formatHistoryTime: function (value) {
+        var raw = plainText(value);
+        if (!raw) return "";
+        var date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+        try {
+          return date.toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          });
+        } catch (_error) {
+          return raw;
+        }
+      },
+
+      persistableMessages: function () {
+        return (this.messages || [])
+          .filter(function (message) {
+            return (
+              (message.role === "user" || message.role === "assistant") &&
+              plainText(message.text).trim()
+            );
+          })
+          .map(function (message) {
+            return {
+              id: plainText(message.id) || undefined,
+              role: message.role,
+              text: plainText(message.text),
+              createdAt: plainText(message.createdAt) || undefined,
+            };
+          });
+      },
+
+      ensureHistoryChatId: function () {
+        if (this.historyChatId) return this.historyChatId;
+        var id =
+          "chat-" +
+          String(Date.now()) +
+          "-" +
+          Math.random().toString(36).slice(2, 8);
+        this.historyChatId = id;
+        this.historyChatCreatedAt = new Date().toISOString();
+        return id;
+      },
+
+      schedulePersistChat: function () {
+        var workbench = this;
+        if (this.persistTimer) {
+          clearTimeout(this.persistTimer);
+        }
+        this.persistTimer = setTimeout(function () {
+          workbench.persistTimer = null;
+          workbench.persistCurrentChat(false);
+        }, 400);
+      },
+
+      persistCurrentChat: async function (_immediate) {
+        var messages = this.persistableMessages();
+        if (!messages.length) return null;
+        var chatId = this.ensureHistoryChatId();
+        var payload = {
+          id: chatId,
+          title: "",
+          mode: this.selectedMode || this.activeMode || "fast",
+          model: this.activeOllamaModel || this.selectedModel || "",
+          createdAt: this.historyChatCreatedAt || undefined,
+          messages: messages,
+        };
+        try {
+          var response = await fetch("/api/chat-history/" + encodeURIComponent(chatId), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || body.ok === false) {
+            return null;
+          }
+          if (body.chat && body.chat.createdAt) {
+            this.historyChatCreatedAt = plainText(body.chat.createdAt);
+          }
+          await this.refreshChatHistory();
+          return body.chat || null;
+        } catch (_error) {
+          return null;
+        }
+      },
+
+      archiveCurrentChat: async function () {
+        if (this.persistTimer) {
+          clearTimeout(this.persistTimer);
+          this.persistTimer = null;
+        }
+        return this.persistCurrentChat(true);
+      },
+
+      refreshChatHistory: async function () {
+        this.historyLoading = true;
+        try {
+          var response = await fetch("/api/chat-history", { cache: "no-store" });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false) {
+            this.chatHistory = [];
+            return;
+          }
+          this.chatHistory = Array.isArray(payload.chats) ? payload.chats : [];
+        } catch (_error) {
+          this.chatHistory = [];
+        } finally {
+          this.historyLoading = false;
+        }
+      },
+
+      restoreChatHistoryOnBoot: async function () {
+        await this.refreshChatHistory();
+        var activeId = null;
+        try {
+          var response = await fetch("/api/chat-history/active", { cache: "no-store" });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (response.ok && payload && payload.activeId) {
+            activeId = plainText(payload.activeId);
+          }
+        } catch (_error) {
+          activeId = null;
+        }
+        if (!activeId && this.chatHistory.length) {
+          activeId = plainText(this.chatHistory[0].id);
+        }
+        if (activeId) {
+          await this.openHistoryChat(activeId, { silent: true });
+        }
+      },
+
+      openHistoryChat: async function (chatId, options) {
+        var id = plainText(chatId);
+        if (!id || this.sending) return;
+        var silent = options && options.silent;
+        if (!silent && this.historyChatId && this.historyChatId !== id) {
+          await this.archiveCurrentChat();
+        }
+        this.historyLoading = true;
+        try {
+          var response = await fetch("/api/chat-history/" + encodeURIComponent(id), {
+            cache: "no-store",
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false || !payload.chat) {
+            throw new Error(errorMessage(payload, "Could not open that chat."));
+          }
+          var chat = payload.chat;
+          await this.invalidateChatOperation();
+          this.sessionId = null;
+          this.continuationToken = null;
+          this.streamIndex = 0;
+          this.pendingInputs = [];
+          this.activities = [];
+          this.sending = false;
+          this.chatError = "";
+          this.currentAssistantId = null;
+          this.historyChatId = plainText(chat.id) || id;
+          this.historyChatCreatedAt = plainText(chat.createdAt) || null;
+          this.messages = (Array.isArray(chat.messages) ? chat.messages : [])
+            .filter(function (message) {
+              return message && (message.role === "user" || message.role === "assistant");
+            })
+            .map(function (message) {
+              return {
+                id: plainText(message.id) || undefined,
+                role: message.role,
+                text: plainText(message.text),
+                createdAt: plainText(message.createdAt) || undefined,
+              };
+            });
+          this.chatStatus = silent
+            ? "Ready for a local conversation."
+            : "Loaded past chat. Next message starts a fresh Eve session.";
+          this.scrollTranscript();
+          if (!silent) {
+            this.historyOpen = true;
+          }
+        } catch (error) {
+          if (!silent) {
+            this.chatError = plainText(error.message) || "Could not open that chat.";
+          }
+        } finally {
+          this.historyLoading = false;
+        }
+      },
+
+      deleteHistoryChat: async function (chatId) {
+        var id = plainText(chatId);
+        if (!id || this.sending) return;
+        try {
+          var response = await fetch("/api/chat-history/" + encodeURIComponent(id), {
+            method: "DELETE",
+            cache: "no-store",
+          });
+          var payload = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || payload.ok === false) {
+            throw new Error(errorMessage(payload, "Could not delete that chat."));
+          }
+          if (this.historyChatId === id) {
+            this.historyChatId = null;
+            this.historyChatCreatedAt = null;
+            this.sessionId = null;
+            this.continuationToken = null;
+            this.messages = [];
+            this.activities = [];
+            this.pendingInputs = [];
+            this.chatStatus = "Ready for a new local conversation.";
+          }
+          await this.refreshChatHistory();
+        } catch (error) {
+          this.chatError = plainText(error.message) || "Could not delete that chat.";
+        }
       },
 
       applyOllamaModels: function (payload) {
@@ -1387,7 +1706,8 @@
               label: plainText(mode && mode.label) || plainText(mode && mode.id),
               description: plainText(mode && mode.description),
               model: plainText(mode && mode.model),
-              numCtx: Number(mode && mode.numCtx) || 0,
+              numCtx: Number(mode && mode.numCtx) || 8192,
+              temperature: Number(mode && mode.temperature) || 0,
             };
           }
         ).filter(function (mode) {
@@ -1401,6 +1721,7 @@
               description: mode.description,
               model: mode.model,
               numCtx: mode.numCtx,
+              temperature: mode.temperature,
             };
           });
         }

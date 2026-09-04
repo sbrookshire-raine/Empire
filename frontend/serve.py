@@ -17,9 +17,21 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 try:
-    from frontend import eve_proxy, memory_api, ollama_api, ollama_inventory, primitives_api, project_catalog, wiki_api
+    from frontend import (
+        chat_history,
+        eve_proxy,
+        eve_toolbelt,
+        memory_api,
+        ollama_api,
+        ollama_inventory,
+        primitives_api,
+        project_catalog,
+        wiki_api,
+    )
 except ModuleNotFoundError:
+    import chat_history  # type: ignore[no-redef]
     import eve_proxy  # type: ignore[no-redef]
+    import eve_toolbelt  # type: ignore[no-redef]
     import memory_api  # type: ignore[no-redef]
     import ollama_api  # type: ignore[no-redef]
     import ollama_inventory  # type: ignore[no-redef]
@@ -315,6 +327,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/projects/")
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
+            or path.startswith("/api/chat-history")
         ) and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
         if path.startswith("/api/eve/"):
@@ -337,6 +350,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._ollama_models()
         if path == "/api/ollama/inventory":
             return self._ollama_inventory()
+        if path == "/api/chat-history" or path.startswith("/api/chat-history/"):
+            return self._chat_history_get(path)
         if path == "/api/memory/status":
             return self._memory_status()
         if path == "/api/projects/catalog":
@@ -381,6 +396,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = self._read_eve_json()
             if payload is None:
                 return None
+            payload = eve_toolbelt.apply_active_tools(payload)
+            payload = ollama_api.apply_chat_mode_payload(payload)
             payload = memory_api.enrich_eve_message_payload(payload)
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
@@ -816,6 +833,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._ollama_set_model()
+        if path.startswith("/api/chat-history/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._chat_history_put(path)
         if path.startswith("/api/wiki/"):
             return self._wiki_mutate("PUT", path, self._read_json())
         self.send_error(404)
@@ -887,9 +908,60 @@ class EmpireHandler(SimpleHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         path = urlparse(self.path).path
+        if path.startswith("/api/chat-history/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._chat_history_delete(path)
         if path.startswith("/api/wiki/"):
             return self._wiki_mutate("DELETE", path, {})
         self.send_error(404)
+
+    def _chat_history_get(self, path: str) -> None:
+        if not self._memory_origin_allowed():
+            return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        try:
+            if path == "/api/chat-history":
+                return self._send_json(200, chat_history.public_list())
+            chat_id = path[len("/api/chat-history/") :].strip("/")
+            if not chat_id or "/" in chat_id:
+                return self._send_json(404, {"ok": False, "error": "Chat not found."})
+            if chat_id == "active":
+                active_id = chat_history.get_active_chat_id()
+                return self._send_json(200, {"ok": True, "activeId": active_id})
+            chat = chat_history.get_chat(chat_id)
+            return self._send_json(200, {"ok": True, "chat": chat})
+        except chat_history.ChatHistoryError as exc:
+            return self._send_json(exc.status, {"ok": False, "error": str(exc)})
+        except Exception:
+            return self._send_json(500, {"ok": False, "error": "Could not load chat history."})
+
+    def _chat_history_put(self, path: str) -> None:
+        chat_id = path[len("/api/chat-history/") :].strip("/")
+        if not chat_id or "/" in chat_id:
+            return self._send_json(404, {"ok": False, "error": "Chat not found."})
+        payload = self._read_json()
+        try:
+            chat = chat_history.upsert_chat(chat_id, payload)
+            return self._send_json(200, {"ok": True, "chat": chat})
+        except chat_history.ChatHistoryError as exc:
+            return self._send_json(exc.status, {"ok": False, "error": str(exc)})
+        except Exception:
+            return self._send_json(500, {"ok": False, "error": "Could not save chat history."})
+
+    def _chat_history_delete(self, path: str) -> None:
+        chat_id = path[len("/api/chat-history/") :].strip("/")
+        if not chat_id or "/" in chat_id:
+            return self._send_json(404, {"ok": False, "error": "Chat not found."})
+        try:
+            if chat_id == "active":
+                chat_history.clear_active_chat_id()
+                return self._send_json(200, {"ok": True, "activeId": None})
+            chat_history.delete_chat(chat_id)
+            return self._send_json(200, {"ok": True, "id": chat_id})
+        except chat_history.ChatHistoryError as exc:
+            return self._send_json(exc.status, {"ok": False, "error": str(exc)})
+        except Exception:
+            return self._send_json(500, {"ok": False, "error": "Could not delete chat."})
 
     def _primitives_get(self) -> None:
         try:

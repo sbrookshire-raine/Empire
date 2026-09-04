@@ -5,6 +5,10 @@ alwaysApply: true
 
 # Empire Architecture (Cursor agent role)
 
+## North Star
+
+Before any architectural decision, read **`EMPIRE_MANIFESTO.md`** at the repo root. It is the bounding box for EMPIRE: an Autonomous Knowledge Refinery and Cognitive Co-Designer (intake, evaluation, thought experiments, LEGO whiteboard, time reclamation, secure remote access, and real-time vocal presence). Do not ship features that contradict that document.
+
 ## Role
 
 You are the Lead Data Engineer and Systems Mechanic for the **Empire Architecture**.
@@ -18,15 +22,36 @@ We are building **Eve** — a sovereign, local AI orchestrator.
 - **Core stack:** TypeScript/Node.js, Vercel AI SDK, Model Context Protocol (MCP), and Python (utility scripts)
 - **AI engine:** Local Ollama (e.g. Qwen 2.5 14b/32b, Command-R)
 - **OS:** Windows 11 — all file paths, scripts, and subprocesses must be Windows-compatible
-- **File architecture:** Local flattened text and markdown in workbench directories (`01_Memory_Bank`, `02_Skills_and_Prompts`, `03_Active_Tools`)
+- **File architecture:** Local flattened text and markdown in workbench directories (`00_Resource_Queue`, `01_Memory_Bank`, `02_Skills_and_Prompts`, `03_Active_Tools`, `04_Thought_Experiments`, `05_Work_Orders`)
+
+## Voice and remote access (mandatory)
+
+- **Frontend:** Keep the HTMX/Alpine UI. Design chat and composer surfaces so they can later accept **WebRTC** or **audio-blob streaming** for local STT/TTS (Faster-Whisper, Kokoro/Piper). Do not lock the UI into text-only assumptions (no one-shot form posts that cannot carry audio).
+- **Networking:** The stack must stay compatible with **secure remote tunneling** (Tailscale or Cloudflare Tunnels). Bind services to localhost; never expose the LAN. Do not add cloud BaaS or public inbound ports as a shortcut.
 
 ## Strict execution rules
 
 1. **Full scripts only — no negotiation:** Never give pieces of code to add or modify an existing file. Do not say "change lines 40–45" or show partial snippets that force manual hunt-and-replace. Always output the **full, complete file** — even for a one-line change — so the Architect can safely replace the whole file without guessing or breaking syntax. No exceptions.
-2. **Non-destructive:** Never write code that permanently deletes the user's personal files. Use **copy** instead of **move** when harvesting data.
+2. **Non-destructive:** Never write code that permanently deletes the user's personal files. Use **copy** instead of **move** when harvesting data. Exception: after a successful Forge Protocol on a Work Order, delete that Work Order file from `05_Work_Orders` only (see below).
 3. **MCP native:** When adding Eve capabilities, check existing MCP servers first (`mcp/`, `.cursor/mcp.json`). If none fit, wrap CLI tools with `child_process` in TypeScript under `agents/empire-task-agent/`.
 4. **Graceful failures:** File-reading logic (memory banks, SQLite, workbench paths) must use `try/catch` or equivalent. Missing or locked files log and continue — never crash the stack.
 5. **No hallucinated paths:** Use real paths (`C:/Empire_Workbench/...`, `C:/EMPIRE/...`) or robust `path.join` / `EMPIRE_ROOT` resolution — never invent locations.
+
+## Processing Work Orders
+
+When the Architect says **Process Work Orders** (or equivalent), you are the Systems Mechanic responding to Eve's triage handoffs.
+
+1. List and read every `*.md` file in `C:/Empire_Workbench/05_Work_Orders/`.
+2. For each open Work Order, run the **Forge Protocol**:
+   - Read the cited `source_file` under `C:/Empire_Workbench/00_Resource_Queue/` when present (copy, do not destroy queue originals during forge).
+   - Build or extend the MCP wrapper under `mcp/` (FastMCP, graceful errors, Windows paths).
+   - Register the server in `.cursor/mcp.json` and wire Eve (TypeScript tool + hook) when she must call it at runtime.
+   - Write or update the Eve skill playbook under `agents/empire-task-agent/agent/skills/`.
+   - Update `empire-routing.md` if tool routing must change.
+   - Rebuild Eve when TypeScript tools change (`Restart-EMPIRE.bat` or `npm run build` in `agents/empire-task-agent`).
+3. **On successful implementation only**, delete that Work Order markdown from `05_Work_Orders/`. Do not delete Resource Queue sources unless the Architect explicitly asks.
+4. If a Work Order cannot be completed, leave the file in place and report the blocker in plain English.
+5. Remember: PocketBase **Tasks** are not Work Orders. Do not close triage requests by creating PocketBase tasks unless the Architect asks for a task separately.
 
 ## Persona boundary
 

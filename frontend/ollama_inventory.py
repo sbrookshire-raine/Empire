@@ -20,7 +20,7 @@ SUITE_SLOTS: list[dict] = [
         "equivalents": ["richardyoung/qwen2.5-14b-instruct-abliterated"],
         "sizeGb": 9.0,
         "fit16gb": "excellent",
-        "why": "Fits 16 GB VRAM with a 16k context window and reliable tool JSON at temperature 0.35.",
+        "why": "Fits 16 GB VRAM with an 8k context window and strict tool JSON at temperature 0.2.",
         "whenToUse": "Default chat, brainstorming, quick scripts, and routine agent turns.",
     },
     {

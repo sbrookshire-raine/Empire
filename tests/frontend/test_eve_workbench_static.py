@@ -18,6 +18,8 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "Add to memory",
             "Eve",
             "mode-picker",
+            "toolbelt",
+            "toolbeltOpen",
             "PocketBase tasks",
             "Memory &amp; indexing",
             "Add task",
@@ -34,6 +36,7 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "visibleMessages",
             "askSuggestion",
             "selectMode",
+            "activeToolIds",
             "onComposerKeydown",
             "refreshTaskSummary",
             "setTab",
@@ -159,6 +162,36 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertIn("return true", self.js)
         self.assertIn("applyChatMode", self.js)
         self.assertIn("chatModes", self.js)
+        self.assertIn("active_tools", self.js)
+        self.assertIn("activeTools", self.js)
+        self.assertIn("mode: this.selectedMode || this.activeMode || \"fast\"", self.js)
+        self.assertIn("numCtx: 8192", self.js)
+        self.assertIn("temperature: 0.2", self.js)
+        self.assertIn("temperature: 0.7", self.js)
+        self.assertIn("temperature: 0.4", self.js)
+
+    def test_chat_history_is_persisted_locally(self) -> None:
+        for token in (
+            "Chat history",
+            "chat-history",
+            "historyOpen",
+            'class="chat-history"',
+        ):
+            self.assertIn(token, self.html)
+        for token in (
+            "/api/chat-history",
+            "archiveCurrentChat",
+            "persistCurrentChat",
+            "refreshChatHistory",
+            "restoreChatHistoryOnBoot",
+            "openHistoryChat",
+            "deleteHistoryChat",
+            "historyChatId",
+            "chatHistory",
+        ):
+            self.assertIn(token, self.js)
+        self.assertIn("chat__body--history", self.css)
+        self.assertIn(".chat-history", self.css)
 
     def test_projected_event_shapes_have_safe_human_projection(self) -> None:
         for event_type in (
@@ -190,6 +223,9 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "delete_task",
             "workbench_list_dir",
             "workbench_read_file",
+            "read_active_tool",
+            "draft_work_order",
+            "check_workbench_health",
         ):
             self.assertIn(tool_name, self.js)
         self.assertIn("inputResponses", self.js)

@@ -71,7 +71,7 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
     $env:EMPIRE_ROOT = $Root
     $env:POCKETBASE_URL = "http://127.0.0.1:8090"
     $env:OLLAMA_BASE_URL = "http://localhost:11434/v1"
-    $env:OLLAMA_MODEL = "llama3.1:8b"
+    $env:OLLAMA_MODEL = "richardyoung/qwen2.5-14b-instruct-abliterated:latest"
     $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
     Start-Process -FilePath $npm `
         -ArgumentList "exec","--","eve","start","--host","127.0.0.1","--port","2000" `

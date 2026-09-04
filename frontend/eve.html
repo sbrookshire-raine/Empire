@@ -128,6 +128,26 @@
             <button
               class="chat__icon-btn"
               type="button"
+              title="Chat history"
+              aria-label="Chat history"
+              :aria-pressed="historyOpen"
+              @click="toggleHistory()"
+            >
+              ☰
+            </button>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="Toggle toolbelt"
+              aria-label="Toggle toolbelt"
+              :aria-pressed="toolbeltOpen"
+              @click="toolbeltOpen = !toolbeltOpen"
+            >
+              ⌗
+            </button>
+            <button
+              class="chat__icon-btn"
+              type="button"
               title="New chat"
               aria-label="New chat"
               @click="newChat()"
@@ -138,6 +158,110 @@
         </header>
 
         <p class="chat__activity" x-show="chatActivityLabel" x-text="chatActivityLabel" aria-live="polite"></p>
+
+        <div
+          class="chat__body"
+          :class="{
+            'chat__body--toolbelt': toolbeltOpen,
+            'chat__body--history': historyOpen
+          }"
+        >
+        <aside
+          class="chat-history"
+          x-show="historyOpen"
+          x-cloak
+          aria-label="Chat history"
+        >
+          <header class="chat-history__header">
+            <div>
+              <h3>History</h3>
+              <p>Past chats stay on this machine after reboot.</p>
+            </div>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="Close history"
+              aria-label="Close history"
+              @click="historyOpen = false"
+            >
+              ×
+            </button>
+          </header>
+          <p class="chat-history__hint" x-show="historyLoading">Loading…</p>
+          <p class="chat-history__hint" x-show="!historyLoading && !chatHistory.length">
+            No saved chats yet.
+          </p>
+          <div class="chat-history__list" role="list">
+            <template x-for="item in chatHistory" :key="item.id">
+              <div
+                class="chat-history__item"
+                role="listitem"
+                :class="{ 'chat-history__item--active': item.id === historyChatId }"
+              >
+                <button
+                  type="button"
+                  class="chat-history__open"
+                  @click="openHistoryChat(item.id)"
+                  :disabled="sending || historyLoading"
+                >
+                  <strong x-text="item.title"></strong>
+                  <small
+                    x-text="(item.mode || 'fast') + ' · ' + (item.messageCount || 0) + ' msgs · ' + formatHistoryTime(item.updatedAt)"
+                  ></small>
+                </button>
+                <button
+                  type="button"
+                  class="chat-history__delete"
+                  title="Delete chat"
+                  aria-label="Delete chat"
+                  @click="deleteHistoryChat(item.id)"
+                  :disabled="sending || historyLoading"
+                >
+                  ×
+                </button>
+              </div>
+            </template>
+          </div>
+        </aside>
+
+        <aside
+          class="toolbelt"
+          x-show="toolbeltOpen"
+          x-cloak
+          aria-label="Toolbelt"
+        >
+          <header class="toolbelt__header">
+            <div>
+              <h3>Toolbelt</h3>
+              <p>Optional heavy limbs only. Memory and Tasks stay on.</p>
+            </div>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="Close toolbelt"
+              aria-label="Close toolbelt"
+              @click="toolbeltOpen = false"
+            >
+              ×
+            </button>
+          </header>
+          <p class="toolbelt__summary" x-text="toolbeltToggleLabel"></p>
+          <div class="toolbelt__list" role="group" aria-label="Tool categories">
+            <template x-for="category in toolbeltCategories" :key="category.id">
+              <label class="toolbelt__item">
+                <input
+                  type="checkbox"
+                  :checked="activeTools[category.id]"
+                  @change="activeTools[category.id] = $event.target.checked"
+                />
+                <span class="toolbelt__item-text">
+                  <strong x-text="category.label"></strong>
+                  <small x-text="category.description"></small>
+                </span>
+              </label>
+            </template>
+          </div>
+        </aside>
 
         <div
           class="transcript chat__transcript"
@@ -203,6 +327,7 @@
               </div>
             </section>
           </template>
+        </div>
         </div>
 
         <form id="chat-form" class="composer chat-composer" @submit.prevent="sendMessage()">

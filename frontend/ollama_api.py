@@ -117,6 +117,35 @@ def save_active_model(model: str, *, mode: str | None = None) -> None:
     save_active_config(mode=resolved_mode, model=model)
 
 
+def apply_chat_mode_payload(payload: dict) -> dict:
+    """Sync Workbench chat `mode` into the active Ollama config, then strip it for Eve."""
+
+    if "mode" not in payload:
+        return payload
+
+    cleaned = dict(payload)
+    mode_raw = cleaned.pop("mode", None)
+    if not isinstance(mode_raw, str):
+        return cleaned
+
+    mode_id = mode_raw.strip()
+    if mode_id not in CHAT_MODES:
+        return cleaned
+
+    active = load_active_config()
+    mode = resolve_mode(mode_id)
+    stored_model = str(active.get("model") or "").strip()
+    if mode_for_model(stored_model) == mode_id and stored_model:
+        model = stored_model
+    else:
+        model = mode["model"]
+    try:
+        save_active_config(mode=mode_id, model=model)
+    except OSError:
+        pass
+    return cleaned
+
+
 def is_chat_model(entry: dict) -> bool:
     name = str(entry.get("name") or entry.get("model") or "").strip()
     if not name:
@@ -266,9 +295,9 @@ def summarize_tasks(tasks: list[dict], *, model: str | None = None) -> dict:
                 {"role": "user", "content": prompt},
             ],
             "stream": False,
-            "temperature": options.get("temperature", 0.35),
+            "temperature": options.get("temperature", 0.2),
             "top_p": options.get("top_p", 0.9),
-            "options": {"num_ctx": options.get("num_ctx", 16_384)},
+            "options": {"num_ctx": options.get("num_ctx", 8_192)},
         }
     ).encode("utf-8")
     connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)
@@ -329,9 +358,9 @@ def chat_completion(
                 {"role": "user", "content": user_prompt},
             ],
             "stream": False,
-            "temperature": temperature if temperature is not None else options.get("temperature", 0.35),
+            "temperature": temperature if temperature is not None else options.get("temperature", 0.2),
             "top_p": options.get("top_p", 0.9),
-            "options": {"num_ctx": options.get("num_ctx", 16_384)},
+            "options": {"num_ctx": options.get("num_ctx", 8_192)},
         }
     ).encode("utf-8")
     connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)

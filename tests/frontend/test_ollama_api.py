@@ -81,7 +81,7 @@ class OllamaApiTests(unittest.TestCase):
             self.assertEqual(saved["active"], "command-r:35b")
             stored = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(stored["mode"], "librarian")
-            self.assertEqual(stored["options"]["temperature"], 0.35)
+            self.assertEqual(stored["options"]["temperature"], 0.4)
             self.assertEqual(stored["options"]["num_ctx"], 8192)
 
     def test_rejects_embedding_models_and_unknown_ids(self) -> None:
