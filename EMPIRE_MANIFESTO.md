@@ -2,6 +2,8 @@
 
 **Bounding box:** Eve is an Autonomous Knowledge Refinery and Cognitive Co-Designer. She must be omnipresent and conversational.
 
+**Full context for collaborators / Gemini:** see [`EMPIRE_GUIDE.md`](EMPIRE_GUIDE.md) (what it is, where we are, what’s next).
+
 ## Phase 1: Intake & Triage
 
 Collect, organize, and shortlist news and releases regarding open source tools, models, guides, and architecture.

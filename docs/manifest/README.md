@@ -6,6 +6,7 @@ Complete reference for understanding, using, and continuing work on EMPIRE. Read
 
 | I want to… | Read |
 |------------|------|
+| **Re-bootstrap Gemini / lost context** | **[EMPIRE_GUIDE.md](../../EMPIRE_GUIDE.md)** (what / now / next) |
 | Understand what EMPIRE is | [01-overview](01-overview.md) |
 | See how pieces connect | [02-architecture](02-architecture.md) |
 | Run it today | [03-getting-started](03-getting-started.md) |

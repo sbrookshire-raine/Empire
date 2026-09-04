@@ -190,6 +190,8 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "chatHistory",
         ):
             self.assertIn(token, self.js)
+        self.assertIn("historyOpen = false", self.js)
+        self.assertNotIn("openHistoryChat(activeId", self.js)
         self.assertIn("chat__body--history", self.css)
         self.assertIn(".chat-history", self.css)
 

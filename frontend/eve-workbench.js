@@ -437,7 +437,8 @@
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshTasks();
-        this.restoreChatHistoryOnBoot();
+        // History stays available via ☰ — do not auto-load past chats into the transcript.
+        this.historyOpen = false;
       },
 
       setTab: function (tab) {
@@ -1579,25 +1580,10 @@
       },
 
       restoreChatHistoryOnBoot: async function () {
+        // Kept for tests / callers: only refresh the index. Never inject a past
+        // transcript into a fresh Workbench session.
+        this.historyOpen = false;
         await this.refreshChatHistory();
-        var activeId = null;
-        try {
-          var response = await fetch("/api/chat-history/active", { cache: "no-store" });
-          var payload = await response.json().catch(function () {
-            return {};
-          });
-          if (response.ok && payload && payload.activeId) {
-            activeId = plainText(payload.activeId);
-          }
-        } catch (_error) {
-          activeId = null;
-        }
-        if (!activeId && this.chatHistory.length) {
-          activeId = plainText(this.chatHistory[0].id);
-        }
-        if (activeId) {
-          await this.openHistoryChat(activeId, { silent: true });
-        }
       },
 
       openHistoryChat: async function (chatId, options) {
@@ -1645,10 +1631,9 @@
           this.chatStatus = silent
             ? "Ready for a local conversation."
             : "Loaded past chat. Next message starts a fresh Eve session.";
+          // Close the drawer so the transcript has the full width again.
+          this.historyOpen = false;
           this.scrollTranscript();
-          if (!silent) {
-            this.historyOpen = true;
-          }
         } catch (error) {
           if (!silent) {
             this.chatError = plainText(error.message) || "Could not open that chat.";
