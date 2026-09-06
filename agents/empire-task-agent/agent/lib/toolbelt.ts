@@ -13,6 +13,9 @@ export const TOOLBELT_CATEGORIES = [
   "gumloop_cloud",
   "web_research",
   "tool_forge",
+  "wiki_local",
+  "time_reclaim",
+  "stem_factory",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

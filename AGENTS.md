@@ -4,6 +4,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 
 **Gemini / fresh-chat context brief:** [EMPIRE_GUIDE.md](EMPIRE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
+**Idea / test queue:** [docs/EMPIRE_IDEA_QUEUE.md](docs/EMPIRE_IDEA_QUEUE.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire
 

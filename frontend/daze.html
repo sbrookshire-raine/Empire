@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>EMPIRE DAZE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <link rel="stylesheet" href="daze.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="daze" aria-label="EMPIRE"></nav>
+    <main class="daze" x-data="dazeDay()" x-init="init()" x-cloak>
+      <header class="daze__header">
+        <div>
+          <h1>DAZE</h1>
+          <p>24-hour radial day — finite time, local PocketBase.</p>
+        </div>
+        <div class="daze__date-row">
+          <label>
+            Date
+            <input type="date" x-model="date" @change="load()" />
+          </label>
+          <label>
+            Phase
+            <select x-model="phase" @change="load()">
+              <option value="planned">Planned</option>
+              <option value="actual">Actual</option>
+            </select>
+          </label>
+          <button type="button" class="secondary" @click="load()" :disabled="loading">Refresh</button>
+        </div>
+      </header>
+
+      <p class="daze__status" x-text="status"></p>
+      <p class="daze__conflict" x-show="conflicts.length" x-cloak>
+        Overbooked: <span x-text="conflicts.length"></span> overlap(s) — arcs glow red on the dial.
+      </p>
+
+      <section class="daze__layout">
+        <div class="daze__dial-wrap" aria-label="24-hour dial">
+          <svg class="daze__dial" viewBox="0 0 320 320" role="img">
+            <circle class="daze__ring" cx="160" cy="160" r="120" />
+            <template x-for="tick in hourTicks" :key="tick.label">
+              <g>
+                <line
+                  :x1="tick.x1"
+                  :y1="tick.y1"
+                  :x2="tick.x2"
+                  :y2="tick.y2"
+                  class="daze__tick"
+                />
+                <text :x="tick.tx" :y="tick.ty" class="daze__tick-label" x-text="tick.label"></text>
+              </g>
+            </template>
+            <template x-for="arc in arcs" :key="arc.id">
+              <path
+                :d="arc.d"
+                :class="arc.conflict ? 'daze__arc daze__arc--conflict' : 'daze__arc'"
+                :style="'stroke:' + arc.color"
+                :title="arc.title"
+              ></path>
+            </template>
+            <circle class="daze__hub" cx="160" cy="160" r="48" />
+            <text x="160" y="156" class="daze__hub-text" x-text="dateShort"></text>
+            <text x="160" y="176" class="daze__hub-sub" x-text="phase"></text>
+          </svg>
+        </div>
+
+        <div class="daze__side">
+          <form class="daze__form" @submit.prevent="save()">
+            <h2 x-text="editingId ? 'Edit block' : 'Add block'"></h2>
+            <label>
+              Title
+              <input type="text" x-model="form.title" required maxlength="255" placeholder="Exercise / deep work / rest" />
+            </label>
+            <div class="daze__row">
+              <label>
+                Start (HH:MM)
+                <input type="time" x-model="form.start" required />
+              </label>
+              <label>
+                End (HH:MM)
+                <input type="time" x-model="form.end" required />
+              </label>
+            </div>
+            <div class="daze__row">
+              <label>
+                Kind
+                <select x-model="form.kind">
+                  <option value="focus">Focus</option>
+                  <option value="body">Body</option>
+                  <option value="admin">Admin</option>
+                  <option value="creative">Creative</option>
+                  <option value="rest">Rest</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label>
+                Phase
+                <select x-model="form.phase">
+                  <option value="planned">Planned</option>
+                  <option value="actual">Actual</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Notes
+              <textarea x-model="form.notes" rows="2" maxlength="5000"></textarea>
+            </label>
+            <div class="daze__row">
+              <button type="submit" :disabled="saving" x-text="editingId ? 'Update' : 'Add'"></button>
+              <button type="button" class="secondary" x-show="editingId" @click="resetForm()">Cancel</button>
+            </div>
+          </form>
+
+          <div class="daze__free">
+            <h2>Free windows (≥30m)</h2>
+            <ul>
+              <template x-for="w in free" :key="w.label">
+                <li>
+                  <strong x-text="w.label"></strong>
+                  <span x-text="w.minutes + ' min'"></span>
+                </li>
+              </template>
+            </ul>
+            <p x-show="!free.length" class="muted">No free windows ≥30 minutes.</p>
+          </div>
+
+          <div class="daze__list">
+            <h2>Blocks</h2>
+            <template x-for="item in items" :key="item.id">
+              <article class="daze__card" :class="{ 'daze__card--conflict': isConflict(item.id) }">
+                <header>
+                  <strong x-text="item.title"></strong>
+                  <span class="muted" x-text="fmtRange(item.start_minute, item.end_minute)"></span>
+                </header>
+                <p class="muted" x-text="item.kind + ' · ' + item.phase"></p>
+                <div class="daze__row">
+                  <button type="button" class="secondary" @click="edit(item)">Edit</button>
+                  <button type="button" class="contrast" @click="remove(item.id)">Delete</button>
+                </div>
+              </article>
+            </template>
+            <p x-show="!items.length" class="muted">No blocks yet — add one to draw the day.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="empire-nav.js"></script>
+    <script src="daze.js"></script>
+  </body>
+</html>

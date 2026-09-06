@@ -25,6 +25,14 @@
     read_active_tool: "Reading Active Tools file…",
     draft_work_order: "Filing a Work Order for the Mechanic…",
     check_workbench_health: "Checking Workbench health…",
+    wiki_scout_search: "Scouting local Wikipedia…",
+    wiki_scout_compare_years: "Comparing Wikipedia years…",
+    daze_list_day: "Reading today’s DAZE blocks…",
+    daze_upsert_block: "Updating DAZE schedule…",
+    daze_free_windows: "Finding free time windows…",
+    stem_status: "Checking Stem Factory…",
+    stem_list_inbox: "Listing stem inbox songs…",
+    stem_run: "Running stem separation…",
   };
   var DEFAULT_CHAT_MODES = [
     {
@@ -251,11 +259,32 @@
           label: "Tool Forge",
           description: "Execute / read harvested 03_Active_Tools flattened scripts.",
         },
+        {
+          id: "wiki_local",
+          label: "Wiki Local",
+          description:
+            "Query local Wikipedia Weaviate; cache md for triage (no auto-memory).",
+        },
+        {
+          id: "time_reclaim",
+          label: "Time Reclaim",
+          description:
+            "DAZE day blocks — list/schedule free windows (PocketBase radial day).",
+        },
+        {
+          id: "stem_factory",
+          label: "Stem Factory",
+          description:
+            "Split songs in stem_factory/input into Demucs stems + practice mixes.",
+        },
       ],
       activeTools: {
         gumloop_cloud: false,
         web_research: false,
         tool_forge: false,
+        wiki_local: false,
+        time_reclaim: false,
+        stem_factory: false,
       },
       activeMode: "fast",
       activeModeLabel: "Fast Mode (14b)",

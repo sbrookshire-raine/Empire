@@ -13,10 +13,15 @@ class EveToolbeltTests(unittest.TestCase):
     def test_normalize_keeps_allowed_order_and_drops_junk(self) -> None:
         self.assertEqual(
             eve_toolbelt.normalize_active_tools(
-                ["tool_forge", "gumloop_cloud", "memory", "tool_forge", 3]
+                ["tool_forge", "wiki_local", "gumloop_cloud", "memory", "tool_forge", 3]
             ),
-            ["tool_forge", "gumloop_cloud"],
+            ["tool_forge", "wiki_local", "gumloop_cloud"],
         )
+
+    def test_wiki_local_is_optional_limb(self) -> None:
+        self.assertIn("wiki_local", eve_toolbelt.ALLOWED_CATEGORIES)
+        self.assertIn("time_reclaim", eve_toolbelt.ALLOWED_CATEGORIES)
+        self.assertIn("stem_factory", eve_toolbelt.ALLOWED_CATEGORIES)
 
     def test_normalize_defaults_when_missing(self) -> None:
         self.assertEqual(eve_toolbelt.normalize_active_tools(None), [])

@@ -50,10 +50,12 @@ Complete reference for understanding, using, and continuing work on EMPIRE. Read
 | [AGENTS.md](../../AGENTS.md) | Day-to-day agent/operator cheat sheet |
 | [docs/OPERATIONAL_HANDOFF.md](../OPERATIONAL_HANDOFF.md) | Operational phase handoff |
 | [docs/COGNEE_VHDX.md](../COGNEE_VHDX.md) | NTFS VHDX storage on `V:` |
+| [docs/WIKI_SCOUT.md](../WIKI_SCOUT.md) | Local Weaviate Wikipedia scout + Truth Drift cache (no full re-ingest) |
+| [docs/EMPIRE_IDEA_QUEUE.md](../EMPIRE_IDEA_QUEUE.md) | Growing ideas + Architect smoke-test queue (not PocketBase Tasks) |
 | [docs/ONEDRIVE.md](../ONEDRIVE.md) | Optional OneDrive tuning |
 | [data/curated_primitives/README.md](../../data/curated_primitives/README.md) | Fuel vs directives for primitives |
 | [agents/empire-task-agent/README.md](../../agents/empire-task-agent/README.md) | Eve npm project |
 
 ## Maintainer note
 
-This manifest describes the repo **as built** (August 2026). Wikipedia/wiki ingest is **halted** but code remains. Curated primitives and Eve Workbench memory are the active data paths.
+This manifest describes the repo **as built** (August 2026). Full Wikipedia/wiki→Cognee ingest is **halted**. On-demand Weaviate **scout** (cache → triage → optional promote) is documented in [WIKI_SCOUT.md](../WIKI_SCOUT.md). Curated primitives and Eve Workbench memory remain the primary Cognee data paths.

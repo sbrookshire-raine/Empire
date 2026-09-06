@@ -2,7 +2,7 @@
 
 Core brain tools (Cognee memory + PocketBase tasks + health/models) are NEVER
 gated here — they stay permanently registered. This file only tracks optional
-external limbs (Gumloop, web research, Tool Forge / Active Tools).
+external limbs (Gumloop, web research, Tool Forge / Active Tools, Wiki Local, Time Reclaim / DAZE).
 
 Note: PocketBase tasks are Tasks. A Work Order is a separate concept (Eve writing
 a .md request for Cursor) and must not be conflated with PocketBase.
@@ -16,7 +16,14 @@ from pathlib import Path
 from typing import Any
 
 # Optional limbs only — default all OFF to protect context until the user opts in.
-ALLOWED_CATEGORIES = ("gumloop_cloud", "web_research", "tool_forge")
+ALLOWED_CATEGORIES = (
+    "gumloop_cloud",
+    "web_research",
+    "tool_forge",
+    "wiki_local",
+    "time_reclaim",
+    "stem_factory",
+)
 DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
 
 

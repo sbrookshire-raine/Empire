@@ -41,6 +41,9 @@ Talk like a sharp co-worker on the same project — concise, human, lightly dry 
 | Tasks, todos, task list | `list_tasks` / `search_tasks` / `create_task` / `update_task` |
 | Run Triage, Resource Queue, evaluate intake, USEFUL NOW / COOL IDEA / JUNK | Load **skill-triage-officer**; `workbench_list_dir` with relative `00_Resource_Queue`; for USEFUL NOW forge needs call **`draft_work_order`** |
 | Workbench health, disk space, Active Tools count, “is the workbench online?” | Load **skill-workbench-health**; call **`check_workbench_health`** |
+| Local Wikipedia / encyclopedia / Truth Drift across years (2017–2026) | Load **skill-wiki-scout**; **`wiki_scout_search`** / **`wiki_scout_compare_years`** (requires **Wiki Local** in Toolbelt) — never invent wiki facts; never auto-`cognee_remember` |
+| Day schedule, free time, overbooking, exercise/meditation slots, DAZE | Load **skill-daze-time**; **`daze_list_day`** / **`daze_free_windows`** / **`daze_upsert_block`** (requires **Time Reclaim** in Toolbelt) — PocketBase day_blocks, not Tasks |
+| Stems, stem inbox, Demucs, practice tracks, Stem Factory / Shard of the Division | Load **skill-stem-factory**; **`stem_list_inbox`** then **`stem_run`** (requires **Stem Factory** in Toolbelt) — songs in `C:/Empire_Workbench/stem_factory/input` |
 | Any file inside `03_Active_Tools/` — flattened codebases, `*_flattened.txt`, harvested tool scripts | **`read_active_tool`** (requires Tool Forge in Toolbelt) — **mandatory**, see rule below |
 | Workbench folder map, Resource Queue, Memory Bank, Skills and Prompts, Thought Experiments, Work Orders listing, or listing any workbench directory | `workbench_list_dir` / `workbench_read_file` with **relative** paths only (e.g. `01_Memory_Bank`) — never `/home/vercel-sandbox` or absolute `C:\` |
 

@@ -2,6 +2,7 @@
   var NAV_LINKS = [
     { id: "dashboard", label: "Dashboard", href: "http://127.0.0.1:8080/dashboard.html" },
     { id: "eve", label: "Eve", href: "http://127.0.0.1:8080/eve.html" },
+    { id: "daze", label: "DAZE", href: "http://127.0.0.1:8080/daze.html" },
     { id: "primitives", label: "Primitives", href: "http://127.0.0.1:8080/primitives.html" },
     { id: "wiki", label: "Wiki", href: "http://127.0.0.1:8080/wiki.html" },
     { id: "tasks", label: "Tasks", href: "http://127.0.0.1:8080/" },

@@ -64,7 +64,10 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
   - **Fast** (Qwen 14b abliterated) — temp **0.2** (strict tools)
   - **Deep** (Qwen 32b) — temp **0.7** (creative)
   - **Librarian** (Command-R 35b) — temp **0.4** (balanced)
-- **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge. Memory + Tasks always on
+- **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge, Wiki Local, Time Reclaim, Stem Factory. Memory + Tasks always on
+- **Wiki Local scout** — on-demand Weaviate Wikipedia (`:8091`) → Truth Drift markdown cache under `04_Thought_Experiments/wiki_cache/` → triage → optional `cognee_remember` (no full wiki re-ingest). See [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md)
+- **DAZE (Phase 5)** — radial day at http://127.0.0.1:8080/daze.html; PocketBase `day_blocks`; Eve tools behind **Time Reclaim** Toolbelt
+- **Stem Factory** — drop songs in `C:\Empire_Workbench\stem_factory\input`, enable Toolbelt **Stem Factory**, ask Eve to run stems (Shard of the Division / Demucs) |
 - **Cognee memory** — upload `.md/.txt/.pdf` → dataset `eve_memory`; optimize → `eve_core` for fast recall; curated primitives → `primitives_test`
 - **PocketBase Tasks** — CRUD from Workbench (these are **not** Work Orders)
 - **Workbench filesystem** — `C:\Empire_Workbench\` with:
@@ -78,12 +81,12 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
 - **Workbench health** — `check_workbench_health` (disk + folder counts)
 - **Sandbox tools disabled** — Eve must not use cloud `bash` / `read_file` / `web_search` etc.; use `workbench_*` and EMPIRE tools
 - **Persona** — `eve_instructions.md`: Triage Officer + Scanner frameworks + light co-worker wit (substance first)
-- **MCP (Cursor)** — `empire-pocketbase`, `empire-cognee`, `empire-workbench`, `empire-work-orders`
+- **MCP (Cursor)** — `empire-pocketbase`, `empire-cognee`, `empire-workbench`, `empire-work-orders`, `empire-wiki-scout`
 - **GitHub backup** — latest meaningful push includes chat history, triage/work orders, mode sampling (`d7e6d75` era and later local edits)
 
 ### Halted / do not restart casually
 
-- **Wikipedia / Wiki Ops ingest** — halted; do not use for new data
+- **Wikipedia / Wiki Ops full ingest** — halted; do not dump the corpus into Cognee. **On-demand scout** (Weaviate → `wiki_cache` → triage → optional remember) is active — see [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md)
 
 ### Important distinctions
 
@@ -106,14 +109,17 @@ From [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md) — vision order, not a sprint
 | **2** Evaluation | USEFUL NOW / COOL IDEA / JUNK | **In progress** (Eve categorizes; Mechanic forges) |
 | **3** Thought Experiments | YouTube/ideas → autonomous research; Gumloop later | Planned (Toolbelt limb exists, not default-on) |
 | **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | Planned |
-| **5** Time reclamation | Daze / personal tracking; free time for body & mind | Planned |
+| **5** Time reclamation | Daze / personal tracking; free time for body & mind | **In progress** — PocketBase `day_blocks` + http://127.0.0.1:8080/daze.html + Eve **Time Reclaim** limb |
 | **6** Secure remote access | Tailscale or Cloudflare Tunnels | Planned (bind localhost now) |
 | **7** Real-time voice | Local STT/TTS (Faster-Whisper, Kokoro/Piper); UI must stay audio-capable | Planned (chat UI must not lock to text-only posts) |
 
 ### Near-term engineering backlog (practical)
 
+Canonical living list: **[`docs/EMPIRE_IDEA_QUEUE.md`](docs/EMPIRE_IDEA_QUEUE.md)** (ideas + smoke tests; not PocketBase Tasks / not Work Orders).
+
+- **Test next:** Truth Drift (Wiki Local), DAZE, Stem Factory / Shard — see queue **T-01…T-03**
 - Stronger “continue past chat” (optional short summary into Eve context — careful with VRAM)
-- Thought-experiment pipeline without cloud lock-in
+- Thought-experiment pipeline without cloud lock-in (web scout sharing wiki_cache contract — see [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md) future expansions)
 - Remote access hardening when Architect is ready
 - Voice path that fits HTMX/Alpine (blob/WebRTC-friendly composer)
 - Keep Cognee storage healthy on VHDX; avoid filling C:
@@ -143,6 +149,8 @@ When the Architect pastes this guide:
 | Chat history API | `frontend/chat_history.py` |
 | Mode temps / ctx | `frontend/ollama_chat_profiles.py`, `agents/.../lib/ollama-config.ts` |
 | Work Orders MCP | `mcp/work_order_mcp.py` |
+| Wikipedia Weaviate scout | `docs/WIKI_SCOUT.md` |
+| Idea / test queue | `docs/EMPIRE_IDEA_QUEUE.md` |
 | Day-to-day ops | `AGENTS.md` |
 
 ---
@@ -153,4 +161,4 @@ When the Architect pastes this guide:
 
 ---
 
-*Last updated: 2026-09-03 (local). Update this file when major capabilities land so Gemini (and humans) can re-bootstrap fast.*
+*Last updated: 2026-09-05 (local). Update this file when major capabilities land so Gemini (and humans) can re-bootstrap fast.*
