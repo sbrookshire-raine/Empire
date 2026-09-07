@@ -18,26 +18,34 @@ from urllib.parse import urlparse
 
 try:
     from frontend import (
+        chat_continuity,
         chat_history,
+        companion_api,
         eve_proxy,
         eve_toolbelt,
         memory_api,
         ollama_api,
+        ollama_fast_ab,
         ollama_inventory,
         primitives_api,
         project_catalog,
         wiki_api,
+        wiki_drift_api,
     )
 except ModuleNotFoundError:
+    import chat_continuity  # type: ignore[no-redef]
     import chat_history  # type: ignore[no-redef]
+    import companion_api  # type: ignore[no-redef]
     import eve_proxy  # type: ignore[no-redef]
     import eve_toolbelt  # type: ignore[no-redef]
     import memory_api  # type: ignore[no-redef]
     import ollama_api  # type: ignore[no-redef]
+    import ollama_fast_ab  # type: ignore[no-redef]
     import ollama_inventory  # type: ignore[no-redef]
     import project_catalog  # type: ignore[no-redef]
     import primitives_api  # type: ignore[no-redef]
     import wiki_api  # type: ignore[no-redef]
+    import wiki_drift_api  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = Path(__file__).resolve().parent
@@ -304,6 +312,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/projects/")
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
+            or path == "/api/gpu-lease"
+            or path.startswith("/api/voice/")
         )
         if local_only_api:
             if origin in MEMORY_ALLOWED_ORIGINS:
@@ -327,6 +337,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/projects/")
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
+            or path == "/api/gpu-lease"
+            or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
         ) and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -350,6 +362,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._ollama_models()
         if path == "/api/ollama/inventory":
             return self._ollama_inventory()
+        if path == "/api/ollama/fast-ab":
+            return self._send_json(200, ollama_fast_ab.load_fast_ab())
+        if path == "/api/gpu-lease":
+            return self._gpu_lease_get()
         if path == "/api/chat-history" or path.startswith("/api/chat-history/"):
             return self._chat_history_get(path)
         if path == "/api/memory/status":
@@ -398,7 +414,22 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 return None
             payload = eve_toolbelt.apply_active_tools(payload)
             payload = ollama_api.apply_chat_mode_payload(payload)
-            payload = memory_api.enrich_eve_message_payload(payload)
+            try:
+                payload = wiki_drift_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
+            try:
+                payload = companion_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
+            try:
+                payload = memory_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
+            try:
+                payload = chat_continuity.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -416,6 +447,18 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._ollama_summarize_tasks()
+        if path == "/api/ollama/fast-ab":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._ollama_fast_ab_set()
+        if path == "/api/gpu-lease":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._gpu_lease_post()
+        if path == "/api/voice/transcribe":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._voice_transcribe()
         if path.startswith("/api/memory/jobs/") and path.endswith("/retry"):
             return self._memory_retry(path)
         payload = self._read_json()
@@ -860,12 +903,125 @@ class EmpireHandler(SimpleHTTPRequestHandler):
     def _ollama_inventory(self) -> None:
         try:
             tags = ollama_api.fetch_tags()
-        except ollama_api.OllamaConnectionError:
+        except ollama_api.OllamaConnectionError as exc:
             return self._send_json(
                 503,
-                {"ok": False, "error": "Ollama is unavailable.", "models": [], "recommendations": {}},
+                {
+                    "ok": False,
+                    "connected": False,
+                    "error": str(exc),
+                    "fastAb": ollama_fast_ab.load_fast_ab(),
+                },
             )
-        return self._send_json(200, ollama_inventory.build_inventory(tags))
+        payload = ollama_inventory.build_inventory(tags)
+        if isinstance(payload, dict):
+            payload = dict(payload)
+            payload["fastAb"] = ollama_fast_ab.load_fast_ab()
+            payload["ok"] = True
+            payload["connected"] = True
+            # Loopback harden note for Architect
+            payload["ollamaClientHint"] = (
+                "Clients must use http://127.0.0.1:11434 — never 0.0.0.0 as a client URL."
+            )
+        return self._send_json(200, payload)
+
+    def _ollama_fast_ab_set(self) -> None:
+        payload = self._read_json()
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        result = ollama_fast_ab.save_fast_ab(
+            variant=str(payload.get("variant") or "") or None,
+            b_model=str(payload.get("b_model") or "") or None,
+        )
+        status = 200 if result.get("ok") else 400
+        # Sync active Fast model when mode is fast
+        if result.get("ok"):
+            try:
+                active = ollama_api.load_active_config()
+                if str(active.get("mode")) == "fast":
+                    ollama_api.save_active_config(
+                        mode="fast",
+                        model=str(result.get("active_model")),
+                    )
+            except OSError:
+                pass
+        return self._send_json(status, result)
+
+    def _gpu_lease_get(self) -> None:
+        try:
+            from pipeline import gpu_lease
+
+            return self._send_json(200, gpu_lease.status())
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _gpu_lease_post(self) -> None:
+        payload = self._read_json()
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        try:
+            from pipeline import gpu_lease
+
+            action = str(payload.get("action") or "status").strip().lower()
+            if action == "release":
+                return self._send_json(200, gpu_lease.release())
+            if action == "acquire":
+                tenant = str(payload.get("tenant") or "").strip()
+                return self._send_json(
+                    200,
+                    gpu_lease.acquire(
+                        tenant,  # type: ignore[arg-type]
+                        holder=str(payload.get("holder") or ""),
+                        force=bool(payload.get("force")),
+                    ),
+                )
+            return self._send_json(200, gpu_lease.status())
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _voice_transcribe(self) -> None:
+        """Accept multipart audio upload, write temp file, call speech API."""
+        try:
+            from pipeline import voice_presence
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+
+        content_type = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type:
+            return self._send_json(400, {"ok": False, "error": "multipart/form-data required"})
+        try:
+            length = int(self.headers.get("Content-Length") or "0")
+        except ValueError:
+            length = 0
+        if length <= 0 or length > 25_000_000:
+            return self._send_json(400, {"ok": False, "error": "Invalid audio size"})
+        raw = self.rfile.read(length)
+        # Reuse email parser like memory upload
+        header_bytes = f"Content-Type: {content_type}\r\n\r\n".encode("utf-8")
+        msg = BytesParser(policy=policy.default).parsebytes(header_bytes + raw)
+        audio_bytes = None
+        filename = "upload.webm"
+        for part in msg.iter_parts():
+            name = part.get_param("name", header="content-disposition")
+            if name == "file":
+                audio_bytes = part.get_payload(decode=True)
+                filename = part.get_filename() or filename
+                break
+        if not audio_bytes:
+            return self._send_json(400, {"ok": False, "error": "file field required"})
+        tmp_dir = Path(os.environ.get("TEMP") or FRONTEND) / "empire-voice"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp_path = tmp_dir / f"mic-{int(time.time() * 1000)}-{filename}"
+        try:
+            tmp_path.write_bytes(audio_bytes)
+            result = voice_presence.transcribe(tmp_path)
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        status = 200 if result.get("ok") else 502
+        return self._send_json(status, result)
 
     def _ollama_set_model(self) -> None:
         payload = self._read_json()

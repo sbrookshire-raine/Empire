@@ -6,9 +6,10 @@ title EMPIRE Launcher
 
 echo.
 echo Starting EMPIRE (Ollama, PocketBase, Workbench, Eve)...
+echo Optional: Start-EMPIRE.bat -Weaviate   ^(Wiki Local on :8091^)
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch-empire.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch-empire.ps1" %*
 if errorlevel 1 (
     echo.
     echo EMPIRE failed to start. See the message above.

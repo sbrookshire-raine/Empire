@@ -18,6 +18,15 @@ from typing import Any
 
 import httpx
 
+from pipeline.wiki_interpreter import (
+    candidate_pool_size,
+    cards_public,
+    clean_query_for_retrieval,
+    expand_queries,
+    interpret_hits,
+)
+
+
 def _normalize_ollama_url(raw: str | None) -> str:
     """Client URL for embeddings. Ignore bind-all OLLAMA_HOST=0.0.0.0."""
     value = (raw or "").strip().rstrip("/")
@@ -48,6 +57,10 @@ DEFAULT_CACHE_DIR = Path(
 )
 DEFAULT_BODY_MAX_CHARS = int(os.environ.get("EMPIRE_WIKI_BODY_MAX_CHARS", "6000"))
 DEFAULT_SUMMARY_CHARS = int(os.environ.get("EMPIRE_WIKI_SUMMARY_CHARS", "280"))
+# Final cards after Wiki Interpreter (retrieve pool is wider — see wiki_interpreter).
+DEFAULT_SEARCH_TOP_K = int(os.environ.get("EMPIRE_WIKI_SEARCH_TOP_K", "5"))
+DEFAULT_COMPARE_TOP_K = int(os.environ.get("EMPIRE_WIKI_COMPARE_TOP_K", "4"))
+DEFAULT_COMPARE_YEARS = ("2017", "2021", "2026")
 
 YEAR_COLLECTIONS: dict[str, str] = {
     "2017": "WikiChunk",
@@ -55,7 +68,6 @@ YEAR_COLLECTIONS: dict[str, str] = {
     "2026": "WikiChunk2026",
 }
 COLLECTION_YEAR: dict[str, str] = {v: k for k, v in YEAR_COLLECTIONS.items()}
-DEFAULT_COMPARE_YEARS = ("2017", "2021", "2026")
 
 _SAFE = re.compile(r"[^A-Za-z0-9_.-]+")
 
@@ -186,7 +198,7 @@ def _graphql_hybrid_search(
     """Hybrid BM25 + vector. Pure nearVector returns empty on this Weaviate archive."""
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", collection):
         raise ValueError(f"Invalid collection name: {collection!r}")
-    limit = max(1, min(int(limit), 20))
+    limit = max(1, min(int(limit), 50))
     alpha = max(0.0, min(float(alpha), 1.0))
     vector_literal = json.dumps(vector)
     query_literal = json.dumps(query)
@@ -240,16 +252,22 @@ def _graphql_bm25_search(
     collection: str,
     query: str,
     limit: int,
+    properties: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", collection):
         raise ValueError(f"Invalid collection name: {collection!r}")
-    limit = max(1, min(int(limit), 20))
+    limit = max(1, min(int(limit), 50))
     query_literal = json.dumps(query)
+    props_clause = ""
+    if properties:
+        safe_props = [p for p in properties if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", p)]
+        if safe_props:
+            props_clause = ", properties: [" + ", ".join(f'"{p}"' for p in safe_props) + "]"
     gql = f"""
     {{
       Get {{
         {collection}(
-          bm25: {{ query: {query_literal} }}
+          bm25: {{ query: {query_literal}{props_clause} }}
           limit: {limit}
         ) {{
           title
@@ -280,6 +298,205 @@ def _graphql_bm25_search(
     if not isinstance(rows, list):
         return []
     return rows
+
+
+def _graphql_exact_title(
+    *,
+    base_url: str,
+    api_key: str,
+    collection: str,
+    title: str,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Fetch chunks whose title Exactly equals the string (canonical page inject)."""
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", collection):
+        raise ValueError(f"Invalid collection name: {collection!r}")
+    title = (title or "").strip()
+    if not title:
+        return []
+    limit = max(1, min(int(limit), 10))
+    title_literal = json.dumps(title)
+    gql = f"""
+    {{
+      Get {{
+        {collection}(
+          where: {{
+            path: ["title"]
+            operator: Equal
+            valueText: {title_literal}
+          }}
+          limit: {limit}
+        ) {{
+          title
+          text
+          doc_id
+          chunk_id
+          page_id
+          snapshot_id
+          chunk_index
+          corpus_rel_path
+          _additional {{ id }}
+        }}
+      }}
+    }}
+    """
+    with httpx.Client(
+        base_url=base_url.rstrip("/"),
+        timeout=60.0,
+        headers=_auth_headers(api_key),
+    ) as client:
+        response = client.post("/v1/graphql", json={"query": gql})
+        response.raise_for_status()
+        payload = response.json()
+    errors = payload.get("errors")
+    if errors:
+        raise RuntimeError(f"Weaviate GraphQL error: {errors}")
+    rows = (((payload.get("data") or {}).get("Get") or {}).get(collection)) or []
+    if not isinstance(rows, list):
+        return []
+
+    # Weaviate text Equal is token-ish on this archive — keep only strict title matches.
+    wanted = title.casefold()
+    strict = [r for r in rows if str(r.get("title") or "").casefold() == wanted]
+
+    def _ci(row: dict[str, Any]) -> int:
+        try:
+            return int(row.get("chunk_index") if row.get("chunk_index") is not None else 99)
+        except (TypeError, ValueError):
+            return 99
+
+    return sorted(strict, key=_ci)[:limit]
+
+
+def _merge_rows(*row_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Dedupe GraphQL rows by object id / chunk_id preserving first-seen order."""
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for rows in row_lists:
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            additional = row.get("_additional") if isinstance(row.get("_additional"), dict) else {}
+            key = str(
+                additional.get("id")
+                or row.get("chunk_id")
+                or f"{row.get('title')}|{row.get('page_id')}|{row.get('chunk_index')}"
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(row)
+    return out
+
+
+def _retrieve_pool_for_query(
+    *,
+    query: str,
+    collection: str,
+    year_str: str,
+    pool: int,
+    base_url: str,
+    api_key: str,
+    vector: list[float] | None,
+    use_hybrid: bool,
+) -> list[dict[str, Any]]:
+    """Wide hybrid + title-BM25 + exact-title inject + query expansion → hits."""
+    retrieve_q = clean_query_for_retrieval(query) or query
+    variants = expand_queries(query)
+    hybrid_rows: list[dict[str, Any]] = []
+    title_rows: list[dict[str, Any]] = []
+    exact_rows: list[dict[str, Any]] = []
+    per_variant = max(6, min(12, pool))
+
+    # Exact title equality for each variant — BM25 often buries the canonical page
+    # under Medal/School/film satellites that share the same tokens.
+    for variant in variants:
+        try:
+            exact_rows.extend(
+                _graphql_exact_title(
+                    base_url=base_url,
+                    api_key=api_key,
+                    collection=collection,
+                    title=variant,
+                    limit=4,
+                )
+            )
+        except Exception:
+            continue
+
+    try:
+        if use_hybrid and vector:
+            hybrid_rows.extend(
+                _graphql_hybrid_search(
+                    base_url=base_url,
+                    api_key=api_key,
+                    collection=collection,
+                    query=retrieve_q,
+                    vector=vector,
+                    limit=pool,
+                )
+            )
+        else:
+            hybrid_rows.extend(
+                _graphql_bm25_search(
+                    base_url=base_url,
+                    api_key=api_key,
+                    collection=collection,
+                    query=retrieve_q,
+                    limit=pool,
+                )
+            )
+    except Exception:
+        pass
+
+    for variant in variants:
+        try:
+            title_rows.extend(
+                _graphql_bm25_search(
+                    base_url=base_url,
+                    api_key=api_key,
+                    collection=collection,
+                    query=variant,
+                    limit=per_variant,
+                    properties=["title"],
+                )
+            )
+        except Exception:
+            continue
+        if variant.casefold() != retrieve_q.casefold():
+            try:
+                hybrid_rows.extend(
+                    _graphql_bm25_search(
+                        base_url=base_url,
+                        api_key=api_key,
+                        collection=collection,
+                        query=variant,
+                        limit=per_variant,
+                    )
+                )
+            except Exception:
+                pass
+
+    # Exact rows first so they survive the pool cap
+    merged = _merge_rows(exact_rows, title_rows, hybrid_rows)
+    exact_keys = {
+        str((r.get("_additional") or {}).get("id") or r.get("chunk_id") or "")
+        for r in exact_rows
+    }
+    title_keys = {
+        str((r.get("_additional") or {}).get("id") or r.get("chunk_id") or "")
+        for r in title_rows
+    }
+    hits: list[dict[str, Any]] = []
+    for row in merged[: max(pool * 2, 50)]:
+        hit = _normalize_hit(row, collection=collection, year=year_str, query=query)
+        oid = str((row.get("_additional") or {}).get("id") or row.get("chunk_id") or "")
+        if oid and oid in exact_keys:
+            hit["from_exact_title"] = True
+        if oid and oid in title_keys:
+            hit["from_title_bm25"] = True
+        hits.append(hit)
+    return hits
 
 
 def _normalize_hit(
@@ -332,18 +549,25 @@ def write_cache_hit(
     path = cache_dir / f"{stem}.md"
     body = _truncate(str(hit.get("text") or ""), body_max_chars)
     distance = hit.get("distance")
+    from pipeline.provenance import provenance_fields
+
     fm = [
         "---",
-        "source: weaviate",
-        "kind: wiki_chunk",
-        f"collection: {hit.get('collection')}",
-        f"snapshot_year: {_yaml_quote(year)}",
-        f"snapshot_id: {_yaml_quote(hit.get('snapshot_id') or '')}",
-        f"title: {_yaml_quote(title)}",
-        f"doc_id: {_yaml_quote(hit.get('doc_id') or '')}",
-        f"chunk_id: {_yaml_quote(hit.get('chunk_id') or '')}",
-        f"query: {_yaml_quote(hit.get('query') or '')}",
-        f"fetched_at: {_yaml_quote(_utc_now_iso())}",
+        *provenance_fields(
+            source="weaviate",
+            kind="wiki_chunk",
+            tool="wiki_scout_search",
+            limb="wiki_local",
+            extra={
+                "collection": hit.get("collection"),
+                "snapshot_year": year,
+                "snapshot_id": hit.get("snapshot_id") or "",
+                "title": title,
+                "doc_id": hit.get("doc_id") or "",
+                "chunk_id": hit.get("chunk_id") or "",
+                "query": hit.get("query") or "",
+            },
+        ),
     ]
     if distance is not None:
         fm.append(f"distance: {distance}")
@@ -370,13 +594,17 @@ def write_compare_cache(
     years = [y for y in DEFAULT_COMPARE_YEARS if y in hits_by_year] or sorted(
         hits_by_year.keys()
     )
+    from pipeline.provenance import provenance_fields
+
     fm = [
         "---",
-        "source: weaviate",
-        "kind: truth_drift_compare",
-        f"query: {_yaml_quote(query)}",
-        f"fetched_at: {_yaml_quote(_utc_now_iso())}",
-        f"years: {json.dumps(years)}",
+        *provenance_fields(
+            source="weaviate",
+            kind="truth_drift_compare",
+            tool="wiki_scout_compare_years",
+            limb="wiki_local",
+            extra={"query": query, "years": json.dumps(years)},
+        ),
         "---",
     ]
     sections: list[str] = [f"# Truth Drift: {query}", ""]
@@ -413,13 +641,14 @@ def search(
     *,
     year: str | int | None = None,
     collection: str | None = None,
-    limit: int = 3,
+    limit: int = DEFAULT_SEARCH_TOP_K,
     base_url: str = DEFAULT_WEAVIATE_URL,
     api_key: str = DEFAULT_API_KEY,
     cache_dir: Path | None = None,
     ollama_url: str = DEFAULT_OLLAMA_URL,
     embed_model: str = DEFAULT_EMBED_MODEL,
     write_files: bool = True,
+    interpret: bool = True,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
@@ -443,36 +672,59 @@ def search(
     except ValueError as exc:
         return {"ok": False, "error": str(exc), "paths": [], "titles": []}
 
+    top_k = max(1, min(int(limit) or DEFAULT_SEARCH_TOP_K, 10))
+    pool = candidate_pool_size(top_k) if interpret else top_k
+
+    retrieve_q = clean_query_for_retrieval(query) or query
+    vector: list[float] | None = None
+    use_hybrid = True
     try:
-        vector = embed_query(query, ollama_url=ollama_url, model=embed_model)
-        rows = _graphql_hybrid_search(
-            base_url=base_url,
-            api_key=api_key,
-            collection=coll,
-            query=query,
-            vector=vector,
-            limit=limit,
-        )
+        vector = embed_query(retrieve_q, ollama_url=ollama_url, model=embed_model)
     except Exception as embed_exc:  # noqa: BLE001
+        use_hybrid = False
         try:
-            rows = _graphql_bm25_search(
+            hits = _retrieve_pool_for_query(
+                query=query,
+                collection=coll,
+                year_str=year_str,
+                pool=pool,
                 base_url=base_url,
                 api_key=api_key,
-                collection=coll,
-                query=query,
-                limit=limit,
+                vector=None,
+                use_hybrid=False,
             )
         except Exception as bm25_exc:  # noqa: BLE001
             return {
                 "ok": False,
-                "error": f"hybrid/embed failed ({embed_exc}); bm25 failed ({bm25_exc})",
+                "error": f"hybrid/embed failed ({embed_exc}); retrieve failed ({bm25_exc})",
                 "paths": [],
                 "titles": [],
             }
+    else:
+        hits = _retrieve_pool_for_query(
+            query=query,
+            collection=coll,
+            year_str=year_str,
+            pool=pool,
+            base_url=base_url,
+            api_key=api_key,
+            vector=vector,
+            use_hybrid=use_hybrid,
+        )
 
-    hits = [
-        _normalize_hit(row, collection=coll, year=year_str, query=query) for row in rows
-    ]
+    if not hits:
+        return {
+            "ok": False,
+            "error": "No Wikipedia hits returned for this query/year.",
+            "paths": [],
+            "titles": [],
+        }
+
+    interpreter_pack: dict[str, Any] = {}
+    if interpret:
+        interpreter_pack = interpret_hits(query, hits, top_k=top_k)
+        hits = list(interpreter_pack.get("selected_hits") or [])
+
     out_dir = Path(cache_dir) if cache_dir else DEFAULT_CACHE_DIR
     paths: list[str] = []
     titles: list[str] = []
@@ -484,6 +736,30 @@ def search(
             path = write_cache_hit(hit, cache_dir=out_dir)
             paths.append(str(path))
 
+    cards = cards_public(list(interpreter_pack.get("cards") or []))
+    # Attach cache paths onto cards in order
+    for i, card in enumerate(cards):
+        if i < len(paths):
+            card["path"] = paths[i]
+
+    note = (
+        f"Interpreter selected {len(hits)} of {interpreter_pack.get('candidates_in', len(hits))} "
+        f"candidates under {out_dir}. "
+        if interpret and write_files
+        else (
+            f"Cached {len(paths)} hit(s) under {out_dir}. "
+            if write_files
+            else f"Found {len(hits)} hit(s); cache write skipped. "
+        )
+    )
+    note += (
+        "Hits are encyclopedia pages/chunks — NOT footnote counts. "
+        "Promote to Cognee only after triage."
+    )
+    coverage_note = str(interpreter_pack.get("coverage_note") or "").strip()
+    if coverage_note:
+        note = f"{note} {coverage_note}"
+
     return {
         "ok": True,
         "query": query,
@@ -493,12 +769,16 @@ def search(
         "paths": paths,
         "titles": titles,
         "summaries": summaries,
-        "note": (
-            f"Cached {len(paths)} hit(s) under {out_dir}. "
-            "Promote to Cognee only after triage via cognee_remember."
-            if write_files
-            else f"Found {len(hits)} hit(s); cache write skipped."
+        "cards": cards,
+        "interpreter": interpreter_pack.get("interpreter") if interpret else None,
+        "interpreter_note": interpreter_pack.get("note") if interpret else None,
+        "coverage_note": coverage_note,
+        "usable": (
+            bool((interpreter_pack.get("interpreter") or {}).get("usable", True))
+            if interpret
+            else True
         ),
+        "note": note,
     }
 
 
@@ -506,13 +786,14 @@ def compare_years(
     query: str,
     *,
     years: tuple[str, ...] | list[str] | None = None,
-    limit_per_year: int = 2,
+    limit_per_year: int = DEFAULT_COMPARE_TOP_K,
     base_url: str = DEFAULT_WEAVIATE_URL,
     api_key: str = DEFAULT_API_KEY,
     cache_dir: Path | None = None,
     ollama_url: str = DEFAULT_OLLAMA_URL,
     embed_model: str = DEFAULT_EMBED_MODEL,
     write_files: bool = True,
+    interpret: bool = True,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
@@ -537,8 +818,12 @@ def compare_years(
     if not year_list:
         year_list = list(DEFAULT_COMPARE_YEARS)
 
+    top_k = max(1, min(int(limit_per_year) or DEFAULT_COMPARE_TOP_K, 10))
+    pool = candidate_pool_size(top_k) if interpret else top_k
+
+    retrieve_q = clean_query_for_retrieval(query) or query
     try:
-        vector = embed_query(query, ollama_url=ollama_url, model=embed_model)
+        vector = embed_query(retrieve_q, ollama_url=ollama_url, model=embed_model)
         use_hybrid = True
     except Exception as embed_exc:  # noqa: BLE001
         vector = []
@@ -548,40 +833,46 @@ def compare_years(
         embed_error = ""
 
     hits_by_year: dict[str, list[dict[str, Any]]] = {}
+    cards_by_year: dict[str, list[dict[str, Any]]] = {}
     years_found: list[str] = []
     errors: list[str] = []
+    interpreter_meta: dict[str, Any] = {}
     if embed_error:
         errors.append(f"embed: {embed_error} (falling back to bm25)")
     for year in year_list:
         try:
             coll, year_str = resolve_collection(year=year)
-            if use_hybrid:
-                rows = _graphql_hybrid_search(
-                    base_url=base_url,
-                    api_key=api_key,
-                    collection=coll,
-                    query=query,
-                    vector=vector,
-                    limit=limit_per_year,
+            raw_hits = _retrieve_pool_for_query(
+                query=query,
+                collection=coll,
+                year_str=year_str,
+                pool=pool,
+                base_url=base_url,
+                api_key=api_key,
+                vector=vector if use_hybrid else None,
+                use_hybrid=use_hybrid,
+            )
+            if interpret:
+                pack = interpret_hits(
+                    query, raw_hits, top_k=top_k, focus_year=year_str
                 )
+                hits = list(pack.get("selected_hits") or [])
+                cards_by_year[year_str] = cards_public(list(pack.get("cards") or []))
+                interpreter_meta[year_str] = {
+                    **(pack.get("interpreter") or {}),
+                    "usable": pack.get("usable"),
+                    "coverage_note": pack.get("coverage_note"),
+                }
             else:
-                rows = _graphql_bm25_search(
-                    base_url=base_url,
-                    api_key=api_key,
-                    collection=coll,
-                    query=query,
-                    limit=limit_per_year,
-                )
-            hits = [
-                _normalize_hit(row, collection=coll, year=year_str, query=query)
-                for row in rows
-            ]
+                hits = raw_hits[:top_k]
+                cards_by_year[year_str] = []
             hits_by_year[year_str] = hits
             if hits:
                 years_found.append(year_str)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{year}: {exc}")
             hits_by_year[str(year)] = []
+            cards_by_year[str(year)] = []
 
     if not any(hits_by_year.values()) and errors:
         return {
@@ -603,8 +894,10 @@ def compare_years(
             summaries.append(_summarize_hit(hit))
 
     note_bits = [
-        f"Truth Drift compare for {len(years_found)} year(s) with hits.",
-        "Promote to Cognee only after triage via cognee_remember.",
+        f"Truth Drift compare for {len(years_found)} year(s) with interpreter top-{top_k}/year.",
+        "Hits are encyclopedia pages/chunks — NOT footnote/reference counts.",
+        "Snapshot years are frozen dumps, not hypothetical futures.",
+        "Promote to Cognee only after triage.",
     ]
     if path_str:
         note_bits.insert(0, f"Wrote {path_str}.")
@@ -616,8 +909,109 @@ def compare_years(
         "query": query,
         "path": path_str,
         "years_found": years_found,
-        "summaries": summaries[:12],
+        "summaries": summaries[:24],
+        "cards_by_year": cards_by_year,
+        "interpreter": interpreter_meta if interpret else None,
+        "interpreter_note": (
+            "INTERPRETER: Ranked Wikipedia hits per year. Do not invent citation counts. "
+            "Do not call archive years hypothetical unless the article text says so."
+        )
+        if interpret
+        else None,
         "note": " ".join(note_bits),
+    }
+
+
+def promote_wiki_cache(
+    path: str | Path,
+    *,
+    dataset: str = "eve_memory",
+    max_chars: int = 12_000,
+) -> dict[str, Any]:
+    """Explicitly promote a wiki_cache markdown file into Cognee remember.
+
+    Never called automatically from search/compare.
+    """
+    from pipeline.provenance import remember_preamble_from_front_matter
+
+    target = Path(path)
+    cache_root = DEFAULT_CACHE_DIR.resolve()
+    try:
+        resolved = target.resolve()
+    except OSError as exc:
+        return {"ok": False, "error": str(exc), "path": str(path)}
+
+    try:
+        resolved.relative_to(cache_root)
+    except ValueError:
+        # Also allow paths under Thought Experiments parent if env overrides
+        if "wiki_cache" not in str(resolved).replace("\\", "/").lower():
+            return {
+                "ok": False,
+                "error": f"Path must be under wiki_cache ({cache_root})",
+                "path": str(resolved),
+            }
+
+    if not resolved.is_file() or resolved.suffix.lower() != ".md":
+        return {"ok": False, "error": "Not a .md file", "path": str(resolved)}
+
+    try:
+        body = resolved.read_text(encoding="utf-8")
+    except OSError as exc:
+        return {"ok": False, "error": str(exc), "path": str(resolved)}
+
+    if len(body) > max_chars:
+        body = body[: max_chars - 1] + "…"
+
+    content = remember_preamble_from_front_matter(str(resolved), body)
+    try:
+        import subprocess
+        import sys
+
+        root = Path(__file__).resolve().parents[1]
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pipeline.cognee_worker",
+                "remember",
+                "--content",
+                content,
+                "--dataset",
+                dataset,
+            ],
+            cwd=str(root),
+            env={**os.environ, "PYTHONPATH": str(root)},
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {
+                "ok": False,
+                "error": (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip(),
+                "path": str(resolved),
+                "dataset": dataset,
+            }
+        try:
+            result = json.loads(proc.stdout.strip() or "{}")
+        except json.JSONDecodeError:
+            result = {"raw": proc.stdout.strip()}
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "error": str(exc),
+            "path": str(resolved),
+            "dataset": dataset,
+        }
+    return {
+        "ok": True,
+        "path": str(resolved),
+        "dataset": dataset,
+        "chars": len(content),
+        "result": result,
+        "note": "Promoted explicitly — scratch cache file left in place.",
     }
 
 
@@ -627,27 +1021,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    search_p = sub.add_parser("search", help="nearVector search one snapshot year")
+    search_p = sub.add_parser("search", help="Wiki Interpreter search one snapshot year")
     search_p.add_argument("query")
     search_p.add_argument("--year", default="2021")
-    search_p.add_argument("--limit", type=int, default=3)
+    search_p.add_argument("--limit", type=int, default=DEFAULT_SEARCH_TOP_K)
     search_p.add_argument("--url", default=DEFAULT_WEAVIATE_URL)
     search_p.add_argument("--api-key", default=DEFAULT_API_KEY)
     search_p.add_argument("--cache-dir", default=str(DEFAULT_CACHE_DIR))
     search_p.add_argument("--no-write", action="store_true")
+    search_p.add_argument("--no-interpret", action="store_true")
 
     compare_p = sub.add_parser("compare", help="Truth Drift compare across years")
     compare_p.add_argument("query")
     compare_p.add_argument("--years", default="2017,2021,2026")
-    compare_p.add_argument("--limit-per-year", type=int, default=2)
+    compare_p.add_argument("--limit-per-year", type=int, default=DEFAULT_COMPARE_TOP_K)
     compare_p.add_argument("--url", default=DEFAULT_WEAVIATE_URL)
     compare_p.add_argument("--api-key", default=DEFAULT_API_KEY)
     compare_p.add_argument("--cache-dir", default=str(DEFAULT_CACHE_DIR))
     compare_p.add_argument("--no-write", action="store_true")
+    compare_p.add_argument("--no-interpret", action="store_true")
 
     ready_p = sub.add_parser("ready", help="Check Weaviate readiness")
     ready_p.add_argument("--url", default=DEFAULT_WEAVIATE_URL)
     ready_p.add_argument("--api-key", default=DEFAULT_API_KEY)
+
+    promote_p = sub.add_parser("promote", help="Explicit Cognee promote of a cache .md")
+    promote_p.add_argument("path")
+    promote_p.add_argument("--dataset", default="eve_memory")
 
     args = parser.parse_args(argv)
 
@@ -655,6 +1055,11 @@ def main(argv: list[str] | None = None) -> int:
         ok, detail = check_weaviate(args.url, args.api_key)
         print(json.dumps({"ok": ok, "detail": detail, "url": args.url}, indent=2))
         return 0 if ok else 1
+
+    if args.command == "promote":
+        result = promote_wiki_cache(args.path, dataset=args.dataset)
+        print(json.dumps(result, indent=2, default=str))
+        return 0 if result.get("ok") else 1
 
     if args.command == "search":
         result = search(
@@ -665,6 +1070,7 @@ def main(argv: list[str] | None = None) -> int:
             api_key=args.api_key,
             cache_dir=Path(args.cache_dir),
             write_files=not args.no_write,
+            interpret=not args.no_interpret,
         )
         print(json.dumps(result, indent=2, default=str))
         return 0 if result.get("ok") else 1
@@ -679,6 +1085,7 @@ def main(argv: list[str] | None = None) -> int:
             api_key=args.api_key,
             cache_dir=Path(args.cache_dir),
             write_files=not args.no_write,
+            interpret=not args.no_interpret,
         )
         print(json.dumps(result, indent=2, default=str))
         return 0 if result.get("ok") else 1

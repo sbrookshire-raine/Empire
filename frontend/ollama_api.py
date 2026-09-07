@@ -139,6 +139,14 @@ def apply_chat_mode_payload(payload: dict) -> dict:
         model = stored_model
     else:
         model = mode["model"]
+    # Fast-mode A/B: only the Fast slot may swap via ollama-fast-ab.json.
+    if mode_id == "fast":
+        try:
+            from frontend.ollama_fast_ab import resolve_fast_model
+
+            model = resolve_fast_model(model)
+        except Exception:
+            pass
     try:
         save_active_config(mode=mode_id, model=model)
     except OSError:

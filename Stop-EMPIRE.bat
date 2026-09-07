@@ -8,12 +8,17 @@ title EMPIRE Shutdown
 
 set "KEEP_OLLAMA=0"
 set "KEEP_DOCKER=0"
+set "STOP_WEAVIATE=0"
 :parse_args
 if "%~1"=="" goto args_done
 if /I "%~1"=="/keep-ollama" set "KEEP_OLLAMA=1"
 if /I "%~1"=="-keep-ollama" set "KEEP_OLLAMA=1"
 if /I "%~1"=="/keep-docker" set "KEEP_DOCKER=1"
 if /I "%~1"=="-keep-docker" set "KEEP_DOCKER=1"
+if /I "%~1"=="/Weaviate" set "STOP_WEAVIATE=1"
+if /I "%~1"=="-Weaviate" set "STOP_WEAVIATE=1"
+if /I "%~1"=="/weaviate" set "STOP_WEAVIATE=1"
+if /I "%~1"=="-weaviate" set "STOP_WEAVIATE=1"
 shift
 goto parse_args
 :args_done
@@ -23,18 +28,34 @@ echo EMPIRE shutdown
 echo ===============
 echo.
 echo No PowerShell stop scripts - AV-safe batch shutdown by port.
+if "%STOP_WEAVIATE%"=="1" echo Also stopping Wiki Local Weaviate ^(-Weaviate^).
 echo.
 
-echo [1/3] Eve, Workbench, PocketBase...
+echo [1/4] Eve, Workbench, PocketBase...
 call :StopPort 2000 eve
 call :StopPort 8080 workbench
 call :StopPort 8090 pocketbase
 echo.
 
-if "%KEEP_DOCKER%"=="1" (
-    echo [2/3] Cognee Postgres - skipped ^(/keep-docker^)
+if "%STOP_WEAVIATE%"=="1" (
+    echo [2/4] Wiki Local Weaviate...
+    docker info >nul 2>&1
+    if errorlevel 1 (
+        echo   Docker not running - skipped
+    ) else (
+        docker stop empire-weaviate-heist-2017 >nul 2>&1
+        docker rm empire-weaviate-heist-2017 >nul 2>&1
+        echo   Weaviate container stopped/removed ^(port 8091^)
+    )
 ) else (
-    echo [2/3] Cognee Postgres ^(Docker^)...
+    echo [2/4] Wiki Local Weaviate - left running ^(pass -Weaviate to stop^)
+)
+echo.
+
+if "%KEEP_DOCKER%"=="1" (
+    echo [3/4] Cognee Postgres - skipped ^(/keep-docker^)
+) else (
+    echo [3/4] Cognee Postgres ^(Docker^)...
     docker info >nul 2>&1
     if errorlevel 1 (
         echo   Docker not running - skipped
@@ -50,9 +71,9 @@ if "%KEEP_DOCKER%"=="1" (
 echo.
 
 if "%KEEP_OLLAMA%"=="1" (
-    echo [3/3] Ollama - skipped ^(/keep-ollama^)
+    echo [4/4] Ollama - skipped ^(/keep-ollama^)
 ) else (
-    echo [3/3] Ollama...
+    echo [4/4] Ollama...
     tasklist /FI "IMAGENAME eq ollama.exe" 2>nul | find /I "ollama.exe" >nul
     if errorlevel 1 (
         echo   Ollama not running - skipped
@@ -69,7 +90,8 @@ echo.
 
 echo Shutdown complete.
 echo V:\Cognee stays mounted; memory data is preserved.
-echo To start again: double-click Start-EMPIRE.bat
+echo To start again: Start-EMPIRE.bat
+echo With wiki:      Start-EMPIRE.bat -Weaviate
 echo.
 if not "%STOP_EMPIRE_NO_PAUSE%"=="" exit /b 0
 pause

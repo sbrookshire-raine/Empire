@@ -1,0 +1,11 @@
+# Embedding A/B checklist (no data migration)
+Write-Host "EMPIRE Embedding A/B"
+Write-Host "Production embedder: nomic-embed-text (do not change cognee.env yet)"
+Write-Host ""
+Write-Host "1) ollama pull qwen3-embedding:0.6b"
+Write-Host "2) Create dataset embed_ab_test only"
+Write-Host "3) Ingest a tiny fixture set"
+Write-Host "4) Compare recall vs eve_core / primitives_test"
+Write-Host "5) Architect approves before any eve_memory re-embed"
+Write-Host ""
+Write-Host "See docs/EMBEDDING_AB.md"

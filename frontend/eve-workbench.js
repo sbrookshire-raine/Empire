@@ -242,6 +242,10 @@
       ollamaModels: [],
       chatModes: [],
       selectedMode: "fast",
+      voiceRecording: false,
+      voiceBusy: false,
+      voiceMediaRecorder: null,
+      voiceChunks: [],
       toolbeltOpen: true,
       toolbeltCategories: [
         {
@@ -277,6 +281,36 @@
           description:
             "Split songs in stem_factory/input into Demucs stems + practice mixes.",
         },
+        {
+          id: "web_scout",
+          label: "Web Scout",
+          description:
+            "Fetch public URLs into Thought Experiments/web_cache (no auto-memory).",
+        },
+        {
+          id: "thought_experiments",
+          label: "Thought Experiments",
+          description:
+            "Capture YouTube/URL ideas as Phase 3 notes for later discussion.",
+        },
+        {
+          id: "voice_presence",
+          label: "Voice Presence",
+          description:
+            "Local STT/TTS via Speaches/Voicebox (composer mic + Eve speak).",
+        },
+        {
+          id: "vision_local",
+          label: "Vision Local",
+          description:
+            "Describe screenshots/images with qwen3-vl (takes GPU lease).",
+        },
+        {
+          id: "container_scout",
+          label: "Container Scout",
+          description:
+            "Docker Hub search + local empire-* status (no auto-pull / no K8s).",
+        },
       ],
       activeTools: {
         gumloop_cloud: false,
@@ -285,6 +319,11 @@
         wiki_local: false,
         time_reclaim: false,
         stem_factory: false,
+        web_scout: false,
+        thought_experiments: false,
+        voice_presence: false,
+        vision_local: false,
+        container_scout: false,
       },
       activeMode: "fast",
       activeModeLabel: "Fast Mode (14b)",
@@ -1014,8 +1053,18 @@
       },
 
       isMemoryQuery: function (text) {
-        return /\b(?:memory|memories|interests?|interested|graph|recall|recalled|what do you know|what can you (?:tell|see)|what am i|my projects?|projects?|research|themes?|workbench|knowledge|from what|notes?|uploaded)\b/i.test(
-          text
+        var cleaned = plainText(text || "").trim();
+        if (!cleaned) return false;
+        // Truth Drift / wiki must go to Eve tools — never Cognee memory answer.
+        if (
+          /\b(?:truth\s*drift|wikipedia|wiki(?:\s*local)?|encyclopedia|weaviate|compare\s+years?|across\s+years?|2017|2021|2026)\b/i.test(
+            cleaned
+          )
+        ) {
+          return false;
+        }
+        return /(?:\b(?:memory|memories|interests?|interested|recall|recalled)\b|\bwhat do you know\b|\bwhat can you (?:tell|see)\b|\bwhat am i\b|\bmy projects?\b|\bfrom (?:my )?memory\b|\buploaded\b|\bmemory graph\b|\bprojects? in (?:your )?memory\b)/i.test(
+          cleaned
         );
       },
 
@@ -1095,11 +1144,13 @@
                 message: text,
                 mode: this.selectedMode || this.activeMode || "fast",
                 active_tools: this.activeToolIds(),
+                chat_id: this.ensureHistoryChatId(),
               }
             : {
                 message: text,
                 mode: this.selectedMode || this.activeMode || "fast",
                 active_tools: this.activeToolIds(),
+                chat_id: this.ensureHistoryChatId(),
               };
           var response = await fetch(path, {
             method: "POST",
@@ -1379,6 +1430,7 @@
                 inputResponses: [{ requestId: requestId, optionId: optionId }],
                 mode: this.selectedMode || this.activeMode || "fast",
                 active_tools: this.activeToolIds(),
+                chat_id: this.ensureHistoryChatId(),
               }),
               signal: this.requestController.signal,
             }
@@ -1545,6 +1597,72 @@
           workbench.persistTimer = null;
           workbench.persistCurrentChat(false);
         }, 400);
+      },
+
+      toggleVoiceRecord: async function () {
+        if (this.voiceBusy) return;
+        if (this.voiceRecording) {
+          try {
+            if (this.voiceMediaRecorder && this.voiceMediaRecorder.state !== "inactive") {
+              this.voiceMediaRecorder.stop();
+            }
+          } catch (_error) {
+            this.voiceRecording = false;
+          }
+          return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          this.chatError = "Microphone not available in this browser.";
+          return;
+        }
+        try {
+          var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          var workbench = this;
+          var chunks = [];
+          var recorder = new MediaRecorder(stream);
+          this.voiceChunks = chunks;
+          this.voiceMediaRecorder = recorder;
+          recorder.ondataavailable = function (event) {
+            if (event.data && event.data.size) chunks.push(event.data);
+          };
+          recorder.onstop = async function () {
+            workbench.voiceRecording = false;
+            stream.getTracks().forEach(function (track) {
+              track.stop();
+            });
+            workbench.voiceBusy = true;
+            try {
+              var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+              var form = new FormData();
+              form.append("file", blob, "composer.webm");
+              var response = await fetch("/api/voice/transcribe", {
+                method: "POST",
+                body: form,
+              });
+              var body = await response.json().catch(function () {
+                return {};
+              });
+              if (!response.ok || body.ok === false) {
+                workbench.chatError =
+                  plainText(body.error) ||
+                  "Speech API unavailable — see docs/VOICE_PRESENCE.md";
+              } else if (body.text) {
+                workbench.draft = (workbench.draft ? workbench.draft + " " : "") + body.text;
+              }
+            } catch (_err) {
+              workbench.chatError = "Could not transcribe audio.";
+            } finally {
+              workbench.voiceBusy = false;
+              workbench.voiceMediaRecorder = null;
+              workbench.voiceChunks = [];
+            }
+          };
+          recorder.start();
+          this.voiceRecording = true;
+          this.chatError = "";
+        } catch (_error) {
+          this.chatError = "Microphone permission denied or unavailable.";
+        }
       },
 
       persistCurrentChat: async function (_immediate) {

@@ -3,29 +3,30 @@ import { z } from "zod";
 import { isCategoryEnabled } from "#lib/toolbelt";
 import { wikiScoutCompareYearsViaMcp } from "#lib/wiki-scout-mcp";
 
-/** Wiki Local limb — Truth Drift compare across Wikipedia years. */
+/** Wiki Local limb — Truth Drift compare with Wiki Interpreter. */
 export default defineDynamic({
   events: {
     "turn.started": () =>
       isCategoryEnabled("wiki_local")
         ? defineTool({
             description:
-              "Compare the same topic across local Wikipedia snapshot years (2017/2021/2026), write one Truth Drift compare markdown under wiki_cache, and return a short summary. Does NOT write to Cognee. Requires Wiki Local in the Toolbelt.",
+              "Truth Drift compare with Wiki Interpreter across local Wikipedia years (2017/2021/2026). " +
+              "Returns cards_by_year — you MUST answer from those card titles/snippets only. " +
+              "Do not invent year-by-year 'key findings' or maturity narratives without card text. " +
+              "Archive years are not hypothetical futures. Does NOT write Cognee. Requires Wiki Local Toolbelt.",
             inputSchema: z.object({
               query: z.string().min(1).describe("Topic to compare across years."),
               years: z
                 .string()
                 .optional()
-                .describe(
-                  "Comma-separated years, default 2017,2021,2026.",
-                ),
+                .describe("Comma-separated years, default 2017,2021,2026."),
               limit_per_year: z
                 .number()
                 .int()
                 .min(1)
-                .max(5)
+                .max(10)
                 .optional()
-                .describe("Max chunks per year (default 2)."),
+                .describe("Max ranked cards per year after interpret (default 4)."),
             }),
             async execute({ query, years, limit_per_year }) {
               return wikiScoutCompareYearsViaMcp({

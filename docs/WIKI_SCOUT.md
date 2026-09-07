@@ -30,6 +30,45 @@ flowchart LR
   Triage -->|"explicit promote"| Cognee
 ```
 
+## Wiki Interpreter
+
+Before Eve sees results, scout:
+
+1. Retrieves a **wide candidate pool** (default ~20) via hybrid BM25+vector  
+2. Scores with **Wikipedia heuristics** (title match, term overlap, date-bearing chunks; demote disambiguation / year-stub / fictional noise; strip year lists from chat questions before retrieve/rerank)  
+3. Optionally **BGE-reranks** locally if `sentence-transformers` is installed (`BAAI/bge-reranker-base`, CPU by default)  
+4. Builds **query-aware snippets** (best sentence/window for the question, not always chunk start)  
+5. Marks **`usable` / confidence** — weak or undated answers to when/who/last questions get `usable=false` so Eve can refuse to invent  
+6. Returns **structured cards**: `title`, `kind_hint`, `rank_why`, `snippet` (+ cache paths)
+
+Cards are **page/chunk hits**, not footnote counts. Snapshot years are frozen dumps.
+
+```powershell
+# Optional glasses upgrade (one-time):
+.\venv\Scripts\python.exe -m pip install sentence-transformers
+
+$env:PYTHONPATH="C:\EMPIRE"
+.\venv\Scripts\python.exe -m pipeline.wiki_scout compare "Artificial Intelligence"
+```
+
+Env knobs: `EMPIRE_WIKI_CANDIDATE_POOL`, `EMPIRE_WIKI_INTERPRETER_TOP_K`, `EMPIRE_WIKI_RERANK=0` to disable rerank, `EMPIRE_WIKI_RERANK_MODEL`.
+
+### Glasses eval (regression)
+
+```powershell
+$env:PYTHONPATH="C:\EMPIRE"
+.\venv\Scripts\python.exe -m pipeline.wiki_glasses_eval --no-rerank
+# Reports land in C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\glasses_eval_*.md
+```
+
+Note: coverage is **not identical across years**. Spot-checks show some famous primaries
+(e.g. `Ludwig van Beethoven`, `Marie Curie`, `Nile`, `Industrial Revolution`) exist in
+**2017 and 2026** but are **absent from the 2021 collection** (same Wikipedia `page_id`
+returns 0 objects). Default single-year search uses 2021 — so “missing Beethoven” is often
+a **2021 hole**, not “Wikipedia has no Beethoven.” Prefer `compare_years` or search 2017/2026
+when a topic looks oddly empty. When a primary is missing in that year, the interpreter
+falls back to disambiguation / related pages instead of Medal/School/film satellites.
+
 ## Prerequisites
 
 | Item | Value |
@@ -43,14 +82,34 @@ flowchart LR
 
 ### Boot Weaviate (on demand)
 
-See [WEAVIATE_HEIST.md](WEAVIATE_HEIST.md) for the full `docker run` snippet. Wait until ready:
+**Easiest** — include Wiki Local when starting EMPIRE (still off by default):
 
-```powershell
-# GET http://127.0.0.1:8091/v1/.well-known/ready
-# Header: Authorization: Bearer <WEAVIATE_API_KEY>
+```bat
+Start-EMPIRE.bat -Weaviate
 ```
 
+Or PowerShell only:
+
+```powershell
+.\scripts\launch-empire.ps1 -Weaviate
+.\scripts\start-weaviate.ps1          # wiki alone, stack already up
+.\scripts\stop-weaviate.ps1           # tear down when done
+```
+
+Needs Docker + `D:\weaviate_v2_archive\weaviate`. Full manual `docker run`: [WEAVIATE_HEIST.md](WEAVIATE_HEIST.md).
+
+Ready check: `GET http://127.0.0.1:8091/v1/.well-known/ready` with  
+`Authorization: Bearer <WEAVIATE_API_KEY>`.
+
 ### Tear down
+
+```powershell
+.\scripts\stop-weaviate.ps1
+# or with full EMPIRE shutdown:
+Stop-EMPIRE.bat -Weaviate
+```
+
+Or:
 
 ```powershell
 docker stop empire-weaviate-heist-2017
@@ -151,6 +210,15 @@ Do **not** dump full multi-article bodies into chat context.
 
 Default promote dataset: **`eve_memory`**. Optional later: small curated **`truth_drift`** dataset for compare files only.
 
+### Explicit promote helper
+
+```powershell
+$env:PYTHONPATH="C:\EMPIRE"
+.\venv\Scripts\python.exe -m pipeline.wiki_scout promote "C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\SOME.md" --dataset eve_memory
+```
+
+Eve / MCP tool: `promote_wiki_cache`. Never automatic.
+
 ## Ops / failure modes
 
 | Symptom | Likely cause | Fix |
@@ -169,11 +237,11 @@ Default promote dataset: **`eve_memory`**. Optional later: small curated **`trut
 
 ## Future expansions (build later)
 
-Ordered backlog — document only; not part of the current ship:
+Ordered backlog — document only where not yet shipped:
 
-1. **Web scout** — same markdown contract; Toolbelt `web_research`; local HTTP then Playwright; no paid search APIs.
-2. **Promote helper** — `promote_wiki_cache(path, dataset)` wrapping `cognee_remember`.
-3. **Model A/B** — trial Fast/Deep alternatives one mode at a time; keep `num_ctx=8192`; measure tool JSON reliability.
+1. ~~**Web scout**~~ — shipped as Toolbelt `web_scout` ([WEB_SCOUT.md](WEB_SCOUT.md)); Playwright escalation still later.
+2. ~~**Promote helper**~~ — `promote_wiki_cache` shipped.
+3. ~~**Model A/B**~~ — Fast-mode A/B via `ollama-fast-ab.json` shipped; Deep/Librarian stay pinned.
 4. **Always-on Weaviate profile** — optional `start-stack` hook only if Architect wants wiki up on cold start.
 5. **Truth Drift Cognee dataset** — curated `truth_drift` for promoted compares only.
 6. **Cross-link Gumloop** — only if local scout fails and Gumloop limb is enabled.

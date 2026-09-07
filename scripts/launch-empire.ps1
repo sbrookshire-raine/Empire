@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 param(
     [switch]$NoBrowser,
-    [switch]$SkipOllamaCheck
+    [switch]$SkipOllamaCheck,
+    [switch]$Weaviate
 )
 
 $ErrorActionPreference = "Stop"
@@ -78,6 +79,9 @@ $stackArgs = @{}
 if ($SkipOllamaCheck) {
     $stackArgs.SkipOllamaCheck = $true
 }
+if ($Weaviate) {
+    $stackArgs.Weaviate = $true
+}
 & (Join-Path $PSScriptRoot "start-stack.ps1") @stackArgs
 
 if (-not $NoBrowser) {
@@ -89,4 +93,8 @@ if (-not $NoBrowser) {
 Write-Host ""
 Write-Host "EMPIRE is ready. Services keep running in the background."
 Write-Host "Workbench: $WorkbenchUrl"
+if ($Weaviate) {
+    Write-Host "Weaviate:   http://127.0.0.1:8091  (Toolbelt: Wiki Local)"
+    Write-Host "Stop wiki:  .\scripts\stop-weaviate.ps1"
+}
 Write-Host ""

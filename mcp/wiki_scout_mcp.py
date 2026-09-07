@@ -1,5 +1,6 @@
 """FastMCP server: on-demand Weaviate Wikipedia scout → wiki_cache markdown.
 
+Uses Wiki Interpreter (wide retrieve + heuristics + optional BGE rerank).
 Does not auto-promote to Cognee. Full overnight wiki ingest remains halted.
 """
 
@@ -11,6 +12,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from pipeline import wiki_scout
+from pipeline.wiki_interpreter import check_reranker
 
 mcp = FastMCP("empire-wiki-scout")
 
@@ -23,15 +25,20 @@ def _json(data: Any) -> str:
 async def wiki_scout_search(
     query: str,
     year: str = "2021",
-    limit: int = 3,
+    limit: int = 5,
 ) -> str:
-    """Query local Wikipedia Weaviate (hybrid BM25+vector) and cache Truth Drift markdown.
+    """Wiki Interpreter search: wide hybrid retrieve, rank with Wikipedia heuristics
+    (+ optional local BGE rerank), return structured cards + cache paths.
 
-    year: 2017, 2021, or 2026. Returns short summaries + cache file paths.
-    Does NOT write to Cognee — promote later via cognee_remember after triage.
-    Requires Weaviate on WEAVIATE_URL (default http://127.0.0.1:8091) and Ollama nomic-embed-text.
+    Cards are encyclopedia page/chunk hits — NOT footnote counts.
+    Snapshot years are frozen dumps, not hypothetical futures.
+    Does NOT write to Cognee. Requires Weaviate on :8091.
     """
-    result = wiki_scout.search(query=query, year=year or "2021", limit=int(limit) or 3)
+    result = wiki_scout.search(
+        query=query,
+        year=year or "2021",
+        limit=int(limit) or wiki_scout.DEFAULT_SEARCH_TOP_K,
+    )
     return _json(result)
 
 
@@ -39,19 +46,41 @@ async def wiki_scout_search(
 async def wiki_scout_compare_years(
     query: str,
     years: str = "2017,2021,2026",
-    limit_per_year: int = 2,
+    limit_per_year: int = 4,
 ) -> str:
-    """Truth Drift compare: same query across Wikipedia snapshot years; one compare .md.
+    """Truth Drift compare with Wiki Interpreter ranking per year.
 
-    years: comma-separated list (default 2017,2021,2026). Never auto-promotes to Cognee.
+    Returns cards_by_year (title, kind_hint, rank_why, snippet). Never auto-promotes.
     """
     year_list = tuple(y.strip() for y in str(years).split(",") if y.strip())
     result = wiki_scout.compare_years(
         query=query,
         years=year_list or ("2017", "2021", "2026"),
-        limit_per_year=int(limit_per_year) or 2,
+        limit_per_year=int(limit_per_year) or wiki_scout.DEFAULT_COMPARE_TOP_K,
     )
     return _json(result)
+
+
+@mcp.tool()
+async def promote_wiki_cache(path: str, dataset: str = "eve_memory") -> str:
+    """Explicitly promote a wiki_cache markdown file into Cognee. Never automatic."""
+    return _json(wiki_scout.promote_wiki_cache(path, dataset=dataset or "eve_memory"))
+
+
+@mcp.tool()
+async def wiki_interpreter_status() -> str:
+    """Show whether local BGE rerank is available (heuristics always on)."""
+    return _json(
+        {
+            "ok": True,
+            "heuristics": True,
+            "rerank": check_reranker(),
+            "defaults": {
+                "search_top_k": wiki_scout.DEFAULT_SEARCH_TOP_K,
+                "compare_top_k": wiki_scout.DEFAULT_COMPARE_TOP_K,
+            },
+        }
+    )
 
 
 if __name__ == "__main__":

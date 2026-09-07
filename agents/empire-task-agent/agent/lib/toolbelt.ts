@@ -16,6 +16,11 @@ export const TOOLBELT_CATEGORIES = [
   "wiki_local",
   "time_reclaim",
   "stem_factory",
+  "web_scout",
+  "thought_experiments",
+  "voice_presence",
+  "vision_local",
+  "container_scout",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

@@ -78,6 +78,33 @@ function activeModelCandidates(): string[] {
   ].filter(Boolean);
 }
 
+function fastAbCandidates(): string[] {
+  const localAppData = process.env.LOCALAPPDATA;
+  return [
+    localAppData ? join(localAppData, "EMPIRE", "ollama-fast-ab.json") : "",
+    join(EMPIRE_ROOT, "config", "ollama-fast-ab.json"),
+  ].filter(Boolean);
+}
+
+function resolveFastAbModel(defaultModel: string): string {
+  for (const filePath of fastAbCandidates()) {
+    try {
+      const parsed = JSON.parse(readFileSync(filePath, "utf8")) as {
+        variant?: unknown;
+        b_model?: unknown;
+      };
+      const variant = String(parsed.variant || "a").toLowerCase();
+      if (variant === "b" && typeof parsed.b_model === "string" && parsed.b_model.trim()) {
+        return parsed.b_model.trim();
+      }
+      break;
+    } catch {
+      continue;
+    }
+  }
+  return defaultModel;
+}
+
 function isChatModeId(value: unknown): value is ChatModeId {
   return typeof value === "string" && value in CHAT_MODES;
 }
@@ -116,9 +143,11 @@ export function loadActiveChatConfig(): ActiveChatConfig {
   }
 
   const mode = resolveMode(modeId, model);
+  const resolvedModel =
+    mode.id === "fast" ? resolveFastAbModel(mode.model) : model;
   return {
     mode: mode.id,
-    model,
+    model: resolvedModel,
     numCtx: mode.numCtx,
     temperature: mode.temperature,
     topP: GLOBAL_CHAT_OPTIONS.topP,

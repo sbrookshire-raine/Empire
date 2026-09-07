@@ -52,6 +52,12 @@
 
       <section class="service-grid" id="service-rows" aria-label="Services"></section>
 
+      <article class="dash-panel" id="gpu-lease-panel" aria-live="polite">
+        <header>GPU lease (16 GB)</header>
+        <p id="gpu-lease-summary" class="dash-status__meta">Checking…</p>
+        <button id="btn-gpu-release" type="button" class="outline secondary">Release lease</button>
+      </article>
+
       <article id="verify-panel" class="dash-panel" hidden>
         <header>Integration verification</header>
         <p id="verify-summary" class="dash-status__meta"></p>
@@ -494,6 +500,33 @@
         });
       }
 
+      async function refreshGpuLease() {
+        var el = document.getElementById("gpu-lease-summary");
+        if (!el) return;
+        try {
+          var res = await fetch("/api/gpu-lease", { cache: "no-store" });
+          var body = await res.json().catch(function () {
+            return {};
+          });
+          if (!res.ok) {
+            el.textContent = "Lease API unavailable";
+            return;
+          }
+          var tenant = body.tenant || "idle";
+          var holder = body.holder || "—";
+          var since = body.since || "";
+          el.textContent =
+            "Tenant: " +
+            tenant +
+            " · holder: " +
+            holder +
+            (since ? " · since " + since : "") +
+            " · one heavy job at a time (chat / stem / vision / voice)";
+        } catch (err) {
+          el.textContent = "Could not read GPU lease";
+        }
+      }
+
       async function controlApiAvailable() {
         // serve.py owns /api/services/*; a 503 on status only means the snapshot
         // file is stale — Start/Stop can still work. Plain python -m http.server
@@ -511,6 +544,7 @@
           const snap = await fetchSnapshot();
           const data = snap || (await loadLiveFallback());
           render(data);
+          await refreshGpuLease();
         } catch (err) {
           showError("Dashboard failed to load: " + (err.message || err));
           document.getElementById("summary-badge").textContent = "Error";
@@ -532,6 +566,18 @@
 
       document.getElementById("btn-verify").addEventListener("click", runVerify);
       document.getElementById("btn-refresh").addEventListener("click", refresh);
+      document.getElementById("btn-gpu-release").addEventListener("click", async function () {
+        try {
+          await fetch("/api/gpu-lease", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "release" }),
+          });
+        } catch (_err) {
+          /* ignore */
+        }
+        await refreshGpuLease();
+      });
       document.getElementById("btn-start-all").addEventListener("click", function () {
         runBulk("start");
       });

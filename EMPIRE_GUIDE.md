@@ -66,9 +66,11 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
   - **Librarian** (Command-R 35b) — temp **0.4** (balanced)
 - **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge, Wiki Local, Time Reclaim, Stem Factory. Memory + Tasks always on
 - **Wiki Local scout** — on-demand Weaviate Wikipedia (`:8091`) → Truth Drift markdown cache under `04_Thought_Experiments/wiki_cache/` → triage → optional `cognee_remember` (no full wiki re-ingest). See [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md)
+- **Container Scout** — Toolbelt limb (default OFF): search Docker Hub + report local `empire-*` Docker status; cache under `container_cache/`; **not** “run EMPIRE on Kubernetes.” See [`docs/KUBERNETES_AND_CONTAINERS.md`](docs/KUBERNETES_AND_CONTAINERS.md)
 - **DAZE (Phase 5)** — radial day at http://127.0.0.1:8080/daze.html; PocketBase `day_blocks`; Eve tools behind **Time Reclaim** Toolbelt
 - **Stem Factory** — drop songs in `C:\Empire_Workbench\stem_factory\input`, enable Toolbelt **Stem Factory**, ask Eve to run stems (Shard of the Division / Demucs) |
 - **Cognee memory** — upload `.md/.txt/.pdf` → dataset `eve_memory`; optimize → `eve_core` for fast recall; curated primitives → `primitives_test`
+- **Companion profile (self glasses)** — distill Obsidian `SBX_Vault` into a **small historical** card; **living CURRENT facts** live in `C:\Empire_Workbench\00_Core_Profile\ARCHITECT_NOW.md` and **override** old journals. Eve tool `architect_now_update` persists corrections. Rebuild historical card: `.\venv\Scripts\python.exe -m pipeline.companion_profile build`. Injected every chat turn; Cognee prefetch is **not** always-on (memory questions / tools only).
 - **PocketBase Tasks** — CRUD from Workbench (these are **not** Work Orders)
 - **Workbench filesystem** — `C:\Empire_Workbench\` with:
   - `00_Resource_Queue` — intake for triage
@@ -96,6 +98,7 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
 | **Work Order** | `.md` in `05_Work_Orders` for Cursor to forge |
 | **Chat history** | Local transcript archive (UI); does **not** revive Eve’s old server session |
 | **Cognee memory** | Long-term knowledge Eve recalls — different from chat history |
+| **Companion profile** | Distilled SBX_Vault card injected every chat turn — not Cognee; rebuild with `pipeline.companion_profile build` |
 
 ---
 
@@ -107,21 +110,20 @@ From [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md) — vision order, not a sprint
 |-------|--------|--------|
 | **1** Intake & Triage | Shortlist tools/guides/architecture | **In progress** (Resource Queue + triage skill + Work Orders) |
 | **2** Evaluation | USEFUL NOW / COOL IDEA / JUNK | **In progress** (Eve categorizes; Mechanic forges) |
-| **3** Thought Experiments | YouTube/ideas → autonomous research; Gumloop later | Planned (Toolbelt limb exists, not default-on) |
-| **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | Planned |
+| **3** Thought Experiments | YouTube/ideas → autonomous research; Gumloop later | **In progress** — Toolbelt **Thought Experiments** + web scout notes |
+| **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | **Scaffold** — `03_Active_Tools/LEGO_INDEX.md` (UI later) |
 | **5** Time reclamation | Daze / personal tracking; free time for body & mind | **In progress** — PocketBase `day_blocks` + http://127.0.0.1:8080/daze.html + Eve **Time Reclaim** limb |
-| **6** Secure remote access | Tailscale or Cloudflare Tunnels | Planned (bind localhost now) |
-| **7** Real-time voice | Local STT/TTS (Faster-Whisper, Kokoro/Piper); UI must stay audio-capable | Planned (chat UI must not lock to text-only posts) |
+| **6** Secure remote access | Tailscale or Cloudflare Tunnels | Planned — see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) |
+| **7** Real-time voice | Local STT/TTS (Faster-Whisper, Kokoro/Piper); UI must stay audio-capable | **Scaffold** — mic composer + [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md) |
 
 ### Near-term engineering backlog (practical)
 
-Canonical living list: **[`docs/EMPIRE_IDEA_QUEUE.md`](docs/EMPIRE_IDEA_QUEUE.md)** (ideas + smoke tests; not PocketBase Tasks / not Work Orders).
+Canonical living list: **[`docs/EMPIRE_IDEA_QUEUE.md`](docs/EMPIRE_IDEA_QUEUE.md)** (Capability Atlas waves + smoke tests; not PocketBase Tasks / not Work Orders).
 
-- **Test next:** Truth Drift (Wiki Local), DAZE, Stem Factory / Shard — see queue **T-01…T-03**
-- Stronger “continue past chat” (optional short summary into Eve context — careful with VRAM)
-- Thought-experiment pipeline without cloud lock-in (web scout sharing wiki_cache contract — see [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md) future expansions)
-- Remote access hardening when Architect is ready
-- Voice path that fits HTMX/Alpine (blob/WebRTC-friendly composer)
+- **Architect smoke next:** T-01 Wiki, T-02 DAZE, T-03 Stem, then T-04…T-09 (continuity, promote, Docling, web, voice, vision)
+- Chat rolling summary, `promote_wiki_cache`, Docling MCP, Fast A/B, web scout, vision limb — **forged** (enable limbs as needed)
+- Remote access when Architect is ready ([`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md))
+- Voice speech server opt-in (`.\scripts\start-voice.ps1`)
 - Keep Cognee storage healthy on VHDX; avoid filling C:
 
 ---

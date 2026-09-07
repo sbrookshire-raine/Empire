@@ -8,10 +8,14 @@
 
 .PARAMETER SkipDocker
     Passes /keep-docker to Stop-EMPIRE.bat.
+
+.PARAMETER Weaviate
+    Also stop/remove the Wiki Local Weaviate container (passes -Weaviate).
 #>
 param(
     [switch]$SkipOllama,
-    [switch]$SkipDocker
+    [switch]$SkipDocker,
+    [switch]$Weaviate
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +28,7 @@ if (-not (Test-Path -LiteralPath $bat)) {
 $batArgs = @()
 if ($SkipOllama) { $batArgs += "/keep-ollama" }
 if ($SkipDocker) { $batArgs += "/keep-docker" }
+if ($Weaviate) { $batArgs += "-Weaviate" }
 
 $env:STOP_EMPIRE_NO_PAUSE = "1"
 try {

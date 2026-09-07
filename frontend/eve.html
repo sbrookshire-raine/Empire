@@ -345,6 +345,17 @@
             ></textarea>
             <div class="composer__actions">
               <button
+                class="button button--quiet composer__mic"
+                type="button"
+                :disabled="sending || voiceBusy"
+                @click="toggleVoiceRecord()"
+                :aria-pressed="voiceRecording ? 'true' : 'false'"
+                aria-label="Record voice note"
+                title="Record voice (needs Voice Presence speech API)"
+              >
+                <span x-text="voiceRecording ? '■' : 'mic'"></span>
+              </button>
+              <button
                 class="button button--primary composer__send"
                 type="submit"
                 :disabled="sending || !draft.trim()"

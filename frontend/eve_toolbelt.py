@@ -23,6 +23,11 @@ ALLOWED_CATEGORIES = (
     "wiki_local",
     "time_reclaim",
     "stem_factory",
+    "web_scout",
+    "thought_experiments",
+    "voice_presence",
+    "vision_local",
+    "container_scout",
 )
 DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
 
@@ -63,15 +68,19 @@ def write_active_tools(categories: list[str]) -> Path:
     return path
 
 
-def category_enabled(category: str) -> bool:
+def load_active_tools() -> list[str]:
     path = _toolbelt_path()
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return category in DEFAULT_ACTIVE_TOOLS
+        return list(DEFAULT_ACTIVE_TOOLS)
     if not isinstance(parsed, dict):
-        return category in DEFAULT_ACTIVE_TOOLS
-    return category in normalize_active_tools(parsed.get("active_tools"))
+        return list(DEFAULT_ACTIVE_TOOLS)
+    return normalize_active_tools(parsed.get("active_tools"))
+
+
+def category_enabled(category: str) -> bool:
+    return category in load_active_tools()
 
 
 def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:

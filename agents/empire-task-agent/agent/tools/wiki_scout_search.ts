@@ -3,16 +3,21 @@ import { z } from "zod";
 import { isCategoryEnabled } from "#lib/toolbelt";
 import { wikiScoutSearchViaMcp } from "#lib/wiki-scout-mcp";
 
-/** Wiki Local limb — on-demand Weaviate Wikipedia scout; opt-in via Toolbelt. */
+/** Wiki Local limb — Wiki Interpreter over Weaviate; opt-in via Toolbelt. */
 export default defineDynamic({
   events: {
     "turn.started": () =>
       isCategoryEnabled("wiki_local")
         ? defineTool({
             description:
-              "Query the local Wikipedia Weaviate index (Truth Drift snapshots), cache markdown under 04_Thought_Experiments/wiki_cache, and return short summaries plus file paths. Does NOT write to Cognee. Requires Wiki Local enabled in the Workbench Toolbelt. year: 2017, 2021, or 2026.",
+              "Wiki Interpreter: search the local Wikipedia Weaviate archive (2017/2021/2026). " +
+              "Retrieves a wide candidate pool, ranks with Wikipedia heuristics (+ optional BGE rerank), " +
+              "and returns structured cards (title, kind_hint, rank_why, snippet) plus cache paths. " +
+              "Cards are page/chunk hits — NOT footnote/reference counts. Snapshot years are frozen " +
+              "encyclopedia dumps, never 'hypothetical' unless the text says so. Does NOT write Cognee. " +
+              "Requires Wiki Local Toolbelt. year: 2017, 2021, or 2026.",
             inputSchema: z.object({
-              query: z.string().min(1).describe("Search query for Wikipedia chunks."),
+              query: z.string().min(1).describe("Search query for Wikipedia."),
               year: z
                 .string()
                 .optional()
@@ -23,7 +28,7 @@ export default defineDynamic({
                 .min(1)
                 .max(10)
                 .optional()
-                .describe("Max chunks to cache (default 3)."),
+                .describe("Max ranked cards to keep after interpret (default 5)."),
             }),
             async execute({ query, year, limit }) {
               return wikiScoutSearchViaMcp({ query, year, limit });

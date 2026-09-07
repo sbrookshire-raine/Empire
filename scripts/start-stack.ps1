@@ -1,5 +1,8 @@
 #Requires -Version 5.1
-param([switch]$SkipOllamaCheck)
+param(
+    [switch]$SkipOllamaCheck,
+    [switch]$Weaviate
+)
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
@@ -79,7 +82,15 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
 }
 Wait-Url "Eve" "http://127.0.0.1:2000/eve/v1/info"
 
+if ($Weaviate) {
+    Write-Host ""
+    & (Join-Path $PSScriptRoot "start-weaviate.ps1")
+}
+
 & (Join-Path $PSScriptRoot "refresh-dashboard.ps1")
 
 Write-Host ""
 Write-Host "Ready: http://127.0.0.1:8080/eve.html"
+if ($Weaviate) {
+    Write-Host "Wiki Local Weaviate: http://127.0.0.1:8091"
+}

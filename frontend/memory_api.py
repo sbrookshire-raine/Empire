@@ -649,24 +649,40 @@ def save_uploads(parts: list, dataset: str, full_graph: bool) -> MemoryJob:
 
 
 RECALL_TIMEOUT_SECONDS = 120
+# Soft timeout only for optional background enrich (not /api/memory/answer).
+LIGHT_RECALL_TIMEOUT_SECONDS = 5
 MEMORY_RECALL_MARKER = "[EMPIRE memory recall"
 DEFAULT_CHAT_RECALL_DATASET = "eve_memory"
 CHAT_RECALL_DATASETS = ("eve_core", "eve_memory")
+# Keep this narrow — broad words like "research" / "notes" steal Truth Drift & wiki turns.
 MEMORY_CHAT_RE = re.compile(
+    r"(?:"
+    r"\b(?:memory|memories|interests?|interested|recall|recalled)\b|"
+    r"\bwhat do you know\b|\bwhat can you (?:tell|see)\b|\bwhat am i\b|"
+    r"\bmy projects?\b|\bfrom (?:my )?memory\b|\buploaded\b|"
+    r"\bmemory graph\b|\bprojects? in (?:your )?memory\b"
+    r")",
+    re.IGNORECASE,
+)
+WIKI_OR_DRIFT_RE = re.compile(
     r"\b(?:"
-    r"memory|memories|interests?|interested|graph|recall|recalled|"
-    r"what do you know|what can you (?:tell|see)|what am i|"
-    r"my projects?|projects?|research|themes?|workbench|knowledge|"
-    r"from what|notes?|uploaded"
+    r"truth\s*drift|wikipedia|wiki(?:\s*local)?|encyclopedia|weaviate|"
+    r"compare\s+years?|across\s+years?|archive\s+year|"
+    r"2017|2021|2026"
     r")\b",
     re.IGNORECASE,
 )
 
 
 def is_memory_chat_query(text: str) -> bool:
-    """True when a chat message should trigger automatic Cognee recall."""
+    """True when a chat message should trigger automatic Cognee recall / memory answer."""
 
-    return bool(MEMORY_CHAT_RE.search(text.strip()))
+    cleaned = text.strip()
+    if not cleaned:
+        return False
+    if WIKI_OR_DRIFT_RE.search(cleaned):
+        return False
+    return bool(MEMORY_CHAT_RE.search(cleaned))
 
 
 def _recall_hit_text(hit: object) -> str:
@@ -755,10 +771,16 @@ def format_recall_context(
     return "\n\n".join(parts), len(parts)
 
 
-def recall_in_subprocess(query: str, dataset: str = DEFAULT_CHAT_RECALL_DATASET) -> dict[str, object]:
+def recall_in_subprocess(
+    query: str,
+    dataset: str = DEFAULT_CHAT_RECALL_DATASET,
+    *,
+    timeout: int | None = None,
+) -> dict[str, object]:
     """Run one Cognee recall in a fresh process."""
 
     safe_dataset = validate_dataset(dataset)
+    limit = RECALL_TIMEOUT_SECONDS if timeout is None else max(1, int(timeout))
     command = [
         sys.executable,
         "-m",
@@ -775,13 +797,11 @@ def recall_in_subprocess(query: str, dataset: str = DEFAULT_CHAT_RECALL_DATASET)
             cwd=ROOT,
             capture_output=True,
             text=True,
-            timeout=RECALL_TIMEOUT_SECONDS,
+            timeout=limit,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"Memory recall timed out after {RECALL_TIMEOUT_SECONDS}s."
-        ) from exc
+        raise RuntimeError(f"Memory recall timed out after {limit}s.") from exc
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "Memory recall worker failed.")
     for line in reversed(result.stdout.splitlines()):
@@ -878,6 +898,7 @@ def recall_for_chat(
     dataset: str = DEFAULT_CHAT_RECALL_DATASET,
     *,
     fast: bool = False,
+    timeout: int | None = None,
 ) -> dict[str, object]:
     """Recall workbench snippets for chat prefetch (prefers eve_core, then eve_memory)."""
 
@@ -890,6 +911,9 @@ def recall_for_chat(
         max_chunks = 6
         per_query = 4
         max_hits = 10
+        worker_timeout = (
+            LIGHT_RECALL_TIMEOUT_SECONDS if timeout is None else timeout
+        )
     else:
         search_queries = memory_recall_queries_for_chat(cleaned)
         datasets = (
@@ -900,9 +924,12 @@ def recall_for_chat(
         max_chunks = 18
         per_query = 6
         max_hits = 18
+        worker_timeout = timeout
     try:
         payloads = [
-            recall_in_subprocess(search_query, recall_dataset)
+            recall_in_subprocess(
+                search_query, recall_dataset, timeout=worker_timeout
+            )
             for recall_dataset in datasets
             for search_query in search_queries
         ]
@@ -945,24 +972,74 @@ def build_enriched_chat_message(user_message: str, context_block: str) -> str:
     )
 
 
+MEMORY_LIGHT_MARKER = "[[EMPIRE_MEMORY_LIGHT]]"
+
+
+def _extract_user_message_for_recall(message: str) -> str:
+    """Prefer the trailing User message block so companion wrappers are not searched."""
+
+    text = message.strip()
+    if "\n\nUser message:\n" in text:
+        return text.rsplit("\n\nUser message:\n", 1)[-1].strip()
+    return text
+
+
+def build_light_recall_message(
+    user_message: str,
+    context_block: str,
+    *,
+    prefix: str = "",
+) -> str:
+    """Attach a short BACKGROUND recall block without replacing companion context."""
+
+    head = prefix.rstrip()
+    block = (
+        f"{MEMORY_LIGHT_MARKER}\n"
+        "BACKGROUND memory (optional — may be incomplete). Use only if relevant to "
+        "the user message. Do not mention recall, snippets, or datasets.\n\n"
+        f"{context_block.strip()}"
+    )
+    if head:
+        return f"{head}\n\n{block}\n\nUser message:\n{user_message.strip()}"
+    return f"{block}\n\nUser message:\n{user_message.strip()}"
+
+
 def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
-    """Server-side backup: prefetch memory when the model might skip tool calls."""
+    """Prefetch Cognee only for explicit memory questions — not every chat turn.
+
+    Always-on journal/Cognee dumps stalled Eve and drowned research chat.
+    CURRENT facts live in companion_api (ARCHITECT_NOW); research recall stays
+    on-demand via tools or this gated path.
+    """
 
     message = payload.get("message")
     if not isinstance(message, str) or not message.strip():
         return payload
-    if MEMORY_RECALL_MARKER in message:
+    if MEMORY_RECALL_MARKER in message or MEMORY_LIGHT_MARKER in message:
         return payload
-    if not is_memory_chat_query(message):
+
+    raw = _extract_user_message_for_recall(message)
+    if not raw or not is_memory_chat_query(raw):
         return payload
-    recall = recall_for_chat(message)
+
+    prefix = ""
+    if "\n\nUser message:\n" in message:
+        prefix = message.rsplit("\n\nUser message:\n", 1)[0].strip()
+
+    recall = recall_for_chat(raw, fast=False)
     if not recall.get("ok"):
         return payload
     context_block = str(recall.get("contextBlock") or "").strip()
     if not context_block:
         return payload
+
     enriched = dict(payload)
-    enriched["message"] = build_enriched_chat_message(message, context_block)
+    if prefix:
+        enriched["message"] = (
+            f"{prefix}\n\n{build_enriched_chat_message(raw, context_block)}"
+        )
+    else:
+        enriched["message"] = build_enriched_chat_message(raw, context_block)
     return enriched
 
 
@@ -1019,7 +1096,7 @@ def answer_memory_chat(query: str, *, fast: bool = False) -> dict[str, object]:
     cleaned = query.strip()
     if not cleaned:
         return {"ok": False, "error": "Query is required."}
-    recall = recall_for_chat(cleaned, fast=fast)
+    recall = recall_for_chat(cleaned, fast=fast, timeout=RECALL_TIMEOUT_SECONDS)
     if not recall.get("ok"):
         return {"ok": False, "error": str(recall.get("error") or "Memory recall failed.")}
     context_block = str(recall.get("contextBlock") or "").strip()

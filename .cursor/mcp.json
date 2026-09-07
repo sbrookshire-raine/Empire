@@ -64,6 +64,41 @@
         "EMPIRE_STEM_INBOX": "C:/Empire_Workbench/stem_factory/input",
         "EMPIRE_STEM_OUTBOX": "C:/Empire_Workbench/stem_factory/output"
       }
+    },
+    "empire-docling": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/docling_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_DOCLING_OUT_DIR": "C:/Empire_Workbench/00_Resource_Queue"
+      }
+    },
+    "empire-web-scout": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/web_scout_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_WEB_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/web_cache"
+      }
+    },
+    "empire-container-scout": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/container_scout_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_CONTAINER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/container_cache"
+      }
+    },
+    "empire-atlas": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/atlas_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_VOICE_BASE_URL": "http://127.0.0.1:8000",
+        "EMPIRE_OLLAMA_URL": "http://127.0.0.1:11434",
+        "OLLAMA_HOST": "http://127.0.0.1:11434",
+        "EMPIRE_VISION_MODEL": "qwen3-vl:8b"
+      }
     }
   }
 }

@@ -135,6 +135,10 @@ def normalize_chat(payload: dict[str, Any], *, chat_id: str) -> dict[str, Any]:
     if len(title) > MAX_TITLE_CHARS:
         title = title[: MAX_TITLE_CHARS - 1] + "…"
 
+    rolling = str(payload.get("rollingSummary") or payload.get("rolling_summary") or "").strip()
+    if len(rolling) > 2_000:
+        rolling = rolling[:1_999] + "…"
+
     return {
         "id": chat_id,
         "title": title,
@@ -144,6 +148,7 @@ def normalize_chat(payload: dict[str, Any], *, chat_id: str) -> dict[str, Any]:
         "updatedAt": updated,
         "messages": messages,
         "messageCount": len(messages),
+        "rollingSummary": rolling,
     }
 
 
@@ -222,6 +227,14 @@ def upsert_chat(chat_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if not chat["messages"] and not existing:
         # Allow empty upsert only when updating an existing chat; skip creating empties.
         raise ChatHistoryError("Cannot save an empty chat.")
+    # Refresh rolling summary from messages when client omitted it.
+    if not chat.get("rollingSummary"):
+        try:
+            from frontend.chat_continuity import build_rolling_summary
+
+            chat["rollingSummary"] = build_rolling_summary(chat.get("messages") or [])
+        except Exception:
+            pass
     try:
         _atomic_write(path, chat)
     except OSError as exc:
