@@ -1,0 +1,8 @@
+Task draft
+
+Name: Smoke test Structured Extract
+Priority: medium
+Status: todo
+Owner: Architect
+
+Description: Verify llama.cpp DocumentMetadata extraction against golden fixtures without writing Cognee.

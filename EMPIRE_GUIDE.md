@@ -2,6 +2,13 @@
 
 **Purpose of this file:** Drop this into Gemini, ChatGPT, Claude, or a fresh Cursor chat when prior context is gone. It is the single starting brief for *what EMPIRE is*, *where it stands (Sep 2026)*, and *where it is going*.
 
+**Research / upgrade matching (complete as-built snapshot):** [`docs/EMPIRE_RESEARCH_SNAPSHOT.md`](docs/EMPIRE_RESEARCH_SNAPSHOT.md) — use this when evaluating external tools, K8s/Docker ideas, or “upgrade” pitches so research maps to what is actually built.
+
+**Autonomous Mechanic track (forge while Architect is away):** [`docs/EMPIRE_AUTONOMOUS_BUILD_GUIDE.md`](docs/EMPIRE_AUTONOMOUS_BUILD_GUIDE.md) — Phase status, smoke gates, resume phrases.
+
+**Your personal smoke list:** [`docs/ARCHITECT_TEST_CHECKLIST.md`](docs/ARCHITECT_TEST_CHECKLIST.md)  
+**Paste-to-accept (Mechanic soft-smoke done):** [`docs/ARCHITECT_SMOKE_REPLY_CARD.md`](docs/ARCHITECT_SMOKE_REPLY_CARD.md) · visual: http://127.0.0.1:8080/architect-smoke.html
+
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire  
 **Local root:** `C:\EMPIRE`  
 **Vision shortlist:** [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md)  
@@ -163,4 +170,4 @@ When the Architect pastes this guide:
 
 ---
 
-*Last updated: 2026-09-05 (local). Update this file when major capabilities land so Gemini (and humans) can re-bootstrap fast.*
+*Last updated: 2026-09-07 (local). Update this file when major capabilities land so Gemini (and humans) can re-bootstrap fast. For full research matching, keep [`docs/EMPIRE_RESEARCH_SNAPSHOT.md`](docs/EMPIRE_RESEARCH_SNAPSHOT.md) current.*

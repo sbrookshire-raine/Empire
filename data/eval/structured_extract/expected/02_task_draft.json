@@ -1,0 +1,7 @@
+{
+  "title": "Smoke test Structured Extract",
+  "author": "Architect",
+  "date": "",
+  "tags": ["todo", "medium"],
+  "summary": "Verify llama.cpp DocumentMetadata extraction against golden fixtures without writing Cognee."
+}

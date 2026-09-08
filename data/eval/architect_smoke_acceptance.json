@@ -1,0 +1,20 @@
+{
+  "accepted_at": "2026-09-08T03:43:00Z",
+  "phrase": "Accept mechanic soft-smoke Phases 1-6 and 8",
+  "phases": {
+    "1": "architect_pass",
+    "2": "architect_pass",
+    "3": "architect_pass",
+    "4": "architect_pass",
+    "5": "architect_pass",
+    "6": "architect_pass",
+    "7": "parked",
+    "8": "architect_pass"
+  },
+  "evidence": [
+    "data/eval/architect_soft_smoke_b.json",
+    "data/eval/architect_phase6_smoke.json",
+    "data/eval/architect_smoke_scorecard.json",
+    "data/eval/ARCHITECT_SMOKE_EVIDENCE_SUMMARY.md"
+  ]
+}

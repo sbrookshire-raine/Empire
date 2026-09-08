@@ -1,0 +1,55 @@
+{
+    "stack":  {
+                  "eve":  false,
+                  "frontend":  false,
+                  "ollama":  true,
+                  "extract_worker":  false,
+                  "pocketbase":  false
+              },
+    "stamped_at":  "2026-09-07T12:31:04Z",
+    "architect_replies_needed":  [
+                                     "Smoke PASS Phase 1",
+                                     "Smoke PASS Phase 2",
+                                     "Smoke PASS Phase 3",
+                                     "Smoke PASS Phase 4",
+                                     "Smoke PASS Phase 5",
+                                     "Smoke PASS Phase 6",
+                                     "Smoke PASS Phase 8"
+                                 ],
+    "results":  {
+                    "phase7":  {
+                                   "status":  "PARKED",
+                                   "note":  "PaddleOCR - skip until Docling fails"
+                               },
+                    "phase2":  {
+                                   "eve_ui_still_required":  true,
+                                   "status":  "CLI_PASS",
+                                   "note":  "ollama fallback CLI (start worker for full Soft Smoke B)"
+                               },
+                    "phase1":  {
+                                   "status":  "PASS",
+                                   "note":  "gpu lease + fixtures"
+                               },
+                    "phase4":  {
+                                   "status":  "CLI_PASS_NEED_FRONTEND",
+                                   "note":  "allowlist; frontend_up=False"
+                               },
+                    "phase3":  {
+                                   "status":  "PASS",
+                                   "note":  "retrieval_rerank eval"
+                               },
+                    "phase6":  {
+                                   "status":  "WIRED",
+                                   "note":  "observe-only module; Toolbelt Vision Local still Architect"
+                               },
+                    "phase5":  {
+                                   "status":  "WIRED",
+                                   "note":  "VAD+voice files; mic UI smoke still Architect"
+                               },
+                    "phase8":  {
+                                   "status":  "PASS",
+                                   "note":  "reports=1"
+                               }
+                },
+    "note":  "CLI scorecard is evidence for Architect. Goal completes only after Architect replies Smoke PASS in Cursor."
+}

@@ -89,6 +89,32 @@
         "EMPIRE_CONTAINER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/container_cache"
       }
     },
+    "empire-structured-extract": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/structured_extract_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_EXTRACT_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/extract_cache",
+        "EMPIRE_OLLAMA_URL": "http://127.0.0.1:11434",
+        "EMPIRE_LLAMA_EXTRACT_URL": "http://127.0.0.1:8092"
+      }
+    },
+    "empire-retrieval-rerank": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/retrieval_rerank_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_RERANK_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/rerank_cache"
+      }
+    },
+    "empire-browser-local": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/browser_local_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_BROWSER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/browser_cache"
+      }
+    },
     "empire-atlas": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
       "args": ["C:/EMPIRE/mcp/atlas_mcp.py"],

@@ -21,6 +21,9 @@ export const TOOLBELT_CATEGORIES = [
   "voice_presence",
   "vision_local",
   "container_scout",
+  "structured_extract",
+  "retrieval_rerank",
+  "browser_local",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

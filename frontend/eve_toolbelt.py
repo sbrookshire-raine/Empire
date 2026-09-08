@@ -28,6 +28,9 @@ ALLOWED_CATEGORIES = (
     "voice_presence",
     "vision_local",
     "container_scout",
+    "structured_extract",
+    "retrieval_rerank",
+    "browser_local",
 )
 DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
 

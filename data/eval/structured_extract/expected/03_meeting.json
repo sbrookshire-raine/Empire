@@ -1,0 +1,7 @@
+{
+  "title": "Meeting notes — 2026-08-15",
+  "author": "",
+  "date": "2026-08-15",
+  "tags": ["gpu", "admission", "meeting"],
+  "summary": "Extend gpu_lease with extract tenant and audit log; one heavy GPU tenant on 16GB VRAM."
+}

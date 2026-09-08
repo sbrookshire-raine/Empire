@@ -47,7 +47,8 @@ Complete reference for understanding, using, and continuing work on EMPIRE. Read
 
 | Path | Purpose |
 |------|---------|
-| [AGENTS.md](../../AGENTS.md) | Day-to-day agent/operator cheat sheet |
+| [EMPIRE_GUIDE.md](../../EMPIRE_GUIDE.md) | Short collaborator handoff |
+| [EMPIRE_RESEARCH_SNAPSHOT.md](../EMPIRE_RESEARCH_SNAPSHOT.md) | Complete as-built snapshot for matching external research |
 | [docs/OPERATIONAL_HANDOFF.md](../OPERATIONAL_HANDOFF.md) | Operational phase handoff |
 | [docs/COGNEE_VHDX.md](../COGNEE_VHDX.md) | NTFS VHDX storage on `V:` |
 | [docs/WIKI_SCOUT.md](../WIKI_SCOUT.md) | Local Weaviate Wikipedia scout + Truth Drift cache (no full re-ingest) |

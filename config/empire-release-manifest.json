@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "revised_at": "2026-09-08T03:40:00Z",
+  "project": "EMPIRE",
+  "notes": "Pin runtimes here. Workers must not pull models at Eve runtime. GGUF + llama-server + qwen3-vl installed by Mechanic 2026-09-07.",
+  "interactive": {
+    "provider": "ollama",
+    "base_url": "http://127.0.0.1:11434",
+    "num_ctx": 8192,
+    "modes": {
+      "fast": {
+        "model": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+        "temperature": 0.2
+      },
+      "deep": {
+        "model": "qwen2.5:32b",
+        "temperature": 0.7
+      },
+      "librarian": {
+        "model": "command-r:35b",
+        "temperature": 0.4
+      }
+    }
+  },
+  "embeddings": {
+    "production": {
+      "model": "nomic-embed-text",
+      "via": "ollama",
+      "note": "Do not swap without Architect-approved A/B on a test dataset."
+    },
+    "eval_candidates": [
+      {
+        "model": "qwen3-embedding:0.6b",
+        "status": "eval_only",
+        "docs": "docs/EMBEDDING_AB.md"
+      }
+    ]
+  },
+  "vision": {
+    "production": {
+      "model": "qwen3-vl:8b",
+      "via": "ollama",
+      "status": "architect_pass",
+      "toolbelt": "vision_local",
+      "observe_mode": "observation_only",
+      "note": "Used by pipeline/vision_local.py and vision_ui_observe.py. OmniParser not bundled. Architect soft-smoke accepted 2026-09-07."
+    }
+  },
+  "workers": {
+    "structured_extract": {
+      "runtime": "llama.cpp",
+      "status": "architect_pass",
+      "listen": "http://127.0.0.1:8092",
+      "model_id": "Qwen3-14B-Q4_K_M",
+      "gguf_filename": "Qwen3-14B-Q4_K_M.gguf",
+      "gguf_dir": "%LOCALAPPDATA%/EMPIRE/models/gguf",
+      "source_url": "https://huggingface.co/Qwen/Qwen3-14B-GGUF",
+      "license": "Apache-2.0 (confirm on model card)",
+      "sha256": "500a8806e85ee9c83f3ae08420295592451379b4f8cf2d0f41c15dffeb6b81f0",
+      "llama_server_release": "b10840",
+      "llama_server_path": "%LOCALAPPDATA%/EMPIRE/bin/llama.cpp/win-cuda-12.4/llama-server.exe",
+      "schema_id": "DocumentMetadata.v1",
+      "gpu_tenant": "extract",
+      "eve_model_pull": false,
+      "toolbelt": "structured_extract",
+      "mechanic_notes": "2026-09-07: 5/5 fixtures via llama.cpp; Eve Soft Smoke B used structured_extract tool; scratch cache written; worker stopped; pending Architect Smoke PASS Phase 2."
+    }
+  },
+  "memory_policy": {
+    "auto_cognee_from_workers": false,
+    "promote": "explicit_only"
+  }
+}

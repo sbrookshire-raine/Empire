@@ -1,0 +1,26 @@
+{
+  "phase2_soft_smoke_b": {
+    "session_id": "wrun_01M1YJBTAGMT1JGH6WS7XPNHV4",
+    "tools": [
+      "structured_extract"
+    ],
+    "used_structured_extract": true,
+    "has_fields": true,
+    "text_head": "The extracted metadata from the text is as follows:\n\n- **Title:** Architect smoke\n- **Tags:** smoke, extract\n- **Summary:** verifying structured extract limb\n\nThis information is stored in the scratch cache at `C:\\\\Empire_Workbench\\\\04_Thought_Experiments\\\\extract_cache\\\\Architect_smoke_2026-09-07T183416_0000.md`. If you want to promote this to Cognee memory, you can do so explicitly using the `cognee_remember` tool.",
+    "cache_recent": [
+      "Architect_smoke_2026-09-07T183416_0000.md",
+      "Local_vector_databases_for_EMPIRE_Wiki_Local_2026-09-07T183102_0000.md",
+      "Local_vector_databases_for_EMPIRE_Wiki_Local_2026-09-07T181821_0000.md",
+      "Local_vector_databases_for_EMPIRE_Wiki_Local_2026-09-07T180722_0000.md"
+    ]
+  },
+  "phase3": {
+    "hits": 3,
+    "cases": 3
+  },
+  "phase4": {
+    "allow": true,
+    "block": true,
+    "fetch_ok": true
+  }
+}

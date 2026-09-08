@@ -1,0 +1,499 @@
+catalog_version: 1
+scope:
+  runtime: local-or-allowlisted-lan
+  account_required: false
+  api_key_required: false
+  normal_operation_internet_required: false
+  excluded:
+    - hosted_saas
+    - oauth_or_vendor_login
+    - hosted_llm_or_embedding_api
+    - public_web_search_or_fetch
+    - token_required_integrations
+
+integration_types:
+  native_mcp: Already speaks MCP; mount or proxy after reviewing its tool surface.
+  library_wrapper: Expose narrowly typed FastMCP functions over a local library.
+  cli_wrapper: Call a fixed local executable with validated arguments; never use a shell string.
+  local_api_wrapper: Call a localhost or static-LAN-allowlisted service only.
+
+tools:
+  - id: official-filesystem-mcp
+    name: Official filesystem reference server
+    repository: https://github.com/modelcontextprotocol/servers
+    category: native-mcp
+    license: Mixed; Apache-2.0 for new contributions, existing MIT code (review package)
+    integration: native_mcp
+    interface: stdio MCP
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: high
+    recommended_surface: Directory-scoped read/list/search tools; isolated mutation tools.
+    guardrails: [canonical_allowed_roots, deny_symlink_escapes, read_only_default, approval_for_mutations]
+
+  - id: official-git-mcp
+    name: Official Git reference server
+    repository: https://github.com/modelcontextprotocol/servers
+    category: native-mcp
+    license: Mixed; Apache-2.0 for new contributions, existing MIT code (review package)
+    integration: native_mcp
+    interface: Python package/stdio MCP (mcp-server-git)
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Repository status, diff, log, blame, and read-only inspection.
+    guardrails: [repository_allowlist, read_only_default, approval_for_commit_branch_or_push]
+
+  - id: official-sqlite-mcp
+    name: Official SQLite reference server
+    repository: https://github.com/modelcontextprotocol/servers
+    category: native-mcp
+    license: Mixed; Apache-2.0 for new contributions, existing MIT code (review package)
+    integration: native_mcp
+    interface: stdio MCP
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: high
+    recommended_surface: Read-only query and schema inspection against approved databases.
+    guardrails: [database_allowlist, sqlite_read_only_connections, sql_statement_allowlist]
+
+  - id: duckdb
+    name: DuckDB
+    repository: https://github.com/duckdb/duckdb
+    category: data-analysis
+    license: MIT
+    integration: library_wrapper
+    interface: CLI and Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Profile datasets, compare schemas, aggregates, joins, and parameterized read-only SQL.
+    guardrails: [allowed_data_roots, sql_statement_allowlist, no_extensions, bounded_result_size]
+
+  - id: polars
+    name: Polars
+    repository: https://github.com/pola-rs/polars
+    category: data-analysis
+    license: MIT
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Typed DataFrame profile, comparison, join, grouping, and anomaly functions.
+    guardrails: [allowed_data_roots, bounded_rows_columns, artifact_output_root]
+
+  - id: pandas
+    name: pandas
+    repository: https://github.com/pandas-dev/pandas
+    category: data-analysis
+    license: BSD-3-Clause
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Compatibility-oriented spreadsheet and tabular transformations.
+    guardrails: [allowed_data_roots, bounded_rows_columns, artifact_output_root]
+
+  - id: sqlite
+    name: SQLite
+    repository: https://github.com/sqlite/sqlite
+    category: state-and-data
+    license: Public-Domain
+    integration: library_wrapper
+    interface: CLI and embedded library
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Agent audit store, task state, and structured persistent memory.
+    guardrails: [separate_agent_database, migrations_only_for_schema, read_only_query_tools]
+
+  - id: postgresql
+    name: PostgreSQL
+    repository: https://github.com/postgres/postgres
+    category: state-and-data
+    license: PostgreSQL-License
+    integration: local_api_wrapper
+    interface: Local/LAN server and CLI
+    no_account: true
+    network: localhost-or-allowlisted-lan
+    os: [windows, linux, macos]
+    priority: P1
+    risk: high
+    recommended_surface: Read-only analytics and separately scoped agent state.
+    guardrails: [loopback_default, agent_specific_role, read_only_default, query_timeout]
+
+  - id: qdrant
+    name: Qdrant
+    repository: https://github.com/qdrant/qdrant
+    category: memory-and-search
+    license: Apache-2.0
+    integration: local_api_wrapper
+    interface: Local HTTP/gRPC API
+    no_account: true
+    network: localhost-or-allowlisted-lan
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Namespaced remember, search-memory, list-memory, and forget-memory tools.
+    guardrails: [loopback_default, per_user_project_collection, record_size_limit, approval_for_forget]
+
+  - id: chroma
+    name: Chroma
+    repository: https://github.com/chroma-core/chroma
+    category: memory-and-search
+    license: Apache-2.0
+    integration: local_api_wrapper
+    interface: Python API or local HTTP
+    no_account: true
+    network: localhost-or-allowlisted-lan
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Small local vector collections and retrieval.
+    guardrails: [loopback_default, namespace_isolation, record_size_limit]
+
+  - id: kuzu
+    name: Kuzu
+    repository: https://github.com/kuzudb/kuzu
+    category: memory-and-search
+    license: MIT
+    integration: library_wrapper
+    interface: Embedded database and Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Typed graph facts, relationships, and local task-history queries.
+    guardrails: [separate_graph_file, parameterized_queries, read_only_default]
+
+  - id: sentence-transformers
+    name: Sentence Transformers
+    repository: https://github.com/UKPLab/sentence-transformers
+    category: local-model
+    license: Apache-2.0
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none-after-model-install
+    os: [windows, linux, macos]
+    priority: P0
+    risk: low
+    recommended_surface: Generate local text embeddings for approved memory/document inputs.
+    guardrails: [pinned_local_model, model_weight_license_review, input_size_limit]
+
+  - id: tesseract
+    name: Tesseract OCR
+    repository: https://github.com/tesseract-ocr/tesseract
+    category: documents-and-ocr
+    license: Apache-2.0
+    integration: cli_wrapper
+    interface: CLI and library
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: OCR an approved local image/PDF render into text and confidence metadata.
+    guardrails: [fixed_argument_schema, allowed_input_roots, timeout, output_size_limit]
+
+  - id: ocrmypdf
+    name: OCRmyPDF
+    repository: https://github.com/ocrmypdf/OCRmyPDF
+    category: documents-and-ocr
+    license: MPL-2.0
+    integration: cli_wrapper
+    interface: CLI
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Produce searchable PDF copies in an artifact output directory.
+    guardrails: [fixed_argument_schema, allowed_input_roots, artifact_output_root, timeout]
+
+  - id: pypdf
+    name: pypdf
+    repository: https://github.com/py-pdf/pypdf
+    category: documents-and-ocr
+    license: BSD-3-Clause
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P0
+    risk: medium
+    recommended_surface: Extract text/metadata and create controlled split/merge artifacts.
+    guardrails: [allowed_input_roots, artifact_output_root, approval_for_source_replacement]
+
+  - id: pandoc
+    name: Pandoc
+    repository: https://github.com/jgm/pandoc
+    category: documents-and-ocr
+    license: GPL-2.0-or-later
+    integration: cli_wrapper
+    interface: CLI
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Fixed-format conversions into a controlled artifact directory.
+    guardrails: [fixed_argument_schema, disable_external_fetch, allowed_input_roots, artifact_output_root]
+
+  - id: libreoffice
+    name: LibreOffice
+    repository: https://github.com/LibreOffice/core
+    category: documents-and-ocr
+    license: MPL-2.0
+    integration: cli_wrapper
+    interface: Headless CLI and UNO API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: high
+    recommended_surface: Convert/recalculate approved office documents in an isolated profile.
+    guardrails: [fixed_argument_schema, isolated_user_profile, allowed_input_roots, artifact_output_root, timeout]
+
+  - id: imagemagick
+    name: ImageMagick
+    repository: https://github.com/ImageMagick/ImageMagick
+    category: media
+    license: ImageMagick-License
+    integration: cli_wrapper
+    interface: CLI and library
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: high
+    recommended_surface: Inspect, resize, crop, convert, and annotate local images.
+    guardrails: [fixed_argument_schema, restrictive_policy_xml, allowed_input_roots, artifact_output_root, timeout]
+
+  - id: ffmpeg
+    name: FFmpeg
+    repository: https://github.com/FFmpeg/FFmpeg
+    category: media
+    license: LGPL-2.1-or-later-or-GPL-depending-on-build
+    integration: cli_wrapper
+    interface: CLI and library
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: high
+    recommended_surface: Media metadata, clip, transcode, frame/audio extraction into artifacts.
+    guardrails: [fixed_argument_schema, allowed_input_roots, artifact_output_root, timeout, resource_limits]
+
+  - id: ollama
+    name: Ollama
+    repository: https://github.com/ollama/ollama
+    category: local-model
+    license: MIT
+    integration: local_api_wrapper
+    interface: Local CLI and HTTP API
+    no_account: true
+    network: localhost-only
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Named, bounded local inference and embedding tasks using pinned installed models.
+    guardrails: [loopback_only, pinned_model_allowlist, model_weight_license_review, request_size_limit, no_model_pull_tool]
+
+  - id: llama-cpp
+    name: llama.cpp
+    repository: https://github.com/ggml-org/llama.cpp
+    category: local-model
+    license: MIT
+    integration: local_api_wrapper
+    interface: CLI and local HTTP server
+    no_account: true
+    network: localhost-only
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Portable local GGUF inference and embedding tasks.
+    guardrails: [loopback_only, pinned_model_allowlist, model_weight_license_review, request_size_limit]
+
+  - id: whisper-cpp
+    name: whisper.cpp
+    repository: https://github.com/ggml-org/whisper.cpp
+    category: speech
+    license: MIT
+    integration: cli_wrapper
+    interface: CLI and local server
+    no_account: true
+    network: none-after-model-install
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Transcribe approved local audio into timestamped text artifacts.
+    guardrails: [pinned_local_model, allowed_input_roots, artifact_output_root, timeout]
+
+  - id: faster-whisper
+    name: faster-whisper
+    repository: https://github.com/SYSTRAN/faster-whisper
+    category: speech
+    license: MIT
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none-after-model-install
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Local high-performance transcription.
+    guardrails: [pinned_local_model, model_weight_license_review, allowed_input_roots, artifact_output_root]
+
+  - id: coqui-tts
+    name: Coqui TTS
+    repository: https://github.com/coqui-ai/TTS
+    category: speech
+    license: MPL-2.0
+    integration: library_wrapper
+    interface: Python API and CLI
+    no_account: true
+    network: none-after-model-install
+    os: [windows, linux, macos]
+    priority: P2
+    risk: medium
+    recommended_surface: Synthesize approved text with a pinned local voice/model.
+    guardrails: [pinned_local_model, model_weight_license_review, voice_consent_required, artifact_output_root]
+
+  - id: playwright
+    name: Playwright
+    repository: https://github.com/microsoft/playwright
+    category: browser-automation
+    license: Apache-2.0
+    integration: library_wrapper
+    interface: Python/Node API and CLI
+    no_account: true
+    network: localhost-or-allowlisted-lan
+    os: [windows, linux, macos]
+    priority: P2
+    risk: high
+    recommended_surface: Navigate, inspect, screenshot, click, and fill only approved local/LAN origins.
+    guardrails: [origin_allowlist, download_blocked_default, approval_for_submit, approval_for_upload, trace_audit]
+
+  - id: pywinauto
+    name: pywinauto
+    repository: https://github.com/pywinauto/pywinauto
+    category: desktop-automation
+    license: BSD-3-Clause
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows]
+    priority: P2
+    risk: critical
+    recommended_surface: Inspect allowlisted windows and invoke semantically identified controls.
+    guardrails: [window_allowlist, observe_only_default, approval_for_input, screenshot_redaction, action_audit]
+
+  - id: pyautogui
+    name: PyAutoGUI
+    repository: https://github.com/asweigart/pyautogui
+    category: desktop-automation
+    license: BSD-3-Clause
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P2
+    risk: critical
+    recommended_surface: Supervised screenshots and short approved pointer/keyboard sequences.
+    guardrails: [failsafe_enabled, observe_only_default, approval_for_every_input_sequence, screen_bounds, action_audit]
+
+  - id: openadapt
+    name: OpenAdapt
+    repository: https://github.com/OpenAdaptAI/OpenAdapt
+    category: desktop-automation
+    license: MIT
+    integration: library_wrapper
+    interface: Local application/API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P2
+    risk: critical
+    recommended_surface: Record user-approved demonstrations, then review and normalize them into reusable skills.
+    guardrails: [explicit_recording_consent, redact_sensitive_screen_data, no_unreviewed_replay, approval_for_replay]
+
+  - id: psutil
+    name: psutil
+    repository: https://github.com/giampaolo/psutil
+    category: system
+    license: BSD-3-Clause
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: medium
+    recommended_surface: Read-only CPU, memory, disk, process, and interface summaries.
+    guardrails: [read_only, redact_command_lines_and_usernames_by_default]
+
+  - id: apscheduler
+    name: APScheduler
+    repository: https://github.com/agronholm/apscheduler
+    category: workflow
+    license: MIT
+    integration: library_wrapper
+    interface: Python API
+    no_account: true
+    network: none
+    os: [windows, linux, macos]
+    priority: P1
+    risk: high
+    recommended_surface: Create and inspect allowlisted recurring local maintenance jobs.
+    guardrails: [job_type_allowlist, approval_for_schedule_change, execution_audit, bounded_concurrency]
+
+  - id: node-red
+    name: Node-RED
+    repository: https://github.com/node-red/node-red
+    category: workflow
+    license: Apache-2.0
+    integration: local_api_wrapper
+    interface: Self-hosted local/LAN API/UI
+    no_account: true
+    network: localhost-or-allowlisted-lan
+    os: [windows, linux, macos]
+    priority: P2
+    risk: high
+    recommended_surface: Inspect and run preapproved local flows only.
+    guardrails: [loopback_default, admin_auth_for_lan, flow_allowlist, approval_for_deploy]
+
+  - id: docker-cli
+    name: Docker CLI
+    repository: https://github.com/docker/cli
+    category: system
+    license: Apache-2.0
+    integration: cli_wrapper
+    interface: CLI
+    no_account: true
+    network: local-daemon-only
+    os: [windows, linux, macos]
+    priority: P3
+    risk: critical
+    recommended_surface: Read-only container/image status; explicit isolated tools for approved lifecycle actions.
+    guardrails: [no_generic_docker_command, read_only_default, container_allowlist, approval_for_lifecycle_or_mounts]

@@ -1,0 +1,14 @@
+{
+  "allow_hosts": [
+    "127.0.0.1",
+    "localhost"
+  ],
+  "allow_ports": [8080, 8090, 2000, 11434],
+  "allow_url_prefixes": [
+    "http://127.0.0.1:8080/",
+    "http://127.0.0.1:8090/",
+    "http://localhost:8080/",
+    "http://localhost:8090/"
+  ],
+  "block_message": "URL not on EMPIRE browser allowlist. Only localhost Workbench/PocketBase origins are permitted."
+}

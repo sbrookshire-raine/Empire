@@ -1,0 +1,7 @@
+{
+  "title": "Container Scout limb",
+  "author": "Systems Mechanic",
+  "date": "2026-09-07",
+  "tags": ["container_scout", "docker_hub"],
+  "summary": "Hub search and empire-* status only; no pull/run; no Cognee writes."
+}

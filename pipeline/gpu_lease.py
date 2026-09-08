@@ -1,38 +1,49 @@
 """Serial GPU lease for EMPIRE (RTX 16GB — one heavy tenant at a time).
 
-Tenants: chat | stem | vision | voice
+Tenants: chat | stem | vision | voice | extract
+Admission events append to admission-audit.jsonl for Architect smoke evidence.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-Tenant = Literal["chat", "stem", "vision", "voice", "idle"]
-VALID: frozenset[str] = frozenset({"chat", "stem", "vision", "voice", "idle"})
+Tenant = Literal["chat", "stem", "vision", "voice", "extract", "idle"]
+VALID: frozenset[str] = frozenset({"chat", "stem", "vision", "voice", "extract", "idle"})
+ACTIVE_TENANTS: frozenset[str] = frozenset({"chat", "stem", "vision", "voice", "extract"})
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def lease_path() -> Path:
+def _empire_dir() -> Path:
     local_app = os.environ.get("LOCALAPPDATA", "").strip()
     if local_app:
         folder = Path(local_app) / "EMPIRE"
         try:
             folder.mkdir(parents=True, exist_ok=True)
-            return folder / "gpu-lease.json"
+            return folder
         except OSError:
             pass
     root = Path(__file__).resolve().parents[1]
     folder = root / "config"
     folder.mkdir(parents=True, exist_ok=True)
-    return folder / "gpu-lease.json"
+    return folder
+
+
+def lease_path() -> Path:
+    return _empire_dir() / "gpu-lease.json"
+
+
+def audit_path() -> Path:
+    return _empire_dir() / "admission-audit.jsonl"
 
 
 def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
@@ -51,6 +62,41 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
+def _resource_snapshot() -> dict[str, Any]:
+    snap: dict[str, Any] = {}
+    try:
+        total, used, free = shutil.disk_usage(str(_empire_dir()))
+        snap["disk_free_gb"] = round(free / (1024**3), 2)
+        snap["disk_total_gb"] = round(total / (1024**3), 2)
+    except OSError:
+        pass
+    try:
+        import psutil  # type: ignore
+
+        snap["ram_available_gb"] = round(psutil.virtual_memory().available / (1024**3), 2)
+        snap["ram_total_gb"] = round(psutil.virtual_memory().total / (1024**3), 2)
+    except Exception:
+        pass
+    return snap
+
+
+def append_audit(event: str, *, detail: dict[str, Any] | None = None) -> None:
+    path = audit_path()
+    record = {
+        "ts": _utc_now(),
+        "event": event,
+        "detail": detail or {},
+        "resources": _resource_snapshot(),
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, default=str) + "\n")
+    except OSError:
+        # Never crash the stack over audit I/O
+        pass
+
+
 def status() -> dict[str, Any]:
     path = lease_path()
     try:
@@ -63,6 +109,7 @@ def status() -> dict[str, Any]:
             "since": "",
             "note": "No lease file — GPU treated as free.",
             "path": str(path),
+            "audit_path": str(audit_path()),
         }
     if not isinstance(raw, dict):
         return {"ok": False, "error": "Invalid lease file", "path": str(path)}
@@ -76,21 +123,26 @@ def status() -> dict[str, Any]:
         "since": str(raw.get("since") or ""),
         "note": str(raw.get("note") or ""),
         "path": str(path),
+        "audit_path": str(audit_path()),
     }
 
 
 def acquire(tenant: Tenant, *, holder: str = "", note: str = "", force: bool = False) -> dict[str, Any]:
-    if tenant not in VALID or tenant == "idle":
-        return {"ok": False, "error": f"Invalid tenant: {tenant}"}
+    if tenant not in ACTIVE_TENANTS:
+        result = {"ok": False, "error": f"Invalid tenant: {tenant}"}
+        append_audit("acquire_reject", detail=result)
+        return result
     current = status()
     active = str(current.get("tenant") or "idle")
     if active not in {"idle", tenant} and not force:
-        return {
+        result = {
             "ok": False,
             "error": f"GPU leased to {active} (holder={current.get('holder')}). "
             "Finish that job or release first.",
             "current": current,
         }
+        append_audit("acquire_deny", detail={"tenant": tenant, "holder": holder, **result})
+        return result
     payload = {
         "tenant": tenant,
         "holder": holder or tenant,
@@ -100,36 +152,45 @@ def acquire(tenant: Tenant, *, holder: str = "", note: str = "", force: bool = F
     try:
         _atomic_write(lease_path(), payload)
     except OSError as exc:
-        return {"ok": False, "error": str(exc)}
-    return {"ok": True, **payload, "path": str(lease_path())}
+        result = {"ok": False, "error": str(exc)}
+        append_audit("acquire_error", detail=result)
+        return result
+    out = {"ok": True, **payload, "path": str(lease_path()), "audit_path": str(audit_path())}
+    append_audit("acquire_ok", detail={"tenant": tenant, "holder": out["holder"], "force": force})
+    return out
 
 
 def release(*, expected: str | None = None) -> dict[str, Any]:
     current = status()
     active = str(current.get("tenant") or "idle")
     if expected and active not in {"idle", expected}:
-        return {
+        result = {
             "ok": False,
             "error": f"Lease held by {active}, expected {expected}",
             "current": current,
         }
+        append_audit("release_deny", detail=result)
+        return result
     payload = {"tenant": "idle", "holder": "", "since": _utc_now(), "note": "released"}
     try:
         _atomic_write(lease_path(), payload)
     except OSError as exc:
-        return {"ok": False, "error": str(exc)}
-    return {"ok": True, **payload, "previous": active, "path": str(lease_path())}
+        result = {"ok": False, "error": str(exc)}
+        append_audit("release_error", detail=result)
+        return result
+    out = {"ok": True, **payload, "previous": active, "path": str(lease_path())}
+    append_audit("release_ok", detail={"previous": active})
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
-    import json
 
     parser = argparse.ArgumentParser(description="EMPIRE GPU lease")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("status")
     acq = sub.add_parser("acquire")
-    acq.add_argument("tenant", choices=["chat", "stem", "vision", "voice"])
+    acq.add_argument("tenant", choices=sorted(ACTIVE_TENANTS))
     acq.add_argument("--holder", default="")
     acq.add_argument("--force", action="store_true")
     sub.add_parser("release")
@@ -138,9 +199,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         result = status()
     elif args.command == "acquire":
-        result = acquire(args.tenant, holder=args.holder, force=args.force)
-    else:
+        result = acquire(args.tenant, holder=args.holder, force=args.force)  # type: ignore[arg-type]
+    elif args.command == "release":
         result = release()
+    else:
+        raise SystemExit(f"unknown command: {args.command}")
+
     print(json.dumps(result, indent=2, default=str))
     return 0 if result.get("ok") else 1
 

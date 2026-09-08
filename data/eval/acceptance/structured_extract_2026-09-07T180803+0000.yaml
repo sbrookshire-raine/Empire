@@ -1,0 +1,52 @@
+candidate: structured_extract
+status: pending_architect
+evaluated_at: "2026-09-07T18:08:03+00:00"
+fixture_count: 5
+row_count: 10
+parse_ok_count: 10
+memory_promoted: false
+provenance_recorded: true
+acceptance_reason: null
+rejection_reason: null
+notes: "Mechanic headless eval. Architect must run Smoke B."
+results:
+  - fixture: 01_research_note.txt
+    backend: ollama
+    ok: true
+    overlap: 1.0
+  - fixture: 01_research_note.txt
+    backend: ollama
+    ok: true
+    overlap: 1.0
+  - fixture: 02_task_draft.txt
+    backend: ollama
+    ok: true
+    overlap: 0.5
+  - fixture: 02_task_draft.txt
+    backend: ollama
+    ok: true
+    overlap: 0.5
+  - fixture: 03_meeting.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75
+  - fixture: 03_meeting.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75
+  - fixture: 04_container_scout.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75
+  - fixture: 04_container_scout.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75
+  - fixture: 05_intake.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75
+  - fixture: 05_intake.txt
+    backend: ollama
+    ok: true
+    overlap: 0.75

@@ -46,6 +46,10 @@ Talk like a sharp co-worker on the same project — concise, human, lightly dry 
 | Promote a wiki_cache `.md` into memory | **`promote_wiki_cache`** only when the Architect explicitly asks — path under wiki_cache |
 | Public web page → Thought Experiments cache | Load **skill-web-scout**; **`web_scout`** (requires **Web Scout** Toolbelt) — never auto-memory |
 | Docker Hub images / container discovery / which empire-* containers are up | Load **skill-container-scout**; **`container_scout_search`** / **`container_scout_detail`** / **`container_scout_docker_status`** (requires **Container Scout** Toolbelt) — never auto-pull, never auto-memory, not Kubernetes |
+| Structured document metadata (title/author/tags/summary JSON) | Load **skill-structured-extract**; **`structured_extract`** (requires **Structured Extract** Toolbelt; llama.cpp worker on :8092) — scratch only, never auto-memory |
+| Rerank retrieval candidates / retrieval A/B | Load **skill-retrieval-rerank**; **`retrieval_rerank`** (requires **Retrieval Rerank**) — eval only; nomic production embeds unchanged |
+| Local Workbench/PocketBase page inspect | Load **skill-browser-local**; **`browser_local_fetch`** (requires **Browser Local**) — allowlist only; no public web; no form submit |
+| Screenshot UI regions (observe only) | **`vision_ui_observe`** (requires **Vision Local**) — no actuators |
 | Thought experiment / YouTube idea capture | **`thought_experiment_capture`** (requires **Thought Experiments** Toolbelt) |
 | PDF/Office → markdown staging | **`docling_convert`** then remember/upload when asked |
 | Day schedule, free time, overbooking, exercise/meditation slots, DAZE | Load **skill-daze-time**; **`daze_list_day`** / **`daze_free_windows`** / **`daze_upsert_block`** (requires **Time Reclaim** in Toolbelt) — PocketBase day_blocks, not Tasks |

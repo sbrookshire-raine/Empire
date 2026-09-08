@@ -16,6 +16,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from pipeline import gpu_lease
+from pipeline import voice_vad
 
 DEFAULT_BASE = os.environ.get("EMPIRE_VOICE_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 DEFAULT_STT_MODEL = os.environ.get("EMPIRE_VOICE_STT_MODEL", "Systran/faster-whisper-base")
@@ -64,6 +65,16 @@ def transcribe(
     path = Path(audio_path)
     if not path.is_file():
         return {"ok": False, "error": f"not a file: {path}"}
+
+    vad = voice_vad.detect(path)
+    if vad.get("ok") and vad.get("speech") is False:
+        return {
+            "ok": True,
+            "skipped": True,
+            "text": "",
+            "vad": vad,
+            "note": "VAD detected no speech — STT skipped.",
+        }
 
     if lease:
         acquired = gpu_lease.acquire("voice", holder="voice_transcribe", note="STT")

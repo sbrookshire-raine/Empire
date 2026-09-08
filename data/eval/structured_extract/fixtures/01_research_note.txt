@@ -1,0 +1,10 @@
+# Sample research note
+
+Title: Local vector databases for EMPIRE Wiki Local
+Author: Architect
+Date: 2026-09-01
+Tags: weaviate, docker, memory
+
+Weaviate runs on-demand via Docker on port 8091.
+Cognee remains the durable memory authority on VHDX.
+Do not auto-ingest Wikipedia into Cognee.

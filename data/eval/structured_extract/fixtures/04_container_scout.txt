@@ -1,0 +1,8 @@
+EMPIRE Toolbelt note
+
+Document: Container Scout limb
+Author: Systems Mechanic
+Published: 2026-09-07
+
+Container Scout searches Docker Hub and lists empire-* containers.
+It does not pull or run images and does not write Cognee.

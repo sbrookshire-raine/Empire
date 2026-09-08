@@ -1,0 +1,7 @@
+Meeting notes — 2026-08-15
+
+Attendees: Architect, Mechanic
+Topic: GPU lease and admission control
+
+Action: Extend gpu_lease with extract tenant and admission-audit.jsonl.
+Constraint: One heavy GPU tenant at a time on 16 GB VRAM.

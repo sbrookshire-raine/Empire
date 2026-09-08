@@ -1,0 +1,7 @@
+{
+  "title": "PocketBase health check script",
+  "author": "unknown",
+  "date": "",
+  "tags": ["pocketbase", "health", "scripts"],
+  "summary": "Verifies PocketBase on 127.0.0.1:8090 before starting the frontend."
+}

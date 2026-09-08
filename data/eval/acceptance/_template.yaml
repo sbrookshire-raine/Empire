@@ -1,0 +1,21 @@
+# Acceptance record template (copy and fill)
+
+candidate: structured_extract
+source_url: https://huggingface.co/Qwen/Qwen3-14B-GGUF
+source_revision: pin-after-download
+license: Apache-2.0 (confirm)
+status: pending_architect
+input_fixture: data/eval/structured_extract/fixtures/
+output_artifact: data/eval/acceptance/
+local_only_after_install: true
+runtime: local-api
+vram_peak_gb: null
+ram_peak_gb: null
+latency_ms: null
+interactive_regression: null
+provenance_recorded: true
+approval_required: true
+memory_promoted: false
+acceptance_reason: null
+rejection_reason: null
+notes: "Fill after Mechanic headless eval and Architect Smoke B."

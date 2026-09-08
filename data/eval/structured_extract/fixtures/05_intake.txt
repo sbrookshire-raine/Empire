@@ -1,0 +1,8 @@
+# Intake: PocketBase health check script
+
+Source file: scripts/verify-stack.ps1 excerpt
+Author: unknown
+Date: n/a
+
+Checks PocketBase on 127.0.0.1:8090 before starting the frontend.
+Tags: pocketbase, health, scripts

@@ -1,0 +1,7 @@
+{
+  "title": "Local vector databases for EMPIRE Wiki Local",
+  "author": "Architect",
+  "date": "2026-09-01",
+  "tags": ["weaviate", "docker", "memory"],
+  "summary": "Weaviate on-demand for Wiki Local; Cognee stays durable memory; no full wiki ingest."
+}

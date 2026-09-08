@@ -311,6 +311,24 @@
           description:
             "Docker Hub search + local empire-* status (no auto-pull / no K8s).",
         },
+        {
+          id: "structured_extract",
+          label: "Structured Extract",
+          description:
+            "DocumentMetadata JSON via local llama.cpp worker (scratch only).",
+        },
+        {
+          id: "retrieval_rerank",
+          label: "Retrieval Rerank",
+          description:
+            "Eval-only passage rerank (nomic production embeds unchanged).",
+        },
+        {
+          id: "browser_local",
+          label: "Browser Local",
+          description:
+            "Allowlisted localhost Playwright fetch (Workbench/PB only).",
+        },
       ],
       activeTools: {
         gumloop_cloud: false,
@@ -324,6 +342,9 @@
         voice_presence: false,
         vision_local: false,
         container_scout: false,
+        structured_extract: false,
+        retrieval_rerank: false,
+        browser_local: false,
       },
       activeMode: "fast",
       activeModeLabel: "Fast Mode (14b)",
