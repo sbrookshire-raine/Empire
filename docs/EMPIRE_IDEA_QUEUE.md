@@ -130,7 +130,7 @@ Capture sparks here; promote to Testing or Forge when clear.
 
 | ID | Idea | Status | Source |
 |----|------|--------|--------|
-| I-01 | LEGO Whiteboard composable UI (beyond markdown index) | `idea` | Manifesto Phase 4 |
+| I-01 | LEGO Whiteboard composable UI (beyond markdown index) | `in_progress` | Manifesto Phase 4; http://127.0.0.1:8080/lego.html |
 | I-02 | Gumloop limb only after local research fails | `parked` | Manifesto Phase 3 |
 | I-03 | Thought-experiment YouTube → research limb | `done` | Manifesto Phase 3 / Atlas |
 | I-04 | Rebuild Shard `.venv-cuda` documented in ops cheat sheet | `done` | 2026-09-06 CUDA fix |
@@ -162,7 +162,7 @@ When waking EMPIRE to work this queue:
 | [docs/WEB_SCOUT.md](WEB_SCOUT.md) | Web scout cache |
 | [docs/VOICE_PRESENCE.md](VOICE_PRESENCE.md) | STT/TTS limb |
 | [docs/REMOTE_ACCESS.md](REMOTE_ACCESS.md) | Phase 6 tunnel notes |
-| [docs/EMBEDDING_AB.md](EMBEDDING_AB.md) | Embed A/B (test only) |
+| [docs/LEGO_WHITEBOARD.md](LEGO_WHITEBOARD.md) | Manifesto Phase 4 LEGO canvas |
 | [docs/KUBERNETES_AND_CONTAINERS.md](KUBERNETES_AND_CONTAINERS.md) | K8s vs Compose; Container Scout |
 | [docs/CONTAINER_SCOUT.md](CONTAINER_SCOUT.md) | Container Scout limb ops |
 | [docs/WEAVIATE_HEIST.md](WEAVIATE_HEIST.md) | Weaviate boot / tear-down |

@@ -23,6 +23,7 @@ try:
         companion_api,
         eve_proxy,
         eve_toolbelt,
+        lego_api,
         memory_api,
         ollama_api,
         ollama_fast_ab,
@@ -38,6 +39,7 @@ except ModuleNotFoundError:
     import companion_api  # type: ignore[no-redef]
     import eve_proxy  # type: ignore[no-redef]
     import eve_toolbelt  # type: ignore[no-redef]
+    import lego_api  # type: ignore[no-redef]
     import memory_api  # type: ignore[no-redef]
     import ollama_api  # type: ignore[no-redef]
     import ollama_fast_ab  # type: ignore[no-redef]
@@ -314,6 +316,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/ollama/")
             or path == "/api/gpu-lease"
             or path.startswith("/api/voice/")
+            or path.startswith("/api/lego/")
         )
         if local_only_api:
             if origin in MEMORY_ALLOWED_ORIGINS:
@@ -340,6 +343,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path == "/api/gpu-lease"
             or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
+            or path.startswith("/api/lego/")
         ) and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
         if path.startswith("/api/eve/"):
@@ -366,6 +370,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._send_json(200, ollama_fast_ab.load_fast_ab())
         if path == "/api/gpu-lease":
             return self._gpu_lease_get()
+        if path.startswith("/api/lego/"):
+            return self._lego_get(path)
         if path == "/api/chat-history" or path.startswith("/api/chat-history/"):
             return self._chat_history_get(path)
         if path == "/api/memory/status":
@@ -455,6 +461,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._gpu_lease_post()
+        if path.startswith("/api/lego/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._lego_post(path)
         if path == "/api/voice/transcribe":
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -876,6 +886,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._ollama_set_model()
+        if path.startswith("/api/lego/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._lego_put(path)
         if path.startswith("/api/chat-history/"):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -954,6 +968,34 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._send_json(200, gpu_lease.status())
         except Exception as exc:  # noqa: BLE001
             return self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _lego_get(self, path: str) -> None:
+        if not self._memory_origin_allowed():
+            return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        if path == "/api/lego/bricks":
+            return self._send_json(200, lego_api.load_bricks())
+        if path == "/api/lego/board":
+            return self._send_json(200, lego_api.load_board())
+        return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
+
+    def _lego_put(self, path: str) -> None:
+        if path != "/api/lego/board":
+            return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
+        payload = self._read_json()
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        result = lego_api.save_board(payload)
+        status = 200 if result.get("ok") else 400
+        return self._send_json(status, result)
+
+    def _lego_post(self, path: str) -> None:
+        if path != "/api/lego/apply-toolbelt":
+            return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
+        payload = self._read_json()
+        body = payload if isinstance(payload, dict) else None
+        result = lego_api.apply_toolbelt_from_board(body)
+        status = 200 if result.get("ok") else 400
+        return self._send_json(status, result)
 
     def _gpu_lease_post(self) -> None:
         payload = self._read_json()

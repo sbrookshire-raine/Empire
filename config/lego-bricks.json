@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "revised_at": "2026-09-08T04:00:00Z",
+  "notes": "Machine-readable LEGO brick catalog. Human mirror: Empire_Workbench/03_Active_Tools/LEGO_INDEX.md. Palette shows forged EMPIRE limbs only.",
+  "bricks": [
+    {
+      "id": "memory",
+      "label": "Memory",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text", "scratch"], "out": ["memory"] },
+      "tools": ["cognee_recall", "cognee_remember", "cognee_improve", "cognee_forget"],
+      "note": "Core — always available; never gated by Toolbelt."
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["text"] },
+      "tools": ["pocketbase_task_crud"],
+      "note": "Core PocketBase Tasks (not Work Orders)."
+    },
+    {
+      "id": "docling",
+      "label": "Docling",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["docling_convert"],
+      "note": "PDF/Office to markdown in Resource Queue."
+    },
+    {
+      "id": "gpu",
+      "label": "GPU Lease",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "ops",
+      "ports": { "in": ["ops"], "out": ["ops"] },
+      "tools": ["gpu_lease_status"],
+      "note": "Ops visibility only."
+    },
+    {
+      "id": "wiki",
+      "label": "Wiki Local",
+      "toolbelt": "wiki_local",
+      "default_on": false,
+      "gpu_tenant": "chat",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["wiki_scout_search", "wiki_scout_compare_years", "promote_wiki_cache"]
+    },
+    {
+      "id": "web",
+      "label": "Web Scout",
+      "toolbelt": "web_scout",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["web_scout"]
+    },
+    {
+      "id": "browser",
+      "label": "Browser Local",
+      "toolbelt": "browser_local",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["browser_local_fetch"]
+    },
+    {
+      "id": "extract",
+      "label": "Structured Extract",
+      "toolbelt": "structured_extract",
+      "default_on": false,
+      "gpu_tenant": "extract",
+      "ports": { "in": ["text", "scratch"], "out": ["scratch"] },
+      "tools": ["structured_extract"]
+    },
+    {
+      "id": "rerank",
+      "label": "Retrieval Rerank",
+      "toolbelt": "retrieval_rerank",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["scratch"], "out": ["scratch"] },
+      "tools": ["retrieval_rerank"]
+    },
+    {
+      "id": "daze",
+      "label": "Time Reclaim",
+      "toolbelt": "time_reclaim",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["text"] },
+      "tools": ["daze_list_day", "daze_upsert_block", "daze_free_windows"]
+    },
+    {
+      "id": "stem",
+      "label": "Stem Factory",
+      "toolbelt": "stem_factory",
+      "default_on": false,
+      "gpu_tenant": "chat",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["stem_list_inbox", "stem_run", "stem_status"]
+    },
+    {
+      "id": "thought",
+      "label": "Thought Experiments",
+      "toolbelt": "thought_experiments",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["thought_experiment_capture"]
+    },
+    {
+      "id": "voice",
+      "label": "Voice Presence",
+      "toolbelt": "voice_presence",
+      "default_on": false,
+      "gpu_tenant": "chat",
+      "ports": { "in": ["text"], "out": ["text"] },
+      "tools": ["voice_transcribe", "voice_speak"]
+    },
+    {
+      "id": "vision",
+      "label": "Vision Local",
+      "toolbelt": "vision_local",
+      "default_on": false,
+      "gpu_tenant": "vision",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["vision_describe", "vision_ui_observe"]
+    },
+    {
+      "id": "container",
+      "label": "Container Scout",
+      "toolbelt": "container_scout",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["container_scout_search", "container_scout_detail", "container_scout_docker_status"]
+    },
+    {
+      "id": "forge",
+      "label": "Tool Forge",
+      "toolbelt": "tool_forge",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["read_active_tool"]
+    }
+  ]
+}

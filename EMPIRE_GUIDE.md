@@ -118,7 +118,7 @@ From [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md) — vision order, not a sprint
 | **1** Intake & Triage | Shortlist tools/guides/architecture | **In progress** (Resource Queue + triage skill + Work Orders) |
 | **2** Evaluation | USEFUL NOW / COOL IDEA / JUNK | **In progress** (Eve categorizes; Mechanic forges) |
 | **3** Thought Experiments | YouTube/ideas → autonomous research; Gumloop later | **In progress** — Toolbelt **Thought Experiments** + web scout notes |
-| **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | **Scaffold** — `03_Active_Tools/LEGO_INDEX.md` (UI later) |
+| **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | **Working** — http://127.0.0.1:8080/lego.html · [`docs/LEGO_WHITEBOARD.md`](docs/LEGO_WHITEBOARD.md) |
 | **5** Time reclamation | Daze / personal tracking; free time for body & mind | **In progress** — PocketBase `day_blocks` + http://127.0.0.1:8080/daze.html + Eve **Time Reclaim** limb |
 | **6** Secure remote access | Tailscale or Cloudflare Tunnels | Planned — see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) |
 | **7** Real-time voice | Local STT/TTS (Faster-Whisper, Kokoro/Piper); UI must stay audio-capable | **Scaffold** — mic composer + [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md) |

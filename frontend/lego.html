@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>EMPIRE LEGO</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="empire-nav.css" />
+    <link rel="stylesheet" href="lego.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  </head>
+  <body>
+    <nav id="empire-nav" data-current="lego" aria-label="EMPIRE"></nav>
+    <main class="lego" x-data="legoBoard()" x-init="init()" x-cloak>
+      <header class="lego__header">
+        <div>
+          <h1>LEGO Whiteboard</h1>
+          <p>Compose forged limbs as bricks. Apply syncs optional limbs to Eve Toolbelt. No auto-Cognee.</p>
+        </div>
+        <div class="lego__actions">
+          <button type="button" class="secondary" @click="loadBoard()" :disabled="busy">Reload</button>
+          <button type="button" class="secondary" @click="saveBoard()" :disabled="busy">Save</button>
+          <button type="button" @click="applyToolbelt()" :disabled="busy">Apply to Toolbelt</button>
+        </div>
+      </header>
+      <p class="lego__status" x-text="status"></p>
+
+      <section class="lego__layout">
+        <aside class="lego__palette" aria-label="Brick palette">
+          <h2>Bricks</h2>
+          <p class="lego__hint">Click a brick to place it on the board.</p>
+          <template x-for="brick in bricks" :key="brick.id">
+            <button
+              type="button"
+              class="lego__palette-item"
+              :class="{ 'lego__palette-item--core': !brick.toolbelt }"
+              @click="addBrick(brick.id)"
+            >
+              <strong x-text="brick.label"></strong>
+              <span x-text="brick.id"></span>
+              <small x-text="brick.toolbelt ? ('limb · ' + brick.gpu_tenant) : 'core'"></small>
+            </button>
+          </template>
+        </aside>
+
+        <div
+          class="lego__canvas-wrap"
+          @wheel.prevent="onWheel($event)"
+          @mousedown="onCanvasDown($event)"
+          @mousemove="onCanvasMove($event)"
+          @mouseup="onCanvasUp($event)"
+          @mouseleave="onCanvasUp($event)"
+        >
+          <svg class="lego__canvas" :viewBox="viewBox">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a8f7c"></path>
+              </marker>
+            </defs>
+            <g :transform="'translate(' + viewport.x + ',' + viewport.y + ') scale(' + viewport.zoom + ')'">
+              <template x-for="edge in edges" :key="edge.id">
+                <path
+                  class="lego__edge"
+                  :class="{ 'lego__edge--selected': selectedEdge === edge.id }"
+                  :d="edgePath(edge)"
+                  marker-end="url(#arrow)"
+                  @click.stop="selectEdge(edge.id)"
+                ></path>
+              </template>
+              <template x-for="node in nodes" :key="node.id">
+                <g
+                  class="lego__node"
+                  :class="{
+                    'lego__node--selected': selectedNode === node.id,
+                    'lego__node--off': !node.enabled,
+                    'lego__node--core': isCore(node.brick)
+                  }"
+                  :transform="'translate(' + node.x + ',' + node.y + ')'"
+                  @mousedown.stop="startDragNode(node.id, $event)"
+                  @click.stop="selectNode(node.id)"
+                >
+                  <rect width="160" height="72" rx="10"></rect>
+                  <text class="lego__node-title" x="12" y="28" x-text="brickLabel(node.brick)"></text>
+                  <text class="lego__node-id" x="12" y="48" x-text="node.brick"></text>
+                  <circle
+                    class="lego__port lego__port--in"
+                    cx="0"
+                    cy="36"
+                    r="6"
+                    @mousedown.stop="startConnect(node.id, 'in', $event)"
+                  ></circle>
+                  <circle
+                    class="lego__port lego__port--out"
+                    cx="160"
+                    cy="36"
+                    r="6"
+                    @mousedown.stop="startConnect(node.id, 'out', $event)"
+                  ></circle>
+                </g>
+              </template>
+              <path
+                class="lego__edge lego__edge--draft"
+                x-show="draftPath"
+                :d="draftPath"
+              ></path>
+            </g>
+          </svg>
+        </div>
+
+        <aside class="lego__inspector" aria-label="Selection">
+          <h2>Inspector</h2>
+          <template x-if="selectedNode">
+            <div>
+              <p><strong x-text="brickLabel(selectedNodeMeta.brick)"></strong></p>
+              <p class="lego__muted" x-text="selectedNodeMeta.brick"></p>
+              <label class="lego__check">
+                <input type="checkbox" x-model="selectedNodeMeta.enabled" @change="touchNode()" />
+                Enabled (counts for Apply)
+              </label>
+              <button type="button" class="secondary" @click="deleteSelected()">Delete brick</button>
+            </div>
+          </template>
+          <template x-if="selectedEdge && !selectedNode">
+            <div>
+              <p><strong>Edge</strong></p>
+              <p class="lego__muted" x-text="selectedEdge"></p>
+              <button type="button" class="secondary" @click="deleteSelected()">Delete edge</button>
+            </div>
+          </template>
+          <template x-if="!selectedNode && !selectedEdge">
+            <p class="lego__muted">Select a brick or edge. Wheel zooms; drag empty canvas to pan. Connect out-port to in-port.</p>
+          </template>
+          <hr />
+          <p class="lego__muted">Board: <span x-text="boardPath || '(unsaved)'"></span></p>
+        </aside>
+      </section>
+    </main>
+    <script src="empire-nav.js"></script>
+    <script src="lego.js"></script>
+  </body>
+</html>

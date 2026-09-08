@@ -1,0 +1,202 @@
+[x-cloak] { display: none !important; }
+
+.lego {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2.5rem;
+}
+
+.lego__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.lego__header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.55rem;
+}
+
+.lego__header p {
+  margin: 0;
+  color: var(--pico-muted-color, #6b7c6e);
+  max-width: 40rem;
+}
+
+.lego__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lego__status {
+  min-height: 1.4rem;
+  color: var(--pico-muted-color, #6b7c6e);
+  font-size: 0.95rem;
+}
+
+.lego__layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 220px;
+  gap: 0.75rem;
+  min-height: 70vh;
+}
+
+@media (max-width: 960px) {
+  .lego__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lego__palette,
+.lego__inspector {
+  background: color-mix(in srgb, var(--pico-card-background-color, #fff) 92%, #1a2a1c);
+  border: 1px solid color-mix(in srgb, var(--pico-muted-border-color, #ccc) 70%, transparent);
+  border-radius: 12px;
+  padding: 0.75rem;
+  overflow: auto;
+  max-height: 75vh;
+}
+
+.lego__palette h2,
+.lego__inspector h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.lego__hint,
+.lego__muted {
+  color: var(--pico-muted-color, #6b7c6e);
+  font-size: 0.85rem;
+}
+
+.lego__palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0 0 0.45rem;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--pico-muted-border-color, #ccc) 80%, transparent);
+  background: transparent;
+  cursor: pointer;
+}
+
+.lego__palette-item strong {
+  font-size: 0.92rem;
+}
+
+.lego__palette-item span {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.lego__palette-item small {
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.lego__palette-item--core {
+  border-color: color-mix(in srgb, #3d9a5f 45%, transparent);
+}
+
+.lego__canvas-wrap {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--pico-muted-border-color, #ccc) 70%, transparent);
+  background:
+    radial-gradient(circle at 20% 0%, #243028 0%, transparent 45%),
+    linear-gradient(180deg, #141a16 0%, #1a221c 100%);
+  overflow: hidden;
+  min-height: 70vh;
+  cursor: grab;
+}
+
+.lego__canvas-wrap:active {
+  cursor: grabbing;
+}
+
+.lego__canvas {
+  width: 100%;
+  height: 70vh;
+  display: block;
+  touch-action: none;
+}
+
+.lego__node rect {
+  fill: #243028;
+  stroke: #4d6a52;
+  stroke-width: 1.5;
+}
+
+.lego__node--core rect {
+  stroke: #3d9a5f;
+}
+
+.lego__node--off rect {
+  opacity: 0.45;
+}
+
+.lego__node--selected rect {
+  stroke: #c8e6c9;
+  stroke-width: 2.5;
+}
+
+.lego__node-title {
+  fill: #e8efe6;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.lego__node-id {
+  fill: #9aab9a;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+}
+
+.lego__port {
+  fill: #7a9a7e;
+  stroke: #0f1411;
+  stroke-width: 1;
+  cursor: crosshair;
+}
+
+.lego__port--in {
+  fill: #6a8ab0;
+}
+
+.lego__edge {
+  fill: none;
+  stroke: #7a8f7c;
+  stroke-width: 2;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.lego__edge--selected {
+  stroke: #c8e6c9;
+  stroke-width: 3;
+}
+
+.lego__edge--draft {
+  stroke: #a0b8a4;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+.lego__check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+.lego__inspector button {
+  width: 100%;
+}

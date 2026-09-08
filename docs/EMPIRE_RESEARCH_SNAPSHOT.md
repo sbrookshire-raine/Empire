@@ -217,7 +217,7 @@ Persisted in `%LOCALAPPDATA%\EMPIRE\eve-toolbelt.json`. Enabling a category regi
 - **Voice / Vision** — scaffolded limbs; GPU lease coordination  
 - **Thought experiments** — note capture under Thought Experiments  
 - **Provenance** footers on scout md (`pipeline/provenance.py`)  
-- **LEGO index** — markdown index under Active Tools (full whiteboard UI later)
+- **LEGO whiteboard** — http://127.0.0.1:8080/lego.html; catalog `config/lego-bricks.json`; docs `docs/LEGO_WHITEBOARD.md`
 
 ### 7.8 MCP servers registered (Cursor)
 
@@ -390,7 +390,7 @@ If the capability is a **containerized third-party service**:
 | 1 Intake & Triage | Collect/shortlist | **Working** — Resource Queue, triage skill, Work Orders |
 | 2 Evaluation | USEFUL NOW / COOL IDEA / JUNK | **Working** — Eve categorizes; Cursor forges |
 | 3 Thought Experiments | Ideas/YouTube research | **Partial** — capture + web scout; Gumloop parked behind local-first |
-| 4 LEGO Whiteboard | Composable tool blocks | **Scaffold** — LEGO_INDEX.md; UI later |
+| 4 LEGO Whiteboard | Composable tool blocks | **Working** — `lego.html` + `config/lego-bricks.json`; Apply → Toolbelt |
 | 5 Time reclaim | DAZE / body time | **Working UI + tools** — needs Architect smoke |
 | 6 Remote access | Tailscale / CF Tunnel | **Docs ready**; localhost until Architect enables |
 | 7 Voice presence | Local STT/TTS | **Scaffold** — limb + docs; speech server opt-in |
