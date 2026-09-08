@@ -252,7 +252,7 @@
                 <input
                   type="checkbox"
                   :checked="activeTools[category.id]"
-                  @change="activeTools[category.id] = $event.target.checked"
+                  @change="setToolbeltCategory(category.id, $event.target.checked)"
                 />
                 <span class="toolbelt__item-text">
                   <strong x-text="category.label"></strong>
@@ -348,12 +348,15 @@
                 class="button button--quiet composer__mic"
                 type="button"
                 :disabled="sending || voiceBusy"
-                @click="toggleVoiceRecord()"
+                @pointerdown.prevent="startVoicePushToTalk($event)"
+                @pointerup="endVoicePushToTalk($event)"
+                @pointercancel="endVoicePushToTalk($event)"
+                @lostpointercapture="endVoicePushToTalk($event)"
                 :aria-pressed="voiceRecording ? 'true' : 'false'"
-                aria-label="Record voice note"
-                title="Record voice (needs Voice Presence speech API)"
+                aria-label="Hold to talk"
+                title="Hold to talk — release to send (Voice Presence)"
               >
-                <span x-text="voiceRecording ? '■' : 'mic'"></span>
+                <span x-text="voiceRecording ? '■■' : 'mic'"></span>
               </button>
               <button
                 class="button button--primary composer__send"
@@ -367,9 +370,10 @@
               <button
                 class="button button--quiet composer__stop"
                 type="button"
-                :disabled="!sending"
-                @click="stopChat()"
-                aria-label="Stop response"
+                :disabled="!canStopOutput"
+                @click="stopOutput()"
+                aria-label="Stop Eve talking or generating"
+                title="Stop speaking / Stop generating (Esc)"
               >
                 Stop
               </button>

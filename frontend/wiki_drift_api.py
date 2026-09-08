@@ -2,6 +2,7 @@
 
 Fast models often skip tools and invent year essays. This runs compare_years
 locally and puts compact cards in the message so Eve must answer from archives.
+Only runs when Wiki Local is already enabled — never auto-enables limbs.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ import re
 from typing import Any
 
 from frontend.companion_api import extract_user_message
-from frontend.eve_toolbelt import load_active_tools, write_active_tools
+from frontend.eve_toolbelt import load_active_tools
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,9 @@ TRUTH_DRIFT_RE = re.compile(
     r"truth\s*drift|compare\s+years?|across\s+years?|"
     r"between\s+20\d{2}\s+and\s+20\d{2}|"
     r"changed\s+between\s+20\d{2}|from\s+20\d{2}\s+to\s+20\d{2}|"
-    r"2017|2021|2026"
+    r"wikipedia|encyclopedia|wiki\s+local|"
+    r"(?:year|archive).{0,40}(?:2017|2021|2026)|"
+    r"(?:2017|2021|2026).{0,40}(?:year|archive|wikipedia|wiki)"
     r")\b",
     re.IGNORECASE,
 )
@@ -114,31 +117,32 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
     if WIKI_DRIFT_MARKER in message:
         return payload
 
+    # Never force Wiki Local on — Architect Toolbelt is the source of truth.
+    try:
+        active = set(load_active_tools())
+    except Exception:  # noqa: BLE001
+        active = set()
+    if "wiki_local" not in active:
+        return payload
+
     raw = extract_user_message(message)
     if not is_truth_drift_query(raw):
         return payload
-
-    # Ensure Wiki Local limb stays on for any follow-up tool use.
-    try:
-        from frontend.eve_toolbelt import load_active_tools
-
-        merged = sorted(set(load_active_tools()) | {"wiki_local"})
-        write_active_tools(merged)
-    except Exception:  # noqa: BLE001
-        try:
-            write_active_tools(["wiki_local"])
-        except Exception:  # noqa: BLE001
-            pass
 
     topic = pick_compare_topic(raw)
     result = run_compare(topic)
     cards = result.get("cards_by_year") if isinstance(result.get("cards_by_year"), dict) else {}
     if not result.get("ok") or not cards:
+        err = str(result.get("error") or "empty")
         block = (
             f"{WIKI_DRIFT_MARKER}\n"
             f"{COMPARE_TIMEOUT_NOTE} for topic '{topic}'. "
-            f"Tell the Architect the local wiki index did not return usable cards "
-            f"({result.get('error') or 'empty'}). Do not invent year findings."
+            f"Local Wikipedia/Weaviate did not return usable cards ({err}). "
+            "Tell the Architect that local wiki is offline or empty. "
+            "Do NOT invent year findings. "
+            "Do NOT offer or attempt web search / internet lookup unless Web Scout "
+            "is already enabled in the Toolbelt. "
+            "Offer cognee_recall / workbench memory only if that fits, or wait for Weaviate."
         )
     else:
         block = _format_cards_block(cards, topic=topic)

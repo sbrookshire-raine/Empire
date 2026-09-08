@@ -661,7 +661,8 @@ def search(
             "error": (
                 f"Weaviate not reachable at {base_url} ({detail}). "
                 "Boot the temporary Docker container on port 8091 "
-                "(see docs/WEAVIATE_HEIST.md / docs/WIKI_SCOUT.md)."
+                "(see docs/WEAVIATE_HEIST.md / docs/WIKI_SCOUT.md). "
+                "Do not fall back to web search unless Web Scout is enabled."
             ),
             "paths": [],
             "titles": [],
@@ -806,7 +807,8 @@ def compare_years(
             "error": (
                 f"Weaviate not reachable at {base_url} ({detail}). "
                 "Boot the temporary Docker container on port 8091 "
-                "(see docs/WEAVIATE_HEIST.md / docs/WIKI_SCOUT.md)."
+                "(see docs/WEAVIATE_HEIST.md / docs/WIKI_SCOUT.md). "
+                "Do not fall back to web search unless Web Scout is enabled."
             ),
             "path": "",
             "years_found": [],

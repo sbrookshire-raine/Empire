@@ -21,7 +21,9 @@ from pipeline import voice_vad
 DEFAULT_BASE = os.environ.get("EMPIRE_VOICE_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 DEFAULT_STT_MODEL = os.environ.get("EMPIRE_VOICE_STT_MODEL", "Systran/faster-whisper-base")
 DEFAULT_TTS_VOICE = os.environ.get("EMPIRE_VOICE_TTS_VOICE", "af_heart")
-DEFAULT_TTS_MODEL = os.environ.get("EMPIRE_VOICE_TTS_MODEL", "kokoro")
+DEFAULT_TTS_MODEL = os.environ.get(
+    "EMPIRE_VOICE_TTS_MODEL", "speaches-ai/Kokoro-82M-v1.0-ONNX"
+)
 
 
 def _normalize_base(raw: str | None) -> str:

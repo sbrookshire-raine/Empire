@@ -9,9 +9,14 @@ export default defineDynamic({
       isCategoryEnabled("web_scout")
         ? defineTool({
             description:
-              "Fetch a public http(s) URL and cache markdown under 04_Thought_Experiments/web_cache. Does NOT write Cognee. Requires Web Scout Toolbelt.",
+              "Fetch one public http(s) page URL and cache markdown under 04_Thought_Experiments/web_cache. Not a search engine — needs a full URL. Does NOT write Cognee. Requires Web Scout Toolbelt.",
             inputSchema: z.object({
-              url: z.string().url().describe("http(s) URL to scout."),
+              url: z
+                .string()
+                .min(1)
+                .describe(
+                  "Full page URL to fetch (https://…). Bare domains ok; not a search query.",
+                ),
               note: z.string().optional().describe("Optional Architect note."),
             }),
             async execute({ url, note }) {

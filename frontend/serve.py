@@ -315,6 +315,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
             or path == "/api/gpu-lease"
+            or path == "/api/toolbelt"
             or path.startswith("/api/voice/")
             or path.startswith("/api/lego/")
         )
@@ -341,6 +342,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/eve/")
             or path.startswith("/api/ollama/")
             or path == "/api/gpu-lease"
+            or path == "/api/toolbelt"
             or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
             or path.startswith("/api/lego/")
@@ -372,6 +374,28 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._gpu_lease_get()
         if path.startswith("/api/lego/"):
             return self._lego_get(path)
+        if path == "/api/toolbelt":
+            active = eve_toolbelt.load_active_tools()
+            return self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "active_tools": active,
+                    "voice_presence": "voice_presence" in active,
+                },
+            )
+        if path == "/api/voice/health":
+            try:
+                from pipeline import voice_presence
+
+                health = voice_presence.health()
+            except Exception as exc:  # noqa: BLE001
+                health = {"ok": False, "error": str(exc)}
+            active = eve_toolbelt.load_active_tools()
+            health = dict(health) if isinstance(health, dict) else {"ok": False}
+            health["voice_presence_limb"] = "voice_presence" in active
+            health["active_tools"] = active
+            return self._send_json(200 if health.get("ok") else 503, health)
         if path == "/api/chat-history" or path.startswith("/api/chat-history/"):
             return self._chat_history_get(path)
         if path == "/api/memory/status":
@@ -469,6 +493,27 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._voice_transcribe()
+        if path == "/api/voice/speak":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._voice_speak()
+        if path == "/api/toolbelt":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            payload = self._read_json()
+            if not isinstance(payload, dict):
+                return self._send_json(400, {"ok": False, "error": "JSON object required"})
+            active = eve_toolbelt.normalize_active_tools(payload.get("active_tools"))
+            path_written = eve_toolbelt.write_active_tools(active)
+            return self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "active_tools": active,
+                    "voice_presence": "voice_presence" in active,
+                    "path": str(path_written),
+                },
+            )
         if path.startswith("/api/memory/jobs/") and path.endswith("/retry"):
             return self._memory_retry(path)
         payload = self._read_json()
@@ -1064,6 +1109,54 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 pass
         status = 200 if result.get("ok") else 502
         return self._send_json(status, result)
+
+    def _voice_speak(self) -> None:
+        """Synthesize short TTS audio (mp3) when Voice Presence limb is on."""
+        if not eve_toolbelt.category_enabled("voice_presence"):
+            return self._send_json(
+                403,
+                {
+                    "ok": False,
+                    "error": "Enable Toolbelt → Voice Presence to hear Eve speak.",
+                },
+            )
+        payload = self._read_json()
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        text = str(payload.get("text") or "").strip()
+        if not text:
+            return self._send_json(400, {"ok": False, "error": "text required"})
+        # Cap length so replies stay snappy
+        if len(text) > 2500:
+            text = text[:2500].rstrip() + "…"
+        try:
+            from pipeline import voice_presence
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+
+        tmp_dir = Path(os.environ.get("TEMP") or FRONTEND) / "empire-voice"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp_path = tmp_dir / f"speak-{int(time.time() * 1000)}.mp3"
+        try:
+            result = voice_presence.speak(text, out_path=tmp_path)
+            if not result.get("ok"):
+                return self._send_json(502, result)
+            audio = tmp_path.read_bytes()
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if not audio:
+            return self._send_json(502, {"ok": False, "error": "empty TTS audio"})
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Content-Length", str(len(audio)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(audio)
 
     def _ollama_set_model(self) -> None:
         payload = self._read_json()

@@ -246,6 +246,18 @@
       voiceBusy: false,
       voiceMediaRecorder: null,
       voiceChunks: [],
+      voiceAudio: null,
+      voiceSpeaking: false,
+      voiceSpeakToken: 0,
+      voiceSpeakQueue: [],
+      voiceSpeakPumping: false,
+      voiceSpokenOffset: 0,
+      voicePttActive: false,
+      voicePttStartedAt: 0,
+      voicePttStream: null,
+      voiceAutoSendOnStop: false,
+      voiceCancelOnly: false,
+      voiceSuppressed: false,
       toolbeltOpen: true,
       toolbeltCategories: [
         {
@@ -435,6 +447,15 @@
         return labels[this.activeMode] || labels[this.selectedMode] || "Mode";
       },
 
+      get canStopOutput() {
+        return Boolean(
+          this.sending ||
+            this.voiceSpeaking ||
+            (this.voiceSpeakQueue && this.voiceSpeakQueue.length) ||
+            this.voiceAudio
+        );
+      },
+
       get toolbeltToggleLabel() {
         var count = this.activeToolIds().length;
         if (!count) return "No tools selected";
@@ -523,11 +544,53 @@
         } catch (_error) {
           /* ignore storage errors */
         }
+        var workbench = this;
+        this._onDocKeydown = function (event) {
+          if (event.key !== "Escape") return;
+          if (!workbench.canStopOutput) return;
+          event.preventDefault();
+          workbench.stopOutput();
+        };
+        document.addEventListener("keydown", this._onDocKeydown);
+        this.refreshToolbelt();
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshTasks();
         // History stays available via ☰ — do not auto-load past chats into the transcript.
         this.historyOpen = false;
+      },
+
+      refreshToolbelt: async function () {
+        try {
+          var response = await fetch("/api/toolbelt", { cache: "no-store" });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || body.ok === false) return;
+          var active = Array.isArray(body.active_tools) ? body.active_tools : [];
+          var next = Object.assign({}, this.activeTools);
+          var categories = this.toolbeltCategories || [];
+          for (var i = 0; i < categories.length; i += 1) {
+            next[categories[i].id] = active.indexOf(categories[i].id) >= 0;
+          }
+          this.activeTools = next;
+        } catch (_error) {
+          /* keep defaults */
+        }
+      },
+
+      setToolbeltCategory: async function (categoryId, enabled) {
+        if (!categoryId || !this.activeTools) return;
+        this.activeTools[categoryId] = Boolean(enabled);
+        try {
+          await fetch("/api/toolbelt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ active_tools: this.activeToolIds() }),
+          });
+        } catch (_error) {
+          /* ignore persist errors — chat send still writes toolbelt */
+        }
       },
 
       setTab: function (tab) {
@@ -1117,6 +1180,9 @@
           });
           this.chatStatus = "Ready.";
           this.persistCurrentChat(true);
+          this.maybeSpeakAssistantReply(
+            plainText(payload.answer) || "I could not form an answer from memory yet."
+          );
         } catch (error) {
           if (this.isCurrentChatOperation(generation) && error.name !== "AbortError") {
             this.chatError = plainText(error.message) || "Memory answer failed.";
@@ -1131,6 +1197,13 @@
       },
 
       onComposerKeydown: function (event) {
+        if (event.key === "Escape") {
+          if (this.canStopOutput) {
+            event.preventDefault();
+            this.stopOutput();
+          }
+          return;
+        }
         if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
           return;
         }
@@ -1142,6 +1215,8 @@
       sendMessage: async function () {
         var text = plainText(this.draft).trim();
         if (!text || this.sending) return;
+        this.voiceSuppressed = false;
+        this.stopVoicePlayback();
         var generation = this.beginChatOperation();
         this.chatError = "";
         this.messages.push({ id: this.makeId("message"), role: "user", text: text, createdAt: new Date().toISOString() });
@@ -1280,10 +1355,12 @@
         if (type === "message.appended") {
           this.updateAssistantMessage(data);
           this.chatStatus = "Eve is responding…";
+          this.streamSpeakFromAssistant(false);
           return;
         }
         if (type === "message.completed") {
           this.updateAssistantMessage(data);
+          this.streamSpeakFromAssistant(true);
           this.currentAssistantId = null;
           this.schedulePersistChat();
           return;
@@ -1352,6 +1429,197 @@
         }
         message.text = cumulative || message.text + delta;
         this.scrollTranscript();
+      },
+
+      textForSpeech: function (raw) {
+        var text = this.cleanSpeechText(raw);
+        if (text.length > 2200) text = text.slice(0, 2200).trim() + "…";
+        return text;
+      },
+
+      cleanSpeechText: function (raw) {
+        var text = plainText(raw);
+        if (!text) return "";
+        // Light cleanup so Kokoro does not read markdown punctuation aloud.
+        text = text.replace(/```[\s\S]*?```/g, " ");
+        text = text.replace(/`([^`]+)`/g, "$1");
+        text = text.replace(/!\[[^\]]*\]\([^)]+\)/g, " ");
+        text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+        text = text.replace(/^#{1,6}\s+/gm, "");
+        text = text.replace(/[*_~>#-]+/g, " ");
+        text = text.replace(/\s+/g, " ").trim();
+        return text;
+      },
+
+      extractSpeechChunks: function (cleaned, fromOffset, finalize) {
+        var rest = cleaned.slice(fromOffset || 0);
+        var chunks = [];
+        var pos = 0;
+        while (pos < rest.length) {
+          var slice = rest.slice(pos);
+          var match = slice.match(/^([\s\S]*?[.!?])(\s+|$)/);
+          if (!match) break;
+          var sentence = plainText(match[1]).trim();
+          if (sentence) chunks.push(sentence);
+          pos += match[0].length;
+        }
+        // If Eve is still talking and we have a long clause with no period yet, speak early.
+        if (!finalize && pos === 0 && rest.length >= 220) {
+          var cut = rest.lastIndexOf(",", 200);
+          if (cut < 80) cut = rest.lastIndexOf(" ", 200);
+          if (cut < 80) cut = 200;
+          var early = plainText(rest.slice(0, cut)).trim();
+          if (early) {
+            chunks.push(early);
+            pos = cut;
+            while (pos < rest.length && rest.charAt(pos) === " ") pos += 1;
+          }
+        }
+        if (finalize) {
+          var tail = plainText(rest.slice(pos)).trim();
+          if (tail) chunks.push(tail);
+          pos = rest.length;
+        }
+        return { chunks: chunks, newOffset: (fromOffset || 0) + pos };
+      },
+
+      streamSpeakFromAssistant: function (finalize) {
+        if (this.voiceSuppressed) return;
+        if (!this.activeTools || !this.activeTools.voice_presence) return;
+        var cleaned = this.cleanSpeechText(this.currentAssistantText());
+        if (!cleaned) return;
+        var extracted = this.extractSpeechChunks(
+          cleaned,
+          this.voiceSpokenOffset || 0,
+          Boolean(finalize)
+        );
+        this.voiceSpokenOffset = extracted.newOffset;
+        var workbench = this;
+        (extracted.chunks || []).forEach(function (chunk) {
+          if (chunk) workbench.voiceSpeakQueue.push(chunk);
+        });
+        this.pumpSpeakQueue();
+      },
+
+      stopVoicePlayback: function () {
+        this.voiceSpeakToken += 1;
+        this.voiceSpeakQueue = [];
+        this.voiceSpeakPumping = false;
+        this.voiceSpokenOffset = 0;
+        if (this.voiceAudio) {
+          try {
+            this.voiceAudio.pause();
+            this.voiceAudio.src = "";
+          } catch (_error) {
+            /* ignore */
+          }
+          this.voiceAudio = null;
+        }
+        this.voiceSpeaking = false;
+      },
+
+      stopSpeaking: function () {
+        this.voiceSuppressed = true;
+        this.stopVoicePlayback();
+        this.chatError = "";
+        this.chatStatus = "Voice stopped.";
+      },
+
+      stopOutput: async function () {
+        var wasSending = Boolean(this.sending);
+        this.stopSpeaking();
+        if (wasSending) {
+          await this.stopChat({ skipVoice: true });
+        }
+      },
+
+      pumpSpeakQueue: async function () {
+        if (this.voiceSpeakPumping) return;
+        if (!this.activeTools || !this.activeTools.voice_presence) return;
+        this.voiceSpeakPumping = true;
+        var token = this.voiceSpeakToken;
+        try {
+          while (token === this.voiceSpeakToken && this.voiceSpeakQueue.length) {
+            var chunk = this.voiceSpeakQueue.shift();
+            if (!chunk) continue;
+            this.voiceSpeaking = true;
+            var response = await fetch("/api/voice/speak", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: chunk }),
+            });
+            if (token !== this.voiceSpeakToken) return;
+            if (!response.ok) {
+              var errBody = await response.json().catch(function () {
+                return {};
+              });
+              this.chatError =
+                plainText(errBody.error) ||
+                "Could not speak reply — speech API unavailable.";
+              this.voiceSpeakQueue = [];
+              this.voiceSpeaking = false;
+              return;
+            }
+            var blob = await response.blob();
+            if (token !== this.voiceSpeakToken) return;
+            await this.playVoiceBlob(blob, token);
+          }
+        } catch (_error) {
+          if (token === this.voiceSpeakToken) {
+            this.chatError = "Could not speak reply.";
+            this.voiceSpeaking = false;
+          }
+        } finally {
+          this.voiceSpeakPumping = false;
+          if (token === this.voiceSpeakToken) {
+            if (!this.voiceSpeakQueue.length && !this.voiceAudio) {
+              this.voiceSpeaking = false;
+            } else if (this.voiceSpeakQueue.length) {
+              this.pumpSpeakQueue();
+            }
+          }
+        }
+      },
+
+      playVoiceBlob: function (blob, token) {
+        var workbench = this;
+        return new Promise(function (resolve) {
+          if (token !== workbench.voiceSpeakToken) {
+            resolve();
+            return;
+          }
+          var url = URL.createObjectURL(blob);
+          var audio = new Audio(url);
+          workbench.voiceAudio = audio;
+          var done = function () {
+            URL.revokeObjectURL(url);
+            if (workbench.voiceAudio === audio) {
+              workbench.voiceAudio = null;
+            }
+            resolve();
+          };
+          audio.onended = done;
+          audio.onerror = function () {
+            workbench.chatError = "Could not play Eve’s voice audio.";
+            done();
+          };
+          var playPromise = audio.play();
+          if (playPromise && typeof playPromise.then === "function") {
+            playPromise.catch(function () {
+              workbench.chatError = "Could not play Eve’s voice audio.";
+              done();
+            });
+          }
+        });
+      },
+
+      maybeSpeakAssistantReply: async function (rawText) {
+        if (!this.activeTools || !this.activeTools.voice_presence) return;
+        var text = this.textForSpeech(rawText);
+        if (!text) return;
+        this.stopVoicePlayback();
+        this.voiceSpeakQueue.push(text);
+        this.pumpSpeakQueue();
       },
 
       addActions: function (actions) {
@@ -1485,8 +1753,18 @@
         }
       },
 
-      stopChat: async function () {
-        if (!this.sending) return;
+      stopChat: async function (options) {
+        options = options || {};
+        if (!options.skipVoice) {
+          this.voiceSuppressed = true;
+          this.stopVoicePlayback();
+        }
+        if (!this.sending) {
+          if (!options.skipVoice) {
+            this.chatStatus = "Voice stopped.";
+          }
+          return;
+        }
         var sessionId = this.sessionId;
         await this.invalidateChatOperation();
         this.sending = false;
@@ -1620,29 +1898,69 @@
         }, 400);
       },
 
-      toggleVoiceRecord: async function () {
-        if (this.voiceBusy) return;
-        if (this.voiceRecording) {
+      startVoicePushToTalk: async function (event) {
+        if (event && event.button != null && event.button !== 0) return;
+        if (this.sending || this.voiceBusy || this.voiceRecording) return;
+        // Barge-in: holding the mic cuts Eve off immediately.
+        this.stopSpeaking();
+        this.voiceSuppressed = false;
+        if (event && event.currentTarget && event.pointerId != null) {
           try {
-            if (this.voiceMediaRecorder && this.voiceMediaRecorder.state !== "inactive") {
-              this.voiceMediaRecorder.stop();
-            }
+            event.currentTarget.setPointerCapture(event.pointerId);
           } catch (_error) {
-            this.voiceRecording = false;
+            /* ignore */
           }
+        }
+        this.voicePttActive = true;
+        this.voicePttStartedAt = Date.now();
+        await this.beginVoiceRecord();
+      },
+
+      endVoicePushToTalk: async function (_event) {
+        if (!this.voicePttActive && !this.voiceRecording) return;
+        this.voicePttActive = false;
+        var heldMs = Date.now() - (this.voicePttStartedAt || 0);
+        if (heldMs < 350) {
+          await this.cancelVoiceRecord("Hold the mic to talk, then release to send.");
           return;
         }
+        await this.endVoiceRecord({ autoSend: true });
+      },
+
+      beginVoiceRecord: async function () {
+        if (this.voiceBusy || this.voiceRecording) return;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           this.chatError = "Microphone not available in this browser.";
+          this.voicePttActive = false;
+          return;
+        }
+        if (!this.activeTools.voice_presence) {
+          this.chatError =
+            "Turn on Toolbelt → Voice Presence, then hold the mic to talk.";
+          this.voicePttActive = false;
           return;
         }
         try {
-          var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          var stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              channelCount: 1,
+            },
+          });
+          // Released before mic permission returned — abort cleanly.
+          if (!this.voicePttActive) {
+            stream.getTracks().forEach(function (track) {
+              track.stop();
+            });
+            return;
+          }
           var workbench = this;
           var chunks = [];
           var recorder = new MediaRecorder(stream);
           this.voiceChunks = chunks;
           this.voiceMediaRecorder = recorder;
+          this.voicePttStream = stream;
           recorder.ondataavailable = function (event) {
             if (event.data && event.data.size) chunks.push(event.data);
           };
@@ -1651,9 +1969,24 @@
             stream.getTracks().forEach(function (track) {
               track.stop();
             });
+            workbench.voicePttStream = null;
+            if (workbench.voiceCancelOnly) {
+              workbench.voiceCancelOnly = false;
+              workbench.voiceBusy = false;
+              workbench.voiceMediaRecorder = null;
+              workbench.voiceChunks = [];
+              return;
+            }
+            var shouldAutoSend = Boolean(workbench.voiceAutoSendOnStop);
+            workbench.voiceAutoSendOnStop = false;
             workbench.voiceBusy = true;
+            workbench.chatError = "Transcribing…";
             try {
               var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+              if (!blob.size) {
+                workbench.chatError = "No audio captured — hold the mic and speak.";
+                return;
+              }
               var form = new FormData();
               form.append("file", blob, "composer.webm");
               var response = await fetch("/api/voice/transcribe", {
@@ -1667,8 +2000,19 @@
                 workbench.chatError =
                   plainText(body.error) ||
                   "Speech API unavailable — see docs/VOICE_PRESENCE.md";
+              } else if (body.skipped) {
+                workbench.chatError =
+                  "No speech detected. Hold the mic closer and try again.";
               } else if (body.text) {
-                workbench.draft = (workbench.draft ? workbench.draft + " " : "") + body.text;
+                workbench.draft = plainText(body.text).trim();
+                workbench.chatError = "";
+                if (shouldAutoSend && workbench.draft) {
+                  workbench.chatStatus = "Sending voice message…";
+                  await workbench.sendMessage();
+                }
+              } else {
+                workbench.chatError =
+                  "Heard only silence. Hold the mic, speak clearly, then release.";
               }
             } catch (_err) {
               workbench.chatError = "Could not transcribe audio.";
@@ -1678,12 +2022,59 @@
               workbench.voiceChunks = [];
             }
           };
-          recorder.start();
+          recorder.start(250);
           this.voiceRecording = true;
-          this.chatError = "";
+          this.chatError = "Listening… release to send.";
         } catch (_error) {
+          this.voicePttActive = false;
           this.chatError = "Microphone permission denied or unavailable.";
         }
+      },
+
+      endVoiceRecord: async function (options) {
+        options = options || {};
+        this.voiceAutoSendOnStop = Boolean(options.autoSend);
+        this.voiceCancelOnly = false;
+        if (!this.voiceRecording) return;
+        try {
+          if (this.voiceMediaRecorder && this.voiceMediaRecorder.state !== "inactive") {
+            this.voiceMediaRecorder.stop();
+          }
+        } catch (_error) {
+          this.voiceRecording = false;
+        }
+      },
+
+      cancelVoiceRecord: async function (message) {
+        this.voicePttActive = false;
+        this.voiceAutoSendOnStop = false;
+        this.voiceCancelOnly = true;
+        if (this.voiceRecording) {
+          try {
+            if (this.voiceMediaRecorder && this.voiceMediaRecorder.state !== "inactive") {
+              this.voiceMediaRecorder.stop();
+            }
+          } catch (_error) {
+            this.voiceRecording = false;
+          }
+        } else if (this.voicePttStream) {
+          this.voicePttStream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          this.voicePttStream = null;
+        }
+        this.chatError = message || "";
+      },
+
+      toggleVoiceRecord: async function () {
+        // Keyboard / legacy fallback: click toggles; stop still auto-sends.
+        if (this.voiceRecording) {
+          await this.endVoiceRecord({ autoSend: true });
+          return;
+        }
+        this.voicePttActive = true;
+        this.voicePttStartedAt = Date.now();
+        await this.beginVoiceRecord();
       },
 
       persistCurrentChat: async function (_immediate) {
