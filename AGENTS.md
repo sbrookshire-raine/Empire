@@ -3,6 +3,7 @@
 Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; runtime code hardwires local tools for the Operational Phase.
 
 **Gemini / fresh-chat context brief:** [EMPIRE_GUIDE.md](EMPIRE_GUIDE.md)  
+**Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
 **Idea / test queue:** [docs/EMPIRE_IDEA_QUEUE.md](docs/EMPIRE_IDEA_QUEUE.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  

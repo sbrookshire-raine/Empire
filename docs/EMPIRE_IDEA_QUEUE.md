@@ -162,6 +162,7 @@ When waking EMPIRE to work this queue:
 | [docs/WEB_SCOUT.md](WEB_SCOUT.md) | Web scout cache |
 | [docs/VOICE_PRESENCE.md](VOICE_PRESENCE.md) | STT/TTS limb |
 | [docs/REMOTE_ACCESS.md](REMOTE_ACCESS.md) | Phase 6 tunnel notes |
+| [docs/EMPIRE_USAGE_GUIDE.md](EMPIRE_USAGE_GUIDE.md) | Architect how-to: pages, Toolbelt, recipes |
 | [docs/LEGO_WHITEBOARD.md](LEGO_WHITEBOARD.md) | Manifesto Phase 4 LEGO canvas |
 | [docs/KUBERNETES_AND_CONTAINERS.md](KUBERNETES_AND_CONTAINERS.md) | K8s vs Compose; Container Scout |
 | [docs/CONTAINER_SCOUT.md](CONTAINER_SCOUT.md) | Container Scout limb ops |

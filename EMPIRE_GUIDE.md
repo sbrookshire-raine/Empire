@@ -2,6 +2,8 @@
 
 **Purpose of this file:** Drop this into Gemini, ChatGPT, Claude, or a fresh Cursor chat when prior context is gone. It is the single starting brief for *what EMPIRE is*, *where it stands (Sep 2026)*, and *where it is going*.
 
+**How to use the system (Architect):** [`docs/EMPIRE_USAGE_GUIDE.md`](docs/EMPIRE_USAGE_GUIDE.md) — pages, Toolbelt limbs, Memory vs scratch, recipes. Prefer this when you feel lost in the parts.
+
 **Research / upgrade matching (complete as-built snapshot):** [`docs/EMPIRE_RESEARCH_SNAPSHOT.md`](docs/EMPIRE_RESEARCH_SNAPSHOT.md) — use this when evaluating external tools, K8s/Docker ideas, or “upgrade” pitches so research maps to what is actually built.
 
 **Autonomous Mechanic track (forge while Architect is away):** [`docs/EMPIRE_AUTONOMOUS_BUILD_GUIDE.md`](docs/EMPIRE_AUTONOMOUS_BUILD_GUIDE.md) — Phase status, smoke gates, resume phrases.
@@ -12,7 +14,8 @@
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire  
 **Local root:** `C:\EMPIRE`  
 **Vision shortlist:** [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md)  
-**Deep reference:** [`docs/manifest/README.md`](docs/manifest/README.md)
+**Deep reference:** [`docs/manifest/README.md`](docs/manifest/README.md)  
+**LEGO canvas:** http://127.0.0.1:8080/lego.html · [`docs/LEGO_WHITEBOARD.md`](docs/LEGO_WHITEBOARD.md)
 
 ---
 
