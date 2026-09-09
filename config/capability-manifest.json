@@ -60,8 +60,9 @@
       "auto_enable": false,
       "session_ttl_min": 0,
       "gpu_tenant": "none",
-      "network": false,
-      "requires_services": []
+      "network": true,
+      "requires_services": [],
+      "min_disk_free_gb": 2
     },
     "time_reclaim": {
       "label": "Time Reclaim",
@@ -126,6 +127,15 @@
       "gpu_tenant": "none",
       "network": false,
       "requires_services": []
+    },
+    "loom_intake": {
+      "label": "Loom Intake",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
     }
   },
   "max_session_capabilities": 4

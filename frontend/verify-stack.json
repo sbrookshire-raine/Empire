@@ -1,58 +1,58 @@
 {
   "version": 1,
-  "updated": "2026-09-09T02:32:08Z",
-  "ok": true,
-  "passed": 11,
-  "failed": 0,
+  "updated": "2026-09-09T21:50:39Z",
+  "ok": false,
+  "passed": 4,
+  "failed": 11,
   "skipped": 3,
   "checks": [
     {
       "id": "ollama.tags",
       "label": "Ollama API reachable",
-      "ok": true,
-      "detail": "HTTP 200",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 30
+      "duration_ms": 4054
     },
     {
       "id": "ollama.model",
       "label": "Ollama chat model present",
-      "ok": true,
-      "detail": "compatible model found for llama3.1:8b",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 4026
     },
     {
       "id": "pocketbase.health",
       "label": "PocketBase health endpoint",
-      "ok": true,
-      "detail": "HTTP 200",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 12
+      "duration_ms": 2013
     },
     {
       "id": "pocketbase.tasks",
       "label": "PocketBase tasks API",
-      "ok": true,
-      "detail": "tasks collection readable (totalItems=8)",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 2045
     },
     {
       "id": "frontend.static",
       "label": "Tasks UI static server",
-      "ok": true,
-      "detail": "HTTP 200",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 2042
     },
     {
       "id": "frontend.to_pocketbase",
       "label": "Tasks UI -> PocketBase",
-      "ok": true,
-      "detail": "Tasks UI can reach PocketBase (same API path as index.html)",
+      "ok": false,
+      "detail": "Tasks UI dependency failed: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 2043
     },
     {
       "id": "frontend.control_api",
@@ -60,31 +60,31 @@
       "ok": true,
       "detail": "Control API unavailable (restart with .\\scripts\\start-frontend.ps1 for dashboard Start/Stop)",
       "skipped": true,
-      "duration_ms": 2176
+      "duration_ms": 2024
     },
     {
       "id": "eve.info",
       "label": "Eve agent API",
-      "ok": true,
-      "detail": "HTTP 200",
+      "ok": false,
+      "detail": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 20
+      "duration_ms": 2023
     },
     {
       "id": "eve.to_pocketbase",
       "label": "Eve -> PocketBase path",
-      "ok": true,
-      "detail": "Eve configured PocketBase reachable at http://127.0.0.1:8090",
+      "ok": false,
+      "detail": "Eve dependency PocketBase unreachable: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 12
+      "duration_ms": 2049
     },
     {
       "id": "eve.to_ollama",
       "label": "Eve -> Ollama path",
-      "ok": true,
-      "detail": "Eve configured Ollama reachable at http://localhost:11434/v1",
+      "ok": false,
+      "detail": "Eve dependency Ollama unreachable: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 16
+      "duration_ms": 4068
     },
     {
       "id": "eve.to_cognee_worker",
@@ -97,10 +97,10 @@
     {
       "id": "mcp.pocketbase",
       "label": "MCP empire-pocketbase -> PocketBase",
-      "ok": true,
-      "detail": "MCP PocketBase tools ok (2654 chars)",
+      "ok": false,
+      "detail": "All connection attempts failed",
       "skipped": false,
-      "duration_ms": 693
+      "duration_ms": 2537
     },
     {
       "id": "mcp.cognee",
@@ -111,19 +111,51 @@
       "duration_ms": 0
     },
     {
+      "id": "pipeline.loom_intake",
+      "label": "Loom intake pipeline + ledger",
+      "ok": true,
+      "detail": "Loom intake ok (ledger rows=289)",
+      "skipped": false,
+      "duration_ms": 2
+    },
+    {
+      "id": "pipeline.tool_forge",
+      "label": "Tool Forge scrape + skill compiler",
+      "ok": true,
+      "detail": "Tool Forge pipelines ok (47 skills indexed)",
+      "skipped": false,
+      "duration_ms": 5
+    },
+    {
+      "id": "mcp.loom_intake",
+      "label": "MCP empire-loom-intake",
+      "ok": true,
+      "detail": "MCP loom_status ok (289 rows)",
+      "skipped": false,
+      "duration_ms": 4
+    },
+    {
+      "id": "mcp.tool_forge",
+      "label": "MCP empire-tool-forge",
+      "ok": true,
+      "detail": "MCP tool_forge ok (2 harvest files)",
+      "skipped": false,
+      "duration_ms": 11
+    },
+    {
       "id": "integration.task_roundtrip",
       "label": "Task write/read/delete round-trip",
-      "ok": true,
-      "detail": "task create -> read -> delete round-trip ok",
+      "ok": false,
+      "detail": "create failed: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
       "skipped": false,
-      "duration_ms": 36
+      "duration_ms": 2030
     }
   ],
   "summary": {
-    "passed": 11,
-    "failed": 0,
+    "passed": 4,
+    "failed": 11,
     "skipped": 3,
-    "total": 14,
-    "allPassed": true
+    "total": 18,
+    "allPassed": false
   }
 }

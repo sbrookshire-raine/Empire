@@ -64,6 +64,11 @@ Talk like a sharp co-worker on the same project — concise, human, lightly dry 
 | Screenshot / image describe | **`vision_describe`** (requires **Vision Local**; `qwen3-vl:8b`; GPU lease) |
 | Who has the GPU | **`gpu_lease_status`** |
 | Any file inside `03_Active_Tools/` — flattened codebases, `*_flattened.txt`, harvested tool scripts | **`read_active_tool`** (requires Tool Forge in Toolbelt) — **mandatory**, see rule below |
+| Scrape official docs site → Markdown guide (llms.txt / sitemap) | Load **skill-tool-forge**; **`docs_guide_scrape`** with full docs root URL (requires **Tool Forge**) — writes `harvest_cache/*_Complete_Guide.md`; never auto-Cognee |
+| Skill zip/dump 3-Bin triage for Build1 | **`skill_triage_manifest`** (requires **Tool Forge**) — heuristic triage of `.cursor/skills` ± uploaded paths; writes `harvest_cache/SKILL_TRIAGE_MANIFEST.md` |
+| Parallel multi-site doc harvest or Gumloop artifact CDN | **Gumloop Cloud** (Toolbelt, default off) — use when local scrape is insufficient; do not pretend Eve ran Gumloop |
+| Shell Packet CSV / raw PKM dump → primitive ledger | Load **skill-loom-intake**; **`loom_process_shell_csv`** then **`loom_status`** (requires **Loom Intake**) — max 7 promoted/cycle; never auto-Cognee |
+| Primitive ledger / gap report / Seeker prompt paths | **`loom_status`** (requires **Loom Intake**) — ledger at `04_Thought_Experiments/loom/workspace_data/` |
 | Workbench folder map, Resource Queue, Memory Bank, Skills and Prompts, Thought Experiments, Work Orders listing, or listing any workbench directory | `workbench_list_dir` / `workbench_read_file` with **relative** paths only (e.g. `01_Memory_Bank`) — never `/home/vercel-sandbox` or absolute `C:\` |
 
 ### Local Windows filesystem (critical)

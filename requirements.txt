@@ -10,3 +10,4 @@ transformers>=4.40
 litellm>=1.90
 filelock>=3.16
 trafilatura>=2.0
+matplotlib>=3.8

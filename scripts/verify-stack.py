@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 LOCAL_APPDATA = Path(os.environ.get("LOCALAPPDATA", "")) / "EMPIRE"
 DEFAULT_OLLAMA_MODEL = "llama3.1:8b"
 
@@ -296,6 +298,53 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
         return asyncio.run(run_async_check(mcp_cognee_async))
 
     add("mcp.cognee", "MCP empire-cognee -> Cognee", mcp_cognee_check)
+
+    def loom_intake_pipeline_check() -> tuple[bool, str]:
+        from pipeline import loom_intake
+
+        status = loom_intake.loom_status()
+        if not status.get("ok"):
+            return False, str(status.get("error") or "loom root missing")
+        rows = status.get("ledger_rows", 0)
+        return True, f"Loom intake ok (ledger rows={rows})"
+
+    add("pipeline.loom_intake", "Loom intake pipeline + ledger", loom_intake_pipeline_check)
+
+    def tool_forge_pipeline_check() -> tuple[bool, str]:
+        from pipeline import skill_compiler
+
+        inv = skill_compiler.inventory_sources([], include_default_skills=True)
+        if not inv.get("ok"):
+            return False, "skill_compiler inventory failed"
+        return True, f"Tool Forge pipelines ok ({inv.get('count', 0)} skills indexed)"
+
+    add("pipeline.tool_forge", "Tool Forge scrape + skill compiler", tool_forge_pipeline_check)
+
+    async def mcp_loom_intake_async() -> tuple[bool, str, Any]:
+        mod = load_mcp_module("mcp/loom_intake_mcp.py")
+        raw = await mod.loom_status()
+        payload = json.loads(raw)
+        if not payload.get("ok"):
+            return False, str(payload.get("error") or "loom_status failed"), None
+        return True, f"MCP loom_status ok ({payload.get('ledger_rows', 0)} rows)", None
+
+    def mcp_loom_intake_check() -> tuple[bool, str]:
+        return asyncio.run(run_async_check(mcp_loom_intake_async))
+
+    add("mcp.loom_intake", "MCP empire-loom-intake", mcp_loom_intake_check)
+
+    async def mcp_tool_forge_async() -> tuple[bool, str, Any]:
+        mod = load_mcp_module("mcp/tool_forge_mcp.py")
+        raw = await mod.list_harvest_outputs()
+        payload = json.loads(raw)
+        if not payload.get("ok"):
+            return False, "list_harvest_outputs failed", None
+        return True, f"MCP tool_forge ok ({payload.get('count', 0)} harvest files)", None
+
+    def mcp_tool_forge_check() -> tuple[bool, str]:
+        return asyncio.run(run_async_check(mcp_tool_forge_async))
+
+    add("mcp.tool_forge", "MCP empire-tool-forge", mcp_tool_forge_check)
 
     def roundtrip_task_check() -> tuple[bool, str]:
         marker = f"__verify_stack__{int(time.time())}"

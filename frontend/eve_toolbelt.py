@@ -32,6 +32,7 @@ ALLOWED_CATEGORIES = (
     "structured_extract",
     "retrieval_rerank",
     "browser_local",
+    "loom_intake",
 )
 DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
 

@@ -22,6 +22,8 @@ class EveToolbeltTests(unittest.TestCase):
         self.assertIn("wiki_local", eve_toolbelt.ALLOWED_CATEGORIES)
         self.assertIn("time_reclaim", eve_toolbelt.ALLOWED_CATEGORIES)
         self.assertIn("stem_factory", eve_toolbelt.ALLOWED_CATEGORIES)
+        self.assertIn("tool_forge", eve_toolbelt.ALLOWED_CATEGORIES)
+        self.assertIn("loom_intake", eve_toolbelt.ALLOWED_CATEGORIES)
 
     def test_normalize_defaults_when_missing(self) -> None:
         self.assertEqual(eve_toolbelt.normalize_active_tools(None), [])

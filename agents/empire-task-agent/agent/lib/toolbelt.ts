@@ -25,6 +25,7 @@ export const TOOLBELT_CATEGORIES = [
   "structured_extract",
   "retrieval_rerank",
   "browser_local",
+  "loom_intake",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

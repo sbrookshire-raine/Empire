@@ -367,6 +367,12 @@
           description:
             "Allowlisted localhost Playwright fetch (Workbench/PB only).",
         },
+        {
+          id: "loom_intake",
+          label: "Loom Intake",
+          description:
+            "Knowledge Shell CSV → primitive ledger (Keeper membrane, max 7/cycle).",
+        },
       ],
       activeTools: {
         gumloop_cloud: false,
@@ -384,6 +390,7 @@
         structured_extract: false,
         retrieval_rerank: false,
         browser_local: false,
+        loom_intake: false,
       },
       composerQuickPrompts: [
         {
@@ -411,7 +418,14 @@
           id: "forge",
           tool: "tool_forge",
           label: "Forge",
-          prompt: "List Tool Forge scripts I can run from the workbench.",
+          prompt: "List harvest_cache outputs and Active Tools I can read with Tool Forge.",
+          send: true,
+        },
+        {
+          id: "loom",
+          tool: "loom_intake",
+          label: "Loom",
+          prompt: "Show Loom ledger status and where the Seeker prompt lives.",
           send: true,
         },
       ],

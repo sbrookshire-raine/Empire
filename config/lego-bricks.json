@@ -158,7 +158,22 @@
       "default_on": false,
       "gpu_tenant": "none",
       "ports": { "in": ["text"], "out": ["scratch"] },
-      "tools": ["read_active_tool"]
+      "tools": [
+        "read_active_tool",
+        "docs_guide_scrape",
+        "skill_triage_manifest"
+      ],
+      "note": "Local docs scrape + skill triage + Active Tools read."
+    },
+    {
+      "id": "loom",
+      "label": "Loom Intake",
+      "toolbelt": "loom_intake",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["loom_status", "loom_process_shell_csv"],
+      "note": "Knowledge Shell CSV → primitive_ledger.csv (Keeper membrane)."
     }
   ]
 }
