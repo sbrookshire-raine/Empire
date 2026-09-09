@@ -2,7 +2,9 @@
   "mcpServers": {
     "empire-pocketbase": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/pocketbase_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/pocketbase_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "POCKETBASE_URL": "http://127.0.0.1:8090",
@@ -12,14 +14,18 @@
     },
     "empire-cognee": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/cognee_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/cognee_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE"
       }
     },
     "empire-workbench": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/workbench_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/workbench_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_WORKBENCH_DIR": "C:/Empire_Workbench",
@@ -28,7 +34,9 @@
     },
     "empire-work-orders": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/work_order_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/work_order_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_WORK_ORDERS_DIR": "C:/Empire_Workbench/05_Work_Orders",
@@ -37,7 +45,9 @@
     },
     "empire-wiki-scout": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/wiki_scout_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/wiki_scout_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "WEAVIATE_URL": "http://127.0.0.1:8091",
@@ -49,7 +59,9 @@
     },
     "empire-daze": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/daze_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/daze_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "POCKETBASE_URL": "http://127.0.0.1:8090"
@@ -57,7 +69,9 @@
     },
     "empire-stem-factory": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/stem_factory_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/stem_factory_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_STEM_FACTORY_DIR": "C:/Users/m69nr/OneDrive/Desktop/HIDDEN/Shard_of_the_Division",
@@ -67,7 +81,9 @@
     },
     "empire-docling": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/docling_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/docling_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_DOCLING_OUT_DIR": "C:/Empire_Workbench/00_Resource_Queue"
@@ -75,7 +91,9 @@
     },
     "empire-web-scout": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/web_scout_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/web_scout_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_WEB_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/web_cache"
@@ -83,7 +101,9 @@
     },
     "empire-container-scout": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/container_scout_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/container_scout_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_CONTAINER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/container_cache"
@@ -91,7 +111,9 @@
     },
     "empire-structured-extract": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/structured_extract_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/structured_extract_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_EXTRACT_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/extract_cache",
@@ -101,7 +123,9 @@
     },
     "empire-retrieval-rerank": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/retrieval_rerank_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/retrieval_rerank_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_RERANK_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/rerank_cache"
@@ -109,7 +133,9 @@
     },
     "empire-browser-local": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/browser_local_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/browser_local_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_BROWSER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/browser_cache"
@@ -117,7 +143,9 @@
     },
     "empire-github-scout": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/github_scout_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/github_scout_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_GITHUB_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/github_cache"
@@ -125,7 +153,9 @@
     },
     "empire-atlas": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/atlas_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/atlas_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_VOICE_BASE_URL": "http://127.0.0.1:8000",
@@ -136,7 +166,9 @@
     },
     "empire-tool-forge": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/tool_forge_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/tool_forge_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_HARVEST_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/harvest_cache",
@@ -146,12 +178,22 @@
     },
     "empire-loom-intake": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
-      "args": ["C:/EMPIRE/mcp/loom_intake_mcp.py"],
+      "args": [
+        "C:/EMPIRE/mcp/loom_intake_mcp.py"
+      ],
       "env": {
         "PYTHONPATH": "C:/EMPIRE",
         "EMPIRE_LOOM_ROOT": "C:/Empire_Workbench/04_Thought_Experiments/loom",
         "EMPIRE_RESOURCE_QUEUE_DIR": "C:/Empire_Workbench/00_Resource_Queue"
       }
+    },
+    "graft": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@nanonets/graft",
+        "mcp"
+      ]
     }
   }
 }
