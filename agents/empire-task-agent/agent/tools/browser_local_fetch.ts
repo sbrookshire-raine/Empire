@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("browser_local")
+      isCapabilityActive("browser_local")
         ? defineTool({
             description:
               "Fetch title/text from an allowlisted localhost EMPIRE URL (Workbench/PocketBase). Blocks other origins. No form submit. No Cognee. Requires Browser Local Toolbelt.",

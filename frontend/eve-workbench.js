@@ -33,6 +33,14 @@
     stem_status: "Checking Stem Factory…",
     stem_list_inbox: "Listing stem inbox songs…",
     stem_run: "Running stem separation…",
+    capability_status: "Checking research capabilities…",
+    request_capability: "Admitting research limb…",
+    release_capabilities: "Releasing session capabilities…",
+    research_orchestrate: "Running research autopilot…",
+    github_scout_search: "Searching GitHub…",
+    github_scout_readme: "Reading GitHub README…",
+    web_scout: "Fetching web page…",
+    container_scout_search: "Searching Docker Hub…",
   };
   var DEFAULT_CHAT_MODES = [
     {
@@ -259,6 +267,14 @@
       voiceCancelOnly: false,
       voiceSuppressed: false,
       toolbeltOpen: true,
+      researchPartnerMode: false,
+      admissionSession: {
+        session_capabilities: [],
+        ttl_remaining_sec: 0,
+        expires_at: "",
+        effective_tools: [],
+      },
+      admissionLoading: false,
       toolbeltCategories: [
         {
           id: "gumloop_cloud",
@@ -324,6 +340,12 @@
             "Docker Hub search + local empire-* status (no auto-pull / no K8s).",
         },
         {
+          id: "github_scout",
+          label: "GitHub Scout",
+          description:
+            "Search GitHub repos + README excerpts into github_cache (no clone).",
+        },
+        {
           id: "structured_extract",
           label: "Structured Extract",
           description:
@@ -354,6 +376,7 @@
         voice_presence: false,
         vision_local: false,
         container_scout: false,
+        github_scout: false,
         structured_extract: false,
         retrieval_rerank: false,
         browser_local: false,
@@ -553,6 +576,7 @@
         };
         document.addEventListener("keydown", this._onDocKeydown);
         this.refreshToolbelt();
+        this.refreshAdmission();
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshTasks();
@@ -576,6 +600,70 @@
           this.activeTools = next;
         } catch (_error) {
           /* keep defaults */
+        }
+      },
+
+      refreshAdmission: async function () {
+        this.admissionLoading = true;
+        try {
+          var response = await fetch("/api/admission", { cache: "no-store" });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || body.ok === false) return;
+          this.researchPartnerMode = Boolean(body.research_partner_mode);
+          this.admissionSession = {
+            session_capabilities: Array.isArray(body.session_capabilities)
+              ? body.session_capabilities
+              : [],
+            ttl_remaining_sec: Number(body.ttl_remaining_sec) || 0,
+            expires_at: plainText(body.expires_at),
+            effective_tools: Array.isArray(body.effective_tools) ? body.effective_tools : [],
+          };
+        } catch (_error) {
+          /* keep defaults */
+        } finally {
+          this.admissionLoading = false;
+        }
+      },
+
+      setResearchPartner: async function (enabled) {
+        try {
+          var response = await fetch("/api/admission", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "set_research_partner", enabled: Boolean(enabled) }),
+          });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || body.ok === false) {
+            throw new Error(errorMessage(body, "Could not update Research Partner mode."));
+          }
+          this.researchPartnerMode = Boolean(body.research_partner_mode);
+          await this.refreshAdmission();
+        } catch (error) {
+          this.chatError = plainText(error.message) || "Research Partner update failed.";
+        }
+      },
+
+      admissionTtlLabel: function () {
+        var sec = Number(this.admissionSession && this.admissionSession.ttl_remaining_sec) || 0;
+        if (sec <= 0) return "";
+        if (sec < 60) return sec + "s";
+        return Math.ceil(sec / 60) + " min";
+      },
+
+      releaseAdmissionSession: async function () {
+        try {
+          await fetch("/api/admission", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "release", reason: "workbench_manual" }),
+          });
+          await this.refreshAdmission();
+        } catch (_error) {
+          /* ignore */
         }
       },
 
@@ -605,6 +693,7 @@
         if (tab === "chat") this.scrollTranscript();
         if (tab === "models") this.refreshModelInventory(false);
         if (tab === "projects") this.refreshProjectsCatalog(false);
+        if (tab === "more") this.refreshAdmission();
       },
 
       refreshProjectsCatalog: async function (rebuild) {
@@ -642,10 +731,15 @@
 
       askAboutProject: function (displayName) {
         this.setTab("chat");
-        this.draft =
+        var prompt =
           "Tell me about my " +
           plainText(displayName) +
           " project — purpose, evolution, and what you know from memory.";
+        if (plainText(displayName).toLowerCase().indexOf("daze") >= 0) {
+          prompt +=
+            " Compare the live app at https://daze-murex.vercel.app/ with the EMPIRE stub at /daze.html and explain the gap.";
+        }
+        this.draft = prompt;
       },
 
       applyModelInventory: function (payload) {
@@ -1340,6 +1434,7 @@
         this.projectEvent(event.type, event.data && typeof event.data === "object" ? event.data : {});
         if (event.type === "session.waiting") {
           this.sending = false;
+          this.refreshAdmission();
           if (this.streamReader) this.streamReader.cancel().catch(function () {});
           return true;
         }

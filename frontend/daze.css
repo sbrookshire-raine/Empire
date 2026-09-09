@@ -43,6 +43,30 @@ body {
   letter-spacing: 0.04em;
 }
 
+.daze__live-banner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--daze-accent) 45%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklch, var(--daze-panel) 88%, #5b8def 12%);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.daze__live-banner p {
+  margin: 0;
+}
+
+.daze__live-banner-sub {
+  margin-top: 0.35rem !important;
+  color: var(--daze-muted);
+  font-size: 0.85rem;
+}
+
+.daze__live-banner a {
+  color: #9ec5ff;
+}
+
 .daze__header p,
 .muted {
   color: var(--daze-muted);

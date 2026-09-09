@@ -15,7 +15,7 @@
       <header class="daze__header">
         <div>
           <h1>DAZE</h1>
-          <p>24-hour radial day — finite time, local PocketBase.</p>
+          <p>EMPIRE Phase 5 stub — local PocketBase dial, not the live Daily OS.</p>
         </div>
         <div class="daze__date-row">
           <label>
@@ -32,6 +32,20 @@
           <button type="button" class="secondary" @click="load()" :disabled="loading">Refresh</button>
         </div>
       </header>
+
+      <aside class="daze__live-banner" aria-label="Live product reference">
+        <p>
+          <strong>Live product:</strong>
+          <a href="https://daze-murex.vercel.app/" target="_blank" rel="noopener noreferrer"
+            >daze-murex.vercel.app</a
+          >
+          — React + Firebase Daily OS (concentric tracks, tabbed logs, full polish).
+        </p>
+        <p class="daze__live-banner-sub">
+          This page is the sovereign EMPIRE limb: same time-reclamation idea, PocketBase-only stub.
+          See Projects in Eve Workbench for the gap table.
+        </p>
+      </aside>
 
       <p class="daze__status" x-text="status"></p>
       <p class="daze__conflict" x-show="conflicts.length" x-cloak>

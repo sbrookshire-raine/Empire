@@ -28,7 +28,7 @@ CURATED_ROOT = ROOT / "data" / "curated_primitives"
 RAW_DIR = CURATED_ROOT / "raw_materials"
 DIRECTIVES_DIR = CURATED_ROOT / "directives"
 STATUS_DIR = CURATED_ROOT / "status"
-DEFAULT_LLM = "huihui_ai/qwen2.5-coder-abliterate:14b"
+DEFAULT_LLM = "qwen2.5-coder:14b"
 
 
 def _utc_now() -> str:

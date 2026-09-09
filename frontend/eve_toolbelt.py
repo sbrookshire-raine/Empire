@@ -28,6 +28,7 @@ ALLOWED_CATEGORIES = (
     "voice_presence",
     "vision_local",
     "container_scout",
+    "github_scout",
     "structured_extract",
     "retrieval_rerank",
     "browser_local",
@@ -84,6 +85,25 @@ def load_active_tools() -> list[str]:
 
 def category_enabled(category: str) -> bool:
     return category in load_active_tools()
+
+
+def capability_enabled(category: str) -> bool:
+    """Manual Toolbelt OR valid Research Autopilot session grant."""
+    try:
+        from pipeline import admission_controller
+
+        return admission_controller.capability_active(category)
+    except Exception:
+        return category_enabled(category)
+
+
+def load_effective_tools() -> list[str]:
+    try:
+        from pipeline import admission_controller
+
+        return admission_controller.load_effective_tools()
+    except Exception:
+        return load_active_tools()
 
 
 def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:

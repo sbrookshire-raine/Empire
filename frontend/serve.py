@@ -316,6 +316,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/ollama/")
             or path == "/api/gpu-lease"
             or path == "/api/toolbelt"
+            or path == "/api/admission"
             or path.startswith("/api/voice/")
             or path.startswith("/api/lego/")
         )
@@ -343,6 +344,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/ollama/")
             or path == "/api/gpu-lease"
             or path == "/api/toolbelt"
+            or path == "/api/admission"
             or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
             or path.startswith("/api/lego/")
@@ -372,6 +374,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._send_json(200, ollama_fast_ab.load_fast_ab())
         if path == "/api/gpu-lease":
             return self._gpu_lease_get()
+        if path == "/api/admission":
+            return self._admission_get()
         if path.startswith("/api/lego/"):
             return self._lego_get(path)
         if path == "/api/toolbelt":
@@ -485,6 +489,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._gpu_lease_post()
+        if path == "/api/admission":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._admission_post()
         if path.startswith("/api/lego/"):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1013,6 +1021,29 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._send_json(200, gpu_lease.status())
         except Exception as exc:  # noqa: BLE001
             return self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _admission_get(self) -> None:
+        if not self._memory_origin_allowed():
+            return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        try:
+            from pipeline import admission_controller
+
+            return self._send_json(200, admission_controller.status())
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _admission_post(self) -> None:
+        payload = self._read_json()
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        try:
+            from pipeline import admission_controller
+
+            result = admission_controller.handle_api_action(payload)
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+        status = 200 if result.get("ok") else 400
+        return self._send_json(status, result)
 
     def _lego_get(self, path: str) -> None:
         if not self._memory_origin_allowed():

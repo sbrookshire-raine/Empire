@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("vision_local")
+      isCapabilityActive("vision_local")
         ? defineTool({
             description:
               "Observe a local screenshot for UI regions (structured). Observation only — no clicks/automation. Uses qwen3-vl. Requires Vision Local Toolbelt.",

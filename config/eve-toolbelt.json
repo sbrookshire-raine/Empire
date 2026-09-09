@@ -1,3 +1,5 @@
 {
-  "active_tools": []
+  "active_tools": [
+    "voice_presence"
+  ]
 }

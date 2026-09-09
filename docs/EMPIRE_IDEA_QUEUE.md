@@ -71,6 +71,14 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-10 | **Container Scout** | `ready` | Enable Toolbelt **Container Scout**. Ask Eve to search Docker Hub (e.g. weaviate / vector db). Confirm cache under `04_Thought_Experiments/container_cache/`; **no** auto-Cognee. Optional: ask which `empire-*` containers are running. | See `docs/KUBERNETES_AND_CONTAINERS.md` |
 | T-11 | **Smoke A — Operational foundation** | `ready` | Follow **Smoke A** in [`EMPIRE_AUTONOMOUS_BUILD_GUIDE.md`](EMPIRE_AUTONOMOUS_BUILD_GUIDE.md). Then reply `Smoke PASS Phase 1`. | Admission audit + release manifest |
 | T-12 | **Smoke B — Structured Extract** | `ready` | Follow **Smoke B** in the autonomous build guide (Toolbelt **Structured Extract**). Then `Smoke PASS Phase 2`. | llama.cpp worker; Ollama stays chat |
+| T-13 | **Research Partner toggle** | `ready` | `Start-EMPIRE.bat`. Open http://127.0.0.1:8080/eve.html → **More** tab or chat admission bar → enable **Research Partner**. Confirm `GET /api/admission` shows `research_partner: true`. Toggle OFF → partner flag false. | F-29 forged; default OFF in repo template |
+| T-14 | **research_orchestrate — GitHub + Product Hunt** | `ready` | With Partner ON, ask Eve: *What's new on Product Hunt today, and find GitHub MCP servers for local DuckDB?* Confirm she uses **`research_orchestrate`** (tool trace or compact multi-source answer). **No** auto-`cognee_remember`. | Same-turn admission bypasses Toolbelt `turn.started` |
+| T-15 | **Session capability chips + TTL** | `ready` | During T-14, chat header shows session chips (`github_scout`, `web_scout`, etc.) with TTL countdown. After orchestrator finishes or **Release session** (More tab), chips clear. Optional: wait for TTL expiry. | Polls `/api/admission` every ~30s |
+| T-16 | **Research cache artifacts** | `ready` | After T-14, confirm new files under `C:\Empire_Workbench\04_Thought_Experiments\github_cache\` and `web_cache\`. Optional: intake brief in `00_Resource_Queue` for forge-worthy GitHub hits — triage only, no auto-forge. | Provenance footer on cache `.md` |
+| T-17 | **Partner OFF guardrail** | `ready` | Partner OFF. Ask the same research question. Eve should **not** silently hit GitHub/Product Hunt; friendly message to enable Research Partner (or manual Toolbelt). | Rings: never auto Cognee / stem / Gumloop |
+| T-18 | **Wiki admission preflight (optional)** | `ready` | T7 plugged + Docker available. Partner ON. Ask a cross-year wiki topic (e.g. T-01 style). Confirm admission may run `start-weaviate.ps1` or reports a **clear** error if archive/path missing — no silent full wiki ingest. | Skip if Weaviate archive unavailable |
+| T-19 | **GitHub Scout manual limb** | `ready` | Enable **GitHub Scout** on Toolbelt (without Partner). Ask Eve to search repos for `mcp duckdb`. Confirm `github_cache/` only; **no** clone/install/Cognee. Optional: `GITHUB_TOKEN` if rate-limited. | Cursor MCP: `empire-github-scout` |
+| T-20 | **Admission CLI smoke** | `ready` | `.\venv\Scripts\python.exe -m pipeline.admission_controller status` → manifest + session + GPU snapshot. `set-research-partner true` → `request github_scout --reason smoke` → `release`. Check `%LOCALAPPDATA%\EMPIRE\` audit append. | Mechanic pre-pass OK; Architect confirms live stack |
 
 ---
 
@@ -121,6 +129,7 @@ Engineering work not yet (or only partially) shipped.
 | F-26 | Vision UI observe (no actuators) | `done` | `pipeline/vision_ui_observe.py` | Under Vision Local toolbelt |
 | F-27 | Mechanic SBOM script | `done` | `scripts/empire-sbom.ps1` | Not Eve-exposed |
 | F-28 | PaddleOCR specialist | `parked` | Autonomous guide Phase 7 | Only if Docling loses Architect samples |
+| F-29 | Research Autopilot (admission + github scout + orchestrator) | `done` | [`docs/RESEARCH_AUTOPILOT.md`](RESEARCH_AUTOPILOT.md) | Forge complete; Architect smoke **T-13–T-20** before daily reliance |
 
 ---
 
@@ -142,10 +151,11 @@ Capture sparks here; promote to Testing or Forge when clear.
 When waking EMPIRE to work this queue:
 
 1. `Start-EMPIRE.bat` (or stack script) for Eve / Workbench / PocketBase / Ollama  
-2. Weaviate only if doing **T-01**: `Start-EMPIRE.bat -Weaviate` (or `.\scripts\start-weaviate.ps1`)  
+2. Weaviate only if doing **T-01** or **T-18**: `Start-EMPIRE.bat -Weaviate` (or `.\scripts\start-weaviate.ps1`)  
 3. Voice speech API only if doing **T-08**  
-4. Enable the matching Toolbelt limb(s)  
-5. Update this file’s status after you test  
+4. **Research Autopilot (T-13–T-17):** enable **Research Partner** in Workbench — no permanent Toolbelt toggles required  
+5. Other limbs: enable matching Toolbelt category(s)  
+6. Update this file’s status after you test  
 
 ---
 
@@ -166,6 +176,7 @@ When waking EMPIRE to work this queue:
 | [docs/LEGO_WHITEBOARD.md](LEGO_WHITEBOARD.md) | Manifesto Phase 4 LEGO canvas |
 | [docs/KUBERNETES_AND_CONTAINERS.md](KUBERNETES_AND_CONTAINERS.md) | K8s vs Compose; Container Scout |
 | [docs/CONTAINER_SCOUT.md](CONTAINER_SCOUT.md) | Container Scout limb ops |
+| [docs/RESEARCH_AUTOPILOT.md](RESEARCH_AUTOPILOT.md) | Research Partner + admission + orchestrator |
 | [docs/WEAVIATE_HEIST.md](WEAVIATE_HEIST.md) | Weaviate boot / tear-down |
 | `C:\Empire_Workbench\05_Work_Orders\` | Active Forge Work Orders |
 | `C:\Empire_Workbench\stem_factory\input` | Stem inbox |

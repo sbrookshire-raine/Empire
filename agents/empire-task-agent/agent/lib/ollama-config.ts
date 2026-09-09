@@ -28,18 +28,18 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
     label: "Fast Mode (14b)",
     description:
       "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
-    model: "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
-    modelAliases: ["richardyoung/qwen2.5-14b-instruct-abliterated"],
+    model: "qwen2.5:14b-instruct",
+    modelAliases: ["qwen2.5:14b"],
     numCtx: SHARED_NUM_CTX,
     temperature: 0.2,
   },
-  deep: {
+    deep: {
     id: "deep",
-    label: "Deep Mode (32b)",
+    label: "Deep Mode (Qwen3 14b)",
     description:
       "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
-    model: "qwen2.5:32b",
-    modelAliases: [],
+    model: "qwen3:14b",
+    modelAliases: ["qwen2.5:32b"],
     numCtx: SHARED_NUM_CTX,
     temperature: 0.7,
   },

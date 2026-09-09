@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("retrieval_rerank")
+      isCapabilityActive("retrieval_rerank")
         ? defineTool({
             description:
               "Rerank candidate text passages for a query (lexical or optional CrossEncoder). Eval/scratch only — does NOT change Cognee production embeddings (nomic). Requires Retrieval Rerank Toolbelt.",

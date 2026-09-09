@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("container_scout")
+      isCapabilityActive("container_scout")
         ? defineTool({
             description:
               "Docker Hub repo detail + recent tags (e.g. semitechnologies/weaviate). Cache only — never pull/run. Requires Container Scout Toolbelt.",

@@ -1,13 +1,13 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { readActiveToolViaMcp } from "#lib/workbench-mcp";
 
 /** Tool Forge limb — heavy Active Tools reads; opt-in via Toolbelt. */
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("tool_forge")
+      isCapabilityActive("tool_forge")
         ? defineTool({
             description:
               "Read a flattened codebase or script from Empire Workbench 03_Active_Tools via the local empire-workbench MCP server (read-only). Pass the filename only, e.g. BANDAPP_flattened.txt. Requires Tool Forge enabled in the Workbench Toolbelt.",

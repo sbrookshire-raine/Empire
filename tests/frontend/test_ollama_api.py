@@ -12,9 +12,15 @@ from frontend import ollama_api
 TAGS = {
     "models": [
         {
-            "name": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
-            "model": "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            "name": "qwen2.5:14b-instruct",
+            "model": "qwen2.5:14b-instruct",
             "details": {"parameter_size": "14.0B", "family": "qwen2"},
+            "capabilities": ["completion", "tools"],
+        },
+        {
+            "name": "qwen3:14b",
+            "model": "qwen3:14b",
+            "details": {"parameter_size": "14.0B", "family": "qwen3"},
             "capabilities": ["completion", "tools"],
         },
         {
@@ -47,7 +53,7 @@ class OllamaApiTests(unittest.TestCase):
                 json.dumps(
                     {
                         "mode": "deep",
-                        "model": "qwen2.5:32b",
+                        "model": "qwen3:14b",
                     }
                 ),
                 encoding="utf-8",
@@ -58,13 +64,14 @@ class OllamaApiTests(unittest.TestCase):
         ids = [model["id"] for model in payload["models"]]
         self.assertEqual(payload["ok"], True)
         self.assertEqual(payload["connected"], True)
-        self.assertEqual(payload["active"], "qwen2.5:32b")
+        self.assertEqual(payload["active"], "qwen3:14b")
         self.assertEqual(payload["activeMode"], "deep")
         self.assertEqual(len(payload["chatModes"]), 3)
         self.assertEqual(
             ids,
             [
-                "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+                "qwen2.5:14b-instruct",
+                "qwen3:14b",
                 "qwen2.5:32b",
                 "command-r:35b",
             ],
@@ -93,17 +100,17 @@ class OllamaApiTests(unittest.TestCase):
                 with self.assertRaises(ollama_api.OllamaRequestError) as missing:
                     ollama_api.set_active_model("not-a-real-model", TAGS)
                 saved = ollama_api.set_active_model(
-                    "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+                    "qwen2.5:14b-instruct",
                     TAGS,
                 )
 
             self.assertEqual(embed.exception.status, 400)
             self.assertEqual(missing.exception.status, 400)
-            self.assertEqual(saved["active"], "richardyoung/qwen2.5-14b-instruct-abliterated:latest")
+            self.assertEqual(saved["active"], "qwen2.5:14b-instruct")
             self.assertEqual(saved["activeMode"], "fast")
             self.assertEqual(
                 json.loads(path.read_text(encoding="utf-8"))["model"],
-                "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+                "qwen2.5:14b-instruct",
             )
 
     def test_unavailable_ollama_keeps_fallback_without_pretending_connected(self) -> None:

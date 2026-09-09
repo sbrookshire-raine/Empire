@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("container_scout")
+      isCapabilityActive("container_scout")
         ? defineTool({
             description:
               "Search Docker Hub by keyword; cache markdown under 04_Thought_Experiments/container_cache. Does NOT pull images or write Cognee. Requires Container Scout Toolbelt.",

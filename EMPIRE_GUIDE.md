@@ -71,10 +71,12 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
 - **Chat** — Eve via Ollama; tool calls for memory, tasks, workbench files, work orders
 - **Chat history** — durable local JSON under `%LOCALAPPDATA%\EMPIRE\chat-history\`; panel behind **☰** (starts **closed**; blank new chat by default; open history only when needed)
 - **Chat modes** (header picker) + per-mode sampling, shared **8192** context for 16 GB VRAM:
-  - **Fast** (Qwen 14b abliterated) — temp **0.2** (strict tools)
-  - **Deep** (Qwen 32b) — temp **0.7** (creative)
-  - **Librarian** (Command-R 35b) — temp **0.4** (balanced)
-- **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge, Wiki Local, Time Reclaim, Stem Factory. Memory + Tasks always on
+  - **Fast** (`qwen2.5:14b-instruct`) — temp **0.2** (strict tools)
+  - **Deep** (`qwen3:14b`; fallback `qwen2.5:32b`) — temp **0.7**
+  - **Librarian** (Command-R 35b) — temp **0.4**
+  - **Vision** (`qwen3-vl:8b`) — Toolbelt **Vision Local**; screenshots + sampled video frames
+  - **Utility** (`qwen3:8b`) — low-VRAM fallback when voice/vision holds the GPU
+- **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge, Wiki Local, Time Reclaim, Stem Factory, GitHub Scout, etc. **Research Partner** (More tab) lets Eve auto-admit read-only research limbs for a session — see [`docs/RESEARCH_AUTOPILOT.md`](docs/RESEARCH_AUTOPILOT.md)
 - **Wiki Local scout** — on-demand Weaviate Wikipedia (`:8091`) → Truth Drift markdown cache under `04_Thought_Experiments/wiki_cache/` → triage → optional `cognee_remember` (no full wiki re-ingest). See [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md)
 - **Container Scout** — Toolbelt limb (default OFF): search Docker Hub + report local `empire-*` Docker status; cache under `container_cache/`; **not** “run EMPIRE on Kubernetes.” See [`docs/KUBERNETES_AND_CONTAINERS.md`](docs/KUBERNETES_AND_CONTAINERS.md)
 - **DAZE (Phase 5)** — radial day at http://127.0.0.1:8080/daze.html; PocketBase `day_blocks`; Eve tools behind **Time Reclaim** Toolbelt

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "revised_at": "2026-09-09T00:00:00Z",
+  "notes": "Admission manifest for Research Autopilot — session TTL auto-enable only when research_partner_mode is ON.",
+  "categories": {
+    "wiki_local": {
+      "label": "Wiki Local",
+      "auto_enable": true,
+      "session_ttl_min": 45,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": ["weaviate:8091"],
+      "min_disk_free_gb": 5
+    },
+    "web_scout": {
+      "label": "Web Scout",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": [],
+      "min_disk_free_gb": 2
+    },
+    "github_scout": {
+      "label": "GitHub Scout",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": [],
+      "min_disk_free_gb": 2
+    },
+    "container_scout": {
+      "label": "Container Scout",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": [],
+      "min_disk_free_gb": 2
+    },
+    "gumloop_cloud": {
+      "label": "Gumloop Cloud",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": []
+    },
+    "web_research": {
+      "label": "Web Research",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": true,
+      "requires_services": []
+    },
+    "tool_forge": {
+      "label": "Tool Forge",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": []
+    },
+    "time_reclaim": {
+      "label": "Time Reclaim",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": ["pocketbase:8090"]
+    },
+    "stem_factory": {
+      "label": "Stem Factory",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "chat",
+      "network": false,
+      "requires_services": []
+    },
+    "thought_experiments": {
+      "label": "Thought Experiments",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": []
+    },
+    "voice_presence": {
+      "label": "Voice Presence",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "voice",
+      "network": false,
+      "requires_services": ["voice:8000"]
+    },
+    "vision_local": {
+      "label": "Vision Local",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "vision",
+      "network": false,
+      "requires_services": ["ollama:11434"]
+    },
+    "structured_extract": {
+      "label": "Structured Extract",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "extract",
+      "network": false,
+      "requires_services": ["llama_extract:8092"]
+    },
+    "retrieval_rerank": {
+      "label": "Retrieval Rerank",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": []
+    },
+    "browser_local": {
+      "label": "Browser Local",
+      "auto_enable": false,
+      "session_ttl_min": 0,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": []
+    }
+  },
+  "max_session_capabilities": 4
+}

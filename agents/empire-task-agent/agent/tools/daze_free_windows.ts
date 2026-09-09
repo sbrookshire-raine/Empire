@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { dazeFreeWindowsViaMcp } from "#lib/daze-mcp";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("time_reclaim")
+      isCapabilityActive("time_reclaim")
         ? defineTool({
             description:
               "Compute free time arcs in the DAZE day for coaching (exercise/meditation). Requires Time Reclaim Toolbelt.",

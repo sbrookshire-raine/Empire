@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("thought_experiments")
+      isCapabilityActive("thought_experiments")
         ? defineTool({
             description:
               "Capture a Manifesto Phase 3 thought-experiment note (optional YouTube/URL) under 04_Thought_Experiments. Scratch only — not Cognee until promoted. Requires Thought Experiments Toolbelt.",

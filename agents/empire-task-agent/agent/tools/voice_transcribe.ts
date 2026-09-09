@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("voice_presence")
+      isCapabilityActive("voice_presence")
         ? defineTool({
             description:
               "Transcribe a local audio file via the OpenAI-compatible speech API (Speaches/Voicebox on :8000). Requires Voice Presence Toolbelt.",

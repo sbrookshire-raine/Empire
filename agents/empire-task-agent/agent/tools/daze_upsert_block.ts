@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { dazeUpsertBlockViaMcp } from "#lib/daze-mcp";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("time_reclaim")
+      isCapabilityActive("time_reclaim")
         ? defineTool({
             description:
               "Create or update a DAZE day block (start/end minutes 0–1440). Requires Time Reclaim Toolbelt. Use for scheduling focus/body/rest arcs.",

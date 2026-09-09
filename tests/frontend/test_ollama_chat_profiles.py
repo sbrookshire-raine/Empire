@@ -38,14 +38,14 @@ class OllamaChatProfileTests(unittest.TestCase):
 
     def test_resolve_installed_model_alias(self) -> None:
         installed = {
-            "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            "qwen2.5:14b-instruct",
             "qwen2.5:32b",
         }
         mode, model = resolve_mode_for_installed("fast", installed)
         self.assertEqual(mode["id"], "fast")
         self.assertEqual(
             model,
-            "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
+            "qwen2.5:14b-instruct",
         )
 
     def test_all_modes_have_models(self) -> None:

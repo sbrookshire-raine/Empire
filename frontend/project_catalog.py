@@ -11,13 +11,33 @@ from typing import TypedDict
 WORKBENCH_ROOT = Path(r"C:\Empire_Workbench")
 FLAT_DIR = WORKBENCH_ROOT / "03_Active_Tools"
 MEMORY_BANK = WORKBENCH_ROOT / "01_Memory_Bank"
-CORE_MANIFEST = WORKBENCH_ROOT / "00_Core_Profile" / "eve_core_manifest.json"
-CATALOG_PATH = WORKBENCH_ROOT / "00_Core_Profile" / "projects_catalog.json"
+CORE_PROFILE = WORKBENCH_ROOT / "00_Core_Profile"
+CORE_MANIFEST = CORE_PROFILE / "eve_core_manifest.json"
+CATALOG_PATH = CORE_PROFILE / "projects_catalog.json"
+DAZE_PROFILE = CORE_PROFILE / "DAZE_PRODUCT_PROFILE.md"
 
 FLATTEN_NAME_RE = re.compile(
     r"^(?P<prefix>(?:sbx2020|sbrookshire-raine)_)?(?P<name>.+?)_flattened(?:_\d+)?\.txt$",
     re.IGNORECASE,
 )
+
+DAZE_MEMORY_RE = re.compile(r"^daze[\W_!]", re.IGNORECASE)
+
+CANONICAL_PRODUCTS: dict[str, dict[str, object]] = {
+    "daze": {
+        "display_name": "DAZE (Daily OS)",
+        "kind": "product",
+        "live_url": "https://daze-murex.vercel.app/",
+        "empire_url": "http://127.0.0.1:8080/daze.html",
+        "product_stack": "React · Vite · Firebase · Vercel",
+        "empire_stack": "Alpine · PocketBase (Phase 5 stub)",
+        "empire_status": "stub",
+        "summary": (
+            "Live: full radial Daily OS with concentric overlap tracks, tabbed logs, and Firebase sync. "
+            "EMPIRE: local time-reclamation stub — same vision, not a port."
+        ),
+    },
+}
 
 
 class ProjectRecord(TypedDict, total=False):
@@ -32,9 +52,17 @@ class ProjectRecord(TypedDict, total=False):
     source_file_count: int
     flattened_bytes: int
     memory_files: list[str]
+    alternate_flattened: list[str]
     in_eve_core: bool
     nlm_topics: list[str]
     kind: str
+    live_url: str
+    empire_url: str
+    product_stack: str
+    empire_stack: str
+    empire_status: str
+    summary: str
+    profile_file: str
 
 
 def _utc_now() -> str:
@@ -44,6 +72,37 @@ def _utc_now() -> str:
 def _slug(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     return cleaned or "project"
+
+
+def _is_daze_memory_path(path: Path) -> bool:
+    stem = path.stem.casefold()
+    if stem == "daze":
+        return True
+    if DAZE_MEMORY_RE.match(path.name):
+        return True
+    if stem.startswith("daze_") or stem.startswith("daze "):
+        return True
+    return False
+
+
+def _blank_record(project_id: str, *, name: str, display_name: str, kind: str) -> ProjectRecord:
+    return {
+        "id": project_id,
+        "name": name,
+        "display_name": display_name,
+        "github_owner": "",
+        "github_repo": "",
+        "flattened_file": "",
+        "flattened_source": "",
+        "flattened_at": "",
+        "source_file_count": 0,
+        "flattened_bytes": 0,
+        "memory_files": [],
+        "alternate_flattened": [],
+        "in_eve_core": False,
+        "nlm_topics": [],
+        "kind": kind,
+    }
 
 
 def _parse_flatten_header(path: Path) -> dict[str, object]:
@@ -113,11 +172,42 @@ def _flatten_projects() -> dict[str, ProjectRecord]:
             "source_file_count": int(header.get("source_file_count") or 0),
             "flattened_bytes": size,
             "memory_files": [],
+            "alternate_flattened": [],
             "in_eve_core": False,
             "nlm_topics": [],
             "kind": "codebase",
         }
     return projects
+
+
+def _ensure_daze_record(projects: dict[str, ProjectRecord]) -> ProjectRecord:
+    overlay = CANONICAL_PRODUCTS["daze"]
+    record = projects.get("daze")
+    if record is None:
+        record = _blank_record(
+            "daze",
+            name="DAZE",
+            display_name=str(overlay["display_name"]),
+            kind=str(overlay["kind"]),
+        )
+        projects["daze"] = record
+    else:
+        record["display_name"] = str(overlay["display_name"])
+        record["kind"] = str(overlay["kind"])
+    record.setdefault("alternate_flattened", [])
+    record.setdefault("memory_files", [])
+    for key in (
+        "live_url",
+        "empire_url",
+        "product_stack",
+        "empire_stack",
+        "empire_status",
+        "summary",
+    ):
+        record[key] = overlay[key]  # type: ignore[literal-required]
+    if DAZE_PROFILE.is_file():
+        record["profile_file"] = str(DAZE_PROFILE)
+    return record
 
 
 def _memory_projects(
@@ -130,22 +220,12 @@ def _memory_projects(
 
     evolution = projects.setdefault(
         "empire-evolution",
-        {
-            "id": "empire-evolution",
-            "name": "Rain to Empire",
-            "display_name": "Rain to Empire (evolution notes)",
-            "github_owner": "",
-            "github_repo": "",
-            "flattened_file": "",
-            "flattened_source": "",
-            "flattened_at": "",
-            "source_file_count": 0,
-            "flattened_bytes": 0,
-            "memory_files": [],
-            "in_eve_core": False,
-            "nlm_topics": [],
-            "kind": "evolution",
-        },
+        _blank_record(
+            "empire-evolution",
+            name="Rain to Empire",
+            display_name="Rain to Empire (evolution notes)",
+            kind="evolution",
+        ),
     )
 
     for path in sorted(MEMORY_BANK.glob("*.md")):
@@ -166,52 +246,85 @@ def _memory_projects(
             project_id = _slug(f"nlm-{topic}")
             record = projects.setdefault(
                 project_id,
-                {
-                    "id": project_id,
-                    "name": topic or name,
-                    "display_name": f"NLM: {topic or name}",
-                    "github_owner": "",
-                    "github_repo": "",
-                    "flattened_file": "",
-                    "flattened_source": "",
-                    "flattened_at": "",
-                    "source_file_count": 0,
-                    "flattened_bytes": 0,
-                    "memory_files": [],
-                    "in_eve_core": False,
-                    "nlm_topics": [topic or name],
-                    "kind": "nlm",
-                },
+                _blank_record(
+                    project_id,
+                    name=topic or name,
+                    display_name=f"NLM: {topic or name}",
+                    kind="nlm",
+                ),
             )
+            record["nlm_topics"] = [topic or name]
             record["memory_files"].append(rel)
             if in_core:
                 record["in_eve_core"] = True
             continue
 
-        if any(token in lower for token in ("forge", "daze", "empire", "workbench")):
+        if _is_daze_memory_path(path):
+            daze = _ensure_daze_record(projects)
+            if rel not in daze["memory_files"]:
+                daze["memory_files"].append(rel)
+            if in_core:
+                daze["in_eve_core"] = True
+            continue
+
+        if any(token in lower for token in ("forge", "empire", "workbench")):
             project_id = _slug(path.stem)
             record = projects.setdefault(
                 project_id,
-                {
-                    "id": project_id,
-                    "name": path.stem,
-                    "display_name": path.stem,
-                    "github_owner": "",
-                    "github_repo": "",
-                    "flattened_file": "",
-                    "flattened_source": "",
-                    "flattened_at": "",
-                    "source_file_count": 0,
-                    "flattened_bytes": 0,
-                    "memory_files": [],
-                    "in_eve_core": False,
-                    "nlm_topics": [],
-                    "kind": "notes",
-                },
+                _blank_record(
+                    project_id,
+                    name=path.stem,
+                    display_name=path.stem,
+                    kind="notes",
+                ),
             )
             record["memory_files"].append(rel)
             if in_core:
                 record["in_eve_core"] = True
+
+
+def _consolidate_daze_projects(projects: dict[str, ProjectRecord], *, eve_core_paths: set[str]) -> None:
+    daze = _ensure_daze_record(projects)
+    profile_path = str(DAZE_PROFILE)
+    if DAZE_PROFILE.is_file() and profile_path in eve_core_paths:
+        daze["in_eve_core"] = True
+
+    remove_ids: list[str] = []
+    for project_id, record in projects.items():
+        if project_id == "daze":
+            continue
+        repo = str(record.get("github_repo") or "").casefold()
+        name = str(record.get("name") or "").casefold()
+        if repo == "daze" or name == "daze" or project_id.startswith("daze"):
+            flat = str(record.get("flattened_file") or "")
+            if flat and flat != daze.get("flattened_file"):
+                alternates = daze.setdefault("alternate_flattened", [])
+                if flat not in alternates:
+                    alternates.append(flat)
+            if not daze.get("flattened_file") and flat:
+                daze["flattened_file"] = flat
+                daze["flattened_source"] = str(record.get("flattened_source") or "")
+                daze["flattened_at"] = str(record.get("flattened_at") or "")
+                daze["source_file_count"] = int(record.get("source_file_count") or 0)
+                daze["flattened_bytes"] = int(record.get("flattened_bytes") or 0)
+            for mf in record.get("memory_files") or []:
+                if mf not in daze["memory_files"]:
+                    daze["memory_files"].append(mf)
+            if record.get("in_eve_core"):
+                daze["in_eve_core"] = True
+            remove_ids.append(project_id)
+            continue
+        # Memory-only fragments that slipped through with daze slug stems
+        if project_id.startswith("daze-") and record.get("kind") == "notes":
+            for mf in record.get("memory_files") or []:
+                if mf not in daze["memory_files"]:
+                    daze["memory_files"].append(mf)
+            if record.get("in_eve_core"):
+                daze["in_eve_core"] = True
+            remove_ids.append(project_id)
+
+    for project_id in remove_ids:
+        projects.pop(project_id, None)
 
 
 def _link_nlm_to_codebases(projects: dict[str, ProjectRecord]) -> None:
@@ -238,6 +351,8 @@ def load_eve_core_paths() -> set[str]:
     for item in payload.get("files", []):
         if isinstance(item, dict) and item.get("path"):
             paths.add(str(item["path"]))
+    if DAZE_PROFILE.is_file():
+        paths.add(str(DAZE_PROFILE))
     return paths
 
 
@@ -245,6 +360,7 @@ def build_project_catalog() -> dict[str, object]:
     eve_core_paths = load_eve_core_paths()
     projects = _flatten_projects()
     _memory_projects(projects, eve_core_paths=eve_core_paths)
+    _consolidate_daze_projects(projects, eve_core_paths=eve_core_paths)
     _link_nlm_to_codebases(projects)
 
     for record in projects.values():
@@ -259,6 +375,7 @@ def build_project_catalog() -> dict[str, object]:
     ordered = sorted(
         projects.values(),
         key=lambda item: (
+            0 if item.get("kind") == "product" else 1,
             0 if item.get("kind") == "evolution" else 1,
             0 if item.get("in_eve_core") else 1,
             -(int(item.get("source_file_count") or 0)),
@@ -295,19 +412,33 @@ def load_project_catalog(*, rebuild: bool = False) -> dict[str, object]:
 
 
 def public_project(record: dict[str, object]) -> dict[str, object]:
-    return {
+    memory_files = record.get("memory_files") or []
+    alternate_flat = record.get("alternate_flattened") or []
+    payload: dict[str, object] = {
         "id": record.get("id"),
         "displayName": record.get("display_name") or record.get("name"),
         "kind": record.get("kind"),
         "inEveCore": bool(record.get("in_eve_core")),
         "hasCode": bool(record.get("flattened_file")),
         "sourceFileCount": int(record.get("source_file_count") or 0),
-        "memoryFileCount": len(record.get("memory_files") or []),
+        "memoryFileCount": len(memory_files),
         "flattenedAt": record.get("flattened_at") or "",
         "flattenedSource": record.get("flattened_source") or "",
         "githubOwner": record.get("github_owner") or "",
         "githubRepo": record.get("github_repo") or "",
-        "memoryFiles": [
-            Path(str(path)).name for path in (record.get("memory_files") or [])[:8]
-        ],
+        "memoryFiles": [Path(str(path)).name for path in memory_files[:8]],
+        "alternateFlattenedCount": len(alternate_flat),
     }
+    if record.get("live_url"):
+        payload["liveUrl"] = record.get("live_url")
+    if record.get("empire_url"):
+        payload["empireUrl"] = record.get("empire_url")
+    if record.get("product_stack"):
+        payload["productStack"] = record.get("product_stack")
+    if record.get("empire_stack"):
+        payload["empireStack"] = record.get("empire_stack")
+    if record.get("empire_status"):
+        payload["empireStatus"] = record.get("empire_status")
+    if record.get("summary"):
+        payload["summary"] = record.get("summary")
+    return payload

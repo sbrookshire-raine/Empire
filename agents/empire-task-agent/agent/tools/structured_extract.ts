@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("structured_extract")
+      isCapabilityActive("structured_extract")
         ? defineTool({
             description:
               "Extract DocumentMetadata (title, author, date, tags, summary) from text via local llama.cpp worker (Ollama JSON fallback). Scratch cache only — never Cognee. Requires Structured Extract Toolbelt.",

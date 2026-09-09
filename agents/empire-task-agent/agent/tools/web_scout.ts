@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("web_scout")
+      isCapabilityActive("web_scout")
         ? defineTool({
             description:
               "Fetch one public http(s) page URL and cache markdown under 04_Thought_Experiments/web_cache. Not a search engine — needs a full URL. Does NOT write Cognee. Requires Web Scout Toolbelt.",

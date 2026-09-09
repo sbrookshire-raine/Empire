@@ -569,6 +569,52 @@ body:has(.workbench--chat) .empire-nav ul {
   color: var(--color-muted);
 }
 
+.project-card__badge--live {
+  background: color-mix(in oklch, var(--color-neon-cyan) 22%, var(--color-paper-3));
+  color: var(--color-neon-cyan);
+}
+
+.project-card__badge--stub {
+  background: color-mix(in oklch, var(--color-warning) 18%, var(--color-paper-3));
+  color: var(--color-warning);
+}
+
+.project-card__summary {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.project-card__deploy {
+  margin: 0 0 var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+  font-size: var(--text-sm);
+}
+
+.project-card__deploy p {
+  margin: 0.15rem 0;
+}
+
+.project-card__deploy-label {
+  display: inline-block;
+  min-width: 3.25rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.project-card__deploy a {
+  word-break: break-all;
+}
+
+.project-card__stack {
+  display: block;
+  margin-left: 3.25rem;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
 .project-card__meta,
 .project-card__source,
 .project-card__files {
@@ -2174,4 +2220,68 @@ textarea[data-state="success"] {
     animation-iteration-count: 1 !important;
     transition-duration: var(--dur-micro) !important;
   }
+}
+
+.admission-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin: 0 var(--space-xs) var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-thin) solid color-mix(in oklch, var(--color-neon-cyan) 35%, var(--color-rule));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-paper-2) 90%, transparent);
+  font-size: var(--text-xs);
+}
+
+.admission-bar__partner,
+.admission-panel__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+}
+
+.admission-bar__hint,
+.admission-panel__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.admission-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-xs);
+}
+
+.admission-bar__chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  border: var(--rule-thin) solid color-mix(in oklch, var(--color-neon-green) 45%, var(--color-rule));
+  color: var(--color-neon-green);
+  font-size: 0.68rem;
+  text-transform: lowercase;
+}
+
+.admission-bar__ttl {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+
+.admission-panel {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  border: var(--rule-thin) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-glass);
+}
+
+.admission-panel__meta {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
 }

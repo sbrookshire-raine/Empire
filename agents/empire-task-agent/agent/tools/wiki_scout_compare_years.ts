@@ -1,13 +1,13 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { wikiScoutCompareYearsViaMcp } from "#lib/wiki-scout-mcp";
 
 /** Wiki Local limb — Truth Drift compare with Wiki Interpreter. */
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("wiki_local")
+      isCapabilityActive("wiki_local")
         ? defineTool({
             description:
               "Truth Drift compare with Wiki Interpreter across local Wikipedia years (2017/2021/2026). " +

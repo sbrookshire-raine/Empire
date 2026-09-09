@@ -21,6 +21,7 @@ export const TOOLBELT_CATEGORIES = [
   "voice_presence",
   "vision_local",
   "container_scout",
+  "github_scout",
   "structured_extract",
   "retrieval_rerank",
   "browser_local",
@@ -40,6 +41,55 @@ function candidatePaths(): string[] {
     localAppData ? join(localAppData, "EMPIRE", "eve-toolbelt.json") : "",
     join(EMPIRE_ROOT, "config", "eve-toolbelt.json"),
   ].filter(Boolean);
+}
+
+function sessionPaths(): string[] {
+  const localAppData = process.env.LOCALAPPDATA;
+  return [
+    localAppData ? join(localAppData, "EMPIRE", "eve-capability-session.json") : "",
+    join(EMPIRE_ROOT, "config", "eve-capability-session.json"),
+  ].filter(Boolean);
+}
+
+function parseSession(): {
+  researchPartnerMode: boolean;
+  sessionCapabilities: ToolbeltCategory[];
+  expiresAt: string;
+} {
+  for (const filePath of sessionPaths()) {
+    try {
+      const parsed = JSON.parse(readFileSync(filePath, "utf8")) as {
+        research_partner_mode?: unknown;
+        session_capabilities?: unknown;
+        expires_at?: unknown;
+      };
+      const caps = Array.isArray(parsed.session_capabilities)
+        ? parsed.session_capabilities.filter(
+            (item): item is ToolbeltCategory =>
+              typeof item === "string" && isToolbeltCategory(item),
+          )
+        : [];
+      return {
+        researchPartnerMode: Boolean(parsed.research_partner_mode),
+        sessionCapabilities: caps,
+        expiresAt: typeof parsed.expires_at === "string" ? parsed.expires_at : "",
+      };
+    } catch {
+      continue;
+    }
+  }
+  return { researchPartnerMode: false, sessionCapabilities: [], expiresAt: "" };
+}
+
+function sessionStillValid(expiresAt: string): boolean {
+  if (!expiresAt.trim()) {
+    return false;
+  }
+  const expires = Date.parse(expiresAt);
+  if (Number.isNaN(expires)) {
+    return false;
+  }
+  return Date.now() < expires;
 }
 
 export function loadActiveToolCategories(): ToolbeltCategory[] {
@@ -65,4 +115,31 @@ export function loadActiveToolCategories(): ToolbeltCategory[] {
 
 export function isCategoryEnabled(category: ToolbeltCategory): boolean {
   return loadActiveToolCategories().includes(category);
+}
+
+/** Manual Toolbelt OR valid Research Autopilot session grant. */
+export function isCapabilityActive(category: ToolbeltCategory): boolean {
+  if (isCategoryEnabled(category)) {
+    return true;
+  }
+  const session = parseSession();
+  if (!session.researchPartnerMode || !sessionStillValid(session.expiresAt)) {
+    return false;
+  }
+  return session.sessionCapabilities.includes(category);
+}
+
+export function loadEffectiveToolCategories(): ToolbeltCategory[] {
+  const manual = loadActiveToolCategories();
+  const session = parseSession();
+  if (!session.researchPartnerMode || !sessionStillValid(session.expiresAt)) {
+    return manual;
+  }
+  const merged: ToolbeltCategory[] = [];
+  for (const item of [...manual, ...session.sessionCapabilities]) {
+    if (!merged.includes(item)) {
+      merged.push(item);
+    }
+  }
+  return merged;
 }

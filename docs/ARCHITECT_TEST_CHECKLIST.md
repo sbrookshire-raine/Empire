@@ -85,6 +85,23 @@ Mechanic CLI scorecard (latest): Phase 1 PASS · Phase 2 CLI_PASS (Ollama; start
 
 ---
 
+## Research Autopilot (F-29 — queue T-13–T-20)
+
+Run after `Start-EMPIRE.bat` and Eve rebuild. Detail in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md).
+
+- [ ] **T-13** — Enable **Research Partner** (More tab or chat bar); `/api/admission` reflects ON/OFF
+- [ ] **T-14** — Partner ON → ask: *What's new on Product Hunt today, and find GitHub MCP servers for local DuckDB?* → multi-source answer, no auto-Cognee
+- [ ] **T-15** — Session chips appear during research; clear after release or TTL
+- [ ] **T-16** — `github_cache/` + `web_cache/` under `04_Thought_Experiments/`; optional `00_Resource_Queue` brief
+- [ ] **T-17** — Partner OFF → same question → guardrail message, no silent network
+- [ ] **T-18** *(optional)* — Wiki question with T7/Docker → Weaviate preflight or clear admission error
+- [ ] **T-19** — Manual Toolbelt **GitHub Scout** without Partner → search only, no clone/Cognee
+- [ ] **T-20** — CLI: `pipeline.admission_controller status` / request / release
+
+Reply when done: `Smoke PASS Research Autopilot` (or note which T-xx failed).
+
+---
+
 ## Already on the board (older limbs — smoke when convenient)
 
 | ID | Item | Quick test |

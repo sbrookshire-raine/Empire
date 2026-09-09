@@ -26,6 +26,9 @@ DEFAULT_SCAN_FOLDERS = (
 CORE_OUTPUT = WORKBENCH_ROOT / "00_Core_Profile"
 PROFILE_FILE = CORE_OUTPUT / "USER_CORE_PROFILE.md"
 MANIFEST_FILE = CORE_OUTPUT / "eve_core_manifest.json"
+PINNED_CORE_FILES = (
+    CORE_OUTPUT / "DAZE_PRODUCT_PROFILE.md",
+)
 DATASET = "eve_core"
 ALLOWED_SUFFIXES = {".md", ".txt"}
 MAX_FILE_BYTES = 120_000
@@ -259,6 +262,15 @@ def main() -> int:
         return 1
 
     selected = ranked[: max(args.max_files, 1)]
+    pinned: list[ScoredFile] = []
+    selected_paths = {item.path for item in selected}
+    for path in PINNED_CORE_FILES:
+        if not path.is_file() or path in selected_paths:
+            continue
+        points = score_file(path)
+        pinned.append(ScoredFile(path=path, score=points if points is not None else 999))
+    selected = pinned + selected
+    selected = selected[: max(args.max_files + len(pinned), 1)]
     profile_path = write_profile(selected[: min(len(selected), 25)])
     write_manifest(selected, profile_path)
 

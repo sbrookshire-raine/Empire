@@ -24,12 +24,20 @@ TAGS = {
             "capabilities": ["completion", "tools"],
         },
         {
-            "name": "huihui_ai/qwen2.5-coder-abliterate:14b",
-            "model": "huihui_ai/qwen2.5-coder-abliterate:14b",
+            "name": "qwen2.5:14b-instruct",
+            "model": "qwen2.5:14b-instruct",
+            "size": 9 * 1024**3,
+            "digest": "digest-fast",
+            "details": {"parameter_size": "14.0B", "quantization_level": "Q4_K_M", "family": "qwen2"},
+            "capabilities": ["completion", "tools"],
+        },
+        {
+            "name": "qwen2.5-coder:14b",
+            "model": "qwen2.5-coder:14b",
             "size": 9 * 1024**3,
             "digest": "digest-coder",
             "details": {"parameter_size": "14.8B", "quantization_level": "Q4_K_M", "family": "qwen2"},
-            "capabilities": ["completion"],
+            "capabilities": ["completion", "tools"],
         },
         {
             "name": "qwen3.8:latest",
@@ -67,16 +75,10 @@ class OllamaInventoryTests(unittest.TestCase):
 
         daily = next(slot for slot in recommendations["suite"] if slot["id"] == "dailyChat")
         self.assertEqual(daily["status"], "covered")
-        self.assertEqual(daily["installedId"], "llama3.1:8b")
+        self.assertEqual(daily["installedId"], "qwen2.5:14b-instruct")
 
-        coding = next(slot for slot in recommendations["suite"] if slot["id"] == "coding")
-        self.assertEqual(coding["status"], "weak")
-        self.assertEqual(coding["installedId"], "huihui_ai/qwen2.5-coder-abliterate:14b")
-        self.assertIsNotNone(coding["pull"])
-
-        reasoning = next(slot for slot in recommendations["suite"] if slot["id"] == "reasoning")
-        self.assertEqual(reasoning["status"], "gap")
-        self.assertTrue(any(pull["id"] == "deepseek-r1:8b" for pull in recommendations["pullGaps"]))
+        deep = next(slot for slot in recommendations["suite"] if slot["id"] == "deepQuality")
+        self.assertIn(deep["status"], ("gap", "weak"))
 
         remove_ids = [item["id"] for item in recommendations["removeSuggestions"]]
         self.assertIn("llama3.1:latest", remove_ids)

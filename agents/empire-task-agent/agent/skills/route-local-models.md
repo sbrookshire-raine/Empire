@@ -28,6 +28,7 @@ or when a task clearly needs a different local model than the current chat defau
   - Fast → temperature **0.2** (strict tool JSON)
   - Deep → temperature **0.7** (creative brainstorming)
   - Librarian → temperature **0.4** (balanced retrieval)
+- **Research Partner mode** (Workbench More tab) does **not** change chat models — it only admits read-only scout limbs for a session TTL via `research_orchestrate` / `request_capability`.
 - Every mode uses **num_ctx 8192** to protect 16 GB VRAM.
 - If `get_model_suite` shows a gap, tell the user the `ollama pull …` command from `pullGaps`.
 - Embedding model is configured in Cognee (`config/cognee.env`), not via chat tools.

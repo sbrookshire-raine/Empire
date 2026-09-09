@@ -21,7 +21,7 @@ Do **not** use this skill for general user interests or `eve_memory` — use `me
 ## Prerequisites
 
 - Curated ingest: `.\scripts\ingest-curated-primitives.ps1`
-- Ollama: `huihui_ai/qwen2.5-coder-abliterate:14b` (graph) + `nomic-embed-text` (embeddings)
+- Ollama: `qwen2.5-coder:14b` (graph) + `nomic-embed-text` (embeddings)
 - Dashboard: http://127.0.0.1:8080/primitives.html
 
 ## If recall is empty

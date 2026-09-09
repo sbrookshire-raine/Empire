@@ -115,6 +115,14 @@
         "EMPIRE_BROWSER_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/browser_cache"
       }
     },
+    "empire-github-scout": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": ["C:/EMPIRE/mcp/github_scout_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_GITHUB_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/github_cache"
+      }
+    },
     "empire-atlas": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
       "args": ["C:/EMPIRE/mcp/atlas_mcp.py"],

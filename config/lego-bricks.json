@@ -143,6 +143,15 @@
       "tools": ["container_scout_search", "container_scout_detail", "container_scout_docker_status"]
     },
     {
+      "id": "github",
+      "label": "GitHub Scout",
+      "toolbelt": "github_scout",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["github_scout_search", "github_scout_readme"]
+    },
+    {
       "id": "forge",
       "label": "Tool Forge",
       "toolbelt": "tool_forge",

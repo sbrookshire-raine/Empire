@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("voice_presence")
+      isCapabilityActive("voice_presence")
         ? defineTool({
             description:
               "Speak text via local TTS (Piper/Kokoro through speech API). Prefer short replies. Requires Voice Presence Toolbelt.",

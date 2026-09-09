@@ -160,6 +160,37 @@
         <p class="chat__activity" x-show="chatActivityLabel" x-text="chatActivityLabel" aria-live="polite"></p>
 
         <div
+          class="admission-bar"
+          x-show="researchPartnerMode || (admissionSession.session_capabilities || []).length"
+          x-cloak
+        >
+          <label class="admission-bar__partner">
+            <input
+              type="checkbox"
+              :checked="researchPartnerMode"
+              @change="setResearchPartner($event.target.checked)"
+            />
+            <span>Research Partner</span>
+          </label>
+          <p class="admission-bar__hint" x-show="researchPartnerMode">
+            Eve may auto-enable read-only research limbs (Wiki, GitHub, Web).
+          </p>
+          <div
+            class="admission-bar__chips"
+            x-show="(admissionSession.session_capabilities || []).length"
+          >
+            <span class="admission-bar__chip-label">Session:</span>
+            <template x-for="cap in admissionSession.session_capabilities" :key="cap">
+              <span class="admission-bar__chip" x-text="cap"></span>
+            </template>
+            <span class="admission-bar__ttl" x-show="admissionTtlLabel()" x-text="admissionTtlLabel()"></span>
+            <button class="button button--quiet admission-bar__release" type="button" @click="releaseAdmissionSession()">
+              Release
+            </button>
+          </div>
+        </div>
+
+        <div
           class="chat__body"
           :class="{
             'chat__body--toolbelt': toolbeltOpen,
@@ -777,7 +808,10 @@
         <header class="panel__header projects__header">
           <div>
             <h2>Your projects</h2>
-            <p>What EMPIRE has harvested: flattened codebases, NLM notes, and eve_core memory.</p>
+            <p>
+              Harvested codebases and memory. Products with a live deploy show
+              <strong>live vs EMPIRE</strong> so stubs are not confused with shipped apps.
+            </p>
           </div>
           <button
             class="button button--quiet"
@@ -809,10 +843,37 @@
                 <h3 x-text="project.displayName"></h3>
                 <span class="project-card__badge" x-show="project.inEveCore">eve_core</span>
                 <span class="project-card__badge project-card__badge--muted" x-show="project.hasCode">code</span>
+                <span
+                  class="project-card__badge project-card__badge--live"
+                  x-show="project.liveUrl"
+                  >live product</span
+                >
+                <span
+                  class="project-card__badge project-card__badge--stub"
+                  x-show="project.empireStatus === 'stub'"
+                  >EMPIRE stub</span
+                >
               </header>
+              <p class="project-card__summary" x-show="project.summary" x-text="project.summary"></p>
+              <div class="project-card__deploy" x-show="project.liveUrl || project.empireUrl">
+                <p x-show="project.liveUrl">
+                  <span class="project-card__deploy-label">Live</span>
+                  <a :href="project.liveUrl" target="_blank" rel="noopener noreferrer" x-text="project.liveUrl"></a>
+                  <span class="project-card__stack" x-show="project.productStack" x-text="project.productStack"></span>
+                </p>
+                <p x-show="project.empireUrl">
+                  <span class="project-card__deploy-label">EMPIRE</span>
+                  <a :href="project.empireUrl" x-text="project.empireUrl"></a>
+                  <span class="project-card__stack" x-show="project.empireStack" x-text="project.empireStack"></span>
+                </p>
+              </div>
               <p class="project-card__meta">
                 <span x-show="project.sourceFileCount" x-text="project.sourceFileCount + ' source files'"></span>
                 <span x-show="project.memoryFileCount" x-text="project.memoryFileCount + ' memory files'"></span>
+                <span
+                  x-show="project.alternateFlattenedCount"
+                  x-text="project.alternateFlattenedCount + ' older flattens'"
+                ></span>
               </p>
               <p class="project-card__source" x-show="project.flattenedSource" x-text="project.flattenedSource"></p>
               <ul class="project-card__files" x-show="project.memoryFiles && project.memoryFiles.length">
@@ -1015,8 +1076,37 @@
       >
         <header class="panel__header">
           <h2>More</h2>
-          <p>Services, curated ingest, and other EMPIRE pages.</p>
+          <p>Services, curated ingest, Research Autopilot, and other EMPIRE pages.</p>
         </header>
+
+        <section class="admission-panel" aria-labelledby="admission-title">
+          <h3 id="admission-title">Research Autopilot</h3>
+          <p class="admission-panel__hint">
+            When on, Eve can admit read-only research limbs (Wiki Local, GitHub Scout, Web Scout) for a
+            short session without manual Toolbelt toggles. Never auto-writes Cognee memory.
+          </p>
+          <label class="admission-panel__toggle">
+            <input
+              type="checkbox"
+              :checked="researchPartnerMode"
+              @change="setResearchPartner($event.target.checked)"
+            />
+            <span>Research Partner mode</span>
+          </label>
+          <p class="admission-panel__meta" x-show="(admissionSession.session_capabilities || []).length">
+            Active session:
+            <span x-text="(admissionSession.session_capabilities || []).join(', ')"></span>
+            <span x-show="admissionTtlLabel()"> · TTL <span x-text="admissionTtlLabel()"></span></span>
+          </p>
+          <button
+            class="button button--quiet"
+            type="button"
+            x-show="(admissionSession.session_capabilities || []).length"
+            @click="releaseAdmissionSession()"
+          >
+            Release session capabilities
+          </button>
+        </section>
 
         <section class="health" aria-labelledby="health-title">
           <h3 id="health-title">Local services</h3>

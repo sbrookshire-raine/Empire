@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("container_scout")
+      isCapabilityActive("container_scout")
         ? defineTool({
             description:
               "List local Docker containers matching EMPIRE names (default empire-*). Status awareness only — does not start/stop. Requires Container Scout Toolbelt.",

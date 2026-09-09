@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("vision_local")
+      isCapabilityActive("vision_local")
         ? defineTool({
             description:
               "Describe a local image/screenshot with Ollama qwen3-vl:8b. Takes a GPU lease — expect chat model unload. Writes scratch note under vision_notes. Requires Vision Local Toolbelt.",

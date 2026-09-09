@@ -1,12 +1,12 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCategoryEnabled } from "#lib/toolbelt";
+import { isCapabilityActive } from "#lib/toolbelt";
 import { stemRunViaMcp } from "#lib/stem-factory-mcp";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCategoryEnabled("stem_factory")
+      isCapabilityActive("stem_factory")
         ? defineTool({
             description:
               "Run Demucs stem separation + practice focus tracks on songs in the stem inbox (default C:/Empire_Workbench/stem_factory/input). Writes to stem_factory/output. Default limit=1. GPU preferred; may take minutes. Requires Stem Factory Toolbelt.",
