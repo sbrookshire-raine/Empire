@@ -103,6 +103,24 @@
             <p class="chat__status" aria-live="polite" x-text="compactChatStatus"></p>
           </div>
           <div class="chat__toolbar-actions">
+            <details class="empire-menu">
+              <summary class="chat__icon-btn empire-menu__toggle" title="EMPIRE menu" aria-label="EMPIRE menu">
+                ☰
+              </summary>
+              <div class="empire-menu__panel" role="menu">
+                <p class="empire-menu__label">Workbench</p>
+                <button type="button" class="empire-menu__item" role="menuitem" @click="setTab('tasks')">Tasks</button>
+                <button type="button" class="empire-menu__item" role="menuitem" @click="setTab('memory')">Memory</button>
+                <button type="button" class="empire-menu__item" role="menuitem" @click="setTab('projects')">Projects</button>
+                <button type="button" class="empire-menu__item" role="menuitem" @click="setTab('models')">Models</button>
+                <button type="button" class="empire-menu__item" role="menuitem" @click="setTab('more')">More</button>
+                <p class="empire-menu__label">EMPIRE</p>
+                <a class="empire-menu__item" role="menuitem" href="http://127.0.0.1:8080/dashboard.html">Dashboard</a>
+                <a class="empire-menu__item" role="menuitem" href="http://127.0.0.1:8080/daze.html">DAZE</a>
+                <a class="empire-menu__item" role="menuitem" href="http://127.0.0.1:8080/lego.html">LEGO</a>
+                <a class="empire-menu__item" role="menuitem" href="http://127.0.0.1:8080/">Tasks UI</a>
+              </div>
+            </details>
             <details class="mode-picker">
               <summary
                 class="mode-picker__toggle"
@@ -133,15 +151,26 @@
               :aria-pressed="historyOpen"
               @click="toggleHistory()"
             >
-              ☰
+              ⏱
             </button>
             <button
               class="chat__icon-btn"
               type="button"
-              title="Toggle toolbelt"
-              aria-label="Toggle toolbelt"
-              :aria-pressed="toolbeltOpen"
-              @click="toolbeltOpen = !toolbeltOpen"
+              title="DAZE day dial"
+              aria-label="DAZE day dial"
+              :aria-pressed="rightDockOpen && rightDock === 'daze'"
+              x-show="activeTools.time_reclaim"
+              @click="toggleDazeDock()"
+            >
+              ◐
+            </button>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="Toolbelt"
+              aria-label="Toolbelt"
+              :aria-pressed="rightDockOpen && rightDock === 'tools'"
+              @click="toggleToolsDock()"
             >
               ⌗
             </button>
@@ -193,8 +222,8 @@
         <div
           class="chat__body"
           :class="{
-            'chat__body--toolbelt': toolbeltOpen,
-            'chat__body--history': historyOpen
+            'chat__body--history': historyOpen,
+            'chat__body--dock': rightDockOpen
           }"
         >
         <aside
@@ -206,7 +235,7 @@
           <header class="chat-history__header">
             <div>
               <h3>History</h3>
-              <p>Optional — open when you need a past chat. × or ☰ closes this panel.</p>
+              <p>Optional — past chats. Close with × or ⏱.</p>
             </div>
             <button
               class="chat__icon-btn"
@@ -251,45 +280,6 @@
                   ×
                 </button>
               </div>
-            </template>
-          </div>
-        </aside>
-
-        <aside
-          class="toolbelt"
-          x-show="toolbeltOpen"
-          x-cloak
-          aria-label="Toolbelt"
-        >
-          <header class="toolbelt__header">
-            <div>
-              <h3>Toolbelt</h3>
-              <p>Optional heavy limbs only. Memory and Tasks stay on.</p>
-            </div>
-            <button
-              class="chat__icon-btn"
-              type="button"
-              title="Close toolbelt"
-              aria-label="Close toolbelt"
-              @click="toolbeltOpen = false"
-            >
-              ×
-            </button>
-          </header>
-          <p class="toolbelt__summary" x-text="toolbeltToggleLabel"></p>
-          <div class="toolbelt__list" role="group" aria-label="Tool categories">
-            <template x-for="category in toolbeltCategories" :key="category.id">
-              <label class="toolbelt__item">
-                <input
-                  type="checkbox"
-                  :checked="activeTools[category.id]"
-                  @change="setToolbeltCategory(category.id, $event.target.checked)"
-                />
-                <span class="toolbelt__item-text">
-                  <strong x-text="category.label"></strong>
-                  <small x-text="category.description"></small>
-                </span>
-              </label>
             </template>
           </div>
         </aside>
@@ -359,11 +349,66 @@
             </section>
           </template>
         </div>
-        </div>
+
+        <aside class="chat-dock" x-show="rightDockOpen" x-cloak aria-label="Workbench dock">
+          <header class="chat-dock__header">
+            <nav class="chat-dock__tabs" role="tablist" aria-label="Dock panels">
+              <button
+                type="button"
+                class="chat-dock__tab"
+                role="tab"
+                :aria-selected="rightDock === 'tools'"
+                @click="openRightDock('tools')"
+              >
+                Tools
+              </button>
+              <button
+                type="button"
+                class="chat-dock__tab"
+                role="tab"
+                x-show="activeTools.time_reclaim"
+                :aria-selected="rightDock === 'daze'"
+                @click="openRightDock('daze')"
+              >
+                DAZE
+              </button>
+            </nav>
+            <button
+              class="chat__icon-btn"
+              type="button"
+              title="Close dock"
+              aria-label="Close dock"
+              @click="closeRightDock()"
+            >
+              ×
+            </button>
+          </header>
+          <div class="chat-dock__panel toolbelt" x-show="rightDock === 'tools'" role="tabpanel">
+            <p class="toolbelt__summary" x-text="toolbeltToggleLabel"></p>
+            <div class="toolbelt__list" role="group" aria-label="Tool categories">
+              <template x-for="category in toolbeltCategories" :key="category.id">
+                <label class="toolbelt__item">
+                  <input
+                    type="checkbox"
+                    :checked="activeTools[category.id]"
+                    @change="setToolbeltCategory(category.id, $event.target.checked)"
+                  />
+                  <span class="toolbelt__item-text">
+                    <strong x-text="category.label"></strong>
+                    <small x-text="category.description"></small>
+                  </span>
+                </label>
+              </template>
+            </div>
+          </div>
+          <div class="chat-dock__panel chat-dock__panel--daze" x-show="rightDock === 'daze'" role="tabpanel">
+            <iframe class="chat-dock__frame" src="/daze.html?embed=1" title="DAZE radial day dial"></iframe>
+          </div>
+        </aside>
 
         <form id="chat-form" class="composer chat-composer" @submit.prevent="sendMessage()">
           <label class="visually-hidden" for="chat-message">Message Eve</label>
-          <div class="composer__row">
+          <div class="composer__stack">
             <textarea
               id="chat-message"
               name="message"
@@ -374,7 +419,7 @@
               aria-describedby="chat-error"
               placeholder="Message Eve…"
             ></textarea>
-            <div class="composer__actions">
+            <div class="composer__actions composer__actions--chat">
               <button
                 class="button button--quiet composer__mic"
                 type="button"
@@ -387,7 +432,7 @@
                 aria-label="Hold to talk"
                 title="Hold to talk — release to send (Voice Presence)"
               >
-                <span x-text="voiceRecording ? '■■' : 'mic'"></span>
+                <span x-text="voiceRecording ? '■' : 'mic'"></span>
               </button>
               <button
                 class="button button--primary composer__send"
@@ -406,8 +451,24 @@
                 aria-label="Stop Eve talking or generating"
                 title="Stop speaking / Stop generating (Esc)"
               >
-                Stop
+                ■
               </button>
+            </div>
+            <div
+              class="composer__quick"
+              x-show="visibleComposerQuickPrompts.length && !sending"
+              x-cloak
+              role="group"
+              aria-label="Quick prompts"
+            >
+              <template x-for="item in visibleComposerQuickPrompts" :key="item.id">
+                <button
+                  type="button"
+                  class="composer__quick-btn"
+                  @click="runComposerQuickPrompt(item)"
+                  x-text="item.label"
+                ></button>
+              </template>
             </div>
           </div>
           <p
@@ -418,6 +479,7 @@
             x-text="chatError"
           ></p>
         </form>
+        </div>
       </section>
 
       <section

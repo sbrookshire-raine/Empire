@@ -62,9 +62,10 @@ async def wiki_scout_compare_years(
 
 
 @mcp.tool()
-async def promote_wiki_cache(path: str, dataset: str = "eve_memory") -> str:
+async def promote_wiki_cache(path: str, dataset: str = "") -> str:
     """Explicitly promote a wiki_cache markdown file into Cognee. Never automatic."""
-    return _json(wiki_scout.promote_wiki_cache(path, dataset=dataset or "eve_memory"))
+    override = dataset.strip() or None
+    return _json(wiki_scout.promote_wiki_cache(path, dataset=override))
 
 
 @mcp.tool()

@@ -15,15 +15,37 @@
       <header class="lego__header">
         <div>
           <h1>LEGO Whiteboard</h1>
-          <p>Compose forged limbs as bricks. Apply syncs optional limbs to Eve Toolbelt. No auto-Cognee.</p>
+          <p>Compose forged limbs as bricks. Recipes seed workflows; Apply syncs optional limbs to Eve Toolbelt.</p>
         </div>
         <div class="lego__actions">
           <button type="button" class="secondary" @click="loadBoard()" :disabled="busy">Reload</button>
+          <button type="button" class="secondary" @click="validateBoard()" :disabled="busy">Validate</button>
           <button type="button" class="secondary" @click="saveBoard()" :disabled="busy">Save</button>
           <button type="button" @click="applyToolbelt()" :disabled="busy">Apply to Toolbelt</button>
         </div>
       </header>
+
+      <div class="lego__recipe-row">
+        <label>
+          Recipe
+          <select id="lego-recipe-select">
+            <option value="">— pick starter —</option>
+            <template x-for="recipe in recipes" :key="recipe.id">
+              <option :value="recipe.id" x-text="recipe.label"></option>
+            </template>
+          </select>
+        </label>
+        <button type="button" class="secondary" @click="loadRecipe()" :disabled="busy">Load recipe</button>
+        <label class="lego__check lego__merge">
+          <input type="checkbox" x-model="mergeToolbelt" />
+          Merge with existing Toolbelt (keep other limbs ON)
+        </label>
+      </div>
+
       <p class="lego__status" x-text="status"></p>
+      <p class="lego__recipe-tag" x-show="recipeLabel" x-cloak>
+        Active recipe: <strong x-text="recipeLabel"></strong>
+      </p>
 
       <section class="lego__layout">
         <aside class="lego__palette" aria-label="Brick palette">
@@ -113,6 +135,17 @@
             <div>
               <p><strong x-text="brickLabel(selectedNodeMeta.brick)"></strong></p>
               <p class="lego__muted" x-text="selectedNodeMeta.brick"></p>
+              <template x-if="selectedBrickMeta">
+                <p class="lego__muted" x-text="selectedBrickMeta.note || ''"></p>
+                <p class="lego__muted" x-show="selectedBrickMeta.toolbelt">
+                  Toolbelt: <span x-text="selectedBrickMeta.toolbelt"></span>
+                </p>
+                <ul class="lego__tools" x-show="selectedBrickMeta.tools && selectedBrickMeta.tools.length">
+                  <template x-for="tool in selectedBrickMeta.tools" :key="tool">
+                    <li x-text="tool"></li>
+                  </template>
+                </ul>
+              </template>
               <label class="lego__check">
                 <input type="checkbox" x-model="selectedNodeMeta.enabled" @change="touchNode()" />
                 Enabled (counts for Apply)
@@ -128,7 +161,16 @@
             </div>
           </template>
           <template x-if="!selectedNode && !selectedEdge">
-            <p class="lego__muted">Select a brick or edge. Wheel zooms; drag empty canvas to pan. Connect out-port to in-port.</p>
+            <p class="lego__muted">Select a brick or edge. Wheel zooms; drag empty canvas to pan. Connect out-port → in-port.</p>
+          </template>
+          <template x-if="validationIssues.length">
+            <hr />
+            <h3>Validation</h3>
+            <ul class="lego__issues">
+              <template x-for="(issue, idx) in validationIssues" :key="idx">
+                <li :class="'lego__issue--' + issue.level" x-text="issue.message"></li>
+              </template>
+            </ul>
           </template>
           <hr />
           <p class="lego__muted">Board: <span x-text="boardPath || '(unsaved)'"></span></p>

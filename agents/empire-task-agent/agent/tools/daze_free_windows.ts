@@ -11,7 +11,12 @@ export default defineDynamic({
             description:
               "Compute free time arcs in the DAZE day for coaching (exercise/meditation). Requires Time Reclaim Toolbelt.",
             inputSchema: z.object({
-              date: z.string().optional().describe("YYYY-MM-DD (default today)."),
+              date: z
+                .string()
+                .optional()
+                .describe(
+                  "YYYY-MM-DD only. Omit entirely for today — never pass 'today' or natural language.",
+                ),
               phase: z.string().optional().describe("planned|actual (default planned)."),
               min_minutes: z
                 .number()

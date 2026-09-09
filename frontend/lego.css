@@ -32,6 +32,51 @@
   gap: 0.5rem;
 }
 
+.lego__recipe-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 0.35rem;
+}
+
+.lego__recipe-row label {
+  margin: 0;
+}
+
+.lego__merge {
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.lego__recipe-tag {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--pico-muted-color, #6b7c6e);
+}
+
+.lego__tools {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--pico-muted-color, #6b7c6e);
+}
+
+.lego__issues {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
+.lego__issue--error {
+  color: #c0392b;
+}
+
+.lego__issue--warn {
+  color: #b8860b;
+}
+
 .lego__status {
   min-height: 1.4rem;
   color: var(--pico-muted-color, #6b7c6e);

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "production_model": "nomic-embed-text",
+  "candidate_model": "qwen3-embedding:0.6b",
+  "test_dataset": "embed_ab_test",
+  "fixture_path": "data/eval/embedding_ab/cases.json",
+  "notes": "Eval only — never re-embed eve_memory without Architect approval."
+}

@@ -69,7 +69,7 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-08 | **Voice presence** | `ready` | `.\scripts\start-voice.ps1` (or Speaches/Voicebox). Enable **Voice Presence**. Mic blob → transcript in composer. | Wave 3; speech API optional |
 | T-09 | **Vision local** | `ready` | `ollama pull qwen3-vl:8b`. Enable **Vision Local**. Ask Eve about a screenshot path. | Wave 3; GPU lease |
 | T-10 | **Container Scout** | `ready` | Enable Toolbelt **Container Scout**. Ask Eve to search Docker Hub (e.g. weaviate / vector db). Confirm cache under `04_Thought_Experiments/container_cache/`; **no** auto-Cognee. Optional: ask which `empire-*` containers are running. | See `docs/KUBERNETES_AND_CONTAINERS.md` |
-| T-11 | **Smoke A — Operational foundation** | `ready` | Follow **Smoke A** in [`EMPIRE_AUTONOMOUS_BUILD_GUIDE.md`](EMPIRE_AUTONOMOUS_BUILD_GUIDE.md). Then reply `Smoke PASS Phase 1`. | Admission audit + release manifest |
+| T-11 | **Smoke A — Operational foundation** | `done` | Follow **Smoke A** in [`EMPIRE_AUTONOMOUS_BUILD_GUIDE.md`](EMPIRE_AUTONOMOUS_BUILD_GUIDE.md). Architect **Smoke PASS Phase 1** 2026-09-09. | Admission audit + release manifest |
 | T-12 | **Smoke B — Structured Extract** | `ready` | Follow **Smoke B** in the autonomous build guide (Toolbelt **Structured Extract**). Then `Smoke PASS Phase 2`. | llama.cpp worker; Ollama stays chat |
 | T-13 | **Research Partner toggle** | `ready` | `Start-EMPIRE.bat`. Open http://127.0.0.1:8080/eve.html → **More** tab or chat admission bar → enable **Research Partner**. Confirm `GET /api/admission` shows `research_partner: true`. Toggle OFF → partner flag false. | F-29 forged; default OFF in repo template |
 | T-14 | **research_orchestrate — GitHub + Product Hunt** | `ready` | With Partner ON, ask Eve: *What's new on Product Hunt today, and find GitHub MCP servers for local DuckDB?* Confirm she uses **`research_orchestrate`** (tool trace or compact multi-source answer). **No** auto-`cognee_remember`. | Same-turn admission bypasses Toolbelt `turn.started` |
@@ -105,9 +105,9 @@ Engineering work not yet (or only partially) shipped.
 | F-02 | `promote_wiki_cache` → Cognee helper | `done` | WIKI_SCOUT | Explicit promote only |
 | F-03 | Chat “continue past chat” (short summary into context) | `done` | EMPIRE_GUIDE near-term | `num_ctx` 8192; rolling summary field |
 | F-04 | Always-on Weaviate cold-start profile (optional) | `parked` | WIKI_SCOUT | Only if Architect wants wiki up every boot |
-| F-05 | Dedicated Cognee `truth_drift` dataset | `ready` | WIKI_SCOUT | Promote helper accepts dataset override |
+| F-05 | Dedicated Cognee `truth_drift` dataset | `done` | WIKI_SCOUT; `config/wiki-promote.json` | Auto-route compare → truth_drift; override allowed |
 | F-06 | Stem Factory WO close after live song smoke | `ready` | WO-stem-factory | Depends on T-03 |
-| F-07 | DAZE WO close after Architect UX review | `ready` | WO-daze-time-reclaim | Depends on T-02 |
+| F-07 | DAZE WO close after Architect UX review | `ready` | [`docs/DAZE.md`](DAZE.md) | Forge complete 2026-09-08 — Architect smoke **T-02** |
 | F-08 | Model A/B Fast mode only | `done` | Atlas Wave 1 | `%LOCALAPPDATA%\EMPIRE\ollama-fast-ab.json`; Deep/Librarian pinned |
 | F-09 | Secure remote access (Tailscale / Cloudflare Tunnel) | `ready` | Phase 6; `docs/REMOTE_ACCESS.md` | Bind localhost until then |
 | F-10 | Local voice (STT/TTS) path for composer | `done` | Phase 7; `docs/VOICE_PRESENCE.md` | Toolbelt OFF; OpenAI-compatible speech API |
@@ -118,7 +118,7 @@ Engineering work not yet (or only partially) shipped.
 | F-15 | Vision Local (`qwen3-vl:8b`) | `done` | Atlas Wave 3 | Toolbelt OFF; GPU lease |
 | F-16 | GPU lease dashboard surface | `done` | Atlas | `/api/gpu-lease` |
 | F-17 | LEGO whiteboard tool index | `done` | Phase 4 | `03_Active_Tools/LEGO_INDEX.md` |
-| F-18 | Embedding A/B (`qwen3-embedding:0.6b` test dataset only) | `ready` | Atlas Wave 4 | `docs/EMBEDDING_AB.md`; nomic stays production |
+| F-18 | Embedding A/B (`qwen3-embedding:0.6b` test dataset only) | `done` | Atlas Wave 4 | `pipeline/embedding_ab.py`; `scripts/embedding-ab.ps1`; nomic stays production |
 | F-19 | Container Scout (Docker Hub + local empire-* status) | `done` | `docs/KUBERNETES_AND_CONTAINERS.md` | Toolbelt OFF; no auto-Cognee; no auto-pull |
 | F-20 | Run EMPIRE core on local Kubernetes | `parked` | KUBERNETES_AND_CONTAINERS | Single-host + Ollama VRAM; Compose/scripts win |
 | F-21 | Autonomous build guide + Phase 1 foundation | `done` | `EMPIRE_AUTONOMOUS_BUILD_GUIDE.md` | Manifest, admission audit, lineage, fixtures |
@@ -139,7 +139,7 @@ Capture sparks here; promote to Testing or Forge when clear.
 
 | ID | Idea | Status | Source |
 |----|------|--------|--------|
-| I-01 | LEGO Whiteboard composable UI (beyond markdown index) | `in_progress` | Manifesto Phase 4; http://127.0.0.1:8080/lego.html |
+| I-01 | LEGO Whiteboard composable UI (beyond markdown index) | `done` | Manifesto Phase 4; http://127.0.0.1:8080/lego.html · recipes + validate + merge apply |
 | I-02 | Gumloop limb only after local research fails | `parked` | Manifesto Phase 3 |
 | I-03 | Thought-experiment YouTube → research limb | `done` | Manifesto Phase 3 / Atlas |
 | I-04 | Rebuild Shard `.venv-cuda` documented in ops cheat sheet | `done` | 2026-09-06 CUDA fix |
@@ -177,6 +177,7 @@ When waking EMPIRE to work this queue:
 | [docs/KUBERNETES_AND_CONTAINERS.md](KUBERNETES_AND_CONTAINERS.md) | K8s vs Compose; Container Scout |
 | [docs/CONTAINER_SCOUT.md](CONTAINER_SCOUT.md) | Container Scout limb ops |
 | [docs/RESEARCH_AUTOPILOT.md](RESEARCH_AUTOPILOT.md) | Research Partner + admission + orchestrator |
+| [docs/DAZE.md](DAZE.md) | DAZE radial day / Time Reclaim |
 | [docs/WEAVIATE_HEIST.md](WEAVIATE_HEIST.md) | Weaviate boot / tear-down |
 | `C:\Empire_Workbench\05_Work_Orders\` | Active Forge Work Orders |
 | `C:\Empire_Workbench\stem_factory\input` | Stem inbox |

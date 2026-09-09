@@ -30,6 +30,7 @@
     daze_list_day: "Reading today’s DAZE blocks…",
     daze_upsert_block: "Updating DAZE schedule…",
     daze_free_windows: "Finding free time windows…",
+    daze_compare_phases: "Comparing planned vs actual…",
     stem_status: "Checking Stem Factory…",
     stem_list_inbox: "Listing stem inbox songs…",
     stem_run: "Running stem separation…",
@@ -266,7 +267,10 @@
       voiceAutoSendOnStop: false,
       voiceCancelOnly: false,
       voiceSuppressed: false,
-      toolbeltOpen: true,
+      toolbeltOpen: false,
+      rightDock: null,
+      rightDockOpen: false,
+      toolDockState: { daze: { screen: 0, label: "Dial" } },
       researchPartnerMode: false,
       admissionSession: {
         session_capabilities: [],
@@ -381,6 +385,36 @@
         retrieval_rerank: false,
         browser_local: false,
       },
+      composerQuickPrompts: [
+        {
+          id: "github",
+          tool: "github_scout",
+          label: "GitHub",
+          prompt: "Search GitHub for ",
+          send: false,
+        },
+        {
+          id: "web",
+          tool: "web_scout",
+          label: "Fetch URL",
+          prompt: "Fetch this URL into web cache: ",
+          send: false,
+        },
+        {
+          id: "daze",
+          tool: "time_reclaim",
+          label: "Free time",
+          prompt: "What free windows do I have today?",
+          send: true,
+        },
+        {
+          id: "forge",
+          tool: "tool_forge",
+          label: "Forge",
+          prompt: "List Tool Forge scripts I can run from the workbench.",
+          send: true,
+        },
+      ],
       activeMode: "fast",
       activeModeLabel: "Fast Mode (14b)",
       activeModeDescription: "",
@@ -479,6 +513,15 @@
         );
       },
 
+      get visibleComposerQuickPrompts() {
+        var self = this;
+        return (this.composerQuickPrompts || [])
+          .filter(function (item) {
+            return !item.tool || (self.activeTools && self.activeTools[item.tool]);
+          })
+          .slice(0, 4);
+      },
+
       get toolbeltToggleLabel() {
         var count = this.activeToolIds().length;
         if (!count) return "No tools selected";
@@ -575,6 +618,16 @@
           workbench.stopOutput();
         };
         document.addEventListener("keydown", this._onDocKeydown);
+        this._onToolDockMessage = function (event) {
+          if (!event || !event.data || event.data.type !== "empire-tool-dock") return;
+          if (event.origin !== window.location.origin) return;
+          if (event.data.tool !== "daze") return;
+          workbench.toolDockState.daze = {
+            screen: event.data.screen | 0,
+            label: plainText(event.data.label) || "Dial",
+          };
+        };
+        window.addEventListener("message", this._onToolDockMessage);
         this.refreshToolbelt();
         this.refreshAdmission();
         this.refreshMemoryStatus();
@@ -670,6 +723,12 @@
       setToolbeltCategory: async function (categoryId, enabled) {
         if (!categoryId || !this.activeTools) return;
         this.activeTools[categoryId] = Boolean(enabled);
+        if (categoryId === "time_reclaim" && enabled) {
+          this.openRightDock("daze");
+        }
+        if (categoryId === "time_reclaim" && !enabled && this.rightDock === "daze") {
+          this.closeRightDock();
+        }
         try {
           await fetch("/api/toolbelt", {
             method: "POST",
@@ -679,6 +738,51 @@
         } catch (_error) {
           /* ignore persist errors — chat send still writes toolbelt */
         }
+      },
+
+      openRightDock: function (tab) {
+        if (!tab) return;
+        if (tab === "daze" && (!this.activeTools || !this.activeTools.time_reclaim)) return;
+        if (this.rightDockOpen && this.rightDock === tab) {
+          this.closeRightDock();
+          return;
+        }
+        this.rightDock = tab;
+        this.rightDockOpen = true;
+        this.toolbeltOpen = tab === "tools";
+      },
+
+      closeRightDock: function () {
+        this.rightDockOpen = false;
+        this.rightDock = null;
+        this.toolbeltOpen = false;
+      },
+
+      toggleToolsDock: function () {
+        this.openRightDock("tools");
+      },
+
+      toggleDazeDock: function () {
+        this.openRightDock("daze");
+      },
+
+      buildWorkbenchUiContext: function () {
+        var dazeOpen =
+          this.rightDockOpen &&
+          this.rightDock === "daze" &&
+          this.activeTools &&
+          this.activeTools.time_reclaim;
+        var dazeScreen = dazeOpen ? plainText(this.toolDockState.daze.label) || "Dial" : "";
+        return {
+          tab: this.activeTab || "chat",
+          panels: {
+            history: !!this.historyOpen,
+            tools_dock: !!(this.rightDockOpen && this.rightDock === "tools"),
+            daze_dial: !!dazeOpen,
+            daze_screen: dazeScreen,
+          },
+          active_tools: this.activeToolIds(),
+        };
       },
 
       setTab: function (tab) {
@@ -1335,12 +1439,14 @@
                 mode: this.selectedMode || this.activeMode || "fast",
                 active_tools: this.activeToolIds(),
                 chat_id: this.ensureHistoryChatId(),
+                workbench_ui: this.buildWorkbenchUiContext(),
               }
             : {
                 message: text,
                 mode: this.selectedMode || this.activeMode || "fast",
                 active_tools: this.activeToolIds(),
                 chat_id: this.ensureHistoryChatId(),
+                workbench_ui: this.buildWorkbenchUiContext(),
               };
           var response = await fetch(path, {
             method: "POST",
@@ -2454,6 +2560,27 @@
         if (!cleaned || this.sending) return;
         this.draft = cleaned;
         this.sendMessage();
+      },
+
+      runComposerQuickPrompt: function (item) {
+        if (!item || this.sending) return;
+        var cleaned = plainText(item.prompt);
+        if (!cleaned) return;
+        if (item.send) {
+          this.askSuggestion(cleaned);
+          return;
+        }
+        this.draft = cleaned;
+        var self = this;
+        this.$nextTick(function () {
+          var el = document.getElementById("chat-message");
+          if (el && typeof el.focus === "function") {
+            el.focus();
+            if (typeof el.setSelectionRange === "function") {
+              el.setSelectionRange(el.value.length, el.value.length);
+            }
+          }
+        });
       },
 
       applyOllamaModel: async function () {

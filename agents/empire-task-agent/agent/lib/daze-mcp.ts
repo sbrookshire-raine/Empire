@@ -4,6 +4,26 @@ import { EMPIRE_ROOT, PYTHON_BIN } from "#lib/empire";
 const DAZE_MCP_SCRIPT = path.join(EMPIRE_ROOT, "mcp", "daze_mcp.py");
 const POCKETBASE_URL = process.env.POCKETBASE_URL ?? "http://127.0.0.1:8090";
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Omit invalid / natural-language dates so MCP defaults to today. */
+export function sanitizeOptionalDate(value?: string): string | undefined {
+  if (value == null) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (ISO_DATE.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^(today|now|current)$/i.test(trimmed)) {
+    return undefined;
+  }
+  return undefined;
+}
+
 async function loadSdk() {
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
   const { StdioClientTransport } = await import(
@@ -139,7 +159,7 @@ export async function dazeListDayViaMcp(input: {
   phase?: string;
 }): Promise<unknown> {
   return callDazeTool("daze_list_day", {
-    date: input.date ?? "",
+    date: sanitizeOptionalDate(input.date) ?? "",
     phase: input.phase ?? "",
   });
 }
@@ -159,7 +179,7 @@ export async function dazeUpsertBlockViaMcp(input: {
     title: input.title,
     start_minute: input.start_minute,
     end_minute: input.end_minute,
-    date: input.date ?? "",
+    date: sanitizeOptionalDate(input.date) ?? "",
     kind: input.kind ?? "focus",
     phase: input.phase ?? "planned",
     notes: input.notes ?? "",
@@ -174,8 +194,16 @@ export async function dazeFreeWindowsViaMcp(input: {
   min_minutes?: number;
 }): Promise<unknown> {
   return callDazeTool("daze_free_windows", {
-    date: input.date ?? "",
+    date: sanitizeOptionalDate(input.date) ?? "",
     phase: input.phase ?? "planned",
     min_minutes: input.min_minutes ?? 30,
+  });
+}
+
+export async function dazeComparePhasesViaMcp(input: {
+  date?: string;
+}): Promise<unknown> {
+  return callDazeTool("daze_compare_phases", {
+    date: sanitizeOptionalDate(input.date) ?? "",
   });
 }

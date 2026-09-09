@@ -1,0 +1,23 @@
+candidate: architect_smoke
+status: architect_pass
+accepted_at: "2026-09-09T02:35:00+00:00"
+architect_phrase: "Smoke PASS Phase 1, Phase 3, Phase 4, and Phase 8"
+phases:
+  - phase: 1
+    name: Operational foundation
+    gate: architect_pass
+  - phase: 3
+    name: Retrieval rerank A/B
+    gate: architect_pass
+  - phase: 4
+    name: Playwright Browser Local allowlist
+    gate: architect_pass
+  - phase: 8
+    name: Mechanic SBOM scripts
+    gate: architect_pass
+evidence:
+  - data/eval/architect_smoke_scorecard.json
+  - data/eval/architect_smoke_acceptance.json
+  - scripts/architect-smoke-helper.ps1 scorecard 2026-09-08
+  - scripts/verify-eve-workbench.py all 14 stages PASS 2026-09-08
+notes: "CLI-green re-confirmed with full stack up; Phase 4 accepted on allowlist + frontend_up evidence."

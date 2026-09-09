@@ -6,163 +6,371 @@
     <title>EMPIRE DAZE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <link rel="stylesheet" href="empire-nav.css" />
-    <link rel="stylesheet" href="daze.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Space+Mono:wght@400;700&display=swap" />
+    <link rel="stylesheet" href="tool-dock.css?v=20260909h" />
+    <link rel="stylesheet" href="daze.css?v=20260909h" />
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
   </head>
   <body>
     <nav id="empire-nav" data-current="daze" aria-label="EMPIRE"></nav>
-    <main class="daze" x-data="dazeDay()" x-init="init()" x-cloak>
-      <header class="daze__header">
-        <div>
+    <main
+      class="daze"
+      :class="{ 'daze--embed': embedMode, 'daze-dock': embedMode }"
+      x-data="dazeDay()"
+      x-init="init()"
+      x-cloak
+    >
+      <header class="daze__toolbar" x-show="!embedMode">
+        <div class="daze__toolbar-brand">
           <h1>DAZE</h1>
-          <p>EMPIRE Phase 5 stub — local PocketBase dial, not the live Daily OS.</p>
+          <p class="daze__tagline" x-show="!embedMode">Radial day · planned vs actual</p>
         </div>
-        <div class="daze__date-row">
-          <label>
-            Date
+        <div class="daze__toolbar-controls">
+          <label class="daze__ctl">
+            <span class="daze__ctl-label">Date</span>
             <input type="date" x-model="date" @change="load()" />
           </label>
-          <label>
-            Phase
+          <label class="daze__ctl">
+            <span class="daze__ctl-label">View</span>
             <select x-model="phase" @change="load()">
+              <option value="both">Both</option>
               <option value="planned">Planned</option>
               <option value="actual">Actual</option>
             </select>
           </label>
-          <button type="button" class="secondary" @click="load()" :disabled="loading">Refresh</button>
+          <button type="button" class="secondary daze__ctl-btn" @click="load()" :disabled="loading">↻</button>
+          <a
+            class="daze__ctl-link"
+            x-show="!embedMode"
+            href="http://127.0.0.1:8080/eve.html"
+            title="Open Eve Workbench"
+            >Eve</a
+          >
         </div>
       </header>
 
-      <aside class="daze__live-banner" aria-label="Live product reference">
+      <header class="daze__embed-bar" x-show="embedMode">
+        <input type="date" x-model="date" @change="load()" aria-label="Date" />
+        <select x-model="phase" @change="load()" aria-label="View">
+          <option value="both">Both</option>
+          <option value="planned">Plan</option>
+          <option value="actual">Actual</option>
+        </select>
+        <button type="button" class="secondary daze__ctl-btn" @click="load()" :disabled="loading" aria-label="Refresh">↻</button>
+        <span class="daze__embed-status" x-text="status"></span>
+      </header>
+
+      <details class="daze__ref" x-show="!embedMode">
+        <summary>Reference · Time Reclaim with Eve</summary>
         <p>
-          <strong>Live product:</strong>
+          Design reference:
           <a href="https://daze-murex.vercel.app/" target="_blank" rel="noopener noreferrer"
             >daze-murex.vercel.app</a
           >
-          — React + Firebase Daily OS (concentric tracks, tabbed logs, full polish).
+          — sovereign EMPIRE limb on PocketBase.
         </p>
-        <p class="daze__live-banner-sub">
-          This page is the sovereign EMPIRE limb: same time-reclamation idea, PocketBase-only stub.
-          See Projects in Eve Workbench for the gap table.
+        <p class="daze__ref-sub">
+          Enable <strong>Time Reclaim</strong> in Eve’s dock (⌗), open **DAZE**, swipe → for schedule & blocks.
         </p>
-      </aside>
+      </details>
 
-      <p class="daze__status" x-text="status"></p>
-      <p class="daze__conflict" x-show="conflicts.length" x-cloak>
-        Overbooked: <span x-text="conflicts.length"></span> overlap(s) — arcs glow red on the dial.
+      <p class="daze__meta" x-show="!embedMode">
+        <span class="daze__status" x-text="status"></span>
+        <span
+          class="daze__conflict"
+          x-show="(phase === 'both' ? plannedConflicts.length + actualConflicts.length : conflicts.length)"
+          x-cloak
+        >
+          · Overbooked:
+          <span
+            x-text="phase === 'both' ? (plannedConflicts.length + ' planned · ' + actualConflicts.length + ' actual') : (conflicts.length + ' overlap(s)')"
+          ></span>
+        </span>
       </p>
 
+      <!-- Eve dock: 3-screen carousel (Dial → Schedule → Blocks) -->
+      <template x-if="embedMode">
+      <section class="tool-dock-carousel" aria-label="DAZE tool dock">
+        <div class="tool-dock-carousel__viewport">
+          <button
+            type="button"
+            class="tool-dock-carousel__arrow tool-dock-carousel__arrow--prev"
+            title="Previous screen"
+            aria-label="Previous screen"
+            x-show="dockScreen > 0"
+            @click="prevDockScreen()"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            class="tool-dock-carousel__arrow tool-dock-carousel__arrow--next"
+            title="Next screen"
+            aria-label="Next screen"
+            x-show="dockScreen < dockScreenMax"
+            @click="nextDockScreen()"
+          >
+            ›
+          </button>
+          <div class="tool-dock-carousel__track" :style="dockTrackStyle">
+            <article class="tool-dock-carousel__screen tool-dock-carousel__screen--dial" aria-label="Day dial">
+              <div class="daze__dial-wrap daze__dial-wrap--dock" aria-label="24-hour dial">
+                <div class="daze__legend daze__legend--dock">
+                  <span class="daze__legend-item" x-show="phase === 'both'"
+                    ><i class="daze__swatch daze__swatch--planned"></i> P</span
+                  >
+                  <span class="daze__legend-item" x-show="phase === 'both'"
+                    ><i class="daze__swatch daze__swatch--actual"></i> A</span
+                  >
+                  <span class="daze__legend-item daze__legend-item--time" x-text="nowTimeLabel"></span>
+                </div>
+                <div class="daze__dial-stack">
+                  <svg class="daze__dial" viewBox="0 0 320 320" role="img" aria-label="Day schedule dial">
+                    <circle class="daze__ring daze__ring--planned" cx="160" cy="160" r="118" />
+                    <circle id="daze-actual-ring" class="daze__ring daze__ring--actual" cx="160" cy="160" r="92" />
+                    <g id="daze-hour-ticks"></g>
+                    <g id="daze-planned-sectors"></g>
+                    <g id="daze-actual-sectors"></g>
+                    <g id="daze-single-sectors"></g>
+                    <line id="daze-now-needle" class="daze__now" style="display: none" x1="0" y1="0" x2="0" y2="0" />
+                    <circle id="daze-now-dot" class="daze__now-dot" style="display: none" cx="0" cy="0" r="4" />
+                    <circle class="daze__hub" cx="160" cy="160" r="44" />
+                  </svg>
+                  <div class="daze__clock-face" x-show="isToday" aria-live="polite">
+                    <div class="daze__clock-time" x-text="nowTimeLabel">--:--</div>
+                    <div class="daze__clock-sub">now</div>
+                  </div>
+                  <div class="daze__clock-face daze__clock-face--past" x-show="!isToday">
+                    <div class="daze__clock-time daze__clock-time--date" x-text="dateShort">--</div>
+                    <div class="daze__clock-sub" x-text="phase === 'both' ? 'both' : phase"></div>
+                  </div>
+                </div>
+                <ul class="daze__free-chips daze__free-chips--dock" x-show="dockFreeItems.length">
+                  <template x-for="w in dockFreeItems" :key="w.label">
+                    <li x-text="w.label"></li>
+                  </template>
+                </ul>
+              </div>
+            </article>
+
+            <article class="tool-dock-carousel__screen tool-dock-carousel__screen--schedule" aria-label="Schedule editor">
+              <form class="daze__form daze__form--dock" @submit.prevent="save()">
+                <label class="daze__field--full">
+                  Title
+                  <input type="text" x-model="form.title" required maxlength="255" placeholder="Block title" />
+                </label>
+                <div class="daze__form-grid">
+                  <label>
+                    Start
+                    <input type="time" x-model="form.start" required />
+                  </label>
+                  <label>
+                    End
+                    <input type="time" x-model="form.end" required />
+                  </label>
+                  <label>
+                    Kind
+                    <select x-model="form.kind">
+                      <option value="focus">Focus</option>
+                      <option value="body">Body</option>
+                      <option value="admin">Admin</option>
+                      <option value="creative">Creative</option>
+                      <option value="rest">Rest</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    Phase
+                    <select x-model="form.phase">
+                      <option value="planned">Planned</option>
+                      <option value="actual">Actual</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="daze__form-actions">
+                  <button type="submit" :disabled="saving" x-text="editingId ? 'Save' : 'Add'"></button>
+                  <button type="button" class="secondary" x-show="editingId" @click="resetForm()">Cancel</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="tool-dock-carousel__screen tool-dock-carousel__screen--blocks" aria-label="Today's blocks">
+              <div class="daze__blocks-dock">
+                <div class="daze__panel-head daze__panel-head--dock">
+                  <h2 class="tool-dock-carousel__screen-title" x-text="items.length ? items.length + ' blocks' : 'Blocks'"></h2>
+                  <button type="button" class="secondary" @click="startAddBlock()">+</button>
+                </div>
+                <div class="daze__list-dock">
+                <template x-for="item in dockBlockItems" :key="item.id">
+                  <article class="daze__card daze__card--dock" :class="{ 'daze__card--conflict': isConflict(item.id) }">
+                    <div class="daze__card-main">
+                      <strong x-text="item.title"></strong>
+                      <span class="daze__card-meta" x-text="fmtRange(item.start_minute, item.end_minute) + ' · ' + item.kind"></span>
+                    </div>
+                    <div class="daze__card-actions">
+                      <button type="button" class="secondary" @click="editInDock(item)">Ed</button>
+                      <button type="button" class="contrast" @click="remove(item.id)">×</button>
+                    </div>
+                  </article>
+                </template>
+                <p x-show="!items.length" class="muted daze__empty daze__empty--dock">No blocks — tap + or › Schedule.</p>
+                <p x-show="dockBlocksOverflow" class="daze__blocks-more" x-text="'+' + dockBlocksOverflow + ' more on full page'"></p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+        <footer class="tool-dock-carousel__footer">
+          <div class="tool-dock-carousel__dots" role="tablist" aria-label="DAZE screens">
+            <template x-for="(label, idx) in dockScreenLabels" :key="label">
+              <button
+                type="button"
+                class="tool-dock-carousel__dot"
+                role="tab"
+                :aria-current="dockScreen === idx ? 'true' : 'false'"
+                @click="goDockScreen(idx)"
+                x-text="label"
+              ></button>
+            </template>
+          </div>
+          <a
+            class="tool-dock-carousel__open-full"
+            href="http://127.0.0.1:8080/daze.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Full page</a
+          >
+        </footer>
+      </section>
+      </template>
+
+      <!-- Full page layout -->
+      <template x-if="!embedMode">
       <section class="daze__layout">
         <div class="daze__dial-wrap" aria-label="24-hour dial">
-          <svg class="daze__dial" viewBox="0 0 320 320" role="img">
-            <circle class="daze__ring" cx="160" cy="160" r="120" />
-            <template x-for="tick in hourTicks" :key="tick.label">
-              <g>
-                <line
-                  :x1="tick.x1"
-                  :y1="tick.y1"
-                  :x2="tick.x2"
-                  :y2="tick.y2"
-                  class="daze__tick"
-                />
-                <text :x="tick.tx" :y="tick.ty" class="daze__tick-label" x-text="tick.label"></text>
-              </g>
-            </template>
-            <template x-for="arc in arcs" :key="arc.id">
-              <path
-                :d="arc.d"
-                :class="arc.conflict ? 'daze__arc daze__arc--conflict' : 'daze__arc'"
-                :style="'stroke:' + arc.color"
-                :title="arc.title"
-              ></path>
-            </template>
-            <circle class="daze__hub" cx="160" cy="160" r="48" />
-            <text x="160" y="156" class="daze__hub-text" x-text="dateShort"></text>
-            <text x="160" y="176" class="daze__hub-sub" x-text="phase"></text>
-          </svg>
+          <div class="daze__legend">
+            <span class="daze__legend-item" x-show="phase === 'both'"
+              ><i class="daze__swatch daze__swatch--planned"></i> Planned</span
+            >
+            <span class="daze__legend-item" x-show="phase === 'both'"
+              ><i class="daze__swatch daze__swatch--actual"></i> Actual</span
+            >
+            <span class="daze__legend-item daze__legend-item--time">00 top · needle = now</span>
+          </div>
+          <div class="daze__dial-stack">
+            <svg class="daze__dial" viewBox="0 0 320 320" role="img" aria-label="Day schedule dial">
+              <circle class="daze__ring daze__ring--planned" cx="160" cy="160" r="118" />
+              <circle id="daze-actual-ring" class="daze__ring daze__ring--actual" cx="160" cy="160" r="92" />
+              <g id="daze-hour-ticks"></g>
+              <g id="daze-planned-sectors"></g>
+              <g id="daze-actual-sectors"></g>
+              <g id="daze-single-sectors"></g>
+              <line id="daze-now-needle" class="daze__now" style="display: none" x1="0" y1="0" x2="0" y2="0" />
+              <circle id="daze-now-dot" class="daze__now-dot" style="display: none" cx="0" cy="0" r="4" />
+              <circle class="daze__hub" cx="160" cy="160" r="44" />
+            </svg>
+            <div class="daze__clock-face" x-show="isToday" aria-live="polite">
+              <div class="daze__clock-time" x-text="nowTimeLabel">--:--</div>
+              <div class="daze__clock-sub">now</div>
+            </div>
+            <div class="daze__clock-face daze__clock-face--past" x-show="!isToday">
+              <div class="daze__clock-time daze__clock-time--date" x-text="dateShort">--</div>
+              <div class="daze__clock-sub" x-text="phase === 'both' ? 'both' : phase"></div>
+            </div>
+          </div>
         </div>
 
         <div class="daze__side">
-          <form class="daze__form" @submit.prevent="save()">
-            <h2 x-text="editingId ? 'Edit block' : 'Add block'"></h2>
-            <label>
-              Title
-              <input type="text" x-model="form.title" required maxlength="255" placeholder="Exercise / deep work / rest" />
-            </label>
-            <div class="daze__row">
+          <details class="daze__panel" open>
+            <summary x-text="editingId ? 'Edit block' : 'Add block'"></summary>
+            <form class="daze__form" @submit.prevent="save()">
               <label>
-                Start (HH:MM)
-                <input type="time" x-model="form.start" required />
+                Title
+                <input type="text" x-model="form.title" required maxlength="255" placeholder="Deep work / rest" />
               </label>
+              <div class="daze__row daze__row--tight">
+                <label>
+                  Start
+                  <input type="time" x-model="form.start" required />
+                </label>
+                <label>
+                  End
+                  <input type="time" x-model="form.end" required />
+                </label>
+                <label>
+                  Kind
+                  <select x-model="form.kind">
+                    <option value="focus">Focus</option>
+                    <option value="body">Body</option>
+                    <option value="admin">Admin</option>
+                    <option value="creative">Creative</option>
+                    <option value="rest">Rest</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Phase
+                  <select x-model="form.phase">
+                    <option value="planned">Planned</option>
+                    <option value="actual">Actual</option>
+                  </select>
+                </label>
+              </div>
               <label>
-                End (HH:MM)
-                <input type="time" x-model="form.end" required />
+                Notes
+                <textarea x-model="form.notes" rows="1" maxlength="5000"></textarea>
               </label>
-            </div>
-            <div class="daze__row">
-              <label>
-                Kind
-                <select x-model="form.kind">
-                  <option value="focus">Focus</option>
-                  <option value="body">Body</option>
-                  <option value="admin">Admin</option>
-                  <option value="creative">Creative</option>
-                  <option value="rest">Rest</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
-              <label>
-                Phase
-                <select x-model="form.phase">
-                  <option value="planned">Planned</option>
-                  <option value="actual">Actual</option>
-                </select>
-              </label>
-            </div>
-            <label>
-              Notes
-              <textarea x-model="form.notes" rows="2" maxlength="5000"></textarea>
-            </label>
-            <div class="daze__row">
-              <button type="submit" :disabled="saving" x-text="editingId ? 'Update' : 'Add'"></button>
-              <button type="button" class="secondary" x-show="editingId" @click="resetForm()">Cancel</button>
-            </div>
-          </form>
+              <div class="daze__row daze__row--actions">
+                <button type="submit" :disabled="saving" x-text="editingId ? 'Update' : 'Add'"></button>
+                <button type="button" class="secondary" x-show="editingId" @click="resetForm()">Cancel</button>
+              </div>
+            </form>
+          </details>
 
-          <div class="daze__free">
-            <h2>Free windows (≥30m)</h2>
+          <div class="daze__panel daze__list">
+            <div class="daze__panel-head">
+              <h2>Blocks</h2>
+              <span class="muted" x-text="items.length ? items.length + ' total' : ''"></span>
+            </div>
+            <div class="daze__list-scroll">
+              <template x-for="item in items" :key="item.id">
+                <article class="daze__card" :class="{ 'daze__card--conflict': isConflict(item.id) }">
+                  <div class="daze__card-main">
+                    <strong x-text="item.title"></strong>
+                    <span class="daze__card-meta">
+                      <span x-text="fmtRange(item.start_minute, item.end_minute)"></span>
+                      · <span x-text="item.kind"></span> ·
+                      <span class="daze__phase-badge" x-text="item.phase"></span>
+                    </span>
+                  </div>
+                  <div class="daze__card-actions">
+                    <button type="button" class="secondary" @click="edit(item)">Edit</button>
+                    <button type="button" class="contrast" @click="remove(item.id)">Del</button>
+                  </div>
+                </article>
+              </template>
+              <p x-show="!items.length" class="muted daze__empty">No blocks yet.</p>
+            </div>
+          </div>
+
+          <details class="daze__panel daze__free" x-show="free.length || phase === 'both'">
+            <summary>Free windows (≥30m)</summary>
+            <p class="muted daze__free-hint" x-show="phase === 'both'">From planned blocks when viewing both rings.</p>
             <ul>
               <template x-for="w in free" :key="w.label">
                 <li>
                   <strong x-text="w.label"></strong>
-                  <span x-text="w.minutes + ' min'"></span>
+                  <span x-text="w.minutes + 'm'"></span>
                 </li>
               </template>
             </ul>
-            <p x-show="!free.length" class="muted">No free windows ≥30 minutes.</p>
-          </div>
-
-          <div class="daze__list">
-            <h2>Blocks</h2>
-            <template x-for="item in items" :key="item.id">
-              <article class="daze__card" :class="{ 'daze__card--conflict': isConflict(item.id) }">
-                <header>
-                  <strong x-text="item.title"></strong>
-                  <span class="muted" x-text="fmtRange(item.start_minute, item.end_minute)"></span>
-                </header>
-                <p class="muted" x-text="item.kind + ' · ' + item.phase"></p>
-                <div class="daze__row">
-                  <button type="button" class="secondary" @click="edit(item)">Edit</button>
-                  <button type="button" class="contrast" @click="remove(item.id)">Delete</button>
-                </div>
-              </article>
-            </template>
-            <p x-show="!items.length" class="muted">No blocks yet — add one to draw the day.</p>
-          </div>
+            <p x-show="!free.length" class="muted">No gaps ≥30 minutes.</p>
+          </details>
         </div>
       </section>
+      </template>
     </main>
     <script src="empire-nav.js"></script>
-    <script src="daze.js"></script>
+    <script src="daze.js?v=20260909h"></script>
   </body>
 </html>

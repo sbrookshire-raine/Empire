@@ -113,6 +113,41 @@ class WikiScoutCacheTests(unittest.TestCase):
             self.assertEqual(len(result["paths"]), 1)
             self.assertTrue(Path(result["paths"][0]).is_file())
 
+    def test_resolve_promote_dataset_compare(self) -> None:
+        body = "---\nkind: truth_drift_compare\ncognee_dataset: truth_drift\n---\n# x\n"
+        chosen, reason = wiki_scout.resolve_promote_dataset("compare_x.md", body)
+        self.assertEqual(chosen, "truth_drift")
+        self.assertEqual(reason, "front_matter_cognee_dataset")
+
+    def test_resolve_promote_dataset_wiki_chunk(self) -> None:
+        body = "---\nkind: wiki_chunk\ncognee_dataset: eve_memory\n---\n# x\n"
+        chosen, reason = wiki_scout.resolve_promote_dataset("hit.md", body)
+        self.assertEqual(chosen, "eve_memory")
+        self.assertEqual(reason, "front_matter_cognee_dataset")
+
+    def test_resolve_promote_dataset_rejects_bad_override(self) -> None:
+        chosen, err = wiki_scout.resolve_promote_dataset("x.md", "", dataset="not_allowed")
+        self.assertIsNone(chosen)
+        self.assertIn("dataset must be one of", err or "")
+
+    def test_write_cache_hit_includes_cognee_dataset(self) -> None:
+        hit = {
+            "collection": "WikiChunk",
+            "snapshot_year": "2017",
+            "snapshot_id": "20170301",
+            "title": "Test",
+            "text": "body",
+            "doc_id": "d",
+            "chunk_id": "c",
+            "object_id": "oid12345",
+            "distance": 0.1,
+            "query": "q",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = wiki_scout.write_cache_hit(hit, cache_dir=Path(tmp))
+            text = path.read_text(encoding="utf-8")
+            self.assertIn('cognee_dataset: "eve_memory"', text)
+
 
 if __name__ == "__main__":
     unittest.main()

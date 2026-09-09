@@ -53,14 +53,16 @@ Architect authorized continued forge of Phase 3+ while they smoke personally (20
 | Phase | Name | Mechanic status | Architect gate |
 |------:|------|-----------------|----------------|
 | 0 | Guide + queue | `done` | — |
-| 1 | Operational foundation | `architect_pass` | accepted 2026-09-07 |
+| 1 | Operational foundation | `architect_pass` | accepted 2026-09-07; **re-confirmed 2026-09-09** |
 | 2 | llama.cpp structured-extract | `architect_pass` | Soft Smoke B accepted |
-| 3 | Retrieval rerank A/B | `architect_pass` | accepted |
-| 4 | Playwright Browser Local | `architect_pass` | accepted |
+| 3 | Retrieval rerank A/B | `architect_pass` | accepted; **re-confirmed 2026-09-09** |
+| 4 | Playwright Browser Local | `architect_pass` | accepted; **re-confirmed 2026-09-09** |
 | 5 | Voice VAD + Kokoro path | `architect_pass` | accepted (VAD CLI) |
 | 6 | UI observe (no actuators) | `architect_pass` | accepted |
 | 7 | PaddleOCR | `parked` | only if Docling fails your scans |
-| 8 | Mechanic SBOM scripts | `architect_pass` | accepted |
+| 8 | Mechanic SBOM scripts | `architect_pass` | accepted; **re-confirmed 2026-09-09** |
+
+**Architect acceptance (2026-09-09):** `Smoke PASS Phase 1, Phase 3, Phase 4, and Phase 8` (stack + CLI evidence)
 
 **Architect acceptance (2026-09-07):** `Accept mechanic soft-smoke Phases 1-6 and 8`
 

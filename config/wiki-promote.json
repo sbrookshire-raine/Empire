@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "notes": "Cognee dataset routing for explicit promote_wiki_cache only. Never auto-promote from scout.",
+  "by_kind": {
+    "wiki_chunk": "eve_memory",
+    "truth_drift_compare": "truth_drift"
+  },
+  "default_dataset": "eve_memory",
+  "allowed_datasets": [
+    "eve_memory",
+    "truth_drift",
+    "eve_core",
+    "primitives_test"
+  ]
+}

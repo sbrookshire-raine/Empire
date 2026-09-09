@@ -1,0 +1,58 @@
+[
+  {
+    "id": "wiki_weaviate",
+    "query": "local weaviate wikipedia on demand EMPIRE",
+    "top_k": 3,
+    "expected_top_ids": ["c1"],
+    "candidates": [
+      {"id": "c1", "text": "Weaviate runs on-demand via Docker on port 8091 for Wiki Local Truth Drift."},
+      {"id": "c2", "text": "PocketBase stores tasks and day_blocks for the Workbench."},
+      {"id": "c3", "text": "Ollama serves interactive chat models for Eve."},
+      {"id": "c4", "text": "Stem Factory splits songs with Demucs under a CUDA venv."}
+    ]
+  },
+  {
+    "id": "cognee_memory",
+    "query": "durable graph memory cognee VHDX",
+    "top_k": 3,
+    "expected_top_ids": ["m1"],
+    "candidates": [
+      {"id": "m1", "text": "Cognee stores durable graph and vector memory on V:\\Cognee VHDX."},
+      {"id": "m2", "text": "Chat history is local JSON under LOCALAPPDATA EMPIRE."},
+      {"id": "m3", "text": "Container Scout searches Docker Hub and does not pull images."}
+    ]
+  },
+  {
+    "id": "structured_extract",
+    "query": "schema constrained document metadata llama.cpp",
+    "top_k": 2,
+    "expected_top_ids": ["e1"],
+    "candidates": [
+      {"id": "e1", "text": "Structured Extract uses llama.cpp DocumentMetadata.v1 on loopback 8092."},
+      {"id": "e2", "text": "DAZE radial day planner uses PocketBase day_blocks."},
+      {"id": "e3", "text": "Web Scout fetches public URLs into web_cache markdown."}
+    ]
+  },
+  {
+    "id": "research_partner",
+    "query": "github scout product hunt research orchestrator",
+    "top_k": 2,
+    "expected_top_ids": ["r1"],
+    "candidates": [
+      {"id": "r1", "text": "Research Autopilot admits github_scout and web_scout for Product Hunt feeds."},
+      {"id": "r2", "text": "Voice Presence transcribes microphone blobs via a local speech API."},
+      {"id": "r3", "text": "LEGO whiteboard composes Toolbelt limbs without auto Cognee promote."}
+    ]
+  },
+  {
+    "id": "daze_time",
+    "query": "radial day free windows exercise meditation",
+    "top_k": 2,
+    "expected_top_ids": ["d1"],
+    "candidates": [
+      {"id": "d1", "text": "DAZE Time Reclaim lists free windows from PocketBase day_blocks for body and rest."},
+      {"id": "d2", "text": "GPU lease prevents vision and stem from colliding on 16 GB VRAM."},
+      {"id": "d3", "text": "Docling converts PDFs into Resource Queue markdown for triage."}
+    ]
+  }
+]

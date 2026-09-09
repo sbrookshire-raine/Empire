@@ -18,9 +18,10 @@ def _json(data: Any) -> str:
 
 
 @mcp.tool()
-async def promote_wiki_cache(path: str, dataset: str = "eve_memory") -> str:
+async def promote_wiki_cache(path: str, dataset: str = "") -> str:
     """Explicitly promote a wiki_cache .md into Cognee (never automatic)."""
-    return _json(wiki_scout.promote_wiki_cache(path, dataset=dataset))
+    override = dataset.strip() or None
+    return _json(wiki_scout.promote_wiki_cache(path, dataset=override))
 
 
 @mcp.tool()

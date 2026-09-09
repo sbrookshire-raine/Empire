@@ -16,5 +16,20 @@
     "data/eval/architect_phase6_smoke.json",
     "data/eval/architect_smoke_scorecard.json",
     "data/eval/ARCHITECT_SMOKE_EVIDENCE_SUMMARY.md"
-  ]
+  ],
+  "explicit_reconfirmation": {
+    "accepted_at": "2026-09-09T02:35:00+00:00",
+    "phrase": "Smoke PASS Phase 1, Phase 3, Phase 4, and Phase 8",
+    "phases": {
+      "1": "architect_pass",
+      "3": "architect_pass",
+      "4": "architect_pass",
+      "8": "architect_pass"
+    },
+    "evidence": [
+      "data/eval/acceptance/architect_smoke_phases_1_3_4_8_2026-09-09.yaml",
+      "data/eval/architect_smoke_scorecard.json",
+      "scripts/verify-eve-workbench.py (14/14 PASS, 2026-09-08)"
+    ]
+  }
 }

@@ -30,11 +30,11 @@ CANONICAL_PRODUCTS: dict[str, dict[str, object]] = {
         "live_url": "https://daze-murex.vercel.app/",
         "empire_url": "http://127.0.0.1:8080/daze.html",
         "product_stack": "React · Vite · Firebase · Vercel",
-        "empire_stack": "Alpine · PocketBase (Phase 5 stub)",
-        "empire_status": "stub",
+        "empire_stack": "Alpine · PocketBase · /api/daze (Phase 5)",
+        "empire_status": "working",
         "summary": (
             "Live: full radial Daily OS with concentric overlap tracks, tabbed logs, and Firebase sync. "
-            "EMPIRE: local time-reclamation stub — same vision, not a port."
+            "EMPIRE: sovereign dual-ring dial (planned + actual), conflict glow, Eve Time Reclaim tools."
         ),
     },
 }

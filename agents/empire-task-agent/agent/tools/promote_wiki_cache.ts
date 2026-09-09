@@ -4,13 +4,15 @@ import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineTool({
   description:
-    "Explicitly promote a wiki_cache .md file into Cognee memory. Never automatic — only when the Architect asks. Path must be under 04_Thought_Experiments/wiki_cache.",
+    "Explicitly promote a wiki_cache .md file into Cognee memory. Never automatic — only when the Architect asks. Compare files route to truth_drift; single hits to eve_memory unless dataset override is set.",
   inputSchema: z.object({
     path: z.string().min(1).describe("Full path to a wiki_cache markdown file."),
     dataset: z
       .string()
       .optional()
-      .describe("Cognee dataset (default eve_memory; use truth_drift for compares)."),
+      .describe(
+        "Optional Cognee dataset override (eve_memory, truth_drift, eve_core, primitives_test). Omit to auto-route from cache kind.",
+      ),
   }),
   async execute({ path, dataset }) {
     const args = ["promote", path];

@@ -7,12 +7,17 @@ function legoBoard() {
 
   return {
     bricks: [],
+    recipes: [],
     nodes: [],
     edges: [],
     viewport: { x: 40, y: 40, zoom: 1 },
     status: "Loading…",
     busy: false,
     boardPath: "",
+    recipeId: "",
+    recipeLabel: "",
+    mergeToolbelt: true,
+    validationIssues: [],
     selectedNode: null,
     selectedEdge: null,
     selectedNodeMeta: { brick: "", enabled: true },
@@ -25,13 +30,19 @@ function legoBoard() {
       return "0 0 1200 800";
     },
 
+    get selectedBrickMeta() {
+      if (!this.selectedNodeMeta.brick) return null;
+      return this.brickMap()[this.selectedNodeMeta.brick] || null;
+    },
+
     async init() {
       await this.loadBricks();
+      await this.loadRecipes();
       await this.loadBoard();
       window.addEventListener("keydown", (e) => {
         if (e.key === "Delete" || e.key === "Backspace") {
           const tag = (e.target && e.target.tagName) || "";
-          if (tag === "INPUT" || tag === "TEXTAREA") return;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
           this.deleteSelected();
         }
       });
@@ -76,7 +87,37 @@ function legoBoard() {
         return;
       }
       this.bricks = data.bricks || [];
-      this.status = "Loaded " + this.bricks.length + " bricks";
+    },
+
+    async loadRecipes() {
+      const { data } = await this.api("GET", "/api/lego/recipes");
+      if (!data.ok) {
+        this.recipes = [];
+        return;
+      }
+      this.recipes = data.recipes || [];
+    },
+
+    boardPayload() {
+      const payload = {
+        nodes: this.nodes,
+        edges: this.edges,
+        viewport: this.viewport,
+      };
+      if (this.recipeId) payload.recipe_id = this.recipeId;
+      if (this.recipeLabel) payload.recipe_label = this.recipeLabel;
+      return payload;
+    },
+
+    applyBoardData(board) {
+      this.nodes = Array.isArray(board.nodes) ? board.nodes : [];
+      this.edges = Array.isArray(board.edges) ? board.edges : [];
+      this.viewport = board.viewport || { x: 40, y: 40, zoom: 1 };
+      this.recipeId = board.recipe_id || "";
+      this.recipeLabel = board.recipe_label || "";
+      this.validationIssues = [];
+      this.selectedNode = null;
+      this.selectedEdge = null;
     },
 
     async loadBoard() {
@@ -87,14 +128,11 @@ function legoBoard() {
           this.status = data.error || "Failed to load board";
           return;
         }
-        const board = data.board || {};
-        this.nodes = Array.isArray(board.nodes) ? board.nodes : [];
-        this.edges = Array.isArray(board.edges) ? board.edges : [];
-        this.viewport = board.viewport || { x: 40, y: 40, zoom: 1 };
+        this.applyBoardData(data.board || {});
         this.boardPath = data.path || "";
         this.status = data.exists
           ? "Board loaded"
-          : "Empty board — place bricks from the palette";
+          : "Empty board — pick a recipe or place bricks";
       } finally {
         this.busy = false;
       }
@@ -103,18 +141,64 @@ function legoBoard() {
     async saveBoard() {
       this.busy = true;
       try {
-        const payload = {
-          nodes: this.nodes,
-          edges: this.edges,
-          viewport: this.viewport,
-        };
-        const { data } = await this.api("PUT", "/api/lego/board", payload);
+        const { data } = await this.api("PUT", "/api/lego/board", this.boardPayload());
         if (!data.ok) {
           this.status = data.error || "Save failed";
-          return;
+          return false;
         }
         this.boardPath = data.path || this.boardPath;
         this.status = "Saved board";
+        return true;
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async validateBoard() {
+      this.busy = true;
+      try {
+        const { data } = await this.api("POST", "/api/lego/validate", this.boardPayload());
+        this.validationIssues = data.issues || [];
+        if (!data.ok) {
+          this.status =
+            "Validation failed — " +
+            (this.validationIssues[0] ? this.validationIssues[0].message : "see inspector");
+          return false;
+        }
+        const warns = this.validationIssues.filter((i) => i.level === "warn").length;
+        this.status =
+          warns > 0
+            ? "Valid with " + warns + " port hint(s)"
+            : "Board valid — " + (data.enabled_optional_limbs || 0) + " optional limb(s) enabled";
+        return true;
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async loadRecipe() {
+      const select = document.getElementById("lego-recipe-select");
+      const recipeId = select ? select.value : "";
+      if (!recipeId) {
+        this.status = "Choose a recipe first";
+        return;
+      }
+      if (
+        this.nodes.length &&
+        !window.confirm("Replace current board with recipe '" + recipeId + "'?")
+      ) {
+        return;
+      }
+      this.busy = true;
+      try {
+        const { data } = await this.api("POST", "/api/lego/recipe", { id: recipeId });
+        if (!data.ok) {
+          this.status = data.error || "Recipe load failed";
+          return;
+        }
+        this.applyBoardData(data.board || {});
+        this.status = "Loaded recipe: " + (data.board.recipe_label || recipeId);
+        await this.validateBoard();
       } finally {
         this.busy = false;
       }
@@ -123,16 +207,22 @@ function legoBoard() {
     async applyToolbelt() {
       this.busy = true;
       try {
+        const valid = await this.validateBoard();
+        if (!valid) return;
         await this.saveBoard();
         const { data } = await this.api("POST", "/api/lego/apply-toolbelt", {
           nodes: this.nodes,
+          edges: this.edges,
+          merge: !!this.mergeToolbelt,
         });
         if (!data.ok) {
+          this.validationIssues = data.issues || this.validationIssues;
           this.status = data.error || "Apply failed";
           return;
         }
         const limbs = (data.active_tools || []).join(", ") || "(none)";
-        this.status = "Toolbelt updated: " + limbs;
+        this.status =
+          (data.merge ? "Merged" : "Set") + " Toolbelt: " + limbs;
       } finally {
         this.busy = false;
       }
@@ -147,6 +237,8 @@ function legoBoard() {
         enabled: true,
       };
       this.nodes.push(n);
+      this.recipeId = "";
+      this.recipeLabel = "";
       this.selectNode(n.id);
       this.status = "Placed " + brickId;
     },
@@ -315,6 +407,21 @@ function legoBoard() {
       this.selectNode(id);
     },
 
+    connectionKind(fromId, toId) {
+      const fromNode = this.nodes.find((n) => n.id === fromId);
+      const toNode = this.nodes.find((n) => n.id === toId);
+      if (!fromNode || !toNode) return "scratch";
+      const fromBrick = this.brickMap()[fromNode.brick];
+      const toBrick = this.brickMap()[toNode.brick];
+      if (!fromBrick || !toBrick) return "scratch";
+      const outs = (fromBrick.ports && fromBrick.ports.out) || [];
+      const ins = (toBrick.ports && toBrick.ports.in) || [];
+      for (let i = 0; i < outs.length; i += 1) {
+        if (ins.indexOf(outs[i]) >= 0) return outs[i];
+      }
+      return outs[0] || ins[0] || "scratch";
+    },
+
     startConnect(id, side, evt) {
       if (evt.button !== 0) return;
       if (side === "in") {
@@ -323,13 +430,14 @@ function legoBoard() {
             (e) => e.from === this.connect.from && e.to === id
           );
           if (!exists) {
+            const kind = this.connectionKind(this.connect.from, id);
             this.edges.push({
               id: uid("e"),
               from: this.connect.from,
               to: id,
-              kind: "scratch",
+              kind: kind,
             });
-            this.status = "Connected " + this.connect.from + " → " + id;
+            this.status = "Connected (" + kind + ")";
           }
           this.connect = null;
           this.draftPath = "";

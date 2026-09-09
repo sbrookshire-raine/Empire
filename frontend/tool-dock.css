@@ -1,0 +1,457 @@
+/* Reusable Eve tool dock carousel — DAZE neon dock (#040814) */
+
+html.daze-embed {
+  height: 100%;
+  overflow: hidden;
+  background: #040814;
+}
+
+body.daze-embed {
+  height: 100%;
+  min-height: 0 !important;
+  margin: 0;
+  overflow: hidden;
+  background: #040814;
+}
+
+body.daze-embed main.daze {
+  margin: 0;
+  background: #040814;
+}
+
+.tool-dock-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #040814;
+}
+
+.tool-dock-carousel__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+  background: #040814;
+}
+
+.tool-dock-carousel__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.tool-dock-carousel__screen {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 0.15rem;
+  padding-top: 1.55rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #040814;
+}
+
+.tool-dock-carousel__arrow {
+  position: absolute;
+  top: 0.15rem;
+  z-index: 2;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 999px;
+  background: #0a1020;
+  color: #00e5ff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+}
+
+.tool-dock-carousel__arrow:hover {
+  border-color: #00e5ff;
+  background: rgba(0, 191, 255, 0.15);
+}
+
+.tool-dock-carousel__arrow--prev {
+  right: 1.65rem;
+}
+
+.tool-dock-carousel__arrow--next {
+  right: 0.15rem;
+}
+
+.tool-dock-carousel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  padding: 0.12rem 0.15rem 0.05rem;
+  border-top: 1px solid rgba(0, 191, 255, 0.18);
+  background: #040814;
+}
+
+.tool-dock-carousel__dots {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.tool-dock-carousel__dot {
+  margin: 0;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid rgba(0, 191, 255, 0.28);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(0, 191, 255, 0.65);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tool-dock-carousel__dot[aria-current="true"] {
+  border-color: rgba(0, 229, 255, 0.65);
+  color: #00e5ff;
+  background: rgba(0, 191, 255, 0.12);
+}
+
+.tool-dock-carousel__open-full {
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(0, 229, 255, 0.75);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tool-dock-carousel__screen-title {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 229, 255, 0.8);
+}
+
+/* —— Screen 1: Dial —— */
+.tool-dock-carousel__screen--dial .daze__dial-wrap--dock {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0.2rem;
+  margin: 0;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  background: #0a1020;
+  border: 1px solid rgba(0, 191, 255, 0.32);
+  box-shadow: inset 0 0 28px rgba(0, 191, 255, 0.05);
+}
+
+.daze__legend--dock {
+  flex: 0 0 auto;
+  margin: 0 0 0.12rem;
+  font-size: 0.55rem;
+  gap: 0.3rem;
+}
+
+.daze-dock .daze__dial-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  filter: drop-shadow(0 0 14px rgba(0, 191, 255, 0.12));
+}
+
+.daze-dock .daze__dial {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  aspect-ratio: 1;
+}
+
+.daze-dock .daze__clock-time {
+  font-size: clamp(0.9rem, 9cqmin, 1.45rem);
+}
+
+.daze-dock .daze__clock-sub {
+  font-size: 0.52rem;
+  margin-top: 0.1rem;
+}
+
+.daze__free-chips--dock {
+  flex: 0 0 auto;
+  margin: 0.12rem 0 0;
+  max-height: 1.15rem;
+  overflow: hidden;
+}
+
+.daze__free-chips--dock li {
+  font-size: 0.52rem;
+  padding: 0.08rem 0.3rem;
+  background: rgba(4, 8, 20, 0.85);
+}
+
+/* —— Screen 2: Schedule —— */
+.tool-dock-carousel__screen--schedule {
+  justify-content: center;
+}
+
+.daze__form--dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  justify-content: center;
+  margin: 0;
+  padding: 0.15rem;
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 0.4rem;
+  background: #0a1020;
+}
+
+.daze__form--dock label {
+  margin: 0;
+  font-size: 0.58rem;
+  line-height: 1.2;
+  color: rgba(0, 229, 255, 0.75);
+}
+
+.daze__form--dock input,
+.daze__form--dock select {
+  min-height: 1.55rem;
+  margin-bottom: 0;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.68rem;
+  background: rgba(4, 8, 20, 0.92);
+  border-color: rgba(0, 191, 255, 0.28);
+  color: #e0f2fe;
+}
+
+.daze__field--full {
+  width: 100%;
+}
+
+.daze__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.28rem 0.35rem;
+}
+
+.daze__form-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.daze__form-actions button {
+  flex: 1 1 auto;
+  min-height: 1.55rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.62rem;
+}
+
+/* —— Screen 3: Blocks —— */
+.daze__blocks-dock {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.12rem;
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 0.4rem;
+  background: #0a1020;
+}
+
+.daze__panel-head--dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  margin-bottom: 0.25rem;
+}
+
+.daze__panel-head--dock button {
+  min-height: 1.35rem;
+  min-width: 1.35rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.daze__blocks-more {
+  flex: 0 0 auto;
+  margin: 0.15rem 0 0;
+  font-size: 0.55rem;
+  text-align: center;
+  color: rgba(0, 191, 255, 0.65);
+}
+
+.daze__list-dock {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  overflow: hidden;
+  justify-content: flex-start;
+}
+
+.daze__card--dock {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem;
+  align-items: center;
+  padding: 0.3rem 0.38rem;
+  margin: 0;
+  background: rgba(4, 8, 20, 0.88);
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-left: 3px solid rgba(0, 229, 255, 0.45);
+  border-radius: 0.35rem;
+}
+
+.daze__card--dock .daze__card-main strong {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e0f2fe;
+}
+
+.daze__card--dock .daze__card-meta {
+  font-size: 0.55rem;
+  line-height: 1.2;
+  color: rgba(0, 191, 255, 0.55);
+}
+
+.daze__card--dock .daze__card-actions {
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.daze__card--dock .daze__card-actions button {
+  min-height: 1.25rem;
+  min-width: 1.35rem;
+  padding: 0.05rem 0.25rem;
+  font-size: 0.55rem;
+}
+
+.daze__empty--dock {
+  margin: auto 0;
+  font-size: 0.62rem;
+  text-align: center;
+  color: rgba(0, 191, 255, 0.55);
+}
+
+/* Taller dock viewports — use the extra height */
+@container (min-height: 300px) {
+  .daze-dock .daze__clock-time {
+    font-size: clamp(1rem, 10cqmin, 1.55rem);
+  }
+
+  .daze__free-chips--dock {
+    max-height: 1.5rem;
+  }
+
+  .daze__free-chips--dock li {
+    font-size: 0.56rem;
+  }
+
+  .daze__form--dock {
+    gap: 0.35rem;
+    padding: 0.25rem;
+  }
+
+  .daze__form--dock input,
+  .daze__form--dock select {
+    min-height: 1.65rem;
+    font-size: 0.7rem;
+  }
+
+  .daze__list-dock {
+    gap: 0.28rem;
+  }
+
+  .daze__card--dock {
+    padding: 0.34rem 0.42rem;
+  }
+
+  .daze__card--dock .daze__card-main strong {
+    font-size: 0.72rem;
+  }
+}
+
+@container (min-height: 420px) {
+  .tool-dock-carousel__screen {
+    padding-top: 1.45rem;
+  }
+
+  .daze-dock .daze__clock-time {
+    font-size: clamp(1.05rem, 11cqmin, 1.75rem);
+  }
+
+  .daze__free-chips--dock {
+    max-height: 2rem;
+  }
+
+  .daze__form--dock {
+    justify-content: flex-start;
+    padding-top: 0.35rem;
+  }
+
+  .daze__blocks-dock {
+    padding: 0.2rem;
+  }
+
+  .daze__list-dock {
+    gap: 0.32rem;
+  }
+
+  .daze__card--dock .daze__card-main strong {
+    font-size: 0.76rem;
+  }
+
+  .daze__card--dock .daze__card-meta {
+    font-size: 0.58rem;
+  }
+}
+
+@container (max-height: 260px) {
+  .daze__form--dock input,
+  .daze__form--dock select {
+    min-height: 1.35rem;
+    font-size: 0.62rem;
+  }
+
+  .daze__form--dock label {
+    font-size: 0.55rem;
+  }
+
+  .daze__card--dock {
+    padding: 0.2rem 0.3rem;
+  }
+}

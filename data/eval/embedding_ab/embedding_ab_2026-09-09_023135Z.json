@@ -1,0 +1,183 @@
+{
+  "ok": true,
+  "evaluated_at": "2026-09-09T02:31:35+00:00",
+  "production_model": "nomic-embed-text",
+  "candidate_model": "qwen3-embedding:0.6b",
+  "production_hits": 5,
+  "candidate_hits": 5,
+  "verdict": "tie",
+  "recommendation": "qwen3-embedding:0.6b tied nomic-embed-text (5 hits). No production embed change recommended yet.",
+  "availability": {
+    "nomic-embed-text": {
+      "available": true,
+      "detail": "ok"
+    },
+    "qwen3-embedding:0.6b": {
+      "available": true,
+      "detail": "ok"
+    }
+  },
+  "models": {
+    "nomic-embed-text": {
+      "ok": true,
+      "hits": 5,
+      "case_count": 5,
+      "cases": [
+        {
+          "id": "wiki_weaviate",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "c1"
+          ],
+          "got_ids": [
+            "c1",
+            "c3",
+            "c2"
+          ],
+          "dimension": 768,
+          "error": null
+        },
+        {
+          "id": "cognee_memory",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "m1"
+          ],
+          "got_ids": [
+            "m1",
+            "m3",
+            "m2"
+          ],
+          "dimension": 768,
+          "error": null
+        },
+        {
+          "id": "structured_extract",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "e1"
+          ],
+          "got_ids": [
+            "e1",
+            "e3"
+          ],
+          "dimension": 768,
+          "error": null
+        },
+        {
+          "id": "research_partner",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "r1"
+          ],
+          "got_ids": [
+            "r1",
+            "r2"
+          ],
+          "dimension": 768,
+          "error": null
+        },
+        {
+          "id": "daze_time",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "d1"
+          ],
+          "got_ids": [
+            "d1",
+            "d2"
+          ],
+          "dimension": 768,
+          "error": null
+        }
+      ]
+    },
+    "qwen3-embedding:0.6b": {
+      "ok": true,
+      "hits": 5,
+      "case_count": 5,
+      "cases": [
+        {
+          "id": "wiki_weaviate",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "c1"
+          ],
+          "got_ids": [
+            "c1",
+            "c3",
+            "c2"
+          ],
+          "dimension": 1024,
+          "error": null
+        },
+        {
+          "id": "cognee_memory",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "m1"
+          ],
+          "got_ids": [
+            "m1",
+            "m2",
+            "m3"
+          ],
+          "dimension": 1024,
+          "error": null
+        },
+        {
+          "id": "structured_extract",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "e1"
+          ],
+          "got_ids": [
+            "e1",
+            "e3"
+          ],
+          "dimension": 1024,
+          "error": null
+        },
+        {
+          "id": "research_partner",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "r1"
+          ],
+          "got_ids": [
+            "r1",
+            "r2"
+          ],
+          "dimension": 1024,
+          "error": null
+        },
+        {
+          "id": "daze_time",
+          "ok": true,
+          "hit": true,
+          "expected_top_ids": [
+            "d1"
+          ],
+          "got_ids": [
+            "d1",
+            "d2"
+          ],
+          "dimension": 1024,
+          "error": null
+        }
+      ]
+    }
+  },
+  "acceptance_path": "C:\\EMPIRE\\data\\eval\\acceptance\\embedding_ab_2026-09-09_023135Z.yaml",
+  "report_path": "C:\\EMPIRE\\data\\eval\\embedding_ab\\embedding_ab_2026-09-09_023135Z.json",
+  "note": "Eval only. Production Cognee embeddings remain nomic-embed-text."
+}

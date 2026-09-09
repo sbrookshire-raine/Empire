@@ -32,6 +32,7 @@ try:
         project_catalog,
         wiki_api,
         wiki_drift_api,
+        workbench_ui_api,
     )
 except ModuleNotFoundError:
     import chat_continuity  # type: ignore[no-redef]
@@ -48,6 +49,7 @@ except ModuleNotFoundError:
     import primitives_api  # type: ignore[no-redef]
     import wiki_api  # type: ignore[no-redef]
     import wiki_drift_api  # type: ignore[no-redef]
+    import workbench_ui_api  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = Path(__file__).resolve().parent
@@ -319,6 +321,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path == "/api/admission"
             or path.startswith("/api/voice/")
             or path.startswith("/api/lego/")
+            or path.startswith("/api/daze/")
         )
         if local_only_api:
             if origin in MEMORY_ALLOWED_ORIGINS:
@@ -348,6 +351,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
             or path.startswith("/api/lego/")
+            or path.startswith("/api/daze/")
         ) and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
         if path.startswith("/api/eve/"):
@@ -378,6 +382,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._admission_get()
         if path.startswith("/api/lego/"):
             return self._lego_get(path)
+        if path.startswith("/api/daze/"):
+            return self._daze_api("GET")
         if path == "/api/toolbelt":
             active = eve_toolbelt.load_active_tools()
             return self._send_json(
@@ -464,6 +470,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 payload = chat_continuity.enrich_eve_message_payload(payload)
             except Exception:
                 pass
+            try:
+                payload = workbench_ui_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -497,6 +507,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._lego_post(path)
+        if path.startswith("/api/daze/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._daze_api("POST")
         if path == "/api/voice/transcribe":
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1045,11 +1059,35 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         status = 200 if result.get("ok") else 400
         return self._send_json(status, result)
 
+    def _daze_api(self, method: str) -> None:
+        try:
+            from frontend import daze_api
+        except ModuleNotFoundError:
+            import daze_api  # type: ignore[no-redef]
+        payload: dict | None = None
+        if method in {"POST", "DELETE"}:
+            raw_length = self.headers.get("Content-Length", "0")
+            try:
+                length = int(raw_length)
+            except ValueError:
+                length = 0
+            if length > 0:
+                payload = self._read_json()
+                if payload is not None and not isinstance(payload, dict):
+                    return self._send_json(400, {"ok": False, "error": "JSON object required"})
+        try:
+            status, result = daze_api.handle_api(method, self.path, payload)
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(500, {"ok": False, "error": str(exc)})
+        return self._send_json(status, result)
+
     def _lego_get(self, path: str) -> None:
         if not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
         if path == "/api/lego/bricks":
             return self._send_json(200, lego_api.load_bricks())
+        if path == "/api/lego/recipes":
+            return self._send_json(200, lego_api.load_recipes())
         if path == "/api/lego/board":
             return self._send_json(200, lego_api.load_board())
         return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
@@ -1065,13 +1103,24 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         return self._send_json(status, result)
 
     def _lego_post(self, path: str) -> None:
-        if path != "/api/lego/apply-toolbelt":
-            return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
         payload = self._read_json()
-        body = payload if isinstance(payload, dict) else None
-        result = lego_api.apply_toolbelt_from_board(body)
-        status = 200 if result.get("ok") else 400
-        return self._send_json(status, result)
+        body = payload if isinstance(payload, dict) else {}
+        if path == "/api/lego/apply-toolbelt":
+            result = lego_api.apply_toolbelt_from_board(body)
+            status = 200 if result.get("ok") else 400
+            return self._send_json(status, result)
+        if path == "/api/lego/validate":
+            result = lego_api.validate_board(body)
+            status = 200 if result.get("ok") else 400
+            return self._send_json(status, result)
+        if path == "/api/lego/recipe":
+            recipe_id = str(body.get("id") or body.get("recipe_id") or "").strip()
+            if not recipe_id:
+                return self._send_json(400, {"ok": False, "error": "recipe id required"})
+            result = lego_api.instantiate_recipe(recipe_id)
+            status = 200 if result.get("ok") else 400
+            return self._send_json(status, result)
+        return self._send_json(404, {"ok": False, "error": "Unknown lego route"})
 
     def _gpu_lease_post(self) -> None:
         payload = self._read_json()
@@ -1236,6 +1285,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._chat_history_delete(path)
         if path.startswith("/api/wiki/"):
             return self._wiki_mutate("DELETE", path, {})
+        if path.startswith("/api/daze/"):
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._daze_api("DELETE")
         self.send_error(404)
 
     def _chat_history_get(self, path: str) -> None:

@@ -61,6 +61,74 @@ class DazeApiHelpersTests(unittest.TestCase):
         self.assertTrue(any(w.startswith("01:00") for w in labels))
         self.assertTrue(any("12:00" in w for w in labels))
 
+    def test_compare_phases_mocked(self) -> None:
+        def fake_list(*, day=None, phase=None):  # noqa: ANN001
+            if phase == "planned":
+                return {
+                    "ok": True,
+                    "date": day or "2026-09-06",
+                    "items": [
+                        {
+                            "id": "1",
+                            "title": "Run",
+                            "start_minute": 420,
+                            "end_minute": 480,
+                            "kind": "body",
+                        }
+                    ],
+                    "conflicts": [],
+                }
+            return {
+                "ok": True,
+                "date": day or "2026-09-06",
+                "items": [],
+                "conflicts": [],
+            }
+
+        original = daze_api.list_day
+        daze_api.list_day = fake_list  # type: ignore[assignment]
+        try:
+            result = daze_api.compare_phases(day="2026-09-06")
+        finally:
+            daze_api.list_day = original  # type: ignore[assignment]
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["planned"]["count"], 1)
+        self.assertTrue(result["coaching"])
+
+    def test_normalize_day_aliases(self) -> None:
+        today = daze_api._today_local()
+        day, err = daze_api.normalize_day("")
+        self.assertIsNone(err)
+        self.assertEqual(day, today)
+        day2, err2 = daze_api.normalize_day("today")
+        self.assertIsNone(err2)
+        self.assertEqual(day2, today)
+        bad, err3 = daze_api.normalize_day("October 5, 2023")
+        self.assertIsNone(bad)
+        self.assertIn("YYYY-MM-DD", err3 or "")
+
+    def test_handle_api_both_phase_route(self) -> None:
+        def fake_list(*, day=None, phase=None):  # noqa: ANN001
+            return {
+                "ok": True,
+                "date": day or "2026-09-06",
+                "items": [],
+                "conflicts": [],
+            }
+
+        original = daze_api.list_day
+        daze_api.list_day = fake_list  # type: ignore[assignment]
+        try:
+            status, payload = daze_api.handle_api(
+                "GET",
+                "/api/daze/day?date=2026-09-06&phase=both",
+            )
+        finally:
+            daze_api.list_day = original  # type: ignore[assignment]
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["phase"], "both")
+
 
 if __name__ == "__main__":
     unittest.main()

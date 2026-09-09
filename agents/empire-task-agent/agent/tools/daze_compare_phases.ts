@@ -1,7 +1,7 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { isCapabilityActive } from "#lib/toolbelt";
-import { dazeListDayViaMcp } from "#lib/daze-mcp";
+import { dazeComparePhasesViaMcp } from "#lib/daze-mcp";
 
 export default defineDynamic({
   events: {
@@ -9,7 +9,7 @@ export default defineDynamic({
       isCapabilityActive("time_reclaim")
         ? defineTool({
             description:
-              "List DAZE day_blocks for a date (YYYY-MM-DD, default today). Requires Time Reclaim Toolbelt limb. Returns blocks + conflicts.",
+              "Compare planned vs actual DAZE day blocks for coaching (free windows, conflicts, body/rest drift). Requires Time Reclaim Toolbelt.",
             inputSchema: z.object({
               date: z
                 .string()
@@ -17,13 +17,9 @@ export default defineDynamic({
                 .describe(
                   "YYYY-MM-DD only. Omit entirely for today — never pass 'today' or natural language.",
                 ),
-              phase: z
-                .string()
-                .optional()
-                .describe("planned or actual (optional filter)."),
             }),
-            async execute({ date, phase }) {
-              return dazeListDayViaMcp({ date, phase });
+            async execute({ date }) {
+              return dazeComparePhasesViaMcp({ date });
             },
           })
         : null,

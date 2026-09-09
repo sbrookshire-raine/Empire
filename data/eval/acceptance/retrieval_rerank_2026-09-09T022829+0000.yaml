@@ -1,0 +1,19 @@
+candidate: retrieval_rerank
+status: pending_architect
+evaluated_at: "2026-09-09T02:28:29+00:00"
+case_count: 3
+hit_count: 3
+memory_promoted: false
+production_embed_unchanged: true
+production_embed: nomic-embed-text
+notes: "Eval only. Optional CrossEncoder via EMPIRE_RERANK_MODEL."
+results:
+  - id: wiki_weaviate
+    hit: true
+    backend: lexical
+  - id: cognee_memory
+    hit: true
+    backend: lexical
+  - id: structured_extract
+    hit: true
+    backend: lexical

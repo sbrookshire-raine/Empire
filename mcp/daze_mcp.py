@@ -65,6 +65,12 @@ async def daze_free_windows(
 
 
 @mcp.tool()
+async def daze_compare_phases(date: str = "") -> str:
+    """Planned vs actual coaching summary — conflicts, free windows, drift hints."""
+    return _json(daze_api.compare_phases(day=date or None))
+
+
+@mcp.tool()
 async def daze_delete_block(record_id: str) -> str:
     """Delete a day_blocks record by id."""
     return _json(daze_api.delete_block(record_id))

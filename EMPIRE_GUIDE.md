@@ -79,7 +79,7 @@ Do **not** inject Eve’s ARC/Scanner personality into Cursor replies. Cursor st
 - **Toolbelt** — optional limbs default **OFF**: Gumloop, Web Research, Tool Forge, Wiki Local, Time Reclaim, Stem Factory, GitHub Scout, etc. **Research Partner** (More tab) lets Eve auto-admit read-only research limbs for a session — see [`docs/RESEARCH_AUTOPILOT.md`](docs/RESEARCH_AUTOPILOT.md)
 - **Wiki Local scout** — on-demand Weaviate Wikipedia (`:8091`) → Truth Drift markdown cache under `04_Thought_Experiments/wiki_cache/` → triage → optional `cognee_remember` (no full wiki re-ingest). See [`docs/WIKI_SCOUT.md`](docs/WIKI_SCOUT.md)
 - **Container Scout** — Toolbelt limb (default OFF): search Docker Hub + report local `empire-*` Docker status; cache under `container_cache/`; **not** “run EMPIRE on Kubernetes.” See [`docs/KUBERNETES_AND_CONTAINERS.md`](docs/KUBERNETES_AND_CONTAINERS.md)
-- **DAZE (Phase 5)** — radial day at http://127.0.0.1:8080/daze.html; PocketBase `day_blocks`; Eve tools behind **Time Reclaim** Toolbelt
+- **DAZE (Phase 5)** — dual-ring planned/actual dial at http://127.0.0.1:8080/daze.html; PocketBase `day_blocks`; Eve **Time Reclaim** tools + [`docs/DAZE.md`](docs/DAZE.md)
 - **Stem Factory** — drop songs in `C:\Empire_Workbench\stem_factory\input`, enable Toolbelt **Stem Factory**, ask Eve to run stems (Shard of the Division / Demucs) |
 - **Cognee memory** — upload `.md/.txt/.pdf` → dataset `eve_memory`; optimize → `eve_core` for fast recall; curated primitives → `primitives_test`
 - **Companion profile (self glasses)** — distill Obsidian `SBX_Vault` into a **small historical** card; **living CURRENT facts** live in `C:\Empire_Workbench\00_Core_Profile\ARCHITECT_NOW.md` and **override** old journals. Eve tool `architect_now_update` persists corrections. Rebuild historical card: `.\venv\Scripts\python.exe -m pipeline.companion_profile build`. Injected every chat turn; Cognee prefetch is **not** always-on (memory questions / tools only).
@@ -124,7 +124,7 @@ From [`EMPIRE_MANIFESTO.md`](EMPIRE_MANIFESTO.md) — vision order, not a sprint
 | **2** Evaluation | USEFUL NOW / COOL IDEA / JUNK | **In progress** (Eve categorizes; Mechanic forges) |
 | **3** Thought Experiments | YouTube/ideas → autonomous research; Gumloop later | **In progress** — Toolbelt **Thought Experiments** + web scout notes |
 | **4** LEGO Whiteboard | Tools as composable blocks on a whiteboard | **Working** — http://127.0.0.1:8080/lego.html · [`docs/LEGO_WHITEBOARD.md`](docs/LEGO_WHITEBOARD.md) |
-| **5** Time reclamation | Daze / personal tracking; free time for body & mind | **In progress** — PocketBase `day_blocks` + http://127.0.0.1:8080/daze.html + Eve **Time Reclaim** limb |
+| **5** Time reclamation | Daze / personal tracking; free time for body & mind | **Working** — dual-ring dial + `/api/daze` + Eve compare · [`docs/DAZE.md`](docs/DAZE.md) |
 | **6** Secure remote access | Tailscale or Cloudflare Tunnels | Planned — see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) |
 | **7** Real-time voice | Local STT/TTS (Faster-Whisper, Kokoro/Piper); UI must stay audio-capable | **Scaffold** — mic composer + [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md) |
 

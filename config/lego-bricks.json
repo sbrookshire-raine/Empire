@@ -95,7 +95,7 @@
       "default_on": false,
       "gpu_tenant": "none",
       "ports": { "in": ["text"], "out": ["text"] },
-      "tools": ["daze_list_day", "daze_upsert_block", "daze_free_windows"]
+      "tools": ["daze_list_day", "daze_upsert_block", "daze_free_windows", "daze_compare_phases"]
     },
     {
       "id": "stem",

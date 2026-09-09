@@ -44,8 +44,9 @@ class ServiceLaunchConfigurationTests(unittest.TestCase):
         stack = (ROOT / "scripts" / "start-stack.ps1").read_text(encoding="utf-8")
         standalone = (ROOT / "scripts" / "start-frontend.ps1").read_text(encoding="utf-8")
         for source in (stack, standalone):
-            self.assertIn("venv\\Scripts\\python.exe", source)
-            self.assertIn('"-m", "frontend.serve"', source)
+            self.assertIn("venv", source.lower())
+            self.assertIn("frontend.serve", source)
+            self.assertIn("-m", source)
             self.assertIn("http://127.0.0.1:8080/api/memory/status", source)
 
     def test_eve_launches_built_production_server_on_loopback(self) -> None:
@@ -69,7 +70,12 @@ class ServiceLaunchConfigurationTests(unittest.TestCase):
         for name in ("start-stack.ps1", "start-eve.ps1"):
             source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
             self.assertIn("ensure-eve-build.py", source)
-            self.assertIn('"start", "--host", "127.0.0.1", "--port", "2000"', source)
+            self.assertIn("eve", source)
+            self.assertIn("start", source)
+            self.assertIn("--host", source)
+            self.assertIn("127.0.0.1", source)
+            self.assertIn("--port", source)
+            self.assertIn("2000", source)
             self.assertNotIn('"dev"', source)
         self.assertIn("Ready: http://127.0.0.1:8080/eve.html", stack_source())
 

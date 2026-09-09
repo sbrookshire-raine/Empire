@@ -1,12 +1,12 @@
 ﻿{
     "version":  1,
-    "updated":  "2026-09-03T15:41:47.0449765Z",
+    "updated":  "2026-09-09T03:36:54.4061988Z",
     "phase":  "idle",
     "message":  "Manual refresh",
     "summary":  {
-                    "healthy":  3,
+                    "healthy":  4,
                     "total":  4,
-                    "allHealthy":  false
+                    "allHealthy":  true
                 },
     "rollInOrder":  [
                         "ollama",
@@ -74,9 +74,9 @@
                          "dashboardControl":  true,
                          "startScript":  "scripts/start-eve.ps1",
                          "startHint":  null,
-                         "listening":  false,
-                         "healthy":  false,
-                         "healthDetail":  "Unable to connect to the remote server",
+                         "listening":  true,
+                         "healthy":  true,
+                         "healthDetail":  "HTTP 200",
                          "dashboardUrl":  "http://127.0.0.1:2000/",
                          "pid":  null
                      }

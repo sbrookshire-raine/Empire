@@ -1,0 +1,18 @@
+candidate: embedding_ab
+status: pending_architect
+evaluated_at: "2026-09-09T02:31:35+00:00"
+production_model: nomic-embed-text
+candidate_model: qwen3-embedding:0.6b
+production_hits: 5
+candidate_hits: 5
+verdict: tie
+memory_promoted: false
+production_embed_unchanged: true
+notes: "qwen3-embedding:0.6b tied nomic-embed-text (5 hits). No production embed change recommended yet."
+models:
+  - model: nomic-embed-text
+    available: true
+    hits: 5
+  - model: qwen3-embedding:0.6b
+    available: true
+    hits: 5

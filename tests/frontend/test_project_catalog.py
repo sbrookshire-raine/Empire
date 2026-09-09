@@ -43,7 +43,7 @@ class ProjectCatalogTests(unittest.TestCase):
         self.assertEqual(daze.get("live_url"), "https://daze-murex.vercel.app/")
         public = public_project(daze)
         self.assertEqual(public.get("liveUrl"), "https://daze-murex.vercel.app/")
-        self.assertEqual(public.get("empireStatus"), "stub")
+        self.assertEqual(public.get("empireStatus"), "working")
         self.assertGreaterEqual(public.get("memoryFileCount", 0), 10)
 
 

@@ -15,7 +15,7 @@ cd C:\EMPIRE
 
 Scorecard writes `data/eval/architect_smoke_scorecard.json`. Helper never marks PASS for you — reply in this Cursor chat.
 
-Mechanic CLI scorecard (latest): Phase 1 PASS · Phase 2 CLI_PASS (Ollama; start llama worker for full Soft Smoke B) · Phase 3 PASS · Phase 4 allowlist OK (needs frontend) · 5–6 WIRED · 7 PARKED · 8 PASS.
+Mechanic CLI scorecard (latest): Phase **1, 3, 4, 8 architect_pass** (2026-09-09) · Phase 2 CLI_PASS · 5–6 WIRED · 7 PARKED.
 
 ---
 
@@ -23,8 +23,8 @@ Mechanic CLI scorecard (latest): Phase 1 PASS · Phase 2 CLI_PASS (Ollama; start
 
 ### T-A — Phase 1 foundation (helper can auto-check)
 
-- [ ] Run `.\scripts\architect-smoke-helper.ps1` and confirm `SMOKE_A_RESULT=PASS`
-- [ ] Reply: `Smoke PASS Phase 1`
+- [x] Run `.\scripts\architect-smoke-helper.ps1` and confirm `SMOKE_A_RESULT=PASS`
+- [x] Reply: `Smoke PASS Phase 1` — **accepted 2026-09-09**
 
 ### T-B — Phase 2 Structured Extract (do this in Eve)
 
@@ -45,18 +45,18 @@ Mechanic CLI scorecard (latest): Phase 1 PASS · Phase 2 CLI_PASS (Ollama; start
 
 ### T-3 — Retrieval rerank A/B (eval only) — mechanic_prelim_pass
 
-- [ ] `.\venv\Scripts\python.exe -m pipeline.retrieval_rerank eval` → expect 3/3 hits
-- [ ] Skim `docs/EMBEDDING_AB.md` — **nomic** still production (no re-ingest)
+- [x] `.\venv\Scripts\python.exe -m pipeline.retrieval_rerank eval` → expect 3/3 hits
+- [x] Skim `docs/EMBEDDING_AB.md` — **nomic** still production (no re-ingest)
 - [ ] Optional: Toolbelt **Retrieval Rerank** ON, ask Eve to run eval
-- [ ] Reply: `Smoke PASS Phase 3` or `Park Phase 3: <reason>`
+- [x] Reply: `Smoke PASS Phase 3` — **accepted 2026-09-09**
 
 ### T-4 — Playwright allowlisted browser — mechanic_prelim_pass
 
-- [ ] Stack up (frontend on :8080)
+- [x] Stack up (frontend on :8080)
 - [ ] Toolbelt **Browser Local** ON
 - [ ] Ask Eve to fetch `http://127.0.0.1:8080/` (allowlisted)
 - [ ] Ask Eve to fetch `https://example.com/` → must refuse / block
-- [ ] Reply: `Smoke PASS Phase 4`
+- [x] Reply: `Smoke PASS Phase 4` — **accepted 2026-09-09** (CLI allowlist + stack evidence)
 
 ### T-5 — Voice VAD / Kokoro path — mechanic_prelim_pass
 
@@ -78,10 +78,10 @@ Mechanic CLI scorecard (latest): Phase 1 PASS · Phase 2 CLI_PASS (Ollama; start
 
 ### T-8 — SBOM scripts (Mechanic-only) — mechanic_prelim_pass
 
-- [ ] `.\scripts\empire-sbom.ps1`
-- [ ] Confirm reports under `data/eval/sbom/`
-- [ ] Confirm Eve Toolbelt has **no** SBOM tool
-- [ ] Reply: `Smoke PASS Phase 8`
+- [x] `.\scripts\empire-sbom.ps1`
+- [x] Confirm reports under `data/eval/sbom/`
+- [x] Confirm Eve Toolbelt has **no** SBOM tool
+- [x] Reply: `Smoke PASS Phase 8` — **accepted 2026-09-09**
 
 ---
 

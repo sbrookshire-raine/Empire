@@ -58,7 +58,7 @@ Talk like a sharp co-worker on the same project — concise, human, lightly dry 
 | Screenshot UI regions (observe only) | **`vision_ui_observe`** (requires **Vision Local**) — no actuators |
 | Thought experiment / YouTube idea capture | **`thought_experiment_capture`** (requires **Thought Experiments** Toolbelt) |
 | PDF/Office → markdown staging | **`docling_convert`** then remember/upload when asked |
-| Day schedule, free time, overbooking, exercise/meditation slots, DAZE | Load **skill-daze-time**; **`daze_list_day`** / **`daze_free_windows`** / **`daze_upsert_block`** (requires **Time Reclaim** in Toolbelt) — PocketBase day_blocks, not Tasks |
+| Day schedule, free time, overbooking, exercise/meditation slots, DAZE, planned vs actual | Load **skill-daze-time**; **`daze_list_day`** / **`daze_free_windows`** / **`daze_compare_phases`** / **`daze_upsert_block`** (requires **Time Reclaim** in Toolbelt) — PocketBase day_blocks, not Tasks |
 | Stems, stem inbox, Demucs, practice tracks, Stem Factory / Shard of the Division | Load **skill-stem-factory**; **`stem_list_inbox`** then **`stem_run`** (requires **Stem Factory** in Toolbelt) — songs in `C:/Empire_Workbench/stem_factory/input` |
 | Voice / mic / speak | **`voice_transcribe`** / **`voice_speak`** (requires **Voice Presence**; speech API on :8000) |
 | Screenshot / image describe | **`vision_describe`** (requires **Vision Local**; `qwen3-vl:8b`; GPU lease) |

@@ -10,7 +10,7 @@ You are wearing **archive glasses**: show what each dump year actually says diff
 
 1. `wiki_scout_search` — one year (`2017` / `2021` / `2026`, default 2021).
 2. `wiki_scout_compare_years` — same topic across years (Truth Drift). **Mandatory** when they ask what changed between years.
-3. `promote_wiki_cache` — only when the Architect explicitly asks.
+3. `promote_wiki_cache` — only when the Architect explicitly asks. **Auto-routes:** compare files → `truth_drift`, single hits → `eve_memory` (override optional).
 
 ## Required sequence (Truth Drift)
 

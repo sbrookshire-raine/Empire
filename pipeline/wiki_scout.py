@@ -566,6 +566,7 @@ def write_cache_hit(
                 "doc_id": hit.get("doc_id") or "",
                 "chunk_id": hit.get("chunk_id") or "",
                 "query": hit.get("query") or "",
+                "cognee_dataset": "eve_memory",
             },
         ),
     ]
@@ -603,7 +604,7 @@ def write_compare_cache(
             kind="truth_drift_compare",
             tool="wiki_scout_compare_years",
             limb="wiki_local",
-            extra={"query": query, "years": json.dumps(years)},
+            extra={"query": query, "years": json.dumps(years), "cognee_dataset": "truth_drift"},
         ),
         "---",
     ]
@@ -924,15 +925,109 @@ def compare_years(
     }
 
 
+PROMOTE_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "wiki-promote.json"
+_KIND_RE = re.compile(r"^kind:\s*(\S+)", re.MULTILINE)
+_COGNEE_DATASET_RE = re.compile(r"^cognee_dataset:\s*(\S+)", re.MULTILINE)
+
+
+def _load_promote_config() -> dict[str, Any]:
+    try:
+        data = json.loads(PROMOTE_CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def parse_cache_front_matter(body: str) -> dict[str, str]:
+    """Read kind / cognee_dataset from YAML front matter (best-effort)."""
+    out: dict[str, str] = {}
+    if not body.startswith("---"):
+        return out
+    end = body.find("\n---", 3)
+    if end < 0:
+        return out
+    block = body[3:end]
+    kind_match = _KIND_RE.search(block)
+    if kind_match:
+        out["kind"] = kind_match.group(1).strip().strip('"').strip("'")
+    dataset_match = _COGNEE_DATASET_RE.search(block)
+    if dataset_match:
+        out["cognee_dataset"] = dataset_match.group(1).strip().strip('"').strip("'")
+    return out
+
+
+def allowed_promote_datasets() -> frozenset[str]:
+    cfg = _load_promote_config()
+    raw = cfg.get("allowed_datasets")
+    if isinstance(raw, list) and raw:
+        return frozenset(str(item).strip() for item in raw if str(item).strip())
+    return frozenset({"eve_memory", "truth_drift", "eve_core", "primitives_test"})
+
+
+def resolve_promote_dataset(
+    path: str | Path,
+    body: str,
+    *,
+    dataset: str | None = None,
+) -> tuple[str | None, str | None]:
+    """Pick Cognee dataset for promote. Returns (dataset, reason) or (None, error)."""
+    allowed = allowed_promote_datasets()
+    override = (dataset or "").strip()
+    if override:
+        if override not in allowed:
+            return None, f"dataset must be one of: {', '.join(sorted(allowed))}"
+        return override, "explicit_override"
+
+    cfg = _load_promote_config()
+    by_kind = cfg.get("by_kind") if isinstance(cfg.get("by_kind"), dict) else {}
+    default_dataset = str(cfg.get("default_dataset") or "eve_memory").strip() or "eve_memory"
+
+    front = parse_cache_front_matter(body)
+    explicit = str(front.get("cognee_dataset") or "").strip()
+    if explicit:
+        if explicit not in allowed:
+            return None, f"cognee_dataset in file not allowed: {explicit}"
+        return explicit, "front_matter_cognee_dataset"
+
+    kind = str(front.get("kind") or "").strip()
+    if kind and kind in by_kind:
+        chosen = str(by_kind[kind]).strip()
+        if chosen in allowed:
+            return chosen, f"kind:{kind}"
+
+    name = Path(path).name.lower()
+    if name.startswith("compare_"):
+        if "truth_drift" in allowed:
+            return "truth_drift", "filename_compare_prefix"
+
+    if default_dataset in allowed:
+        return default_dataset, "default"
+    return None, "No valid promote dataset configured"
+
+
+def promote_dataset_routing_help() -> dict[str, Any]:
+    cfg = _load_promote_config()
+    return {
+        "ok": True,
+        "by_kind": cfg.get("by_kind")
+        or {"wiki_chunk": "eve_memory", "truth_drift_compare": "truth_drift"},
+        "default_dataset": cfg.get("default_dataset") or "eve_memory",
+        "allowed_datasets": sorted(allowed_promote_datasets()),
+        "config_path": str(PROMOTE_CONFIG_PATH),
+    }
+
+
 def promote_wiki_cache(
     path: str | Path,
     *,
-    dataset: str = "eve_memory",
+    dataset: str | None = None,
     max_chars: int = 12_000,
 ) -> dict[str, Any]:
     """Explicitly promote a wiki_cache markdown file into Cognee remember.
 
     Never called automatically from search/compare.
+    Dataset auto-routes: truth_drift_compare → truth_drift, wiki_chunk → eve_memory
+    unless --dataset / tool override is provided.
     """
     from pipeline.provenance import remember_preamble_from_front_matter
 
@@ -962,6 +1057,14 @@ def promote_wiki_cache(
     except OSError as exc:
         return {"ok": False, "error": str(exc), "path": str(resolved)}
 
+    chosen, route_reason = resolve_promote_dataset(resolved, body, dataset=dataset)
+    if not chosen:
+        return {
+            "ok": False,
+            "error": route_reason or "Could not resolve dataset",
+            "path": str(resolved),
+        }
+
     if len(body) > max_chars:
         body = body[: max_chars - 1] + "…"
 
@@ -980,7 +1083,7 @@ def promote_wiki_cache(
                 "--content",
                 content,
                 "--dataset",
-                dataset,
+                chosen,
             ],
             cwd=str(root),
             env={**os.environ, "PYTHONPATH": str(root)},
@@ -994,7 +1097,7 @@ def promote_wiki_cache(
                 "ok": False,
                 "error": (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip(),
                 "path": str(resolved),
-                "dataset": dataset,
+                "dataset": chosen,
             }
         try:
             result = json.loads(proc.stdout.strip() or "{}")
@@ -1005,12 +1108,13 @@ def promote_wiki_cache(
             "ok": False,
             "error": str(exc),
             "path": str(resolved),
-            "dataset": dataset,
+            "dataset": chosen,
         }
     return {
         "ok": True,
         "path": str(resolved),
-        "dataset": dataset,
+        "dataset": chosen,
+        "dataset_reason": route_reason,
         "chars": len(content),
         "result": result,
         "note": "Promoted explicitly — scratch cache file left in place.",
@@ -1049,7 +1153,11 @@ def main(argv: list[str] | None = None) -> int:
 
     promote_p = sub.add_parser("promote", help="Explicit Cognee promote of a cache .md")
     promote_p.add_argument("path")
-    promote_p.add_argument("--dataset", default="eve_memory")
+    promote_p.add_argument(
+        "--dataset",
+        default=None,
+        help="Cognee dataset (auto from cache kind when omitted)",
+    )
 
     args = parser.parse_args(argv)
 

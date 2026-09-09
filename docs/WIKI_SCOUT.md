@@ -196,7 +196,7 @@ If Weaviate is down, tools return `{ ok: false, error: "…" }` — they do not 
 1. Enable **Wiki Local** in the Workbench Toolbelt (default **OFF**).
 2. Ask for encyclopedia / Truth Drift facts (e.g. “What did Wikipedia say about Cambrai in 2017 vs 2026?”).
 3. Eve calls `wiki_scout_search` / `wiki_scout_compare_years`, then answers from summaries + cache paths.
-4. To keep something in long-term memory: triage the cache file, then call `cognee_remember` (dataset `eve_memory` by default, or a dedicated `truth_drift` dataset once the Architect creates that workflow).
+4. To keep something in long-term memory: triage the cache file, then **`promote_wiki_cache`** (auto-routes compare → `truth_drift`, single hit → `eve_memory`).
 
 Do **not** dump full multi-article bodies into chat context.
 
@@ -204,20 +204,27 @@ Do **not** dump full multi-article bodies into chat context.
 
 | When | Action |
 |------|--------|
-| Useful after triage | `cognee_remember` on the cache `.md` path (or Workbench upload) |
+| Useful after triage | `promote_wiki_cache` on the cache `.md` path |
+| Compare / Truth Drift file | Routes to Cognee dataset **`truth_drift`** automatically |
+| Single wiki chunk file | Routes to **`eve_memory`** automatically |
 | Not useful | Leave in `wiki_cache` or delete manually — scout never auto-promotes |
 | Full corpus | **Forbidden** — do not restart overnight wiki→Cognee ingest |
 
-Default promote dataset: **`eve_memory`**. Optional later: small curated **`truth_drift`** dataset for compare files only.
+Routing config: [`config/wiki-promote.json`](../config/wiki-promote.json). Override with `--dataset` or tool `dataset` arg.
 
 ### Explicit promote helper
 
 ```powershell
 $env:PYTHONPATH="C:\EMPIRE"
-.\venv\Scripts\python.exe -m pipeline.wiki_scout promote "C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\SOME.md" --dataset eve_memory
+# Auto-route from front matter kind:
+.\venv\Scripts\python.exe -m pipeline.wiki_scout promote "C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\compare_topic_20260101T120000Z.md"
+# Single hit (→ eve_memory):
+.\venv\Scripts\python.exe -m pipeline.wiki_scout promote "C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\Battle_of_Cambrai_2017_abcd1234.md"
+# Override:
+.\venv\Scripts\python.exe -m pipeline.wiki_scout promote "...\compare_....md" --dataset eve_memory
 ```
 
-Eve / MCP tool: `promote_wiki_cache`. Never automatic.
+Eve / MCP tool: `promote_wiki_cache`. Never automatic. Response includes `dataset` + `dataset_reason`.
 
 ## Ops / failure modes
 
@@ -243,7 +250,7 @@ Ordered backlog — document only where not yet shipped:
 2. ~~**Promote helper**~~ — `promote_wiki_cache` shipped.
 3. ~~**Model A/B**~~ — Fast-mode A/B via `ollama-fast-ab.json` shipped; Deep/Librarian stay pinned.
 4. **Always-on Weaviate profile** — optional `start-stack` hook only if Architect wants wiki up on cold start.
-5. **Truth Drift Cognee dataset** — curated `truth_drift` for promoted compares only.
+5. **Truth Drift Cognee dataset** — `truth_drift` auto-route on promote (F-05 done).
 6. **Cross-link Gumloop** — only if local scout fails and Gumloop limb is enabled.
 
 ## Related files

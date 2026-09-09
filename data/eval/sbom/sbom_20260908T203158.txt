@@ -1,0 +1,19 @@
+EMPIRE SBOM / audit report 20260908T203158
+Root: C:\EMPIRE
+
+
+==== pip-audit ====
+
+pip-audit not installed. Optional: pip install pip-audit
+
+==== osv-scanner ====
+
+osv-scanner not installed. Optional: https://github.com/google/osv-scanner
+
+==== syft ====
+
+syft not installed. Optional: https://github.com/anchore/syft
+
+==== grype ====
+
+grype skipped (missing binary or syft sbom).

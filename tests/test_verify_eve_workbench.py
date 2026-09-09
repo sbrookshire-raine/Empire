@@ -45,7 +45,7 @@ class VerifierPresenceTests(unittest.TestCase):
             ),
         )
 
-    def test_eve_uses_chat_completions_for_ollama_continuations(self) -> None:
+    def test_eve_uses_dynamic_ollama_chat_model(self) -> None:
         agent_source = (
             SCRIPT.parents[1]
             / "agents"
@@ -53,11 +53,11 @@ class VerifierPresenceTests(unittest.TestCase):
             / "agent"
             / "agent.ts"
         ).read_text(encoding="utf-8")
-        self.assertIn("ollama.chat(modelId)", agent_source)
-        self.assertIn("ollama.chat(selectedOllamaModel())", agent_source)
+        self.assertIn("ollama.chat(fallbackConfig.model)", agent_source)
+        self.assertIn("ollama.chat(config.model)", agent_source)
         self.assertIn("defineDynamic", agent_source)
         self.assertIn('"step.started"', agent_source)
-        self.assertIn("selectedOllamaModel", agent_source)
+        self.assertIn("loadActiveChatConfig", agent_source)
 
 
 @unittest.skipUnless(SCRIPT.is_file(), "verifier is not implemented yet")

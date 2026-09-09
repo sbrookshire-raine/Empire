@@ -291,7 +291,7 @@ def _check_pocketbase() -> str:
 
 def _check_frontend() -> str:
     _status, _headers, page = _request(f"{FRONTEND_URL}/eve.html")
-    if b"Chat with Eve" not in page or b"eve-workbench.js" not in page:
+    if b"Eve Workbench" not in page or b"eve-workbench.js" not in page:
         raise StageFailure("Frontend does not serve the Eve Workbench.")
     memory, _headers = _json_request(f"{FRONTEND_URL}/api/memory/status")
     if not memory.get("ok"):

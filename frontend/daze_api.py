@@ -8,7 +8,7 @@ import re
 from datetime import date, datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 POCKETBASE_URL = os.environ.get("POCKETBASE_URL", "http://127.0.0.1:8090").rstrip("/")
@@ -28,6 +28,21 @@ DEFAULT_COLORS = {
 
 def _today_local() -> str:
     return date.today().isoformat()
+
+
+def normalize_day(day: str | None) -> tuple[str | None, str | None]:
+    """Resolve YYYY-MM-DD; empty/today/now -> local today."""
+    if day is None:
+        return _today_local(), None
+    cleaned = str(day).strip()
+    if not cleaned:
+        return _today_local(), None
+    lowered = cleaned.lower()
+    if lowered in {"today", "now", "current"}:
+        return _today_local(), None
+    if DATE_RE.fullmatch(cleaned):
+        return cleaned, None
+    return None, "date must be YYYY-MM-DD (omit the parameter for today)"
 
 
 def _pb(method: str, path: str, body: dict[str, Any] | None = None) -> Any:
@@ -51,9 +66,10 @@ def _pb(method: str, path: str, body: dict[str, Any] | None = None) -> Any:
 
 
 def validate_block_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
-    day = str(payload.get("date") or _today_local()).strip()
-    if not DATE_RE.fullmatch(day):
-        return None, "date must be YYYY-MM-DD"
+    day_raw = payload.get("date")
+    day, day_err = normalize_day(str(day_raw) if day_raw is not None else None)
+    if day_err or not day:
+        return None, day_err or "date must be YYYY-MM-DD"
     title = str(payload.get("title") or "").strip()
     if not title:
         return None, "title is required"
@@ -85,9 +101,9 @@ def validate_block_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | No
 
 
 def list_day(day: str | None = None, phase: str | None = None) -> dict[str, Any]:
-    day_s = (day or _today_local()).strip()
-    if not DATE_RE.fullmatch(day_s):
-        return {"ok": False, "error": "date must be YYYY-MM-DD", "items": []}
+    day_s, day_err = normalize_day(day)
+    if day_err or not day_s:
+        return {"ok": False, "error": day_err or "date must be YYYY-MM-DD", "items": []}
     filt = f'date = "{day_s}"'
     if phase:
         phase_s = phase.strip().lower()
@@ -236,3 +252,113 @@ def _fmt(minute: int) -> str:
     if m == 1440:
         return "24:00"
     return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def compare_phases(day: str | None = None) -> dict[str, Any]:
+    """Planned vs actual summary for Eve coaching (no PocketBase schema change)."""
+    day_s, day_err = normalize_day(day)
+    if day_err or not day_s:
+        return {"ok": False, "error": day_err or "date must be YYYY-MM-DD"}
+    planned = list_day(day=day_s, phase="planned")
+    actual = list_day(day=day_s, phase="actual")
+    if not planned.get("ok") or not actual.get("ok"):
+        return {
+            "ok": False,
+            "error": planned.get("error") or actual.get("error") or "list failed",
+        }
+    planned_free = free_windows(day=day_s, phase="planned", min_minutes=30)
+    actual_free = free_windows(day=day_s, phase="actual", min_minutes=30)
+    planned_items = planned.get("items") or []
+    actual_items = actual.get("items") or []
+    body_planned = sum(
+        1 for x in planned_items if str(x.get("kind") or "").lower() in {"body", "rest"}
+    )
+    body_actual = sum(
+        1 for x in actual_items if str(x.get("kind") or "").lower() in {"body", "rest"}
+    )
+    coaching: list[str] = []
+    if body_planned > body_actual:
+        coaching.append(
+            f"Planned includes {body_planned} body/rest block(s) but actual only has {body_actual} — check if exercise or meditation slipped."
+        )
+    if (planned.get("conflicts") or []) and not (actual.get("conflicts") or []):
+        coaching.append(
+            "Planned day is overbooked but actual is not — good chance to simplify the plan."
+        )
+    if (actual.get("conflicts") or []) and not (planned.get("conflicts") or []):
+        coaching.append(
+            "Actual day has overlaps that planned did not — schedule drift or ad-hoc stacking."
+        )
+    if planned_free.get("free") and not coaching:
+        best = max(planned_free["free"], key=lambda w: int(w.get("minutes") or 0))
+        coaching.append(
+            f"Largest planned free window: {best.get('label')} ({best.get('minutes')} min) — candidate for body or rest."
+        )
+    return {
+        "ok": True,
+        "date": day_s,
+        "planned": {
+            "count": len(planned_items),
+            "conflicts": planned.get("conflicts") or [],
+            "free": planned_free.get("free") or [],
+        },
+        "actual": {
+            "count": len(actual_items),
+            "conflicts": actual.get("conflicts") or [],
+            "free": actual_free.get("free") or [],
+        },
+        "coaching": coaching,
+        "empire_url": "http://127.0.0.1:8080/daze.html",
+        "fetched_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+
+
+def handle_api(method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    """HTTP adapter for frontend static server (/api/daze/*)."""
+    parsed = urlparse(path)
+    params = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+    route = parsed.path.rstrip("/")
+    if method == "GET" and route == "/api/daze/day":
+        phase = params.get("phase") or ""
+        day = params.get("date") or None
+        if phase == "both":
+            planned = list_day(day=day, phase="planned")
+            actual = list_day(day=day, phase="actual")
+            if not planned.get("ok") or not actual.get("ok"):
+                return 502, {
+                    "ok": False,
+                    "error": planned.get("error") or actual.get("error") or "list failed",
+                }
+            return 200, {
+                "ok": True,
+                "date": planned.get("date") or actual.get("date"),
+                "phase": "both",
+                "planned": planned.get("items") or [],
+                "actual": actual.get("items") or [],
+                "planned_conflicts": planned.get("conflicts") or [],
+                "actual_conflicts": actual.get("conflicts") or [],
+            }
+        return 200, list_day(day=day, phase=phase or None)
+
+    if method == "GET" and route == "/api/daze/free":
+        return 200, free_windows(
+            day=params.get("date") or None,
+            phase=params.get("phase") or "planned",
+            min_minutes=int(params.get("min_minutes") or 30),
+        )
+
+    if method == "GET" and route == "/api/daze/compare":
+        return 200, compare_phases(day=params.get("date") or None)
+
+    if method == "POST" and route == "/api/daze/block":
+        body = payload or {}
+        record_id = str(body.get("id") or body.get("record_id") or "").strip()
+        return 200, upsert_block(body, record_id=record_id)
+
+    if method == "DELETE" and route == "/api/daze/block":
+        record_id = params.get("id") or str((payload or {}).get("id") or "")
+        if not record_id:
+            return 400, {"ok": False, "error": "id query param required"}
+        return 200, delete_block(record_id)
+
+    return 404, {"ok": False, "error": f"unknown daze route: {route}"}
