@@ -78,20 +78,45 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertEqual(extract_wiki_subject(q), "Kate Bush")
         self.assertEqual(clean_query_for_retrieval(q), "Kate Bush")
 
-    def test_revival_song_injection_prefers_running_up_that_hill(self) -> None:
-        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
-            payload = wiki_drift_api.enrich_eve_message_payload(
+    def test_revival_song_injection_uses_lead_evidence(self) -> None:
+        lookup = {
+            "ok": True,
+            "snapshot_year": "2026",
+            "cards": [{"title": "Running Up That Hill", "snippet": "Kate Bush song."}],
+            "hit_meta": [
                 {
-                    "message": (
-                        "what song from Kate Bush reinvigorated her career in 2025-2026?"
-                    )
+                    "title": "Running Up That Hill",
+                    "corpus_rel_path": "batch/y.md",
                 }
-            )
+            ],
+        }
+        lead = {
+            "ok": True,
+            "title": "Running Up That Hill",
+            "snapshot": "2026",
+            "lead": (
+                'Kate Bush\'s "Running Up That Hill" surged after Stranger Things season 4.'
+            ),
+            "allowed_names": ["Running Up That Hill", "Kate Bush"],
+        }
+        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
+            with patch.object(wiki_drift_api, "run_lookup", return_value=lookup):
+                with patch.object(
+                    wiki_drift_api, "_build_lead_evidence", return_value=lead
+                ):
+                    payload = wiki_drift_api.enrich_eve_message_payload(
+                        {
+                            "message": (
+                                "what song from Kate Bush reinvigorated her career "
+                                "in 2025-2026?"
+                            )
+                        }
+                    )
         msg = str(payload.get("message") or "")
         self.assertIn(wiki_drift_api.WIKI_LOOKUP_MARKER, msg)
+        self.assertIn("EVIDENCE", msg)
         self.assertIn("running up that hill", msg.casefold())
-        self.assertIn("primary answer from snippets", msg.casefold())
-        self.assertNotIn("discography", msg.casefold())
+        self.assertIn("_wiki_evidence", payload)
 
     def test_enrich_artist_runs_lookup_not_compare(self) -> None:
         fake = {

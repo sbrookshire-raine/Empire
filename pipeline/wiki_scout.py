@@ -812,6 +812,14 @@ def search(
         note = f"{note} {coverage_note}"
 
     chat_cards = cards_for_chat(cards)
+    hit_meta = [
+        {
+            "title": str(hit.get("title") or ""),
+            "corpus_rel_path": str(hit.get("corpus_rel_path") or ""),
+            "page_id": str(hit.get("page_id") or ""),
+        }
+        for hit in hits
+    ]
     return {
         "ok": True,
         "query": query,
@@ -821,6 +829,7 @@ def search(
         "paths": paths,
         "titles": titles,
         "summaries": summaries,
+        "hit_meta": hit_meta,
         "cards": chat_cards,
         "chat_reply_rule": WIKI_CHAT_REPLY_RULE,
         "interpreter": interpreter_pack.get("interpreter") if interpret else None,

@@ -474,6 +474,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 payload = workbench_ui_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
+            pending = payload.pop("_wiki_evidence", None)
+            self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -570,6 +572,13 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         upstream = "/eve/v1/" + parsed.path[len("/api/eve/") :]
         return upstream + (f"?{parsed.query}" if parsed.query else "")
 
+    def _eve_session_id_from_path(self) -> str:
+        parsed = urlparse(self.path)
+        parts = [part for part in parsed.path.split("/") if part]
+        if len(parts) >= 4 and parts[1] == "eve" and parts[2] == "session":
+            return parts[3]
+        return ""
+
     def _read_eve_json(self) -> dict | None:
         raw_length = self.headers.get("Content-Length", "0")
         try:
@@ -617,26 +626,76 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._write_eve_stream(
                 response,
                 eve_proxy.stream_start_index(upstream_path),
+                session_id=self._eve_session_id_from_path(),
             )
 
         try:
+            body = response.body
+            pending = getattr(self, "_pending_wiki_evidence", None)
+            if pending and body:
+                try:
+                    created = json.loads(body.decode("utf-8"))
+                    session_id = str(created.get("sessionId") or "")
+                    if session_id:
+                        wiki_drift_api.register_wiki_evidence(session_id, pending)
+                except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+                    pass
+            self._pending_wiki_evidence = None
             self.send_response(response.status)
             for name, value in response.headers.items():
                 self.send_header(name, value)
-            self.send_header("Content-Length", str(len(response.body)))
+            self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
-            self.wfile.write(response.body)
+            self.wfile.write(body)
         except (BrokenPipeError, ConnectionResetError):
             return None
         finally:
             response.close()
 
+    def _apply_wiki_grounding_event(
+        self,
+        projected: dict,
+        *,
+        session_id: str,
+    ) -> dict:
+        if not session_id:
+            return projected
+        event_type = str(projected.get("type") or "")
+        if event_type == "session.waiting":
+            wiki_drift_api.pop_wiki_evidence(session_id)
+            return projected
+        evidence = wiki_drift_api.get_wiki_evidence(session_id)
+        if not evidence or event_type not in {"message.completed", "message.appended"}:
+            return projected
+        data = projected.get("data")
+        if not isinstance(data, dict):
+            return projected
+        try:
+            from pipeline.wiki_grounding_guard import apply_grounding_guard
+        except Exception:
+            return projected
+        user_question = str(evidence.get("user_question") or "")
+        patched = dict(data)
+        for key in ("message", "messageSoFar", "text", "content"):
+            value = patched.get(key)
+            if isinstance(value, str) and value.strip():
+                patched[key] = apply_grounding_guard(
+                    value,
+                    evidence,
+                    user_question=user_question,
+                )
+        updated = dict(projected)
+        updated["data"] = patched
+        return updated
+
     def _write_eve_stream(
         self,
         response: eve_proxy.EveResponse,
         upstream_next_index: int = 0,
+        *,
+        session_id: str = "",
     ) -> None:
         client_connected = True
         try:
@@ -649,6 +708,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 projected = eve_proxy.project_event(event)
                 if projected is None:
                     continue
+                projected = self._apply_wiki_grounding_event(
+                    projected,
+                    session_id=session_id,
+                )
                 projected = eve_proxy.with_upstream_next_index(
                     projected,
                     upstream_next_index,

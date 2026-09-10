@@ -30,6 +30,10 @@ LOOKUP_TIMEOUT_SEC = 18
 COMPARE_TIMEOUT_SEC = 45
 COMPARE_TIMEOUT_NOTE = "Wiki compare failed or timed out"
 LOOKUP_FAIL_NOTE = "Wiki lookup failed or returned no usable cards"
+EVIDENCE_MAX_CHARS = 1800
+EVIDENCE_TOKEN_BUDGET = 2000
+
+_EVIDENCE_BY_SESSION: dict[str, dict[str, Any]] = {}
 
 # Explicit Truth Drift / cross-year compare only — NOT bare "wikipedia".
 TRUTH_DRIFT_RE = re.compile(
@@ -196,6 +200,90 @@ def _format_cards_block(cards_by_year: dict[str, Any], *, topic: str) -> str:
                 lines.append(f"  Snippet: {snippet}")
         lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def register_wiki_evidence(session_id: str, evidence: dict[str, Any]) -> None:
+    sid = (session_id or "").strip()
+    if sid and evidence.get("ok"):
+        _EVIDENCE_BY_SESSION[sid] = evidence
+
+
+def pop_wiki_evidence(session_id: str) -> dict[str, Any] | None:
+    sid = (session_id or "").strip()
+    if not sid:
+        return None
+    return _EVIDENCE_BY_SESSION.pop(sid, None)
+
+
+def get_wiki_evidence(session_id: str) -> dict[str, Any] | None:
+    sid = (session_id or "").strip()
+    if not sid:
+        return None
+    return _EVIDENCE_BY_SESSION.get(sid)
+
+
+def _estimate_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def _build_lead_evidence(
+    *,
+    user_question: str,
+    year: str,
+    hit_meta: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    from pipeline.wiki_read_lead import (
+        pick_lead_target,
+        wiki_read_lead,
+        wiki_read_lead_enabled,
+    )
+
+    if not wiki_read_lead_enabled() or not hit_meta:
+        return None
+    entity, corpus_rel_path = pick_lead_target(user_question, hit_meta)
+    if not entity:
+        return None
+    lead = wiki_read_lead(
+        entity,
+        year,
+        corpus_rel_path=corpus_rel_path,
+        max_chars=EVIDENCE_MAX_CHARS,
+    )
+    if not lead.get("ok"):
+        return None
+    lead["user_question"] = user_question
+    return lead
+
+
+def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> str:
+    allowed = evidence.get("allowed_names")
+    allowed_list = (
+        [str(name) for name in allowed if str(name).strip()]
+        if isinstance(allowed, list)
+        else []
+    )
+    allowed_text = ", ".join(allowed_list[:12]) if allowed_list else "(none parsed)"
+    lines = [
+        WIKI_LOOKUP_MARKER,
+        f"EVIDENCE (mandatory — snapshot {evidence.get('snapshot', '')}):",
+        f"Title: {evidence.get('title', '')}",
+        f"Lead: {evidence.get('lead', '')}",
+        f"Allowed names: {allowed_text}",
+        "",
+        "CONTRACT: Answer only from EVIDENCE above.",
+        "If the user asked for a song/person not named in EVIDENCE, say it is not in this archive.",
+        "Never use training-memory song titles (e.g. do not answer \"Wow\" for Kate Bush revival questions).",
+        "",
+        f"User question: {user_question.strip()}",
+    ]
+    block = "\n".join(lines)
+    if _estimate_tokens(block) > EVIDENCE_TOKEN_BUDGET:
+        lead = str(evidence.get("lead") or "")
+        trimmed = lead[: max(400, EVIDENCE_MAX_CHARS // 2)].rstrip() + "…"
+        evidence = dict(evidence)
+        evidence["lead"] = trimmed
+        return _format_evidence_block(evidence, user_question=user_question)
+    return block
 
 
 def _lookup_answer_hint(cards: list[dict[str, Any]], user_question: str) -> str:
@@ -367,6 +455,7 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
 
     raw = extract_user_message(message)
     lookup_cards: list[dict[str, Any]] | None = None
+    enriched_evidence: dict[str, Any] | None = None
 
     if is_truth_drift_query(raw):
         topic = pick_compare_topic(raw)
@@ -418,18 +507,36 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
                     )
                 else:
                     lookup_cards = cards
-                    block = _format_lookup_block(
-                        cards,
-                        query=query,
-                        year=year,
-                        user_question=raw,
+                    hit_meta = (
+                        result.get("hit_meta")
+                        if isinstance(result.get("hit_meta"), list)
+                        else []
                     )
+                    lead_evidence = _build_lead_evidence(
+                        user_question=raw,
+                        year=year,
+                        hit_meta=hit_meta,
+                    )
+                    if lead_evidence:
+                        block = _format_evidence_block(lead_evidence, user_question=raw)
+                        enriched_evidence = lead_evidence
+                    else:
+                        enriched_evidence = None
+                        block = _format_lookup_block(
+                            cards,
+                            query=query,
+                            year=year,
+                            user_question=raw,
+                        )
                 label = "Answer from local Wikipedia snippets above"
     else:
         return payload
 
     enriched = dict(payload)
-    if lookup_cards and _lookup_answer_hint(lookup_cards, raw):
+    if enriched_evidence:
+        enriched["message"] = block
+        enriched["_wiki_evidence"] = enriched_evidence
+    elif lookup_cards and _lookup_answer_hint(lookup_cards, raw):
         enriched["message"] = block
     else:
         enriched["message"] = f"{block}\n\nUser message ({label}):\n{raw}"

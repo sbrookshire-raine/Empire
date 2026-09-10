@@ -79,6 +79,9 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-18 | **Wiki admission preflight (optional)** | `ready` | T7 plugged + Docker available. Partner ON. Ask a cross-year wiki topic (e.g. T-01 style). Confirm admission may run `start-weaviate.ps1` or reports a **clear** error if archive/path missing — no silent full wiki ingest. | Skip if Weaviate archive unavailable |
 | T-19 | **GitHub Scout manual limb** | `ready` | Enable **GitHub Scout** on Toolbelt (without Partner). Ask Eve to search repos for `mcp duckdb`. Confirm `github_cache/` only; **no** clone/install/Cognee. Optional: `GITHUB_TOKEN` if rate-limited. | Cursor MCP: `empire-github-scout` |
 | T-20 | **Admission CLI smoke** | `ready` | `.\venv\Scripts\python.exe -m pipeline.admission_controller status` → manifest + session + GPU snapshot. `set-research-partner true` → `request github_scout --reason smoke` → `release`. Check `%LOCALAPPDATA%\EMPIRE\` audit append. | Mechanic pre-pass OK; Architect confirms live stack |
+| T-21 | **Wiki Phase A — conversational lookup** | `ready` | `Start-EMPIRE.bat -Weaviate`. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-chat-smoke.py` → 4/4 PASS. Ask Eve the Kate Bush / Stranger Things vague questions in chat — no **Wow**, no Truth Drift hijack. | Mechanic: 4/4 smoke PASS 2026-09-10 with Weaviate up; `wiki_read_lead` + grounding guard |
+| T-22 | **Wiki calibrate JSONL harness** | `ready` | `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\run-wiki-calibrate.py --tier smoke --injection --retrieval`. Full corpus: drop `--tier smoke` (expect routing_gap failures until Phase B). Data: `data/eval/wiki_calibrate.jsonl`. | Mechanic: smoke 8/8 PASS 2026-09-10 |
+| T-23 | **Playwright wiki Eve UI smoke** | `ready` | Stack up + Weaviate. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-eve-playwright.py` (add `--headful` to watch). | Mechanic PASS 2026-09-10 (~48s) |
 
 ---
 
@@ -90,6 +93,9 @@ Paste or summarize the next document here. Mechanic will triage into Testing / F
 |------|------------|-----------------|--------|
 | 2026-09-06 | Bridge `EVE_OLLAMA_EXPANSION_MANIFEST.md` | Voice, Docling, model A/B, promote cache, provenance, web scout | Folded into Atlas waves; rejects noted above |
 | 2026-09-06 | EMPIRE Capability Atlas (Mechanic) | GPU lease, vision limb, thought experiments, LEGO index, embed A/B | Waves 0–4 rows |
+| 2026-09-10 | `empire_missed_oss_investigation.md` | kiwix-mcp 3-rung ladder (server-side), FlashRank CPU rerank, promptfoo/JSONL eval, skip Kiwix migration | → F-30–F-33; ladder in `pipeline/wiki_kiwix_ladder.py` |
+| 2026-09-10 | `empire_huggingface_specialty_resources.md` | AmbigQA/RedirectQA/FaithDial samples, EMPIRE DriftBench from snapshots, MiniCheck CPU eval later | → `data/eval/wiki_calibrate.jsonl`, `pipeline/wiki_driftbench_seed.py`; HF import parked |
+| 2026-09-10 | RAG Stack technical directive (NotebookLM) | Phase A `wiki_read_lead`, slim EVIDENCE, 4 calibration Qs | → T-21; shipped + mechanic smoke PASS |
 
 **Intake rule:** When you share a document, add one row above (or ask Cursor to), then split bullets into the sections below with new `I-xx` / `T-xx` / `F-xx` IDs.
 
@@ -130,6 +136,11 @@ Engineering work not yet (or only partially) shipped.
 | F-27 | Mechanic SBOM script | `done` | `scripts/empire-sbom.ps1` | Not Eve-exposed |
 | F-28 | PaddleOCR specialist | `parked` | Autonomous guide Phase 7 | Only if Docling loses Architect samples |
 | F-29 | Research Autopilot (admission + github scout + orchestrator) | `done` | [`docs/RESEARCH_AUTOPILOT.md`](RESEARCH_AUTOPILOT.md) | Forge complete; Architect smoke **T-13–T-20** before daily reliance |
+| F-30 | Wiki calibrate JSONL + DriftBench seed + runner | `done` | `data/eval/wiki_calibrate.jsonl`, `pipeline/wiki_driftbench_seed.py`, `scripts/run-wiki-calibrate.py` | 21 seed cases; expand to ~325 with HF samples |
+| F-31 | Kiwix-MCP ladder (server-side) | `done` | `pipeline/wiki_kiwix_ladder.py` | `search_with_snippets` → `get_content_summary` → `get_content`; not exposed as MCP |
+| F-32 | FlashRank CPU rerank on title+lead | `ready` | missed OSS + HF specialty docs | Phase B — only if calibrate shows title mixups |
+| F-33 | HF calibrate sample import (AmbigQA, RedirectQA, …) | `ready` | `empire_huggingface_specialty_resources.md` | `scripts/import-wiki-calibrate-samples.py` not forged yet; 200 placeholder slots optional via `--include-placeholders` |
+| F-34 | MiniCheck / FaithCritic CPU offline verifier | `parked` | HF specialty doc | Eval-only after allowlist metrics plateau |
 
 ---
 
