@@ -80,6 +80,15 @@ def verify_grounding(
             if quoted.casefold() not in lead.casefold():
                 return False, synthesize_fallback_reply(evidence, user_question)
 
+    try:
+        from pipeline.wiki_entity_guard import verify_entities
+
+        entity_ok, unsupported = verify_entities(text, evidence, user_question=user_question)
+        if not entity_ok and unsupported:
+            return False, synthesize_fallback_reply(evidence, user_question)
+    except Exception:
+        pass
+
     return True, text
 
 

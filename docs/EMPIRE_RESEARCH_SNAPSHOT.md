@@ -2,7 +2,8 @@
 
 **Audience:** Any human or AI evaluating upgrades, tools, architectures, or “add this to EMPIRE” ideas.  
 **Purpose:** Ground external research in **what is actually built**, not manifesto aspiration alone.  
-**Date of snapshot:** 2026-09-07  
+**Date of snapshot:** 2026-09-10  
+**Research phase:** **Closed** — see [`docs/RESEARCH_CLOSURE.md`](RESEARCH_CLOSURE.md) before proposing new tools.  
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire  
 **Local roots:** `C:\EMPIRE` (code) · `C:\Empire_Workbench` (Architect workbench FS)
 

@@ -81,7 +81,9 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-20 | **Admission CLI smoke** | `ready` | `.\venv\Scripts\python.exe -m pipeline.admission_controller status` → manifest + session + GPU snapshot. `set-research-partner true` → `request github_scout --reason smoke` → `release`. Check `%LOCALAPPDATA%\EMPIRE\` audit append. | Mechanic pre-pass OK; Architect confirms live stack |
 | T-21 | **Wiki Phase A — conversational lookup** | `ready` | `Start-EMPIRE.bat -Weaviate`. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-chat-smoke.py` → 4/4 PASS. Ask Eve the Kate Bush / Stranger Things vague questions in chat — no **Wow**, no Truth Drift hijack. | Mechanic: 4/4 smoke PASS 2026-09-10 with Weaviate up; `wiki_read_lead` + grounding guard |
 | T-22 | **Wiki calibrate JSONL harness** | `ready` | `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\run-wiki-calibrate.py --tier smoke --injection --retrieval`. Full corpus: drop `--tier smoke` (expect routing_gap failures until Phase B). Data: `data/eval/wiki_calibrate.jsonl`. | Mechanic: smoke 8/8 PASS 2026-09-10 |
-| T-23 | **Playwright wiki Eve UI smoke** | `ready` | Stack up + Weaviate. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-eve-playwright.py` (add `--headful` to watch). | Mechanic PASS 2026-09-10 (~48s) |
+| T-23 | **Playwright wiki Eve UI smoke** | `ready` | Stack up + Weaviate. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-eve-playwright.py` (add `--headful` to watch). | Mechanic PASS 2026-09-10 (~48s); may timeout if Eve busy |
+| T-24 | **Embedding stack audit** | `ready` | `.\scripts\audit-embedding-stack.ps1` — confirm **nomic-embed-text** for Weaviate + Cognee; Weaviate reachable optional. | Gap analysis item 7 — audit only, no re-embed |
+| T-25 | **Offline survival mirror** | `ready` | While online: `.\scripts\build-offline-mirror.ps1 -PullOllama -Wheelhouse`. Review `D:\empire\MANIFEST.md`. Pull `qwen2.5-coder:7b` if missing. | **Time-sensitive** — gap analysis #1 |
 
 ---
 
@@ -96,6 +98,7 @@ Paste or summarize the next document here. Mechanic will triage into Testing / F
 | 2026-09-10 | `empire_missed_oss_investigation.md` | kiwix-mcp 3-rung ladder (server-side), FlashRank CPU rerank, promptfoo/JSONL eval, skip Kiwix migration | → F-30–F-33; ladder in `pipeline/wiki_kiwix_ladder.py` |
 | 2026-09-10 | `empire_huggingface_specialty_resources.md` | AmbigQA/RedirectQA/FaithDial samples, EMPIRE DriftBench from snapshots, MiniCheck CPU eval later | → `data/eval/wiki_calibrate.jsonl`, `pipeline/wiki_driftbench_seed.py`; HF import parked |
 | 2026-09-10 | RAG Stack technical directive (NotebookLM) | Phase A `wiki_read_lead`, slim EVIDENCE, 4 calibration Qs | → T-21; shipped + mechanic smoke PASS |
+| 2026-09-10 | `empire_local_capability_gap_analysis.md` | Offline mirror, GLiNER, CPU specialist fleet, PH wind-down, build sequence | → **docs/RESEARCH_CLOSURE.md**; F-35–F-38; T-24–T-25 |
 
 **Intake rule:** When you share a document, add one row above (or ask Cursor to), then split bullets into the sections below with new `I-xx` / `T-xx` / `F-xx` IDs.
 
@@ -140,7 +143,11 @@ Engineering work not yet (or only partially) shipped.
 | F-31 | Kiwix-MCP ladder (server-side) | `done` | `pipeline/wiki_kiwix_ladder.py` | `search_with_snippets` → `get_content_summary` → `get_content`; not exposed as MCP |
 | F-32 | FlashRank CPU rerank on title+lead | `ready` | missed OSS + HF specialty docs | Phase B — only if calibrate shows title mixups |
 | F-33 | HF calibrate sample import (AmbigQA, RedirectQA, …) | `ready` | `empire_huggingface_specialty_resources.md` | `scripts/import-wiki-calibrate-samples.py` not forged yet; 200 placeholder slots optional via `--include-placeholders` |
-| F-34 | MiniCheck / FaithCritic CPU offline verifier | `parked` | HF specialty doc | Eval-only after allowlist metrics plateau |
+| F-34 | MiniCheck / FaithCritic CPU offline verifier | `parked` | HF specialty doc | Eval-only after allowlist/GLiNER metrics plateau |
+| F-35 | Offline survival mirror + MANIFEST | `done` | `docs/RESEARCH_CLOSURE.md`, `scripts/build-offline-mirror.ps1`, `config/offline-mirror.json` | Architect runs **T-25** while online |
+| F-36 | GLiNER CPU entity grounding gate | `done` | `pipeline/wiki_entity_guard.py` | Opt-in: `pip install gliner` + `EMPIRE_GLINER_GROUNDING=1` |
+| F-37 | Piper TTS path (vs Speaches) | `parked` | Gap analysis §2 | Speaches already forged (F-10/T-08); compare only if voice quality insufficient |
+| F-38 | Ollama JSON-schema article selection | `ready` | Gap analysis §4; structured outputs | Wire `format` for title pick before prose — no second generator |
 
 ---
 
@@ -154,6 +161,8 @@ Capture sparks here; promote to Testing or Forge when clear.
 | I-02 | Gumloop limb only after local research fails | `parked` | Manifesto Phase 3 |
 | I-03 | Thought-experiment YouTube → research limb | `done` | Manifesto Phase 3 / Atlas |
 | I-04 | Rebuild Shard `.venv-cuda` documented in ops cheat sheet | `done` | 2026-09-06 CUDA fix |
+| I-05 | **Research discovery closed** | `done` | Gap analysis § Product Hunt wind-down | Authority: **docs/RESEARCH_CLOSURE.md** — DriftBench drives next search |
+| I-06 | Personal doc corpus (Docling → Weaviate) | `ready` | Gap analysis §5 | Week 3 build; same `wiki_read_lead` contract on your PDFs |
 
 ---
 
@@ -190,6 +199,7 @@ When waking EMPIRE to work this queue:
 | [docs/RESEARCH_AUTOPILOT.md](RESEARCH_AUTOPILOT.md) | Research Partner + admission + orchestrator |
 | [docs/DAZE.md](DAZE.md) | DAZE radial day / Time Reclaim |
 | [docs/WEAVIATE_HEIST.md](WEAVIATE_HEIST.md) | Weaviate boot / tear-down |
+| [docs/RESEARCH_CLOSURE.md](RESEARCH_CLOSURE.md) | **Research phase capstone — read before new tool hunts** |
 | `C:\Empire_Workbench\05_Work_Orders\` | Active Forge Work Orders |
 | `C:\Empire_Workbench\stem_factory\input` | Stem inbox |
 | http://127.0.0.1:8080/daze.html | DAZE radial day |

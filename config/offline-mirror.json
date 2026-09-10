@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "description": "EMPIRE offline survival kit — pull while online.",
+  "mirror_root_default": "D:\\empire",
+  "ollama_models": [
+    {
+      "name": "qwen2.5:14b-instruct",
+      "role": "Eve Fast chat",
+      "required": true
+    },
+    {
+      "name": "nomic-embed-text:latest",
+      "role": "Weaviate hybrid + Cognee embed",
+      "required": true
+    },
+    {
+      "name": "qwen2.5-coder:7b",
+      "role": "Offline coding fallback when Cursor unavailable",
+      "required": false
+    },
+    {
+      "name": "qwen3-vl:8b",
+      "role": "Vision swap (GPU lease; do not co-reside with 14B)",
+      "required": false
+    }
+  ],
+  "huggingface_optional": [
+    {
+      "repo": "urchade/gliner_small-v2.1",
+      "role": "CPU entity grounding (F-36)",
+      "required": false
+    },
+    {
+      "repo": "Systran/faster-whisper-small",
+      "role": "STT reference (Speaches bundles its own)",
+      "required": false
+    }
+  ],
+  "pip_wheelhouse": {
+    "requirements": "requirements.txt",
+    "output_dir": "D:\\wheels"
+  },
+  "docker_images_optional": [
+    "semitechnologies/weaviate:1.27.0",
+    "ghcr.io/speaches-ai/speaches:latest-cpu"
+  ],
+  "kiwix_zim_suggestions": [
+    {
+      "name": "DevDocs",
+      "url": "https://library.kiwix.org/"
+    },
+    {
+      "name": "Wiktionary",
+      "url": "https://library.kiwix.org/"
+    }
+  ],
+  "offline_env_flags": [
+    "HF_HUB_OFFLINE=1",
+    "TRANSFORMERS_OFFLINE=1"
+  ]
+}
