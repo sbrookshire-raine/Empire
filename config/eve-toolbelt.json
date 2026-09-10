@@ -1,5 +1,7 @@
 {
   "active_tools": [
-    "voice_presence"
-  ]
+    "voice_presence",
+    "wiki_local"
+  ],
+  "defaults_version": 1
 }

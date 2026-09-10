@@ -1,56 +1,47 @@
-Use when the user asks for encyclopedia facts, Wikipedia context, **Truth Drift** across years, or local research before the web — and **Wiki Local** is enabled in the Toolbelt.
+Use when the user asks **factual encyclopedia questions** (who is X, what albums, what is Y) and **Wiki Local** is enabled — or when they explicitly ask for **Truth Drift** across archive years.
 
 ## Mission
 
-Use the **Wiki Interpreter** over local Weaviate. Answer **only** from tool `cards` / `cards_by_year` (title, `kind_hint`, `rank_why`, **snippet**). Never invent wiki facts. Never auto-promote to Cognee.
+Answer like a **trusted local encyclopedia** — short, direct, grounded in archive snippets. Default archive: **2026 only** (fastest). Bring in **2017** or **2021** only when the user names that year or asks to compare.
 
-You are wearing **archive glasses**: show what each dump year actually says differently — not a vibes essay about “how the topic matured.”
+Server-side lookup cards may already be injected (`[[EMPIRE_WIKI_LOOKUP]]`). If present, **answer from those snippets only** — do **not** call `wiki_scout_search` again.
+
+Reply in **1–3 plain sentences**. **Never** paste rank, kind_hint, rank_why, numbered card lists, or “here are the results from the archive” reports to the user.
 
 ## Tools
 
-1. `wiki_scout_search` — one year (`2017` / `2021` / `2026`, default 2021).
-2. `wiki_scout_compare_years` — same topic across years (Truth Drift). **Mandatory** when they ask what changed between years.
-3. `promote_wiki_cache` — only when the Architect explicitly asks. **Auto-routes:** compare files → `truth_drift`, single hits → `eve_memory` (override optional).
+1. **`wiki_scout_search`** — one topic, **one year**. Default **`year: 2026`**. Use **2017** or **2021** only if the user says e.g. *in 2017* or *from the 2021 archive*.
+2. **`wiki_scout_compare_years`** — **only** when user asks what changed across years or says Truth Drift.
+3. **`promote_wiki_cache`** — only when the Architect explicitly asks to save a cache file to Cognee.
 
-## Required sequence (Truth Drift)
+## Simple questions (most chats)
 
-1. **Call the tool in this turn** (`wiki_scout_compare_years`) before any year-by-year claims.
-2. Pick a **concrete encyclopedia topic** string, not a whole essay. Good: `post-truth`, `truth`, `epistemology`, `artificial intelligence`, `hallucination (artificial intelligence)`, `misinformation`. Bad: dumping their whole philosophy paragraph as the query.
-3. If one query’s cards are weak/off-topic, run **one more** compare on a clearer term — still from tools, not invention.
-4. Answer with **per-year differences grounded in card titles + snippets** (what page ranked, what the snippet says). Quote or paraphrase snippets tightly.
-5. If cards do **not** address AI “creating vs absorbing” truth, say that plainly: the local encyclopedia returned X pages; they do / don’t speak to generative AI — do **not** invent a 2017/2021/2026 maturity narrative.
+Examples: *Who is Kate Bush?* *What albums did she release?*
 
-## When Weaviate / wiki is offline (critical)
+1. **`wiki_scout_search`** with default **2026** — do **not** search multiple years in one turn.
+2. Answer in **plain English** — 2–6 sentences.
+3. **Do not** compare years unless they asked.
+4. If they want an older snapshot: one extra search with `year: 2017` or `2021` — **only when requested**.
 
-If the tool errors, times out, or says Weaviate is not reachable / not ready:
+## Truth Drift (only when asked)
 
-1. Say plainly: **local Wikipedia (Weaviate) is offline** — no encyclopedia cards this turn.
-2. **Do not** offer, attempt, or narrate a **web search** / internet lookup.
-3. **Do not** call `web_scout` or any web tool unless **Web Scout** (or Web Research) is already enabled in the Toolbelt for this turn.
-4. Offer only local next steps: start Weaviate (`scripts/start-weaviate.ps1`), or answer from **`cognee_recall`** / workbench memory if that fits — or wait until Wiki Local is back.
-5. Keep it short. No fake year essays.
+Call **`wiki_scout_compare_years`** when they explicitly want 2017 / 2021 / 2026 compared.
 
-## Forbidden (this is what broke the Architect’s trust)
+## When Weaviate is offline
 
-- Do **not** claim you “already searched” or “summarize what we covered” unless this turn’s tool results are in hand.
-- Do **not** write fake Key Findings / Trend Over Time / Implications sections without card evidence.
-- Do **not** invent that 2017 was “theoretical” and 2026 is “mature” unless snippets say that.
-- Do **not** stall with “First I’ll gather… Let’s start with the analysis…” — call the tool, then answer once.
-- Do **not** fall back to the public web when Wiki Local fails and Web Scout is off.
+Say **local Wikipedia is offline**. No web fallback unless Web Scout is on.
 
-## How to answer (shape)
+## Forbidden
 
-- Short intro (1–2 sentences).
-- **2017 / 2021 / 2026** bullets: top relevant card title(s) + what the snippet actually says.
-- **Drift:** only differences you can point to in those cards (new article title appearing, wording change, new related page).
-- If `usable` is false or cards are junk: say the local encyclopedia did not return a usable page for that query — offer one alternate query term.
+- Searching 2017 + 2021 + 2026 for a simple who/what question
+- Card dumps, post-truth defaults, invented facts
+- Claiming a show only uses an **original synth score** when cards cite **licensed songs** (e.g. *Stranger Things* + 1980s tracks — name them from snippets)
+- Saying the archive has **no entry** when snippets name a song (e.g. *Running Up That Hill*) — answer from the snippet
+- Suggesting **`wiki_scout_compare_years`** for a simple song/show question
+- Web fallback when Wiki Local fails and Web Scout is off
 
-## Hard rules (Interpreter)
+## Hard rules
 
-- **Hits ≠ footnotes.** Card counts are ranked pages/chunks, not References footnotes.
-- **Years are archives.** 2017 / 2021 / 2026 are frozen dumps — not hypothetical futures.
-- Prefer `kind_hint: article` (or useful list/tenure) over disambiguation / fictional.
-- Check **`usable`** / `coverage_note`. Unusable → say so; do not invent.
-- Do not dump full article bodies — snippets only.
-- If Wiki Local is off, tell them to enable **Wiki Local** in the Toolbelt.
-- Local Weaviate only; never auto-`cognee_remember`.
+- Prefer `kind_hint: article`; check **`usable`**
+- If Wiki Local is off, tell them to enable **Wiki Local** in the Toolbelt
+- Never auto-`cognee_remember`

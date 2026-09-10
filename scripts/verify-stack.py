@@ -245,6 +245,15 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
 
     add("eve.to_ollama", "Eve -> Ollama path", eve_to_ollama_check)
 
+    def voice_presence_check() -> tuple[bool, str]:
+        voice_url = os.environ.get("EMPIRE_VOICE_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+        ok, detail, _ = http_json(f"{voice_url}/health")
+        if not ok:
+            return False, f"Speaches unreachable at {voice_url}: {detail}"
+        return True, f"Voice API ok at {voice_url}"
+
+    add("voice.speaches", "Eve -> Speaches voice (STT/TTS)", voice_presence_check)
+
     def eve_python_worker_check() -> tuple[bool, str]:
         if args.skip_cognee:
             return True, "SKIP: Cognee worker check disabled"

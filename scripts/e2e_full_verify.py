@@ -126,8 +126,10 @@ def main() -> int:
     from frontend.memory_api import is_memory_chat_query
     from frontend.wiki_drift_api import (
         WIKI_DRIFT_MARKER,
+        WIKI_LOOKUP_MARKER,
         enrich_eve_message_payload,
         is_truth_drift_query,
+        is_wiki_lookup_query,
         pick_compare_topic,
     )
     from frontend import companion_api
@@ -160,6 +162,20 @@ def main() -> int:
         (
             "plain_chat",
             "hows it going?",
+            False,
+            False,
+            None,
+        ),
+        (
+            "wiki_access_not_drift",
+            "Can you access my Wikipedia data?",
+            False,
+            False,
+            None,
+        ),
+        (
+            "artist_lookup",
+            "Who is Kate Bush?",
             False,
             False,
             None,

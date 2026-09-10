@@ -39,6 +39,9 @@ function wikiScoutMcpEnv(): Record<string, string> {
   env.WEAVIATE_API_KEY = WEAVIATE_API_KEY;
   env.EMPIRE_OLLAMA_URL = "http://127.0.0.1:11434";
   env.OLLAMA_HOST = "http://127.0.0.1:11434";
+  // Chat turns need sub-second wiki tools — heuristics only (no BGE cold load).
+  env.EMPIRE_WIKI_RERANK = "0";
+  env.EMPIRE_WIKI_CANDIDATE_POOL = "12";
   return env;
 }
 
@@ -161,8 +164,8 @@ export async function wikiScoutSearchViaMcp(input: {
       name: "wiki_scout_search",
       arguments: {
         query: input.query,
-        year: input.year ?? "2021",
-        limit: input.limit ?? 3,
+        year: input.year ?? "2026",
+        limit: input.limit ?? 2,
       },
     });
     return parseMcpToolJson(result);

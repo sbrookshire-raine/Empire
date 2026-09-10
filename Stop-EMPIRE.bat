@@ -66,6 +66,8 @@ if "%KEEP_DOCKER%"=="1" (
         ) else (
             echo   Postgres stopped
         )
+        docker stop empire-speaches >nul 2>&1
+        echo   Speaches voice stopped ^(port 8000^)
     )
 )
 echo.

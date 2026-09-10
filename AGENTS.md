@@ -32,10 +32,14 @@ Equivalent manual stack (no browser):
 ```
 
 That mounts `V:\Cognee` (UAC prompt if needed), starts Docker Postgres and PocketBase,
-launches the frontend with the repo venv, conditionally rebuilds Eve only when its
-authored inputs are newer, and starts the built Eve server on `127.0.0.1:2000`.
+launches the frontend with the repo venv, starts **Speaches voice** on port 8000 (Eve
+push-to-talk), conditionally rebuilds Eve only when its authored inputs are newer, and
+starts the built Eve server on `127.0.0.1:2000`.
 
-Open **http://127.0.0.1:8080/eve.html**
+Open **http://127.0.0.1:8080/eve.html** — use the mic for spoken turns when training
+personality and response style.
+
+Skip voice only when needed: `.\scripts\launch-empire.ps1 -NoVoice`
 
 ### Give Eve data
 
@@ -71,6 +75,7 @@ Provide a lightweight Tasks CRUD loop (PocketBase + HTMX/Alpine UI), graph memor
 | Frontend | http://127.0.0.1:8080 | Python static server (Phase 4) |
 | Ollama | http://localhost:11434/v1 | Local inference (Operational Phase) |
 | Eve | http://127.0.0.1:2000 | Agent runtime (headless API) |
+| Speaches (voice) | http://127.0.0.1:8000 | Local STT/TTS for Eve push-to-talk |
 
 ## Start order (Operational Phase)
 

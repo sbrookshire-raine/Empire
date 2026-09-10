@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-# Optional limbs only — default all OFF to protect context until the user opts in.
+# Optional limbs only — default all OFF except voice (spoken practice is core UX).
 ALLOWED_CATEGORIES = (
     "gumloop_cloud",
     "web_research",
@@ -34,7 +34,8 @@ ALLOWED_CATEGORIES = (
     "browser_local",
     "loom_intake",
 )
-DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
+DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ("voice_presence", "wiki_local")
+DEFAULTS_VERSION = 1
 
 
 def _toolbelt_path() -> Path:
@@ -65,7 +66,7 @@ def normalize_active_tools(raw: Any) -> list[str]:
 
 def write_active_tools(categories: list[str]) -> Path:
     path = _toolbelt_path()
-    payload = {"active_tools": categories}
+    payload = {"active_tools": categories, "defaults_version": DEFAULTS_VERSION}
     try:
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     except OSError:
@@ -81,7 +82,18 @@ def load_active_tools() -> list[str]:
         return list(DEFAULT_ACTIVE_TOOLS)
     if not isinstance(parsed, dict):
         return list(DEFAULT_ACTIVE_TOOLS)
-    return normalize_active_tools(parsed.get("active_tools"))
+    selected = normalize_active_tools(parsed.get("active_tools"))
+    if parsed.get("defaults_version") is None:
+        for default_tool in DEFAULT_ACTIVE_TOOLS:
+            if default_tool not in selected:
+                selected = normalize_active_tools([*selected, default_tool])
+        parsed["active_tools"] = selected
+        parsed["defaults_version"] = DEFAULTS_VERSION
+        try:
+            path.write_text(json.dumps(parsed, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            pass
+    return selected
 
 
 def category_enabled(category: str) -> bool:

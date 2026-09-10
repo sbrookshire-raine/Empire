@@ -5,8 +5,9 @@ cd /d "%~dp0"
 title EMPIRE Launcher
 
 echo.
-echo Starting EMPIRE (Ollama, PocketBase, Workbench, Eve)...
+echo Starting EMPIRE (Ollama, PocketBase, Workbench, Eve, Voice)...
 echo Optional: Start-EMPIRE.bat -Weaviate   ^(Wiki Local on :8091^)
+echo Optional: Start-EMPIRE.bat -NoVoice    ^(skip Speaches on :8000^)
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch-empire.ps1" %*

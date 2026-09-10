@@ -39,7 +39,7 @@ if (-not $docker) {
 }
 
 if (-not (Test-Path -LiteralPath $ArchivePath)) {
-    throw "Weaviate archive not found: $ArchivePath — plug in / mount the drive that holds weaviate_v2_archive."
+    throw "Weaviate archive not found: $ArchivePath - plug in / mount the drive that holds weaviate_v2_archive."
 }
 
 if (Test-WeaviateReady -Key $ApiKey) {
@@ -51,15 +51,15 @@ $existing = docker ps -a --filter "name=^/${ContainerName}$" --format "{{.Names}
 if ($existing -eq $ContainerName) {
     $running = docker ps --filter "name=^/${ContainerName}$" --format "{{.Names}}" 2>$null
     if ($running -eq $ContainerName) {
-        Write-Host "  Container running — waiting for ready…"
+        Write-Host "  Container running - waiting for ready..."
     }
     else {
-        Write-Host "  Starting existing container $ContainerName…"
+        Write-Host "  Starting existing container $ContainerName..."
         docker start $ContainerName | Out-Null
     }
 }
 else {
-    Write-Host "  Creating container $ContainerName (port 8091)…"
+    Write-Host "  Creating container $ContainerName (port 8091)..."
     # Mount must be RW (Weaviate opens Bolt); scout/export use GET only.
     $archiveDocker = ($ArchivePath -replace "\\", "/")
     docker run -d --name $ContainerName `
@@ -88,7 +88,7 @@ for ($attempt = 1; $attempt -le $ReadyTimeoutSec; $attempt++) {
         return
     }
     if (($attempt % 15) -eq 0) {
-        Write-Host "  Still warming up… ($attempt s) — large archive can take a while"
+        Write-Host "  Still warming up... ($attempt s) - large archive can take a while"
     }
     Start-Sleep -Seconds 1
 }

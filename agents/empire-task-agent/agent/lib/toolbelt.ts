@@ -30,7 +30,7 @@ export const TOOLBELT_CATEGORIES = [
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];
 
-const DEFAULT_ACTIVE: ToolbeltCategory[] = [];
+const DEFAULT_ACTIVE: ToolbeltCategory[] = ["voice_presence", "wiki_local"];
 
 function isToolbeltCategory(value: string): value is ToolbeltCategory {
   return (TOOLBELT_CATEGORIES as readonly string[]).includes(value);

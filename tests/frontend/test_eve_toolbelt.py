@@ -26,7 +26,10 @@ class EveToolbeltTests(unittest.TestCase):
         self.assertIn("loom_intake", eve_toolbelt.ALLOWED_CATEGORIES)
 
     def test_normalize_defaults_when_missing(self) -> None:
-        self.assertEqual(eve_toolbelt.normalize_active_tools(None), [])
+        self.assertEqual(
+            eve_toolbelt.normalize_active_tools(None),
+            ["voice_presence", "wiki_local"],
+        )
 
     def test_apply_persists_and_strips_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -53,6 +56,30 @@ class EveToolbeltTests(unittest.TestCase):
     def test_apply_leaves_payload_when_field_absent(self) -> None:
         payload = {"message": "hi"}
         self.assertEqual(eve_toolbelt.apply_active_tools(payload), payload)
+
+    def test_load_defaults_voice_and_wiki_when_file_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "missing.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                self.assertEqual(
+                    eve_toolbelt.load_active_tools(),
+                    ["voice_presence", "wiki_local"],
+                )
+
+    def test_load_migrates_legacy_toolbelt_to_voice_on(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            path.write_text(
+                json.dumps({"active_tools": ["tool_forge"]}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                self.assertEqual(
+                    eve_toolbelt.load_active_tools(),
+                    ["tool_forge", "voice_presence", "wiki_local"],
+                )
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(saved["defaults_version"], eve_toolbelt.DEFAULTS_VERSION)
 
 
 if __name__ == "__main__":

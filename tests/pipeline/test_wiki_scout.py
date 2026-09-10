@@ -22,6 +22,13 @@ class WikiScoutCacheTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             wiki_scout.resolve_collection(year="1999")
 
+    def test_resolve_collection_defaults_to_2026(self) -> None:
+        with patch.dict("os.environ", {"EMPIRE_WIKI_DEFAULT_YEAR": "2026"}, clear=False):
+            self.assertEqual(
+                wiki_scout.resolve_collection(year=None),
+                ("WikiChunk2026", "2026"),
+            )
+
     def test_write_cache_hit_frontmatter_and_path(self) -> None:
         hit = {
             "collection": "WikiChunk",

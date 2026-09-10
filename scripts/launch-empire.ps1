@@ -2,7 +2,8 @@
 param(
     [switch]$NoBrowser,
     [switch]$SkipOllamaCheck,
-    [switch]$Weaviate
+    [switch]$Weaviate,
+    [switch]$NoVoice
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +83,9 @@ if ($SkipOllamaCheck) {
 if ($Weaviate) {
     $stackArgs.Weaviate = $true
 }
+if ($NoVoice) {
+    $stackArgs.NoVoice = $true
+}
 & (Join-Path $PSScriptRoot "start-stack.ps1") @stackArgs
 
 if (-not $NoBrowser) {
@@ -93,6 +97,9 @@ if (-not $NoBrowser) {
 Write-Host ""
 Write-Host "EMPIRE is ready. Services keep running in the background."
 Write-Host "Workbench: $WorkbenchUrl"
+if (-not $NoVoice) {
+    Write-Host "Voice:      http://127.0.0.1:8000  (Eve push-to-talk on eve.html)"
+}
 if ($Weaviate) {
     Write-Host "Weaviate:   http://127.0.0.1:8091  (Toolbelt: Wiki Local)"
     Write-Host "Stop wiki:  .\scripts\stop-weaviate.ps1"

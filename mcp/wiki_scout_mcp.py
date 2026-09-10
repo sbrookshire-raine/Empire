@@ -24,7 +24,7 @@ def _json(data: Any) -> str:
 @mcp.tool()
 async def wiki_scout_search(
     query: str,
-    year: str = "2021",
+    year: str = "",
     limit: int = 5,
 ) -> str:
     """Wiki Interpreter search: wide hybrid retrieve, rank with Wikipedia heuristics
@@ -36,9 +36,22 @@ async def wiki_scout_search(
     """
     result = wiki_scout.search(
         query=query,
-        year=year or "2021",
-        limit=int(limit) or wiki_scout.DEFAULT_SEARCH_TOP_K,
+        year=year.strip() or None,
+        limit=int(limit) or 3,
+        write_files=False,
+        use_rerank=False,
     )
+    if isinstance(result, dict) and result.get("ok"):
+        slim = {
+            "ok": True,
+            "query": result.get("query"),
+            "snapshot_year": result.get("snapshot_year"),
+            "usable": result.get("usable"),
+            "cards": result.get("cards") or [],
+            "chat_reply_rule": result.get("chat_reply_rule"),
+            "coverage_note": result.get("coverage_note"),
+        }
+        return _json(slim)
     return _json(result)
 
 
@@ -57,6 +70,8 @@ async def wiki_scout_compare_years(
         query=query,
         years=year_list or ("2017", "2021", "2026"),
         limit_per_year=int(limit_per_year) or wiki_scout.DEFAULT_COMPARE_TOP_K,
+        write_files=False,
+        use_rerank=False,
     )
     return _json(result)
 

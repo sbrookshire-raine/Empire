@@ -19,7 +19,9 @@ from typing import Any
 import httpx
 
 from pipeline.wiki_interpreter import (
+    WIKI_CHAT_REPLY_RULE,
     candidate_pool_size,
+    cards_for_chat,
     cards_public,
     clean_query_for_retrieval,
     expand_queries,
@@ -61,6 +63,32 @@ DEFAULT_SUMMARY_CHARS = int(os.environ.get("EMPIRE_WIKI_SUMMARY_CHARS", "280"))
 DEFAULT_SEARCH_TOP_K = int(os.environ.get("EMPIRE_WIKI_SEARCH_TOP_K", "5"))
 DEFAULT_COMPARE_TOP_K = int(os.environ.get("EMPIRE_WIKI_COMPARE_TOP_K", "4"))
 DEFAULT_COMPARE_YEARS = ("2017", "2021", "2026")
+ALLOWED_SNAPSHOT_YEARS = frozenset(DEFAULT_COMPARE_YEARS)
+
+
+def default_snapshot_year() -> str:
+    """Primary archive for everyday lookup (override: EMPIRE_WIKI_DEFAULT_YEAR)."""
+    raw = os.environ.get("EMPIRE_WIKI_DEFAULT_YEAR", "2026").strip()
+    return raw if raw in ALLOWED_SNAPSHOT_YEARS else "2026"
+
+
+_YEAR_IN_TEXT_RE = re.compile(
+    r"\b(?:in|from|using|on|with)\s+(2017|2021|2026)\b|"
+    r"\b(2017|2021|2026)\s+(?:archive|snapshot|wikipedia|wiki)\b",
+    re.IGNORECASE,
+)
+
+
+def parse_snapshot_year_from_text(text: str) -> str | None:
+    """Optional explicit archive year in a user question (e.g. 'in 2017')."""
+    match = _YEAR_IN_TEXT_RE.search((text or "").strip())
+    if not match:
+        return None
+    for group in match.groups():
+        if group and group in ALLOWED_SNAPSHOT_YEARS:
+            return group
+    return None
+
 
 YEAR_COLLECTIONS: dict[str, str] = {
     "2017": "WikiChunk",
@@ -159,7 +187,8 @@ def resolve_collection(
         year_str = COLLECTION_YEAR.get(name, "")
         return name, year_str
     if year is None or str(year).strip() == "":
-        return YEAR_COLLECTIONS["2021"], "2021"
+        default_year = default_snapshot_year()
+        return YEAR_COLLECTIONS[default_year], default_year
     year_str = str(year).strip()
     if year_str not in YEAR_COLLECTIONS:
         raise ValueError(
@@ -424,30 +453,45 @@ def _retrieve_pool_for_query(
         except Exception:
             continue
 
-    try:
-        if use_hybrid and vector:
-            hybrid_rows.extend(
-                _graphql_hybrid_search(
-                    base_url=base_url,
-                    api_key=api_key,
-                    collection=collection,
-                    query=retrieve_q,
-                    vector=vector,
-                    limit=pool,
+    hybrid_queries: list[str] = []
+    for candidate in (retrieve_q, *variants):
+        key = (candidate or "").strip().casefold()
+        if key and key not in {q.casefold() for q in hybrid_queries}:
+            hybrid_queries.append(candidate.strip())
+    raw_q = (query or "").strip()
+    if (
+        raw_q
+        and raw_q.casefold() not in {q.casefold() for q in hybrid_queries}
+        and raw_q.casefold() != retrieve_q.casefold()
+        and len(raw_q.split()) >= 5
+    ):
+        hybrid_queries.append(raw_q)
+
+    for hybrid_q in hybrid_queries[:4]:
+        try:
+            if use_hybrid and vector:
+                hybrid_rows.extend(
+                    _graphql_hybrid_search(
+                        base_url=base_url,
+                        api_key=api_key,
+                        collection=collection,
+                        query=hybrid_q,
+                        vector=vector,
+                        limit=max(8, pool // max(len(hybrid_queries), 1)),
+                    )
                 )
-            )
-        else:
-            hybrid_rows.extend(
-                _graphql_bm25_search(
-                    base_url=base_url,
-                    api_key=api_key,
-                    collection=collection,
-                    query=retrieve_q,
-                    limit=pool,
+            else:
+                hybrid_rows.extend(
+                    _graphql_bm25_search(
+                        base_url=base_url,
+                        api_key=api_key,
+                        collection=collection,
+                        query=hybrid_q,
+                        limit=max(8, pool // max(len(hybrid_queries), 1)),
+                    )
                 )
-            )
-    except Exception:
-        pass
+        except Exception:
+            continue
 
     for variant in variants:
         try:
@@ -650,6 +694,7 @@ def search(
     embed_model: str = DEFAULT_EMBED_MODEL,
     write_files: bool = True,
     interpret: bool = True,
+    use_rerank: bool | None = None,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
@@ -723,8 +768,12 @@ def search(
         }
 
     interpreter_pack: dict[str, Any] = {}
+    rerank = use_rerank if use_rerank is not None else None
     if interpret:
-        interpreter_pack = interpret_hits(query, hits, top_k=top_k)
+        interpret_kwargs: dict[str, Any] = {"top_k": top_k}
+        if rerank is not None:
+            interpret_kwargs["use_rerank"] = rerank
+        interpreter_pack = interpret_hits(query, hits, **interpret_kwargs)
         hits = list(interpreter_pack.get("selected_hits") or [])
 
     out_dir = Path(cache_dir) if cache_dir else DEFAULT_CACHE_DIR
@@ -762,6 +811,7 @@ def search(
     if coverage_note:
         note = f"{note} {coverage_note}"
 
+    chat_cards = cards_for_chat(cards)
     return {
         "ok": True,
         "query": query,
@@ -771,7 +821,8 @@ def search(
         "paths": paths,
         "titles": titles,
         "summaries": summaries,
-        "cards": cards,
+        "cards": chat_cards,
+        "chat_reply_rule": WIKI_CHAT_REPLY_RULE,
         "interpreter": interpreter_pack.get("interpreter") if interpret else None,
         "interpreter_note": interpreter_pack.get("note") if interpret else None,
         "coverage_note": coverage_note,
@@ -796,6 +847,7 @@ def compare_years(
     embed_model: str = DEFAULT_EMBED_MODEL,
     write_files: bool = True,
     interpret: bool = True,
+    use_rerank: bool | None = None,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
@@ -856,9 +908,13 @@ def compare_years(
                 use_hybrid=use_hybrid,
             )
             if interpret:
-                pack = interpret_hits(
-                    query, raw_hits, top_k=top_k, focus_year=year_str
-                )
+                interpret_kwargs: dict[str, Any] = {
+                    "top_k": top_k,
+                    "focus_year": year_str,
+                }
+                if use_rerank is not None:
+                    interpret_kwargs["use_rerank"] = use_rerank
+                pack = interpret_hits(query, raw_hits, **interpret_kwargs)
                 hits = list(pack.get("selected_hits") or [])
                 cards_by_year[year_str] = cards_public(list(pack.get("cards") or []))
                 interpreter_meta[year_str] = {
@@ -1129,7 +1185,7 @@ def main(argv: list[str] | None = None) -> int:
 
     search_p = sub.add_parser("search", help="Wiki Interpreter search one snapshot year")
     search_p.add_argument("query")
-    search_p.add_argument("--year", default="2021")
+    search_p.add_argument("--year", default=default_snapshot_year())
     search_p.add_argument("--limit", type=int, default=DEFAULT_SEARCH_TOP_K)
     search_p.add_argument("--url", default=DEFAULT_WEAVIATE_URL)
     search_p.add_argument("--api-key", default=DEFAULT_API_KEY)

@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 param(
     [switch]$SkipOllamaCheck,
-    [switch]$Weaviate
+    [switch]$Weaviate,
+    [switch]$NoVoice
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +83,14 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
 }
 Wait-Url "Eve" "http://127.0.0.1:2000/eve/v1/info"
 
+if (-not $NoVoice) {
+    Write-Host ""
+    & (Join-Path $PSScriptRoot "start-voice.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Voice (Speaches) did not start cleanly. Eve text chat still works; push-to-talk needs port 8000."
+    }
+}
+
 if ($Weaviate) {
     Write-Host ""
     & (Join-Path $PSScriptRoot "start-weaviate.ps1")
@@ -91,6 +100,9 @@ if ($Weaviate) {
 
 Write-Host ""
 Write-Host "Ready: http://127.0.0.1:8080/eve.html"
+if (-not $NoVoice) {
+    Write-Host "Voice (Speaches):  http://127.0.0.1:8000  (Eve push-to-talk / auto-speak)"
+}
 if ($Weaviate) {
     Write-Host "Wiki Local Weaviate: http://127.0.0.1:8091"
 }
