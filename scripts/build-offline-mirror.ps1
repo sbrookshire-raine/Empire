@@ -81,14 +81,24 @@ if ($Wheelhouse) {
     $reqFile = Join-Path $Root $config.pip_wheelhouse.requirements
     $wheelDir = $config.pip_wheelhouse.output_dir
     New-Item -ItemType Directory -Force -Path $wheelDir | Out-Null
-    $pip = Join-Path $Root "venv\Scripts\pip.exe"
-    if (Test-Path $pip) {
+    # Use python -m pip — pip.exe launchers break when the repo moves (OneDrive -> C:\EMPIRE).
+    $python = Join-Path $Root "venv\Scripts\python.exe"
+    if (-not (Test-Path $python)) {
+        $python = (Get-Command python -ErrorAction SilentlyContinue).Source
+    }
+    if ($python -and (Test-Path $python)) {
         Write-Host "Downloading wheels to $wheelDir ..."
-        & $pip download -r $reqFile -d $wheelDir
-        $lines += "- Wheelhouse: ``$wheelDir`` — downloaded $stamp"
+        & $python -m pip download -r $reqFile -d $wheelDir
+        if ($LASTEXITCODE -eq 0) {
+            $lines += "- Wheelhouse: ``$wheelDir`` — downloaded $stamp"
+        }
+        else {
+            $lines += "- Wheelhouse: **failed** (exit $LASTEXITCODE) — retry: ``$python -m pip download -r $reqFile -d $wheelDir``"
+            Write-Warning "Wheel download failed. If pip is broken, run: $python -m ensurepip --upgrade"
+        }
     }
     else {
-        $lines += "- Wheelhouse: **skipped** (venv pip not found)"
+        $lines += "- Wheelhouse: **skipped** (venv python not found)"
     }
 }
 else {
