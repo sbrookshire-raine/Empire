@@ -17,6 +17,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+_EMPIRE_ROOT = Path(__file__).resolve().parents[1]
+if str(_EMPIRE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_EMPIRE_ROOT))
+
 ORIGIN = "http://127.0.0.1:8080"
 DEFAULT_QUESTION = (
     "what popular 80s song got re-popularized during the later seasons of stranger things?"

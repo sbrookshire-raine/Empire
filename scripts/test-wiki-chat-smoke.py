@@ -5,6 +5,12 @@ from __future__ import annotations
 import json
 import sys
 import time
+from pathlib import Path
+
+# Allow: python scripts\test-wiki-chat-smoke.py (no PYTHONPATH required)
+_EMPIRE_ROOT = Path(__file__).resolve().parents[1]
+if str(_EMPIRE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_EMPIRE_ROOT))
 import urllib.error
 import urllib.request
 from typing import Any
@@ -30,7 +36,15 @@ QUESTIONS = [
     (
         "kate_bush_who",
         "who is Kate Bush?",
-        ("kate bush",),
+        ("kate bush", "1958"),  # bio lead — not 2023 Rolling Stone trivia
+    ),
+]
+
+COMPARE_QUESTIONS = [
+    (
+        "ai_compare_2017_2026",
+        "Compare artificial intelligence 2017 vs 2026",
+        ("artificial intelligence",),
     ),
 ]
 
@@ -165,13 +179,48 @@ def test_live_eve(name: str, question: str, must_contain: tuple[str, ...]) -> li
     return errors
 
 
-def main() -> int:
-    from frontend.wiki_drift_api import WIKI_LOOKUP_MARKER  # noqa: F401
+def test_compare_injection(name: str, question: str, must_contain: tuple[str, ...]) -> list[str]:
+    from frontend.wiki_drift_api import (
+        WIKI_DRIFT_MARKER,
+        enrich_eve_message_payload,
+        is_truth_drift_query,
+    )
+    from unittest.mock import patch
 
+    errors: list[str] = []
+    if not is_truth_drift_query(question):
+        errors.append(f"{name}: is_truth_drift_query=False")
+    with patch("frontend.wiki_drift_api.load_active_tools", return_value=["wiki_local"]):
+        enriched = enrich_eve_message_payload({"message": question})
+    msg = str(enriched.get("message") or "")
+    if WIKI_DRIFT_MARKER not in msg:
+        errors.append(f"{name}: no WIKI_DRIFT injection")
+        return errors
+    lowered = msg.casefold()
+    for needle in must_contain:
+        if needle.casefold() not in lowered:
+            errors.append(f"{name}: injection missing {needle!r}")
+    # Topic must not collapse to bare "truth"
+    if "topic: truth" in lowered and "artificial intelligence" not in lowered:
+        errors.append(f"{name}: compare topic collapsed to 'truth'")
+    return errors
+
+
+def main() -> int:
+    print(f"EMPIRE root: {_EMPIRE_ROOT}")
     print("=== Wiki injection smoke ===")
     all_errors: list[str] = []
     for name, question, must in QUESTIONS:
         errs = test_injection(name, question, must)
+        if errs:
+            all_errors.extend(errs)
+            print("FAIL injection", name, errs)
+        else:
+            print("OK injection", name)
+
+    print("\n=== Truth Drift injection smoke ===")
+    for name, question, must in COMPARE_QUESTIONS:
+        errs = test_compare_injection(name, question, must)
         if errs:
             all_errors.extend(errs)
             print("FAIL injection", name, errs)
@@ -189,6 +238,14 @@ def main() -> int:
         return 0
 
     for name, question, must in QUESTIONS:
+        live_errors = test_live_eve(name, question, must)
+        if live_errors:
+            all_errors.extend(live_errors)
+            print("FAIL live", name, live_errors)
+        else:
+            print("OK live", name)
+
+    for name, question, must in COMPARE_QUESTIONS:
         live_errors = test_live_eve(name, question, must)
         if live_errors:
             all_errors.extend(live_errors)
