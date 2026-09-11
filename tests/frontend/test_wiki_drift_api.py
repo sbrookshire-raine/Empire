@@ -29,6 +29,36 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertTrue(wiki_drift_api.is_truth_drift_query(text))
         self.assertEqual(wiki_drift_api.pick_compare_topic(text), "post-truth")
 
+    def test_ai_change_picks_artificial_intelligence(self) -> None:
+        text = "How did AI change between 2017 and 2026?"
+        self.assertTrue(wiki_drift_api.is_truth_drift_query(text))
+        self.assertEqual(
+            wiki_drift_api.pick_compare_topic(text),
+            "artificial intelligence",
+        )
+
+    def test_how_has_ai_changed_phrasing(self) -> None:
+        text = "how has artificial intelligence changed from 2017 to 2026"
+        self.assertTrue(wiki_drift_api.is_truth_drift_query(text))
+        self.assertEqual(
+            wiki_drift_api.pick_compare_topic(text),
+            "artificial intelligence",
+        )
+
+    def test_what_changed_about_ai(self) -> None:
+        text = "what changed about AI across 2017 and 2026"
+        self.assertEqual(
+            wiki_drift_api.pick_compare_topic(text),
+            "artificial intelligence",
+        )
+
+    def test_compare_artificial_intelligence_phrasing(self) -> None:
+        text = "Compare artificial intelligence 2017 vs 2026"
+        self.assertEqual(
+            wiki_drift_api.pick_compare_topic(text),
+            "artificial intelligence",
+        )
+
     def test_plain_chat_not_wiki(self) -> None:
         text = "hows it going?"
         self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))

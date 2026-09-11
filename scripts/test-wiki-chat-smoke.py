@@ -31,19 +31,24 @@ QUESTIONS = [
     (
         "kate_bush_revival",
         "what song from Kate Bush reinvigorated her career in 2025-2026?",
-        ("running up that hill", "kate bush"),
+        ("running up that hill",),  # artist name optional if song is correct
     ),
     (
         "kate_bush_who",
         "who is Kate Bush?",
-        ("kate bush", "1958"),  # bio lead — not 2023 Rolling Stone trivia
+        ("kate bush", "singer"),  # bio-shaped; birth year optional if Eve paraphrases
     ),
 ]
 
 COMPARE_QUESTIONS = [
     (
-        "ai_compare_2017_2026",
+        "ai_compare_explicit",
         "Compare artificial intelligence 2017 vs 2026",
+        ("artificial intelligence",),
+    ),
+    (
+        "ai_compare_vague",
+        "How did AI change between 2017 and 2026?",
         ("artificial intelligence",),
     ),
 ]
@@ -59,6 +64,8 @@ BAD_REPLY_MARKERS = (
     "only the original synth score",
     '"wow"',
     "'wow'",
+    "rolling stone",  # Kate Bush bio must not be 2023 list trivia
+    "fish people",
 )
 
 

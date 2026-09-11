@@ -42,6 +42,25 @@ class WikiGroundingGuardTests(unittest.TestCase):
         self.assertIn("Running Up That Hill", out)
         self.assertNotIn("Wow", out)
 
+    def test_rejects_bio_trivia_for_who_is(self) -> None:
+        evidence = {
+            "ok": True,
+            "title": "Kate Bush",
+            "lead": (
+                "**Catherine Bush** (born 30 July 1958) is an English singer, "
+                "songwriter, musician, dancer and record producer."
+            ),
+            "allowed_names": ["Kate Bush", "Catherine Bush"],
+        }
+        bad = (
+            "Kate Bush was ranked at No. 60 in the list of 200 Best Singers of All Time "
+            "by Rolling Stone. Fish People moved to state51."
+        )
+        ok, fixed = verify_grounding(bad, evidence, user_question="Who is Kate Bush?")
+        self.assertFalse(ok)
+        self.assertIn("1958", fixed)
+        self.assertNotIn("Rolling Stone", fixed)
+
 
 if __name__ == "__main__":
     unittest.main()

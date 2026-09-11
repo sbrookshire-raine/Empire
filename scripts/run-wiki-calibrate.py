@@ -19,6 +19,11 @@ import argparse
 import json
 import sys
 import time
+from pathlib import Path as _Path
+
+_EMPIRE_ROOT = _Path(__file__).resolve().parents[1]
+if str(_EMPIRE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_EMPIRE_ROOT))
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -123,19 +128,34 @@ def _forbid_checks(case: dict[str, Any], lowered: str, *, scope: str) -> list[st
 
 
 def run_injection(case: dict[str, Any]) -> CaseResult:
-    from frontend.wiki_drift_api import WIKI_LOOKUP_MARKER, enrich_eve_message_payload, is_wiki_lookup_query
+    from frontend.wiki_drift_api import (
+        WIKI_DRIFT_MARKER,
+        WIKI_LOOKUP_MARKER,
+        enrich_eve_message_payload,
+        is_truth_drift_query,
+        is_wiki_lookup_query,
+    )
 
     cid = str(case.get("id") or "?")
     query = str(case.get("query") or "")
+    mode = str(case.get("mode") or "lookup")
     issues: list[str] = []
-    if not is_wiki_lookup_query(query):
-        issues.append("is_wiki_lookup_query=False")
     with patch("frontend.wiki_drift_api.load_active_tools", return_value=["wiki_local"]):
         enriched = enrich_eve_message_payload({"message": query})
     msg = str(enriched.get("message") or "")
     lowered = msg.casefold()
-    if WIKI_LOOKUP_MARKER not in msg:
-        issues.append("no WIKI_LOOKUP injection")
+    if mode == "compare" or is_truth_drift_query(query):
+        if not is_truth_drift_query(query):
+            issues.append("is_truth_drift_query=False")
+        if WIKI_DRIFT_MARKER not in msg:
+            issues.append("no WIKI_DRIFT injection")
+        if "topic: truth" in lowered and "artificial intelligence" not in lowered:
+            issues.append("compare topic collapsed to bare 'truth'")
+    else:
+        if not is_wiki_lookup_query(query):
+            issues.append("is_wiki_lookup_query=False")
+        if WIKI_LOOKUP_MARKER not in msg:
+            issues.append("no WIKI_LOOKUP injection")
     for needle in case.get("must_contain") or []:
         if str(needle).casefold() not in lowered:
             issues.append(f"injection missing {needle!r}")
@@ -146,6 +166,7 @@ def run_injection(case: dict[str, Any]) -> CaseResult:
 
 
 def run_retrieval(case: dict[str, Any]) -> CaseResult:
+    from frontend.wiki_drift_api import pick_compare_topic
     from pipeline.wiki_scout import compare_years, search
 
     cid = str(case.get("id") or "?")
@@ -154,7 +175,8 @@ def run_retrieval(case: dict[str, Any]) -> CaseResult:
     issues: list[str] = []
     mode = str(case.get("mode") or "lookup")
     if mode == "compare":
-        result = compare_years(query, write_files=False)
+        topic = pick_compare_topic(query)
+        result = compare_years(topic, write_files=False)
         titles = []
         for year_cards in (result.get("cards_by_year") or {}).values():
             if isinstance(year_cards, list):

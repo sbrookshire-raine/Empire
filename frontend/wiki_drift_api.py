@@ -91,7 +91,10 @@ TOPIC_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
         ),
         "post-truth",
     ),
-    (re.compile(r"\bartificial\s+intelligence\b|\bAI models?\b", re.I), "artificial intelligence"),
+    (
+        re.compile(r"\bartificial\s+intelligence\b|\bAI\b|\bAI models?\b", re.I),
+        "artificial intelligence",
+    ),
 )
 
 
@@ -123,8 +126,52 @@ def pick_compare_topic(text: str) -> str:
     for pattern, topic in TOPIC_RULES:
         if pattern.search(cleaned):
             return topic
+    compare_match = re.search(
+        r"\bcompare\s+(.+?)(?:\s+(?:across|between|from|vs\.?|versus)\b|\s+(?:2017|2021|2026)\b|[?.!]|$)",
+        cleaned,
+        re.I,
+    )
+    if compare_match:
+        topic = _clean_topic(compare_match.group(1))
+        if topic and len(topic.split()) <= 8:
+            return _normalize_compare_topic(topic)
+    # Natural: "how did/has X change(d) …", "what changed about X …"
+    for pattern in (
+        re.compile(r"\bhow\s+(?:did|has|have)\s+(.+?)\s+chang(?:e|ed|ing)\b", re.I),
+        re.compile(r"\bwhat\s+chang(?:e|ed|es)\s+(?:about|in|for|with)\s+(.+?)(?:\s+(?:across|between|from)\b|[?.!]|$)", re.I),
+        re.compile(r"\b(?:evolution|history)\s+of\s+(.+?)(?:\s+(?:across|between|from)\b|\s+(?:2017|2021|2026)\b|[?.!]|$)", re.I),
+    ):
+        match = pattern.search(cleaned)
+        if match:
+            topic = _clean_topic(match.group(1))
+            if topic:
+                return _normalize_compare_topic(topic)
     extracted = extract_search_query(cleaned)
-    return extracted or "truth"
+    if extracted and not re.match(r"^(how|what|who|when|where|why)\b", extracted, re.I):
+        return _normalize_compare_topic(extracted)
+    return "truth"
+
+
+def _normalize_compare_topic(topic: str) -> str:
+    """Map short/chatty subjects to encyclopedia titles."""
+    key = re.sub(r"^(the\s+)?(concept\s+of\s+|topic\s+of\s+|field\s+of\s+)", "", topic.strip(), flags=re.I)
+    key = key.strip(" .?!,\"'").casefold()
+    aliases = {
+        "ai": "artificial intelligence",
+        "a.i.": "artificial intelligence",
+        "a.i": "artificial intelligence",
+        "ml": "machine learning",
+        "machine learning": "machine learning",
+        "llm": "large language model",
+        "llms": "large language model",
+        "chatgpt": "ChatGPT",
+        "truth": "truth",
+    }
+    if key in aliases:
+        return aliases[key]
+    if key.startswith("ai ") or key.endswith(" ai"):
+        return "artificial intelligence"
+    return topic.strip()[:120]
 
 
 def _clean_topic(value: str) -> str:
@@ -503,7 +550,10 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
                         f"{WIKI_LOOKUP_MARKER}\n"
                         f"{LOOKUP_FAIL_NOTE} for '{query}' ({err}). "
                         "Say local Wikipedia did not return a hit — suggest a simpler title or "
-                        "check Weaviate (`scripts/start-weaviate.ps1`). Do NOT invent facts."
+                        "check Weaviate (`scripts/start-weaviate.ps1` or `Start-EMPIRE-WikiTest.bat`). "
+                        "Do NOT invent facts. Do NOT answer from training memory (no song titles, "
+                        "no Should I Stay or Should I Go, no Kate Bush deep cuts) — only report "
+                        "the archive miss and how to start Weaviate on port 8091."
                     )
                 else:
                     lookup_cards = cards

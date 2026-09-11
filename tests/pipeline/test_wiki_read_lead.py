@@ -10,6 +10,15 @@ from pipeline.wiki_read_lead import (
 
 
 class WikiReadLeadTests(unittest.TestCase):
+    def test_extract_lead_strips_md_title_prefix(self) -> None:
+        body = (
+            "---\ntitle: Kate Bush\n---\n"
+            "# Kate Bush **Catherine Bush** (born 30 July 1958) is an English singer.\n"
+        )
+        lead = extract_lead(body, max_chars=500)
+        self.assertIn("Catherine Bush", lead)
+        self.assertNotIn("# Kate Bush", lead)
+
     def test_extract_lead_skips_infobox_table(self) -> None:
         body = (
             "---\ntitle: Running Up That Hill\n---\n"

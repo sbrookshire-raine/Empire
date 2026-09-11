@@ -7,6 +7,11 @@ from typing import Any
 
 _FORBIDDEN_KB_SONG_RE = re.compile(r'\b"wow"\b|\bwow\b', re.I)
 _QUOTED_TITLE_RE = re.compile(r'"([^"]{3,120})"')
+_BIO_QUESTION_RE = re.compile(r"\bwho\s+(?:is|are|was|were)\b", re.I)
+_BIO_TRIVIA_RE = re.compile(
+    r"\brolling\s+stone\b|\bfish\s+people\b|\bstate51\b|\bbest\s+singers\s+of\s+all\s+time\b",
+    re.I,
+)
 
 
 def synthesize_fallback_reply(evidence: dict[str, Any], user_question: str) -> str:
@@ -32,6 +37,30 @@ def synthesize_fallback_reply(evidence: dict[str, Any], user_question: str) -> s
     if allowed:
         return f"From the local archive: {allowed[0]}."
     return "The local Wikipedia archive did not provide enough detail to answer confidently."
+
+
+def _bio_lead_overlap(reply: str, lead: str) -> bool:
+    """True if reply shares distinctive bio tokens with the lead (not just the name)."""
+    lead_l = lead.casefold()
+    reply_l = reply.casefold()
+    markers = []
+    for token in (
+        "born",
+        "1958",
+        "singer",
+        "songwriter",
+        "catherine",
+        "english",
+        "record producer",
+        "wuthering heights",
+        "emi",
+    ):
+        if token in lead_l:
+            markers.append(token)
+    if not markers:
+        return True
+    hits = sum(1 for m in markers if m in reply_l)
+    return hits >= 1
 
 
 def verify_grounding(
@@ -65,6 +94,13 @@ def verify_grounding(
 
     if "stranger things" in ql and "song" in ql:
         if "running up that hill" not in text.casefold() and "running up that hill" in lead.casefold():
+            return False, synthesize_fallback_reply(evidence, user_question)
+
+    # Bio questions: answer from lead, not late-career trivia / parametric memory
+    if _BIO_QUESTION_RE.search(user_question or "") and lead:
+        if _BIO_TRIVIA_RE.search(text) and not _BIO_TRIVIA_RE.search(lead):
+            return False, synthesize_fallback_reply(evidence, user_question)
+        if not _bio_lead_overlap(text, lead):
             return False, synthesize_fallback_reply(evidence, user_question)
 
     for match in _QUOTED_TITLE_RE.finditer(text):

@@ -79,10 +79,11 @@ def _handwritten_failures() -> Iterator[CalibrateCase]:
         source="handwritten",
         tier="smoke",
         query="who is Kate Bush?",
-        must_contain=["kate bush"],
+        must_contain=["kate bush", "1958"],
         expect_title_any=["Kate Bush"],
         live_eve=True,
         tags=["bio", "entity"],
+        notes="Bio lead — Catherine Bush born 1958; not 2023 Rolling Stone trivia.",
     )
     yield CalibrateCase(
         id="hand_05",
@@ -96,6 +97,29 @@ def _handwritten_failures() -> Iterator[CalibrateCase]:
         injection=False,
         tags=["meta", "access"],
         notes="Admission/meta — no Truth Drift hijack.",
+    )
+    yield CalibrateCase(
+        id="hand_06",
+        source="handwritten",
+        tier="smoke",
+        query="How did AI change between 2017 and 2026?",
+        mode="compare",
+        must_contain=["artificial intelligence"],
+        expect_title_any=["Artificial intelligence", "Artificial Intelligence"],
+        live_eve=True,
+        tags=["truth_drift", "vague", "ai"],
+        notes="Vague AI — must not collapse topic to bare 'truth'.",
+    )
+    yield CalibrateCase(
+        id="hand_07",
+        source="handwritten",
+        tier="smoke",
+        query="Compare artificial intelligence 2017 vs 2026",
+        mode="compare",
+        must_contain=["artificial intelligence"],
+        expect_title_any=["Artificial intelligence", "Artificial Intelligence"],
+        live_eve=True,
+        tags=["truth_drift", "ai"],
     )
 
 

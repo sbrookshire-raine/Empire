@@ -75,6 +75,9 @@ def extract_lead(body: str, *, max_chars: int = DEFAULT_LEAD_MAX_CHARS) -> str:
     parts = re.split(r"\n##\s+", cleaned, maxsplit=1)
     lead = parts[0].strip()
     lead = re.sub(r"\n#+\s+.*", "", lead).strip()
+    # Drop converted-md title line: "# Kate Bush **Catherine Bush** (born …"
+    lead = re.sub(r"^#\s+[^*\n]+?(?=\*\*)", "", lead).strip()
+    lead = re.sub(r"^#\s+[^\n]+?\n+", "", lead).strip()
     lead = re.sub(r"\s+", " ", lead)
     if len(lead) > max_chars:
         lead = lead[: max_chars - 1].rstrip() + "…"
