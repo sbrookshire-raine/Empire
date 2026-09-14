@@ -88,11 +88,40 @@ class WikiScoutCacheTests(unittest.TestCase):
             self.assertIn("new text", text)
 
     def test_search_graceful_when_weaviate_down(self) -> None:
-        with patch.object(wiki_scout, "check_weaviate", return_value=(False, "down")):
+        with (
+            patch.object(wiki_scout, "_search_via_title_dns", return_value=None),
+            patch.object(wiki_scout, "check_weaviate", return_value=(False, "down")),
+        ):
             result = wiki_scout.search("Cambrai", year=2017, write_files=False)
         self.assertFalse(result["ok"])
-        self.assertIn("Weaviate not reachable", result["error"])
+        self.assertIn("Title DNS found no page", result["error"])
+        self.assertNotIn("Weaviate", result["error"])
+        self.assertNotIn("8091", result["error"])
         self.assertEqual(result["paths"], [])
+
+    def test_search_title_dns_works_when_weaviate_down(self) -> None:
+        dns_payload = {
+            "ok": True,
+            "query": "V",
+            "source": "title_dns",
+            "titles": ["V (1983 miniseries)"],
+            "cards": [{"title": "V (1983 miniseries)", "snippet": "Kenneth Johnson"}],
+            "usable": True,
+            "paths": [],
+        }
+        with (
+            patch.object(wiki_scout, "_search_via_title_dns", return_value=dns_payload),
+            patch.object(wiki_scout, "check_weaviate", return_value=(False, "down")) as weaviate,
+        ):
+            result = wiki_scout.search(
+                "what actors played in the 1980s miniseries called 'V'",
+                year=2026,
+                write_files=False,
+            )
+        weaviate.assert_not_called()
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["source"], "title_dns")
+        self.assertEqual(result["titles"], ["V (1983 miniseries)"])
 
     def test_search_writes_with_mocked_backend(self) -> None:
         row = {
@@ -105,6 +134,7 @@ class WikiScoutCacheTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp:
             with (
+                patch.object(wiki_scout, "_search_via_title_dns", return_value=None),
                 patch.object(wiki_scout, "check_weaviate", return_value=(True, "ready")),
                 patch.object(wiki_scout, "embed_query", return_value=[0.1, 0.2, 0.3]),
                 patch.object(wiki_scout, "_graphql_hybrid_search", return_value=[row]),

@@ -10,11 +10,11 @@ export default defineDynamic({
       isCapabilityActive("wiki_local")
         ? defineTool({
             description:
-              "Search local Wikipedia (2017/2021/2026 Weaviate). Returns title + snippet cards only. " +
-              "Pass the user's question verbatim — do NOT rewrite into keyword soup. " +
-              "After calling: answer in 1–3 plain sentences from snippets. " +
+              "Local Wikipedia lookup (Title DNS + article lead first; Weaviate only if DNS misses). " +
+              "Pass the user's question verbatim. After calling: answer in 1–3 plain sentences. " +
               "NEVER paste rank, kind_hint, rank_why, or numbered card lists to the user. " +
-              "If [[EMPIRE_WIKI_LOOKUP]] snippets are already in the turn, do NOT call this tool. " +
+              "If [[EMPIRE_WIKI_LOOKUP]] evidence is already in the turn, do NOT call this tool. " +
+              "Do NOT tell the user to boot Weaviate/Docker for a normal who/what/cast question. " +
               "Default year 2026. Does NOT write Cognee.",
             inputSchema: z.object({
               query: z.string().min(1).describe("Search query for Wikipedia."),

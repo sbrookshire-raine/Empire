@@ -27,12 +27,10 @@ async def wiki_scout_search(
     year: str = "",
     limit: int = 5,
 ) -> str:
-    """Wiki Interpreter search: wide hybrid retrieve, rank with Wikipedia heuristics
-    (+ optional local BGE rerank), return structured cards + cache paths.
+    """Local Wikipedia lookup: Title DNS + markdown lead first.
 
-    Cards are encyclopedia page/chunk hits — NOT footnote counts.
-    Snapshot years are frozen dumps, not hypothetical futures.
-    Does NOT write to Cognee. Requires Weaviate on :8091.
+    Who/what/cast questions resolve without Weaviate. Weaviate is only used when
+    Title DNS misses (similarity) or for Truth Drift compare. Does NOT write Cognee.
     """
     result = wiki_scout.search(
         query=query,
@@ -81,6 +79,24 @@ async def promote_wiki_cache(path: str, dataset: str = "") -> str:
     """Explicitly promote a wiki_cache markdown file into Cognee. Never automatic."""
     override = dataset.strip() or None
     return _json(wiki_scout.promote_wiki_cache(path, dataset=override))
+
+
+@mcp.tool()
+async def remember_wiki_lead(
+    subject: str,
+    year: str = "2026",
+    dataset: str = "eve_memory",
+) -> str:
+    """Explicitly remember one Title DNS lead into Cognee. Never automatic. Lead only."""
+    from pipeline.wiki_title_dns import remember_wiki_lead as _remember
+
+    return _json(
+        _remember(
+            subject,
+            year.strip() or "2026",
+            dataset=(dataset.strip() or "eve_memory"),
+        )
+    )
 
 
 @mcp.tool()

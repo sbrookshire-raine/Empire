@@ -75,7 +75,9 @@ falls back to disambiguation / related pages instead of Medal/School/film satell
 |------|--------|
 | Weaviate URL | `http://127.0.0.1:8091` (`WEAVIATE_URL`) |
 | API key | `WEAVIATE_API_KEY` (heist default in [WEAVIATE_HEIST.md](WEAVIATE_HEIST.md)) |
-| Archive mount | `D:\weaviate_v2_archive\weaviate` (temporary Docker RW mount; GET/query only) |
+| Archive mount | `I:\weaviate_v2_archive\weaviate` (canonical). `D:\weaviate_v2_archive` is legacy. Docker RW mount; GET/query only. |
+| Title DNS | `I:\EMPIRE_DATA\wiki-reports\{year}\title-index.sqlite` — chat lookup existence gate. Build: `.\scripts\build-wiki-title-index.ps1` |
+| Markdown corpus | `D:\wiki_md\{year}\` — conversion output; lead/body pull after a DNS hit |
 | Embeddings | Ollama `nomic-embed-text` — Weaviate runs with `DEFAULT_VECTORIZER_MODULE=none`. Scout embeds the query locally and runs **hybrid** (BM25 + vector, named vector `default`). Pure `nearVector` returns empty on this archive; BM25-only is the fallback if embed fails. |
 | Cache root | `C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\` (`EMPIRE_WIKI_CACHE_DIR`) |
 | Frontend port | Workbench stays on **8080**; Weaviate uses **8091** |
@@ -96,7 +98,33 @@ Or PowerShell only:
 .\scripts\stop-weaviate.ps1           # tear down when done
 ```
 
-Needs Docker + `D:\weaviate_v2_archive\weaviate`. Full manual `docker run`: [WEAVIATE_HEIST.md](WEAVIATE_HEIST.md).
+Needs Docker + `I:\weaviate_v2_archive\weaviate`. Full manual `docker run`: [WEAVIATE_HEIST.md](WEAVIATE_HEIST.md).
+
+### Title DNS (chat lookup)
+
+Normal who/what/cast questions do **not** use Weaviate. They resolve the title in SQLite, then read the lead from `D:\wiki_md`.
+
+```powershell
+.\scripts\build-wiki-title-index.ps1            # 2026 default
+.\scripts\build-wiki-title-index.ps1 -Year 2026 -LimitBatches 2   # smoke
+```
+
+Optional redirect aliases (tab-separated `alias<TAB>canonical`): `I:\EMPIRE_DATA\wiki-reports\2026\redirects.tsv`
+
+### Link web (title → title)
+
+After the phone book exists, index `outgoing_links` from each article header:
+
+```powershell
+.\scripts\build-wiki-title-index.ps1 -Links
+.\venv\Scripts\python.exe -m pipeline.wiki_title_dns neighbors "Cheese"
+```
+
+This is Wikipedia’s own spiderweb, not embeddings. Lookup ranks those links by the question (cast vs song vs cheddar) and may inject one neighbor lead — still not Cognee.
+
+Redirect aliases: `python -m pipeline.wiki_title_dns import-redirects --year 2026 --redirects PATH`.
+
+Weaviate hybrid search stays for **Truth Drift / compare_years** only.
 
 Ready check: `GET http://127.0.0.1:8091/v1/.well-known/ready` with  
 `Authorization: Bearer <WEAVIATE_API_KEY>`.
@@ -225,6 +253,16 @@ $env:PYTHONPATH="C:\EMPIRE"
 ```
 
 Eve / MCP tool: `promote_wiki_cache`. Never automatic. Response includes `dataset` + `dataset_reason`.
+
+### Remember a Title DNS lead (explicit)
+
+Do **not** ingest the encyclopedia into Cognee. If a lookup was useful:
+
+```powershell
+.\venv\Scripts\python.exe -m pipeline.wiki_title_dns remember "Kate Bush" --year 2026
+```
+
+That writes a **lead-only** wiki_cache file and promotes it to **`eve_memory`**. Same title is skipped next time (`remembered-titles.jsonl`). Eve tool / MCP: `remember_wiki_lead`. Still never automatic.
 
 ## Ops / failure modes
 

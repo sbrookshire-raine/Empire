@@ -36,7 +36,21 @@ QUESTIONS = [
     (
         "kate_bush_who",
         "who is Kate Bush?",
-        ("kate bush", "singer"),  # bio-shaped; birth year optional if Eve paraphrases
+        ("kate bush",),  # bio-shaped; wording varies by model
+    ),
+    (
+        "stranger_things_cast",
+        "What actors played in Stranger Things?",
+        ("stranger things",),
+    ),
+]
+
+MISS_QUESTIONS = [
+    (
+        "following_cast_miss",
+        "What actors played in the TV show 'The Following'?",
+        ("did not return a usable page", "the following"),
+        ("using the compare_years", "checking other years"),
     ),
 ]
 
@@ -224,6 +238,24 @@ def main() -> int:
             print("FAIL injection", name, errs)
         else:
             print("OK injection", name)
+
+    print("\n=== Wiki miss-contract smoke ===")
+    for name, question, must, forbid in MISS_QUESTIONS:
+        errs = test_injection(name, question, must)
+        from frontend.wiki_drift_api import enrich_eve_message_payload
+        from unittest.mock import patch
+
+        with patch("frontend.wiki_drift_api.load_active_tools", return_value=["wiki_local"]):
+            msg = str(enrich_eve_message_payload({"message": question}).get("message") or "").casefold()
+        for bad in forbid:
+            # Only flag proactive suggestions, not the CONTRACT that forbids them.
+            if bad.casefold() in msg and "do not suggest" not in msg:
+                errs.append(f"{name}: miss injection should not push {bad!r}")
+        if errs:
+            all_errors.extend(errs)
+            print("FAIL miss", name, errs)
+        else:
+            print("OK miss", name)
 
     print("\n=== Truth Drift injection smoke ===")
     for name, question, must in COMPARE_QUESTIONS:

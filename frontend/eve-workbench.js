@@ -55,9 +55,10 @@
     },
     {
       id: "deep",
-      label: "Deep Mode (32b)",
-      description: "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
-      model: "qwen2.5:32b",
+      label: "Deep Mode (Qwen3.8 27b GSQ)",
+      description:
+        "Architect — 27B GSQ-RCO (~12 GB). Unloads Fast 14B. Falls back to qwen3:14b if not installed.",
+      model: "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
       numCtx: 8192,
       temperature: 0.7,
     },

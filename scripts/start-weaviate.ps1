@@ -4,12 +4,12 @@
   Boot on-demand Wikipedia Weaviate on http://127.0.0.1:8091 (not part of default Start-EMPIRE).
 
 .NOTES
-  Archive: D:\weaviate_v2_archive\weaviate
+  Archive: I:\weaviate_v2_archive\weaviate (canonical). D:\weaviate_v2_archive is legacy.
   Container: empire-weaviate-heist-2017
   Tear down: .\scripts\stop-weaviate.ps1
 #>
 param(
-    [string]$ArchivePath = "D:\weaviate_v2_archive\weaviate",
+    [string]$ArchivePath = "I:\weaviate_v2_archive\weaviate",
     [string]$ContainerName = "empire-weaviate-heist-2017",
     [string]$ApiKey = "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih",
     [int]$ReadyTimeoutSec = 180

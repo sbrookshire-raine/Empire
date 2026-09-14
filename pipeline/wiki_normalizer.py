@@ -45,10 +45,11 @@ def _parse_frontmatter_manual(block: str) -> dict[str, Any]:
         if not raw.strip():
             continue
         if raw.lstrip().startswith("- ") and current_key is not None:
-            item = raw.strip()[2:].strip().strip('"')
-            meta.setdefault(current_key, [])
-            if isinstance(meta[current_key], list):
-                meta[current_key].append(item)
+            item = raw.strip()[2:].strip().strip('"').strip("'")
+            existing = meta.get(current_key)
+            if not isinstance(existing, list):
+                meta[current_key] = [] if existing in (None, "") else [str(existing)]
+            meta[current_key].append(item)
             continue
         if ":" in raw:
             key, value = raw.split(":", 1)
@@ -58,7 +59,7 @@ def _parse_frontmatter_manual(block: str) -> dict[str, Any]:
                 meta[key] = [] if value == "[]" else ""
                 current_key = key if value == "" else None
             else:
-                meta[key] = value.strip('"')
+                meta[key] = value.strip('"').strip("'")
                 current_key = None
     return meta
 

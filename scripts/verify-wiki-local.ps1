@@ -5,11 +5,11 @@
 
 .EXAMPLE
   .\scripts\verify-wiki-local.ps1
-  .\scripts\verify-wiki-local.ps1 -ArchivePath "I:\EMPIRE_DATA\weaviate_v2_archive\weaviate"
+  .\scripts\verify-wiki-local.ps1 -ArchivePath "I:\weaviate_v2_archive\weaviate"
   .\scripts\verify-wiki-local.ps1 -StartIfDown
 #>
 param(
-    [string]$ArchivePath = "D:\weaviate_v2_archive\weaviate",
+    [string]$ArchivePath = "I:\weaviate_v2_archive\weaviate",
     [switch]$StartIfDown,
     [switch]$SkipSearch
 )
@@ -49,7 +49,7 @@ Write-Host "OK    Archive path exists: $ArchivePath"
 
 if (-not (Test-WeaviateReady)) {
     if ($StartIfDown) {
-        Write-Host "WARN  Weaviate not ready — starting..."
+        Write-Host "WARN  Weaviate not ready - starting..."
         & (Join-Path $PSScriptRoot "start-weaviate.ps1") -ArchivePath $ArchivePath
     }
     else {
@@ -67,7 +67,7 @@ if (-not (Test-WeaviateReady)) {
 Write-Host "OK    Weaviate ready on :8091"
 
 if (-not (Test-Path $Python)) {
-    Write-Host "WARN  Skip search smoke — venv python missing"
+    Write-Host "WARN  Skip search smoke - venv python missing"
     exit 0
 }
 
@@ -78,8 +78,8 @@ if ($SkipSearch) {
 }
 
 Write-Host ""
-Write-Host "Smoke  Weaviate search (Stranger Things 80s song)..."
-$code = @"
+Write-Host "Smoke  Title DNS / wiki search (Stranger Things 80s song)..."
+$code = @'
 import sys
 from pipeline.wiki_scout import search
 q = "what 80s song was popularized again in Stranger Things"
@@ -93,7 +93,7 @@ if "running up that hill" not in blob:
     print("SEARCH_WARN top titles:", titles[:5])
     sys.exit(2)
 print("SEARCH_OK", titles[0] if titles else "?")
-"@
+'@
 
 $env:PYTHONPATH = $Root
 & $Python -c $code
@@ -106,8 +106,8 @@ if ($searchExit -eq 0) {
     exit 0
 }
 if ($searchExit -eq 2) {
-    Write-Host "WARN  Weaviate up but top titles unexpected — check archive year / embed"
+    Write-Host "WARN  Weaviate/DNS up but top titles unexpected - check archive year / embed"
     exit 2
 }
-Write-Host "FAIL  Search smoke failed (Weaviate up but query failed)"
+Write-Host "FAIL  Search smoke failed (service up but query failed)"
 exit 1

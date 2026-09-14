@@ -15,7 +15,7 @@ This document is the capstone for five research packs (Product Hunt, CLI, missed
 
 | Question | Answer |
 |----------|--------|
-| Do we need a new Wikipedia index? | **No.** Weaviate + `D:\wiki_md` retrieve; grounding was the gap. |
+| Do we need a new Wikipedia *vector* index? | **No.** Weaviate stays for Truth Drift only. Chat existence uses Title DNS (`title-index.sqlite` on `I:`) then `D:\wiki_md` lead pull. |
 | Do we need Kiwix / AnythingLLM / second vector DB? | **No.** Steal contracts only (kiwix 3-rung ladder → server-side). |
 | Do we need Product Hunt / broad GitHub trawls? | **No.** ~2% hit rate; **monthly 30 min** on r/LocalLLaMA + Ollama library only. |
 | Do we need a second chat model? | **No** on 16 GB. Optional **qwen2.5-coder:7b** for offline coding fallback. |
@@ -30,7 +30,7 @@ This document is the capstone for five research packs (Product Hunt, CLI, missed
 | Capability | Gap doc | EMPIRE today | Queue | Next build step |
 |------------|---------|--------------|-------|-----------------|
 | Chat / synthesis | Qwen 2.5 14B | ✅ Fast mode | — | Solidify, not swap |
-| Wikipedia retrieval | Weaviate + md | ✅ | T-01, T-21 | Architect smoke |
+| Wikipedia retrieval | Title DNS + md; Weaviate = compare only | ✅ | T-01, T-21 | Build 2026 `title-index.sqlite` |
 | Wiki grounding | lead + guard | ✅ Phase A shipped | T-21–T-23 | GLiNER upgrade F-36 |
 | Memory | Cognee | ✅ | — | — |
 | Persistence | PocketBase | ✅ | — | — |

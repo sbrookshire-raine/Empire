@@ -35,11 +35,15 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
   },
     deep: {
     id: "deep",
-    label: "Deep Mode (Qwen3 14b)",
+    label: "Deep Mode (Qwen3.8 27b GSQ)",
     description:
-      "Architect — deep planning, complex MCP work, and highest-tier reasoning.",
-    model: "qwen3:14b",
-    modelAliases: ["qwen2.5:32b"],
+      "Architect — 27B GSQ-RCO (~12 GB). Unloads Fast 14B. Falls back to qwen3:14b if not installed.",
+    model: "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
+    modelAliases: [
+      "logicbeat/qwen3.8-27B_GSQ_RCO",
+      "qwen3:14b",
+      "qwen2.5:32b",
+    ],
     numCtx: SHARED_NUM_CTX,
     temperature: 0.7,
   },

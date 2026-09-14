@@ -1,12 +1,13 @@
 # One-time Weaviate → Markdown heist (2017 WikiChunk)
 
-Location 2 (`D:\weaviate_v2_archive\weaviate`) is a **524 GB Weaviate v2 binary DB**, not
-Markdown. EMPIRE does **not** keep Weaviate as a runtime dependency. Boot it only long enough
-to dump collections to staging on `I:`, then tear it down.
+The live Weaviate binary DB is on **`I:\weaviate_v2_archive\weaviate`**. `D:\weaviate_v2_archive` is a legacy copy. `D:\wiki_md` is archive→Markdown conversion only.
+
+Chat lookup uses Title DNS (`title-index.sqlite`) + `D:\wiki_md`, not Weaviate. Boot Weaviate for Truth Drift / export only.
 
 | Item | Value |
 |------|-------|
-| Source (read) | `D:\weaviate_v2_archive\weaviate` |
+| Runtime archive | `I:\weaviate_v2_archive\weaviate` |
+| Legacy archive | `D:\weaviate_v2_archive\weaviate` |
 | Staging (write) | `I:\EMPIRE_DATA\weaviate_dump\{year}\` |
 | Cognee (NTFS VHDX) | `V:\Cognee` |
 | Collections | `WikiChunk` (2017 / `snapshot_id=20170301`), `WikiChunk2021`, `WikiChunk2026` |

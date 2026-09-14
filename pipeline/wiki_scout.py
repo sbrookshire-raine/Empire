@@ -681,6 +681,122 @@ def _summarize_hit(hit: dict[str, Any]) -> str:
     return f"{title} ({year}): {snippet}"
 
 
+def _search_via_title_dns(
+    query: str,
+    *,
+    year: str | int | None,
+    limit: int = 5,
+) -> dict[str, Any] | None:
+    """Resolve who/what lookups from Title DNS + markdown lead. No Weaviate."""
+    try:
+        from pipeline.wiki_interpreter import (
+            extract_quoted_title,
+            extract_wiki_subject,
+            resolve_lookup_topic,
+        )
+        from pipeline.wiki_ops_paths import validate_year
+        from pipeline.wiki_read_lead import wiki_read_lead, wiki_read_lead_enabled
+        from pipeline.wiki_title_dns import neighbors as dns_neighbors
+        from pipeline.wiki_title_dns import resolve as dns_resolve
+    except Exception as exc:  # noqa: BLE001
+        logger = __import__("logging").getLogger(__name__)
+        logger.debug("title DNS search import failed: %s", exc)
+        return None
+    if not wiki_read_lead_enabled():
+        return None
+    try:
+        year_str = validate_year(str(year) if year not in (None, "") else "2026")
+    except ValueError:
+        year_str = "2026"
+    subject = (
+        extract_quoted_title(query)
+        or resolve_lookup_topic(query)
+        or extract_wiki_subject(query)
+        or query
+    ).strip()
+    if not subject:
+        return None
+    dns = dns_resolve(subject, year_str, user_question=query)
+    if dns.status == "ambiguous":
+        titles = [c.title for c in dns.candidates[: max(1, min(int(limit), 8))]]
+        cards = [
+            {
+                "title": title,
+                "snippet": "Title DNS found multiple pages — ask which title to open.",
+                "kind_hint": "disambiguation",
+            }
+            for title in titles
+        ]
+        return {
+            "ok": True,
+            "query": query,
+            "snapshot_year": year_str,
+            "source": "title_dns",
+            "collection": f"title_dns_{year_str}",
+            "count": len(titles),
+            "paths": [],
+            "titles": titles,
+            "summaries": [f"Ambiguous: {title}" for title in titles],
+            "cards": cards,
+            "chat_reply_rule": (
+                "Ask which Title DNS page to open. Do NOT invent a pick. "
+                "Do NOT mention Weaviate or Docker port 8091."
+            ),
+            "coverage_note": f"Title DNS ambiguous for {subject!r}.",
+            "usable": False,
+        }
+    if dns.status != "hit" or dns.hit is None:
+        return None
+    lead = wiki_read_lead(
+        dns.hit.title,
+        year_str,
+        corpus_rel_path=dns.hit.rel_path or None,
+        max_chars=1800,
+    )
+    if not lead.get("ok"):
+        return None
+    related: list[str] = []
+    try:
+        web = dns_neighbors(dns.hit.title, year_str, user_question=query, limit=12)
+        related = list(web.get("ranked") or web.get("outbound") or [])[:12]
+    except Exception:  # noqa: BLE001
+        related = []
+    snippet = str(lead.get("lead") or "").strip()
+    if related:
+        snippet = f"{snippet}\nRelated titles: {', '.join(related[:10])}"
+    card = {
+        "title": dns.hit.title,
+        "snippet": snippet[:1200],
+        "kind_hint": "article",
+        "path": str(lead.get("path") or ""),
+    }
+    return {
+        "ok": True,
+        "query": query,
+        "snapshot_year": year_str,
+        "source": "title_dns",
+        "collection": f"title_dns_{year_str}",
+        "count": 1,
+        "paths": [],
+        "titles": [dns.hit.title],
+        "summaries": [f"{dns.hit.title} ({year_str}): {snippet[:240]}"],
+        "hit_meta": [
+            {
+                "title": dns.hit.title,
+                "corpus_rel_path": dns.hit.rel_path,
+                "page_id": dns.hit.page_id,
+            }
+        ],
+        "cards": [card],
+        "chat_reply_rule": (
+            f"{WIKI_CHAT_REPLY_RULE} Answer from the Title DNS lead and related titles. "
+            "Do NOT mention Weaviate or suggest booting Docker."
+        ),
+        "coverage_note": "Resolved via Title DNS (markdown lead). Weaviate not required.",
+        "usable": True,
+    }
+
+
 def search(
     query: str,
     *,
@@ -700,15 +816,20 @@ def search(
     if not query:
         return {"ok": False, "error": "query is required", "paths": [], "titles": []}
 
+    # Who/what/cast: phone book first. Weaviate stays for Truth Drift / DNS misses.
+    dns_result = _search_via_title_dns(query, year=year, limit=limit)
+    if dns_result is not None:
+        return dns_result
+
     ready, detail = check_weaviate(base_url, api_key)
     if not ready:
         return {
             "ok": False,
             "error": (
-                f"Weaviate not reachable at {base_url} ({detail}). "
-                "Boot the temporary Docker container on port 8091 "
-                "(see docs/WEAVIATE_HEIST.md / docs/WIKI_SCOUT.md). "
-                "Do not fall back to web search unless Web Scout is enabled."
+                "Title DNS found no page for this query in the local Wikipedia archive. "
+                "Tell the user that clearly. Do NOT invent cast or plot. "
+                "Do NOT suggest web search unless Web Scout is enabled. "
+                "Do NOT suggest comparing archive years unless they asked."
             ),
             "paths": [],
             "titles": [],

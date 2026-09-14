@@ -37,12 +37,17 @@ CHAT_MODES: dict[str, ChatMode] = {
     },
     "deep": {
         "id": "deep",
-        "label": "Deep Mode (Qwen3 14b)",
+        "label": "Deep Mode (Qwen3.8 27b GSQ)",
         "description": (
-            "Architect — deep planning, complex MCP work, and highest-tier reasoning."
+            "Architect — 27B GSQ-RCO (~12 GB). Unloads Fast 14B. "
+            "Falls back to qwen3:14b if the 27B is not installed."
         ),
-        "model": "qwen3:14b",
-        "model_aliases": ("qwen2.5:32b",),
+        "model": "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
+        "model_aliases": (
+            "logicbeat/qwen3.8-27B_GSQ_RCO",
+            "qwen3:14b",
+            "qwen2.5:32b",
+        ),
         "num_ctx": SHARED_NUM_CTX,
         "temperature": 0.7,
     },
@@ -94,31 +99,44 @@ def resolve_mode(mode_id: str | None) -> ChatMode:
     return CHAT_MODES[DEFAULT_CHAT_MODE]
 
 
-def resolve_installed_model(preferred: str, installed_ids: set[str]) -> str | None:
-    candidate = preferred.strip()
-    if not candidate:
-        return None
-    if candidate in installed_ids:
-        return candidate
-    if ":" not in candidate:
-        tagged = f"{candidate}:latest"
-        if tagged in installed_ids:
-            return tagged
-    base = candidate.split(":", 1)[0]
-    for installed in installed_ids:
-        if installed == base or installed.startswith(f"{base}:"):
-            return installed
+def resolve_installed_model(
+    preferred: str,
+    installed_ids: set[str],
+    aliases: tuple[str, ...] | list[str] = (),
+) -> str | None:
+    for candidate in (preferred, *aliases):
+        text = str(candidate or "").strip()
+        if not text:
+            continue
+        if text in installed_ids:
+            return text
+        if ":" not in text:
+            tagged = f"{text}:latest"
+            if tagged in installed_ids:
+                return tagged
+        base = text.split(":", 1)[0]
+        for installed in installed_ids:
+            if installed == base or installed.startswith(f"{base}:"):
+                return installed
     return None
 
 
 def resolve_mode_for_installed(mode_id: str | None, installed_ids: set[str]) -> tuple[ChatMode, str]:
     mode = resolve_mode(mode_id)
-    resolved = resolve_installed_model(mode["model"], installed_ids)
+    resolved = resolve_installed_model(
+        mode["model"],
+        installed_ids,
+        mode.get("model_aliases") or (),
+    )
     if resolved:
         return mode, resolved
     for fallback_id in (DEFAULT_CHAT_MODE, "deep", "librarian"):
         fallback_mode = CHAT_MODES[fallback_id]
-        resolved = resolve_installed_model(fallback_mode["model"], installed_ids)
+        resolved = resolve_installed_model(
+            fallback_mode["model"],
+            installed_ids,
+            fallback_mode.get("model_aliases") or (),
+        )
         if resolved:
             return fallback_mode, resolved
     return mode, mode["model"]

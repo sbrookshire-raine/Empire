@@ -51,6 +51,21 @@ class OllamaChatProfileTests(unittest.TestCase):
     def test_all_modes_have_models(self) -> None:
         self.assertEqual(set(CHAT_MODES), {"fast", "deep", "librarian"})
 
+    def test_deep_prefers_qwen27_when_installed(self) -> None:
+        installed = {
+            "qwen2.5:14b-instruct",
+            "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
+        }
+        mode, model = resolve_mode_for_installed("deep", installed)
+        self.assertEqual(mode["id"], "deep")
+        self.assertIn("27B", model)
+
+    def test_deep_falls_back_to_qwen3_14b(self) -> None:
+        installed = {"qwen3:14b", "qwen2.5:14b-instruct"}
+        mode, model = resolve_mode_for_installed("deep", installed)
+        self.assertEqual(mode["id"], "deep")
+        self.assertEqual(model, "qwen3:14b")
+
 
 if __name__ == "__main__":
     unittest.main()

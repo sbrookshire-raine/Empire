@@ -133,8 +133,17 @@ _SUBJECT_PATTERNS: tuple[re.Pattern[str], ...] = (
         r"\bwhat\s+albums?\s+(?:from|by|did|has|have)\s+(.+?)(?:\s+(?:reinvig|reviv|resur|release|make|record)|[\?.!]|$)",
         re.I,
     ),
+    re.compile(
+        r"\b(?:what\s+)?(?:actors?|cast|stars?)\s+(?:played\s+in|starred\s+in|in|of|from)\s+(?:the\s+)?(?:tv\s+show|television\s+show|tv\s+series|series\s+)?(.+?)[\?.!]*$",
+        re.I,
+    ),
+    re.compile(
+        r"\bwho\s+(?:acted|starred|played|appeared)\s+(?:in|on)\s+(?:the\s+)?(?:tv\s+show|television\s+show|tv\s+series|series\s+)?(.+?)[\?.!]*$",
+        re.I,
+    ),
     re.compile(r"\bwho\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
     re.compile(r"\bwhat\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
+    re.compile(r"\b(?:tell me about|about)\s+[\w][\w\s'-]*\s+in\s+(.+?)[\?.!]*$", re.I),
     re.compile(r"\b(?:tell me about|about)\s+(.+?)[\?.!]*$", re.I),
 )
 _REVIVAL_QUESTION_RE = re.compile(
@@ -185,19 +194,42 @@ def _trim_subject(value: str) -> str:
     return topic[:120].strip()
 
 
+_CALLED_QUOTED_RE = re.compile(
+    r"\b(?:called|named|titled)\s+[\"']([^\"']{1,80})[\"']",
+    re.I,
+)
+_DOUBLE_QUOTED_RE = re.compile(r'"([^"]{1,120})"')
+# Do not treat the apostrophe in I'm / don't as an opening quote.
+_SINGLE_QUOTED_TITLE_RE = re.compile(r"(?<![A-Za-z])'([^']{1,80})'(?![A-Za-z])")
+
+
+def extract_quoted_title(query: str) -> str:
+    """Pull a deliberately quoted encyclopedia title without eating contractions."""
+    raw = (query or "").strip()
+    if not raw:
+        return ""
+    for pattern in (_CALLED_QUOTED_RE, _DOUBLE_QUOTED_RE, _SINGLE_QUOTED_TITLE_RE):
+        match = pattern.search(raw)
+        if match:
+            return _trim_subject(match.group(1))
+    return ""
+
+
 def extract_wiki_subject(query: str) -> str:
     """Pull the encyclopedia subject (person/topic) out of a conversational question."""
     raw = (query or "").strip()
     if not raw:
         return ""
-    quoted = re.search(r'"([^"]{2,120})"|\'([^\']{2,120})\'', raw)
+    quoted = extract_quoted_title(raw)
     if quoted:
-        return _trim_subject(quoted.group(1) or quoted.group(2) or "")
+        return quoted
     for pattern in _SUBJECT_PATTERNS:
         match = pattern.search(raw)
         if match:
             subject = _trim_subject(match.group(1))
             if subject and subject.casefold() not in {"wikipedia", "wiki", "encyclopedia"}:
+                if re.fullmatch(r"(?:19|20)\d{2}", subject):
+                    continue
                 return subject
     return ""
 
@@ -232,26 +264,6 @@ def resolve_lookup_topic(query: str) -> str:
         return subject
     ql = normalize_text(raw)
     if "stranger things" in ql:
-        if any(
-            token in ql
-            for token in (
-                "song",
-                "songs",
-                "music",
-                "popular",
-                "1980",
-                "80s",
-                "80's",
-                "eighties",
-                "hit again",
-                "hit",
-                "soundtrack",
-                "featured",
-                "series",
-                "streaming",
-            )
-        ):
-            return "Music of Stranger Things"
         return "Stranger Things"
     cleaned = clean_query_for_retrieval(raw)
     if cleaned and len(cleaned.split()) <= 8:
@@ -269,7 +281,21 @@ def conversational_lookup_queries(query: str) -> list[str]:
         variants: list[str] = []
         if any(
             token in ql
-            for token in ("song", "songs", "1980", "80s", "80's", "eighties", "popular", "featured", "hit")
+            for token in (
+                "song",
+                "songs",
+                "track",
+                "tracks",
+                "soundtrack",
+                "listen",
+                "1980",
+                "80s",
+                "80's",
+                "eighties",
+                "popular",
+                "featured",
+                "hit",
+            )
         ):
             variants.append("Running Up That Hill")
         variants.extend(
@@ -294,6 +320,25 @@ def conversational_lookup_queries(query: str) -> list[str]:
         titled = subject[:1].upper() + subject[1:] if subject else ""
         if titled and titled not in variants:
             variants.append(titled)
+        # TV / show questions → try disambiguated encyclopedia titles first
+        if any(
+            token in ql
+            for token in (
+                "tv",
+                "television",
+                "series",
+                "show",
+                "actor",
+                "actors",
+                "cast",
+                "starred",
+                "played",
+            )
+        ):
+            for suffix in (" (TV series)", " (American TV series)", " (TV program)"):
+                candidate = f"{titled or subject}{suffix}"
+                if candidate not in variants:
+                    variants.append(candidate)
         if is_music_career_question(raw):
             raw_n = normalize_text(raw)
             if _REVIVAL_QUESTION_RE.search(raw_n):
@@ -301,11 +346,12 @@ def conversational_lookup_queries(query: str) -> list[str]:
                 if media not in variants:
                     variants.append(media)
                 if re.search(r"\bwhat\s+songs?\b", raw_n):
-                    for extra in (
+                    extras = (
                         "Running Up That Hill",
                         "Stranger Things season 4",
                         "Music of Stranger Things",
-                    ):
+                    )
+                    for extra in reversed(extras):
                         if extra not in variants:
                             variants.insert(0, extra)
             discog = f"{subject} discography"

@@ -59,6 +59,27 @@ class WikiDriftApiTests(unittest.TestCase):
             "artificial intelligence",
         )
 
+    def test_actors_tv_show_is_lookup(self) -> None:
+        text = "What actors played in the TV show 'The Following'?"
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+        self.assertEqual(wiki_drift_api.extract_search_query(text), "The Following")
+
+    def test_titles_match_rejects_cult_following(self) -> None:
+        self.assertFalse(
+            wiki_drift_api._titles_match_topic(
+                ["Cult following", "Following", "Trend following"],
+                "The Following",
+                user_question="What actors played in the TV show 'The Following'?",
+            )
+        )
+        self.assertTrue(
+            wiki_drift_api._titles_match_topic(
+                ["Stranger Things", "Music of Stranger Things"],
+                "Stranger Things",
+                user_question="What actors played in Stranger Things?",
+            )
+        )
+
     def test_plain_chat_not_wiki(self) -> None:
         text = "hows it going?"
         self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))
@@ -74,6 +95,36 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertNotIn(wiki_drift_api.WIKI_DRIFT_MARKER, msg)
         self.assertNotIn("post-truth", msg.casefold())
 
+    def test_quoted_single_letter_title(self) -> None:
+        q = "what actors played in the original 1983/1984 series called 'V'?"
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(q))
+        self.assertEqual(wiki_drift_api.extract_search_query(q), "V")
+        q2 = "tell me about a sci-fi series in the 80s called 'V'"
+        self.assertEqual(wiki_drift_api.extract_search_query(q2), "V")
+
+    def test_im_interested_does_not_eat_contraction(self) -> None:
+        q = "I'm interested in the 1984 TV series 'V'."
+        self.assertEqual(wiki_drift_api.extract_search_query(q), "V")
+        self.assertNotIn("interested", wiki_drift_api.extract_search_query(q).casefold())
+
+    def test_disambiguation_followup_picks_1984(self) -> None:
+        wiki_drift_api.remember_dns_ambiguous(
+            "V",
+            "2026",
+            ["V (1984 TV series)", "V (1983 miniseries)"],
+        )
+        self.assertEqual(
+            wiki_drift_api.pick_disambiguation_followup(
+                "I'm interested in the 1984 TV series 'V'."
+            ),
+            "V (1984 TV series)",
+        )
+        self.assertEqual(
+            wiki_drift_api.pick_disambiguation_followup("the miniseries?"),
+            "V (1983 miniseries)",
+        )
+        wiki_drift_api.clear_dns_ambiguous()
+
     def test_parse_year_from_message(self) -> None:
         from pipeline.wiki_scout import parse_snapshot_year_from_text
 
@@ -88,15 +139,15 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertTrue(wiki_drift_api.is_wiki_lookup_query(q))
         self.assertEqual(
             wiki_drift_api.extract_search_query(q),
-            "Music of Stranger Things",
+            "Stranger Things",
         )
 
     def test_stranger_things_song_question_resolves_topic(self) -> None:
         from pipeline.wiki_interpreter import resolve_lookup_topic
 
         q = "what song in 1980s song got popular in the series stranger things?"
-        self.assertEqual(resolve_lookup_topic(q), "Music of Stranger Things")
-        self.assertEqual(wiki_drift_api.extract_search_query(q), "Music of Stranger Things")
+        self.assertEqual(resolve_lookup_topic(q), "Stranger Things")
+        self.assertEqual(wiki_drift_api.extract_search_query(q), "Stranger Things")
 
     def test_conversational_song_question_extracts_artist(self) -> None:
         from pipeline.wiki_interpreter import (
@@ -109,17 +160,8 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertEqual(clean_query_for_retrieval(q), "Kate Bush")
 
     def test_revival_song_injection_uses_lead_evidence(self) -> None:
-        lookup = {
-            "ok": True,
-            "snapshot_year": "2026",
-            "cards": [{"title": "Running Up That Hill", "snippet": "Kate Bush song."}],
-            "hit_meta": [
-                {
-                    "title": "Running Up That Hill",
-                    "corpus_rel_path": "batch/y.md",
-                }
-            ],
-        }
+        from pipeline.wiki_title_dns import DnsHit, DnsResult
+
         lead = {
             "ok": True,
             "title": "Running Up That Hill",
@@ -129,10 +171,27 @@ class WikiDriftApiTests(unittest.TestCase):
             ),
             "allowed_names": ["Running Up That Hill", "Kate Bush"],
         }
+        dns = DnsResult(
+            status="hit",
+            query="Kate Bush",
+            year="2026",
+            hit=DnsHit(
+                title="Kate Bush",
+                path=r"D:\wiki_md\2026\kb.md",
+                rel_path="kb.md",
+                page_id="kb",
+                year="2026",
+            ),
+            reason="exact",
+        )
         with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
-            with patch.object(wiki_drift_api, "run_lookup", return_value=lookup):
-                with patch.object(
-                    wiki_drift_api, "_build_lead_evidence", return_value=lead
+            with patch(
+                "pipeline.wiki_title_dns.resolve",
+                return_value=dns,
+            ):
+                with patch(
+                    "pipeline.wiki_read_lead.wiki_read_lead",
+                    return_value=lead,
                 ):
                     payload = wiki_drift_api.enrich_eve_message_payload(
                         {
@@ -148,33 +207,69 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertIn("running up that hill", msg.casefold())
         self.assertIn("_wiki_evidence", payload)
 
-    def test_enrich_artist_runs_lookup_not_compare(self) -> None:
-        fake = {
+    def test_enrich_artist_uses_dns_not_compare(self) -> None:
+        from pipeline.wiki_title_dns import DnsHit, DnsResult
+
+        lead = {
             "ok": True,
-            "snapshot_year": "2017",
-            "usable": True,
-            "cards": [
-                {
-                    "title": "Kate Bush",
-                    "kind_hint": "article",
-                    "snippet": "English singer-songwriter.",
-                }
-            ],
+            "title": "Kate Bush",
+            "snapshot": "2026",
+            "lead": "English singer-songwriter.",
+            "allowed_names": ["Kate Bush"],
         }
-        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
-            with patch.object(wiki_drift_api, "run_lookup", return_value=fake) as lookup:
-                payload = wiki_drift_api.enrich_eve_message_payload(
-                    {"message": "Who is Kate Bush?"}
-                )
-        lookup.assert_called_once_with(
-            "Kate Bush",
-            year=None,
-            user_question="Who is Kate Bush?",
+        dns = DnsResult(
+            status="hit",
+            query="Kate Bush",
+            year="2026",
+            hit=DnsHit(
+                title="Kate Bush",
+                path=r"D:\wiki_md\2026\kb.md",
+                rel_path="kb.md",
+                page_id="kb",
+                year="2026",
+            ),
+            reason="exact",
         )
+        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
+            with patch(
+                "pipeline.wiki_title_dns.resolve",
+                return_value=dns,
+            ) as resolve:
+                with patch(
+                    "pipeline.wiki_read_lead.wiki_read_lead",
+                    return_value=lead,
+                ):
+                    with patch.object(wiki_drift_api, "run_lookup") as lookup:
+                        payload = wiki_drift_api.enrich_eve_message_payload(
+                            {"message": "Who is Kate Bush?"}
+                        )
+        resolve.assert_called()
+        lookup.assert_not_called()
         msg = str(payload.get("message") or "")
         self.assertIn(wiki_drift_api.WIKI_LOOKUP_MARKER, msg)
         self.assertIn("Kate Bush", msg)
         self.assertNotIn(wiki_drift_api.WIKI_DRIFT_MARKER, msg)
+
+    def test_following_cast_is_dns_miss(self) -> None:
+        from pipeline.wiki_title_dns import DnsResult
+
+        miss = DnsResult(
+            status="miss",
+            query="The Following",
+            year="2026",
+            reason="not in title registry",
+        )
+        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
+            with patch("pipeline.wiki_title_dns.resolve", return_value=miss):
+                with patch.object(wiki_drift_api, "run_lookup") as lookup:
+                    payload = wiki_drift_api.enrich_eve_message_payload(
+                        {"message": "What actors played in the TV show 'The Following'?"}
+                    )
+        lookup.assert_not_called()
+        msg = str(payload.get("message") or "").casefold()
+        self.assertIn("did not return a usable page", msg)
+        self.assertIn("the following", msg)
+        self.assertNotIn(wiki_drift_api.WIKI_DRIFT_MARKER, str(payload.get("message") or ""))
 
 
 if __name__ == "__main__":
