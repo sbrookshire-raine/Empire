@@ -11,6 +11,20 @@ from pipeline import wiki_scout
 
 
 class WikiScoutCacheTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._lock_tmp = tempfile.TemporaryDirectory()
+        self._lock_path = Path(self._lock_tmp.name) / "lock.json"
+        self._env = patch.dict(
+            "os.environ",
+            {"EMPIRE_WIKI_LOOKUP_LOCK": str(self._lock_path)},
+            clear=False,
+        )
+        self._env.start()
+
+    def tearDown(self) -> None:
+        self._env.stop()
+        self._lock_tmp.cleanup()
+
     def test_resolve_collection_years(self) -> None:
         self.assertEqual(wiki_scout.resolve_collection(year=2017), ("WikiChunk", "2017"))
         self.assertEqual(
@@ -95,9 +109,20 @@ class WikiScoutCacheTests(unittest.TestCase):
             result = wiki_scout.search("Cambrai", year=2017, write_files=False)
         self.assertFalse(result["ok"])
         self.assertIn("Title DNS found no page", result["error"])
-        self.assertNotIn("Weaviate", result["error"])
         self.assertNotIn("8091", result["error"])
+        # Instruction may say "Do NOT mention Weaviate" — that is fine.
         self.assertEqual(result["paths"], [])
+
+    def test_search_skips_weaviate_by_default(self) -> None:
+        with (
+            patch.object(wiki_scout, "_search_via_title_dns", return_value=None),
+            patch.object(wiki_scout, "check_weaviate") as weaviate,
+            patch.dict("os.environ", {"EMPIRE_WIKI_WEAVIATE_FALLBACK": "0"}, clear=False),
+        ):
+            result = wiki_scout.search("Cambrai", year=2017, write_files=False)
+        weaviate.assert_not_called()
+        self.assertFalse(result["ok"])
+        self.assertIn("Title DNS found no page", result["error"])
 
     def test_search_title_dns_works_when_weaviate_down(self) -> None:
         dns_payload = {
@@ -133,11 +158,20 @@ class WikiScoutCacheTests(unittest.TestCase):
             "_additional": {"id": "deadbeef-0001", "distance": 0.05},
         }
         with tempfile.TemporaryDirectory() as tmp:
+            lock = Path(tmp) / "lock.json"
             with (
                 patch.object(wiki_scout, "_search_via_title_dns", return_value=None),
                 patch.object(wiki_scout, "check_weaviate", return_value=(True, "ready")),
                 patch.object(wiki_scout, "embed_query", return_value=[0.1, 0.2, 0.3]),
                 patch.object(wiki_scout, "_graphql_hybrid_search", return_value=[row]),
+                patch.dict(
+                    "os.environ",
+                    {
+                        "EMPIRE_WIKI_WEAVIATE_FALLBACK": "1",
+                        "EMPIRE_WIKI_LOOKUP_LOCK": str(lock),
+                    },
+                    clear=False,
+                ),
             ):
                 result = wiki_scout.search(
                     "Cambrai",

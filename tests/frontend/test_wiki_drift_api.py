@@ -1,12 +1,28 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from frontend import wiki_drift_api
 
 
 class WikiDriftApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._lock_tmp = tempfile.TemporaryDirectory()
+        lock = Path(self._lock_tmp.name) / "lock.json"
+        self._env = patch.dict(
+            "os.environ",
+            {"EMPIRE_WIKI_LOOKUP_LOCK": str(lock)},
+            clear=False,
+        )
+        self._env.start()
+
+    def tearDown(self) -> None:
+        self._env.stop()
+        self._lock_tmp.cleanup()
+
     def test_access_question_is_lookup_not_drift(self) -> None:
         text = "Can you access my Wikipedia data?"
         self.assertFalse(wiki_drift_api.is_truth_drift_query(text))

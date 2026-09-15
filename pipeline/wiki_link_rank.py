@@ -90,11 +90,58 @@ _CAST_QUESTION_RE = re.compile(
 _BIO_QUESTION_RE = re.compile(r"^\s*who\s+(?:is|are|was|were)\b", re.I)
 _SONG_TITLE_RE = re.compile(r"\([^)]*\bsong\b[^)]*\)\s*$", re.I)
 _PERSON_TITLE_RE = re.compile(r"\([^)]*\b(?:actor|actress|singer|rapper|musician)\b[^)]*\)\s*$", re.I)
+_PERSON_NAME_TOKEN = r"[A-Z][A-Za-z'\-]+"
+_PERSON_THREE_NAME_RE = re.compile(
+    rf"^{_PERSON_NAME_TOKEN}(?:\s+{_PERSON_NAME_TOKEN}){{2,3}}$"
+)
+_PERSON_TWO_NAME_RE = re.compile(rf"^{_PERSON_NAME_TOKEN}\s+{_PERSON_NAME_TOKEN}$")
+_CAST_SECOND_WORD_BLOCK = frozenset(
+    {
+        "war",
+        "age",
+        "era",
+        "music",
+        "list",
+        "states",
+        "kingdom",
+        "empire",
+        "party",
+        "front",
+        "coast",
+        "island",
+        "river",
+        "city",
+        "county",
+        "university",
+        "college",
+        "museum",
+        "theatre",
+        "theater",
+        "festival",
+        "awards",
+        "award",
+    }
+)
 _NOISE_TITLE_RE = re.compile(
     r"^(?:list of\b|.*\bin music$|allmusic$|bbc news$|billboard \(magazine\)$)",
     re.I,
 )
 _WOW_SONG_RE = re.compile(r"^wow\b.*\bsong\b", re.I)
+
+
+def _looks_like_person_title(title: str) -> bool:
+    text = (title or "").strip()
+    if not text or _NOISE_TITLE_RE.search(text):
+        return False
+    if _PERSON_TITLE_RE.search(text):
+        return True
+    if _PERSON_THREE_NAME_RE.fullmatch(text):
+        return True
+    if _PERSON_TWO_NAME_RE.fullmatch(text):
+        parts = text.split()
+        return parts[-1].casefold() not in _CAST_SECOND_WORD_BLOCK
+    return False
+
 
 
 def classify_lookup_kind(question: str) -> LookupKind:
@@ -167,7 +214,7 @@ def score_related_title(
     elif intent == "cast":
         if _PERSON_TITLE_RE.search(text):
             score += 55.0
-        elif re.fullmatch(r"[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}", text):
+        elif _looks_like_person_title(text):
             score += 35.0
         if _NOISE_TITLE_RE.search(text):
             score -= 40.0
@@ -220,13 +267,22 @@ def select_hop_titles(
     landing_title: str = "",
     limit: int = 1,
 ) -> list[str]:
-    """Open at most one neighbor lead when the question is about that neighbor."""
+    """Open neighbor leads when the question is about that neighbor (song/cast/topic)."""
     kind = classify_lookup_kind(question)
-    if kind in {"bio", "cast"}:
+    if kind == "bio":
         return []
     landing_key = normalize_text(landing_title)
     cap = max(1, min(int(limit), 2))
     hops: list[str] = []
+    if kind == "cast":
+        for title in ranked:
+            if normalize_text(title) == landing_key:
+                continue
+            if _looks_like_person_title(title):
+                hops.append(title)
+                if len(hops) >= cap:
+                    break
+        return hops
     if kind == "song":
         for title in ranked:
             if normalize_text(title) == landing_key:

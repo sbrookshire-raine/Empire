@@ -816,10 +816,38 @@ def search(
     if not query:
         return {"ok": False, "error": "query is required", "paths": [], "titles": []}
 
-    # Who/what/cast: phone book first. Weaviate stays for Truth Drift / DNS misses.
+    try:
+        from pipeline.wiki_lookup_lock import locked_tool_response, wiki_lookup_lock_active
+
+        if wiki_lookup_lock_active():
+            return locked_tool_response(tool="wiki_scout_search")
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Who/what/cast: phone book first. Weaviate stays for Truth Drift / opt-in fallback.
     dns_result = _search_via_title_dns(query, year=year, limit=limit)
     if dns_result is not None:
         return dns_result
+
+    weaviate_fallback = os.environ.get("EMPIRE_WIKI_WEAVIATE_FALLBACK", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if not weaviate_fallback:
+        return {
+            "ok": False,
+            "error": (
+                "Title DNS found no page for this query in the local Wikipedia archive. "
+                "Tell the user that clearly. Do NOT invent cast or plot. "
+                "Do NOT suggest web search unless Web Scout is enabled. "
+                "Do NOT suggest comparing archive years unless they asked."
+            ),
+            "paths": [],
+            "titles": [],
+            "source": "title_dns",
+        }
 
     ready, detail = check_weaviate(base_url, api_key)
     if not ready:

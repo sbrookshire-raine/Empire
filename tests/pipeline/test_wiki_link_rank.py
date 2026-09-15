@@ -76,8 +76,9 @@ class WikiLinkRankTests(unittest.TestCase):
             ranked,
             "What actors played in Stranger Things?",
             landing_title="Stranger Things",
+            limit=2,
         )
-        self.assertEqual(hops, [])
+        self.assertEqual(hops, ["Anna Wood (actress)", "Caleb McLaughlin"])
 
     def test_who_is_does_not_hop(self) -> None:
         ranked = rank_related_titles(

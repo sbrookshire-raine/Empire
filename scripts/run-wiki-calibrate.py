@@ -1,16 +1,15 @@
-"""Run wiki calibration cases from data/eval/wiki_calibrate.jsonl.
+"""Run wiki calibration / workbench cases from JSONL.
 
 Modes (stack-dependent):
   injection  — offline enrich_eve_message_payload (fast, no Weaviate)
-  retrieval  — Weaviate search + title expectations
+  retrieval  — Weaviate search + title expectations (opt-in; workbench defaults off)
   live_eve   — POST /api/eve/session + stream (needs 8080, 2000, Ollama)
 
 Usage:
   $env:PYTHONPATH='C:\\EMPIRE'
-  .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py
   .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py --tier smoke --injection
-  .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py --retrieval --limit 10
-  .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py --live-eve --tier smoke
+  .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py --suite workbench --injection
+  .\\venv\\Scripts\\python.exe scripts\\run-wiki-calibrate.py --suite workbench --injection --baseline data/eval/wiki_workbench_baseline.json
 """
 
 from __future__ import annotations
@@ -26,13 +25,14 @@ if str(_EMPIRE_ROOT) not in sys.path:
     sys.path.insert(0, str(_EMPIRE_ROOT))
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 EMPIRE_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_JSONL = EMPIRE_ROOT / "data" / "eval" / "wiki_calibrate.jsonl"
+WORKBENCH_JSONL = EMPIRE_ROOT / "data" / "eval" / "wiki_workbench.jsonl"
 ORIGIN = "http://127.0.0.1:8080"
 
 BAD_REPLY_MARKERS = (
@@ -43,6 +43,8 @@ BAD_REPLY_MARKERS = (
     '"wow"',
     "'wow'",
 )
+
+DEFAULT_MUST_NOT_MENTION = ("weaviate", "docker", "8091")
 
 
 @dataclass
@@ -59,7 +61,7 @@ def load_cases(path: Path) -> list[dict[str, Any]]:
         if not line.strip():
             continue
         row = json.loads(line)
-        if not str(row.get("query") or "").strip():
+        if not str(row.get("query") or "").strip() and not row.get("turns"):
             continue
         if row.get("tier") == "import_pending":
             continue
@@ -124,45 +126,126 @@ def _forbid_checks(case: dict[str, Any], lowered: str, *, scope: str) -> list[st
             continue
         if str(bad).casefold() in lowered:
             issues.append(f"{scope} contains forbidden {bad!r}")
+    for bad in case.get("must_not_mention") or []:
+        if str(bad).casefold() in lowered:
+            issues.append(f"{scope} mentions forbidden {bad!r}")
+    if case.get("tier") == "workbench":
+        for bad in DEFAULT_MUST_NOT_MENTION:
+            if bad in lowered and bad not in {
+                str(x).casefold() for x in (case.get("must_not_mention") or [])
+            }:
+                # Already covered if listed; still enforce defaults for workbench.
+                if bad in lowered:
+                    issues.append(f"{scope} mentions forbidden {bad!r}")
     return issues
+
+
+def _dedupe_issues(issues: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in issues:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
 
 
 def run_injection(case: dict[str, Any]) -> CaseResult:
     from frontend.wiki_drift_api import (
         WIKI_DRIFT_MARKER,
         WIKI_LOOKUP_MARKER,
+        clear_dns_ambiguous,
         enrich_eve_message_payload,
         is_truth_drift_query,
         is_wiki_lookup_query,
     )
 
     cid = str(case.get("id") or "?")
-    query = str(case.get("query") or "")
+    turns = case.get("turns")
+    if isinstance(turns, list) and turns:
+        queries = [str(t).strip() for t in turns if str(t).strip()]
+    else:
+        queries = [str(case.get("query") or "").strip()]
     mode = str(case.get("mode") or "lookup")
     issues: list[str] = []
+    messages: list[str] = []
+    clear_dns_ambiguous()
     with patch("frontend.wiki_drift_api.load_active_tools", return_value=["wiki_local"]):
-        enriched = enrich_eve_message_payload({"message": query})
-    msg = str(enriched.get("message") or "")
+        for query in queries:
+            enriched = enrich_eve_message_payload({"message": query})
+            messages.append(str(enriched.get("message") or ""))
+    msg = "\n---\n".join(messages)
     lowered = msg.casefold()
-    if mode == "compare" or is_truth_drift_query(query):
-        if not is_truth_drift_query(query):
+    first = queries[0] if queries else ""
+
+    if mode == "compare" or is_truth_drift_query(first):
+        if not is_truth_drift_query(first):
             issues.append("is_truth_drift_query=False")
         if WIKI_DRIFT_MARKER not in msg:
             issues.append("no WIKI_DRIFT injection")
         if "topic: truth" in lowered and "artificial intelligence" not in lowered:
             issues.append("compare topic collapsed to bare 'truth'")
+    elif case.get("expect_miss"):
+        if WIKI_LOOKUP_MARKER not in msg:
+            issues.append("no WIKI_LOOKUP injection on miss")
+        if "did not return a usable page" not in lowered and "not in title registry" not in lowered:
+            if "no clear topic" not in lowered and "archive did not" not in lowered:
+                issues.append("expected miss contract missing")
     else:
-        if not is_wiki_lookup_query(query):
-            issues.append("is_wiki_lookup_query=False")
+        if not is_wiki_lookup_query(first) and not case.get("expect_ask_disambiguation"):
+            # Follow-up turns may not match lookup regex alone.
+            if len(queries) == 1:
+                issues.append("is_wiki_lookup_query=False")
         if WIKI_LOOKUP_MARKER not in msg:
             issues.append("no WIKI_LOOKUP injection")
+
     for needle in case.get("must_contain") or []:
         if str(needle).casefold() not in lowered:
             issues.append(f"injection missing {needle!r}")
+
+    for title in case.get("must_titles") or []:
+        if str(title).casefold() not in lowered:
+            issues.append(f"injection missing title {title!r}")
+
+    if case.get("expect_ask_disambiguation"):
+        disambig_ok = (
+            "more than one page" in lowered
+            or "which title" in lowered
+            or "ask the user which" in lowered
+            or "candidates" in lowered
+            or "title dns found more than one" in lowered
+        )
+        # Multi-turn: turn 2 may resolve — still OK if second message has a hit Title.
+        resolved = len(messages) > 1 and "title:" in messages[-1].casefold() and "more than one" not in messages[-1].casefold()
+        if not disambig_ok and not resolved:
+            issues.append("expected disambiguation ask or follow-up resolve")
+
+    if case.get("expect_escalate_web"):
+        escalate_ok = any(
+            token in lowered
+            for token in (
+                "web scout",
+                "insufficient",
+                "insufficiency",
+                "not in this archive",
+                "not in the local",
+                "current weather",
+                "real-time",
+                "outside the archive",
+                "ask to enable",
+                "enable web",
+            )
+        )
+        # Soft: injection may only have local evidence; CONTRACT may not yet mention web.
+        # Phase 0 baseline records FAIL until skill/enrich adds escalation hints.
+        if not escalate_ok:
+            issues.append("expected web-escalation / insufficiency hint")
+
     issues.extend(_forbid_checks(case, lowered, scope="injection"))
     if "**rank:**" in lowered:
         issues.append("debug card dump in injection")
-    return CaseResult(id=cid, passed=not issues, issues=issues, mode="injection")
+    return CaseResult(id=cid, passed=not issues, issues=_dedupe_issues(issues), mode="injection")
 
 
 def run_retrieval(case: dict[str, Any]) -> CaseResult:
@@ -190,7 +273,7 @@ def run_retrieval(case: dict[str, Any]) -> CaseResult:
         issues.append(f"retrieval failed: {result.get('error')}")
         return CaseResult(id=cid, passed=False, issues=issues, mode="retrieval")
     norm_titles = " | ".join(titles).casefold()
-    expect_any = case.get("expect_title_any") or []
+    expect_any = case.get("expect_title_any") or case.get("must_titles") or []
     if expect_any and not any(str(t).casefold() in norm_titles for t in expect_any):
         issues.append(f"no expected title in {titles[:5]!r}")
     for forbid in case.get("forbid_title") or []:
@@ -228,22 +311,45 @@ def run_live_eve(case: dict[str, Any]) -> CaseResult:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run wiki calibration JSONL")
-    parser.add_argument("--jsonl", type=Path, default=DEFAULT_JSONL)
-    parser.add_argument("--tier", default="", help="Filter by tier (smoke, calibrate, …)")
+    parser = argparse.ArgumentParser(description="Run wiki calibration / workbench JSONL")
+    parser.add_argument("--jsonl", type=Path, default=None)
+    parser.add_argument(
+        "--suite",
+        choices=["calibrate", "workbench"],
+        default=None,
+        help="calibrate=wiki_calibrate.jsonl; workbench=wiki_workbench.jsonl",
+    )
+    parser.add_argument("--tier", default="", help="Filter by tier (smoke, calibrate, workbench, …)")
     parser.add_argument("--tag", default="", help="Filter cases containing this tag")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--injection", action="store_true")
     parser.add_argument("--retrieval", action="store_true")
     parser.add_argument("--live-eve", action="store_true")
     parser.add_argument("--all", action="store_true", help="Run all applicable modes per case flags")
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help="Write JSON summary (pass/fail per case) for Phase 0 recording",
+    )
     args = parser.parse_args()
 
-    if not args.jsonl.is_file():
-        print(f"Missing {args.jsonl} — run: python -m pipeline.wiki_driftbench_seed --merge-into {args.jsonl}")
+    jsonl = args.jsonl
+    if jsonl is None:
+        if args.suite == "workbench":
+            jsonl = WORKBENCH_JSONL
+        else:
+            jsonl = DEFAULT_JSONL
+
+    if not jsonl.is_file():
+        print(f"Missing {jsonl}")
         return 2
 
-    cases = load_cases(args.jsonl)
+    cases = load_cases(jsonl)
+    if args.suite == "workbench":
+        cases = [c for c in cases if str(c.get("tier") or "") == "workbench"]
+        if not args.tier:
+            args.tier = "workbench"
     if args.tier:
         cases = [c for c in cases if str(c.get("tier") or "") == args.tier]
     if args.tag:
@@ -256,13 +362,16 @@ def main() -> int:
     run_live_flag = args.live_eve or args.all
     if not (run_injection_flag or run_retrieval_flag or run_live_flag):
         run_injection_flag = True
-        run_retrieval_flag = True
+        # Workbench suite defaults to injection-only (Weaviate off).
+        if args.suite != "workbench" and str(args.tier) != "workbench":
+            run_retrieval_flag = True
 
-    frontend_up = _req("GET", "/api/memory/status", timeout=5)[0] < 400
+    frontend_up = False
+    if run_live_flag:
+        frontend_up = _req("GET", "/api/memory/status", timeout=5)[0] < 400
 
     results: list[CaseResult] = []
     for case in cases:
-        cid = str(case.get("id") or "?")
         if run_injection_flag and case.get("injection", True):
             results.append(run_injection(case))
         if run_retrieval_flag and case.get("retrieval", True):
@@ -278,6 +387,21 @@ def main() -> int:
         print(f"{mark} [{result.mode}] {result.id}")
         for issue in result.issues:
             print(f"    - {issue}")
+
+    if args.baseline:
+        args.baseline.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "suite": args.suite or "calibrate",
+            "jsonl": str(jsonl),
+            "passed": passed,
+            "total": len(results),
+            "cases": len(cases),
+            "weaviate_fallback": "0",
+            "results": [asdict(r) for r in results],
+        }
+        args.baseline.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        print(f"Wrote baseline {args.baseline}")
+
     if failed:
         return 1
     return 0

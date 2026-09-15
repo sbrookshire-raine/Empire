@@ -29,9 +29,16 @@ async def wiki_scout_search(
 ) -> str:
     """Local Wikipedia lookup: Title DNS + markdown lead first.
 
-    Who/what/cast questions resolve without Weaviate. Weaviate is only used when
-    Title DNS misses (similarity) or for Truth Drift compare. Does NOT write Cognee.
+    Who/what/cast questions resolve without Weaviate. Weaviate is a fallback only
+    when EMPIRE_WIKI_WEAVIATE_FALLBACK=1. Does NOT write Cognee.
     """
+    try:
+        from pipeline.wiki_lookup_lock import locked_tool_response, wiki_lookup_lock_active
+
+        if wiki_lookup_lock_active():
+            return _json(locked_tool_response(tool="wiki_scout_search"))
+    except Exception:  # noqa: BLE001
+        pass
     result = wiki_scout.search(
         query=query,
         year=year.strip() or None,
@@ -97,6 +104,45 @@ async def remember_wiki_lead(
             dataset=(dataset.strip() or "eve_memory"),
         )
     )
+
+
+@mcp.tool()
+async def wiki_read_section(
+    title: str,
+    year: str = "2026",
+    section: str = "",
+    question: str = "",
+) -> str:
+    """Read a Title DNS page lead and optional H2 section from local markdown."""
+    from pipeline.wiki_read_lead import wiki_read
+
+    return _json(
+        wiki_read(
+            title,
+            year.strip() or "2026",
+            section=section.strip(),
+            user_question=question,
+        )
+    )
+
+
+@mcp.tool()
+async def wiki_scratch_upsert(text: str, title: str = "", session_id: str = "") -> str:
+    """Save a bridging fact to the Wikipedia research scratchpad. Not Cognee."""
+    from pipeline.wiki_scratchpad import scratch_upsert
+
+    return _json(scratch_upsert(text, session_id=session_id, title=title))
+
+
+@mcp.tool()
+async def wiki_scratch_read(session_id: str = "", include_errors: bool = False) -> str:
+    """Read Wikipedia research scratchpad and optional Error Book."""
+    from pipeline.wiki_scratchpad import error_book_recent, scratch_read
+
+    result = scratch_read(session_id)
+    if include_errors:
+        result["errors"] = error_book_recent(limit=20)
+    return _json(result)
 
 
 @mcp.tool()

@@ -16,12 +16,75 @@ from pipeline.wiki_ops_paths import validate_year, wiki_md_root
 logger = logging.getLogger(__name__)
 
 DEFAULT_LEAD_MAX_CHARS = 1800
+DEFAULT_SECTION_MAX_CHARS = 1400
 _TITLE_LINE_RE = re.compile(r"^title:\s*(.+?)\s*$", re.I | re.M)
 _QUOTED_RE = re.compile(r'"([^"]{2,120})"|\*([^*]{2,120})\*')
 _SONG_LIKE_RE = re.compile(
     r'\b(?:Running Up That Hill|Wow|Kate Bush|Stranger Things)\b|"[^"]{3,80}"',
     re.I,
 )
+_CAST_QUESTION_RE = re.compile(
+    r"\b(?:actors?|actress(?:es)?|cast|starred|played|characters?)\b",
+    re.I,
+)
+_CAST_SECTION_NAMES = (
+    "cast",
+    "casting",
+    "main cast",
+    "ensemble",
+    "characters",
+    "main characters",
+    "cast and characters",
+)
+
+SECTION_ALIASES: dict[str, tuple[str, ...]] = {
+    "cast": _CAST_SECTION_NAMES,
+    "discography": ("discography", "album discography", "studio albums"),
+    "filmography": ("filmography", "filmography and television", "acting career"),
+    "charts": (
+        "chart performance",
+        "charts",
+        "commercial performance",
+        "weekly charts",
+        "year-end charts",
+    ),
+    "history": ("history", "historical", "origins", "background"),
+    "reception": ("reception", "critical reception", "critical response"),
+    "plot": ("plot", "synopsis", "premise"),
+    "production": ("production", "development", "filming"),
+}
+
+
+def resolve_section_names(section: str) -> tuple[str, ...]:
+    key = (section or "").strip().casefold()
+    if not key or key in {"lead", "intro", "introduction"}:
+        return ()
+    if key in SECTION_ALIASES:
+        return SECTION_ALIASES[key]
+    # Accept raw heading text
+    return (key,)
+
+
+def prefer_section_for_question(user_question: str) -> str:
+    ql = (user_question or "").casefold()
+    if wants_cast_section(user_question):
+        return "cast"
+    if any(token in ql for token in ("discography", "album", "albums")):
+        return "discography"
+    if any(token in ql for token in ("filmography", "nightmare on elm", "franchise")):
+        return "filmography"
+    if any(token in ql for token in ("chart", "peak", "billboard", "2022")):
+        return "charts"
+    if any(token in ql for token in ("history", "historical", "origin", "biological")):
+        return "history"
+    if "reception" in ql or "review" in ql:
+        return "reception"
+    if "plot" in ql or "synopsis" in ql:
+        return "plot"
+    if "production" in ql:
+        return "production"
+    return ""
+
 
 
 def wiki_read_lead_enabled() -> bool:
@@ -84,6 +147,41 @@ def extract_lead(body: str, *, max_chars: int = DEFAULT_LEAD_MAX_CHARS) -> str:
     return lead
 
 
+def extract_named_section(
+    body: str,
+    section_names: tuple[str, ...] | list[str],
+    *,
+    max_chars: int = DEFAULT_SECTION_MAX_CHARS,
+) -> str:
+    """Return the first matching ## section body (markdown), collapsed to prose."""
+    wanted = {str(name).casefold().strip() for name in section_names if str(name).strip()}
+    if not wanted:
+        return ""
+    _, text = _parse_frontmatter(body)
+    cleaned = _strip_infobox_noise(text.strip())
+    if not cleaned:
+        return ""
+    parts = re.split(r"\n(?=##\s+)", cleaned)
+    for part in parts:
+        match = re.match(r"^##\s+(.+?)\s*\n(.*)$", part, re.S)
+        if not match:
+            continue
+        heading = match.group(1).strip().casefold()
+        if heading not in wanted and not any(heading.startswith(name) for name in wanted):
+            continue
+        section = match.group(2).strip()
+        section = re.split(r"\n##\s+", section, maxsplit=1)[0].strip()
+        section = re.sub(r"\s+", " ", section)
+        if len(section) > max_chars:
+            section = section[: max_chars - 1].rstrip() + "…"
+        return section
+    return ""
+
+
+def wants_cast_section(user_question: str) -> bool:
+    return bool(_CAST_QUESTION_RE.search(user_question or ""))
+
+
 def allowed_names_from_lead(lead: str, *, title: str = "") -> list[str]:
     names: list[str] = []
     seen: set[str] = set()
@@ -144,7 +242,21 @@ def resolve_md_path(
     root = wiki_md_root() / y
     rel = (corpus_rel_path or "").strip().replace("\\", "/").lstrip("/")
     if not rel:
-        rel = _corpus_rel_from_weaviate(title, year) or ""
+        try:
+            from pipeline.wiki_title_dns import resolve as dns_resolve
+
+            dns = dns_resolve(title, y)
+            if dns.status == "hit" and dns.hit is not None:
+                if dns.hit.path:
+                    hit_path = Path(dns.hit.path)
+                    if hit_path.is_file():
+                        return hit_path
+                if dns.hit.rel_path:
+                    rel = dns.hit.rel_path
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("wiki_read Title DNS path failed for %r: %s", title, exc)
+        if not rel:
+            rel = _corpus_rel_from_weaviate(title, year) or ""
     if rel:
         candidate = root / rel
         if candidate.is_file():
@@ -195,6 +307,8 @@ def wiki_read_lead(
     *,
     corpus_rel_path: str | None = None,
     max_chars: int = DEFAULT_LEAD_MAX_CHARS,
+    user_question: str = "",
+    include_cast_section: bool | None = None,
 ) -> dict[str, Any]:
     title = (entity or "").strip()
     year = validate_year(snapshot)
@@ -224,8 +338,21 @@ def wiki_read_lead(
             "snapshot": year,
             "path": str(path),
         }
-    allowed = allowed_names_from_lead(lead, title=resolved_title)
-    return {
+    want_cast = (
+        include_cast_section
+        if include_cast_section is not None
+        else wants_cast_section(user_question)
+    )
+    cast_section = ""
+    if want_cast:
+        cast_section = extract_named_section(
+            raw,
+            _CAST_SECTION_NAMES,
+            max_chars=min(DEFAULT_SECTION_MAX_CHARS, max(600, max_chars)),
+        )
+    name_source = f"{lead} {cast_section}".strip()
+    allowed = allowed_names_from_lead(name_source, title=resolved_title)
+    out: dict[str, Any] = {
         "ok": True,
         "title": resolved_title,
         "snapshot": year,
@@ -233,6 +360,66 @@ def wiki_read_lead(
         "allowed_names": allowed,
         "path": str(path),
     }
+    if cast_section:
+        out["cast_section"] = cast_section
+        out["section_name"] = "Cast"
+    return out
+
+
+def wiki_read(
+    entity: str,
+    snapshot: str = "2026",
+    *,
+    section: str = "",
+    corpus_rel_path: str | None = None,
+    max_chars: int = DEFAULT_LEAD_MAX_CHARS,
+    user_question: str = "",
+) -> dict[str, Any]:
+    """Read lead and/or a named H2 section from local markdown (Title DNS path)."""
+    question = user_question or ""
+    section_key = (section or "").strip() or prefer_section_for_question(question)
+    base = wiki_read_lead(
+        entity,
+        snapshot,
+        corpus_rel_path=corpus_rel_path,
+        max_chars=max_chars,
+        user_question=question,
+        include_cast_section=(section_key.casefold() == "cast") if section_key else None,
+    )
+    if not base.get("ok"):
+        return base
+    names = resolve_section_names(section_key)
+    if not names:
+        return base
+    path_str = str(base.get("path") or "")
+    path = Path(path_str) if path_str else None
+    if path is None or not path.is_file():
+        return base
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        base["section_error"] = str(exc)
+        return base
+    body = extract_named_section(
+        raw,
+        names,
+        max_chars=min(DEFAULT_SECTION_MAX_CHARS, max(600, max_chars)),
+    )
+    if body:
+        label = section_key.strip().title() or "Section"
+        base["section_name"] = label
+        base["section"] = body
+        if label.casefold() == "cast" or "cast" in names:
+            base["cast_section"] = body
+        merged = list(base.get("allowed_names") or [])
+        for name in allowed_names_from_lead(body, title=str(base.get("title") or "")):
+            if name.casefold() not in {str(x).casefold() for x in merged}:
+                merged.append(name)
+        base["allowed_names"] = merged[:24]
+    elif section_key:
+        base["section_name"] = section_key
+        base["section_missing"] = True
+    return base
 
 
 def pick_lead_target(

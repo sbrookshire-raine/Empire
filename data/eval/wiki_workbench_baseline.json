@@ -1,0 +1,76 @@
+{
+  "suite": "workbench",
+  "jsonl": "C:\\EMPIRE\\data\\eval\\wiki_workbench.jsonl",
+  "passed": 11,
+  "total": 11,
+  "cases": 11,
+  "weaviate_fallback": "0",
+  "results": [
+    {
+      "id": "wb_01_casting_hop",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_02_soundtrack_trace",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_03_ingredient_origin",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_04_timeline_brief",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_05_conflict_resolver",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_06_cast_table_merge",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_07_one_letter_fork",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_08_persistence",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_09_error_book",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_10_insufficiency",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    },
+    {
+      "id": "wb_11_post_2026_cutoff",
+      "passed": true,
+      "issues": [],
+      "mode": "injection"
+    }
+  ]
+}

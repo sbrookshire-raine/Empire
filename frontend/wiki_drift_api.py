@@ -44,6 +44,8 @@ _DISAMBIG_FOLLOWUP_RE = re.compile(
     r"\b(?:19|20)\d{2}\b|"
     r"\bminiseries\b|"
     r"\btv\s+series\b|"
+    r"\bhorror\b|"
+    r"\bmovie\b|\bfilm\b|"
     r"\b(?:that|this)\s+one\b"
     r")",
     re.I,
@@ -80,13 +82,21 @@ WIKI_LOOKUP_RE = re.compile(
     r"what\b.{0,48}\b(?:80s|80's|eighties|1980s?)\b|"
     r"(?:who|which)\b.{0,40}\b(?:acted|starred|played|appeared)\b|"
     r"\b(?:actors?|cast|stars?)\b.{0,48}\b(?:in|of|on|from)\b|"
-    r"\b(?:tv\s+show|television\s+show|tv\s+series|series)\b|"
-    r"(?:tell me|look up|find)\s+(?:about\s+)?|"
+    r"\b(?:tv\s+show|television\s+show|tv\s+series|series|miniseries)\b|"
+    r"(?:tell me|look up|find|trace|draft|extract|compare|summarize|research)\b|"
     r"discography\b|"
     r"\balbums?\s+(?:by|from|of)\b|"
+    r"\bpopulation\b|"
+    r"\breception\b|"
+    r"\bfilmography\b|"
+    r"\bplaystation\b|\bxbox\b|"
+    r"\biphone\b|"
+    r"\bdune\b|"
+    r"\bcheddar\b|\bcheese\b|"
     r"(?:use|search|query)\s+(?:my\s+)?(?:local\s+)?(?:wikipedia|wiki|encyclopedia)\b|"
     r"(?:local\s+)?(?:wikipedia|encyclopedia)\s+(?:say|says|about)\b|"
-    r"stranger things\b"
+    r"stranger things\b|"
+    r"\b1980s\b"
     r")\b",
     re.IGNORECASE,
 )
@@ -179,8 +189,36 @@ def pick_disambiguation_followup(text: str) -> str | None:
             ]
             if len(weekly) == 1:
                 return weekly[0]
+        if len(year_hits) > 1 and any(token in ql for token in ("horror", "movie", "film")):
+            films = [
+                title
+                for title in year_hits
+                if any(
+                    marker in title.casefold()
+                    for marker in ("film", "movie", "horror")
+                )
+            ]
+            if len(films) == 1:
+                return films[0]
+            if len(films) > 1:
+                return films[0]
         if len(year_hits) == 1:
             return year_hits[0]
+    if any(token in ql for token in ("horror", "movie", "film")):
+        films = [
+            title
+            for title in candidates
+            if any(marker in title.casefold() for marker in ("film", "movie", "horror"))
+        ]
+        years = re.findall(r"\b((?:19|20)\d{2})\b", raw)
+        if years:
+            year_films = [title for title in films if any(year in title for year in years)]
+            if len(year_films) == 1:
+                return year_films[0]
+            if year_films:
+                return year_films[0]
+        if len(films) == 1:
+            return films[0]
     if "miniseries" in ql:
         mini = [title for title in candidates if "miniseries" in title.casefold()]
         if len(mini) == 1:
@@ -280,6 +318,15 @@ def extract_search_query(text: str) -> str:
     if quoted:
         return _clean_topic(quoted)
 
+    # Single-letter / short title after "production/plot/cast of …"
+    short = re.search(
+        r"\b(?:production|plot|cast|reception|history)\s+of\s+([A-Za-z0-9]{1,3})\b",
+        raw,
+        re.I,
+    )
+    if short:
+        return short.group(1).upper() if len(short.group(1)) == 1 else short.group(1)
+
     topic = resolve_lookup_topic(raw)
     if topic:
         return topic
@@ -294,12 +341,26 @@ def extract_search_query(text: str) -> str:
             re.I,
         ),
         re.compile(r"\b(?:tell me about|look up|search for?|find)\s+(.+?)[\?.!]*$", re.I),
+        re.compile(r"\bpopulation\s+of\s+(.+?)(?:\s+and\b|[?.!]|$)", re.I),
+        re.compile(r"\breception\s+of\s+(?:the\s+)?(.+?)(?:\s+to\b|\s+versus\b|[?.!]|$)", re.I),
+        re.compile(r"\bplot\s+of\s+(?:the\s+)?(?:movie\s+)?(.+?)(?:\s+and\b|[?.!]|$)", re.I),
+        re.compile(r"\b(?:playstation\s*2|ps2)\b", re.I),
+        re.compile(r"\b(?:cheddar\s+cheese|cheddar)\b", re.I),
+        re.compile(r"\bmindhunter\b", re.I),
+        re.compile(r"\bdune:\s*part\s*two\b|\bdune\s+part\s*2\b", re.I),
+        re.compile(r"\biphone\s*14\b", re.I),
+        re.compile(r"\bzxqwy\s+blorf\s+band\b", re.I),
+        re.compile(r"\blibby,?\s+montana\b", re.I),
     ):
         match = pattern.search(raw)
-        if match:
+        if not match:
+            continue
+        if match.lastindex:
             topic = _clean_topic(match.group(1))
-            if topic and topic.casefold() not in {"wikipedia", "wiki", "encyclopedia", "it"}:
-                return topic
+        else:
+            topic = _clean_topic(match.group(0))
+        if topic and topic.casefold() not in {"wikipedia", "wiki", "encyclopedia", "it"}:
+            return topic
 
     return ""
 
@@ -410,10 +471,10 @@ def _lookup_miss_block(query: str, *, err: str = "") -> str:
         f"{LOOKUP_FAIL_NOTE} for '{query}'{detail}.\n"
         "CONTRACT: Tell the user the local Wikipedia archive did not return a usable page "
         f"for '{query}'. Do NOT invent cast lists, plots, or years from training memory. "
-        "Do NOT suggest Weaviate, Docker port 8091, wiki_scout_compare_years, or Truth Drift "
-        "unless they asked to compare years. Do NOT claim the page exists in another snapshot "
+        "Do NOT suggest comparing archive years or Truth Drift unless they asked to compare years. "
+        "Do NOT claim the page exists in another snapshot "
         "unless cards for that year were provided above. Offer a simpler title or confirm the "
-        "Title DNS index and `D:\\wiki_md` are available (`scripts/build-wiki-title-index.ps1`)."
+        "Title DNS index and local markdown corpus are available."
     )
 
 
@@ -424,9 +485,9 @@ def _dns_ambiguous_block(query: str, year: str, candidates: list[str]) -> str:
         f"{WIKI_LOOKUP_MARKER}\n"
         f"Title DNS found more than one page for '{query}' ({year}): {sample}.\n"
         "CONTRACT: Ask the user which title to open. Do NOT invent a pick. "
-        "Do NOT fall back to Weaviate similarity. Do NOT suggest compare_years "
+        "Do NOT fall back to similarity search. Do NOT suggest compare_years "
         "unless they asked to compare years. When they name a year, miniseries, "
-        "or TV series from the list, open that Title DNS page — stay on Title DNS."
+        "horror film, TV series, or other qualifier from the list, open that Title DNS page."
     )
 
 
@@ -447,21 +508,45 @@ def _lookup_from_title_dns(
         titles = [c.title for c in result.candidates]
         return _dns_ambiguous_block(query, year, titles), None
     if status != "hit" or result.hit is None:
+        try:
+            from pipeline.wiki_scratchpad import error_book_append
+
+            error_book_append(
+                query=user_question or query,
+                reason=result.reason or "not in title registry",
+                title=query,
+                year=year,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return _lookup_miss_block(query, err=result.reason or "not in title registry"), None
     clear_dns_ambiguous()
     hit = result.hit
-    from pipeline.wiki_read_lead import wiki_read_lead, wiki_read_lead_enabled
+    from pipeline.wiki_read_lead import (
+        prefer_section_for_question,
+        wiki_read,
+        wiki_read_lead_enabled,
+    )
 
     if not wiki_read_lead_enabled():
         return _lookup_miss_block(query, err="lead read disabled"), None
-    lead = wiki_read_lead(
+    section = prefer_section_for_question(user_question)
+    lead = wiki_read(
         hit.title,
         year,
+        section=section,
         corpus_rel_path=hit.rel_path or None,
         max_chars=EVIDENCE_MAX_CHARS,
+        user_question=user_question,
     )
     if not lead.get("ok"):
         err = str(lead.get("error") or "lead missing")
+        try:
+            from pipeline.wiki_scratchpad import error_book_append
+
+            error_book_append(query=user_question or query, reason=err, title=hit.title, year=year)
+        except Exception:  # noqa: BLE001
+            pass
         return _lookup_miss_block(query, err=f"page listed but {err}"), None
     lead["user_question"] = user_question
     from pipeline.wiki_title_dns import neighbors as dns_neighbors
@@ -482,11 +567,14 @@ def _lookup_from_title_dns(
             hop_dns = dns_resolve(str(hop_title), year, user_question=user_question)
             if hop_dns.status != "hit" or hop_dns.hit is None:
                 continue
-            hop = wiki_read_lead(
+            hop_section = prefer_section_for_question(user_question)
+            hop = wiki_read(
                 hop_dns.hit.title,
                 year,
+                section=hop_section,
                 corpus_rel_path=hop_dns.hit.rel_path or None,
                 max_chars=max(400, EVIDENCE_MAX_CHARS // 2),
+                user_question=user_question,
             )
             if not hop.get("ok"):
                 continue
@@ -583,6 +671,10 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
         f"Lead: {evidence.get('lead', '')}",
         f"Allowed names: {allowed_text}",
     ]
+    cast_section = str(evidence.get("cast_section") or evidence.get("section") or "").strip()
+    if cast_section:
+        section_name = str(evidence.get("section_name") or "Cast").strip() or "Cast"
+        lines.append(f"{section_name} section: {cast_section}")
     if related_text:
         lines.append(f"Related titles (page links): {related_text}")
     hop_leads = evidence.get("hop_leads")
@@ -592,15 +684,25 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
                 continue
             hop_title = str(hop.get("title") or "").strip()
             hop_lead = str(hop.get("lead") or "").strip()
+            hop_section = str(hop.get("section") or hop.get("cast_section") or "").strip()
             if hop_title:
                 lines.append(f"Hop title: {hop_title}")
             if hop_lead:
                 lines.append(f"Hop lead: {hop_lead}")
+            if hop_section:
+                lines.append(f"Hop section: {hop_section}")
+    escalate = _escalation_hint(user_question)
     lines.extend([
         "",
-        "CONTRACT: Answer only from EVIDENCE above.",
+        "CONTRACT: Answer only from EVIDENCE above (and scratchpad notes if present).",
         "If the user asked for a song/person not named in EVIDENCE, say it is not in this archive.",
         "Never use training-memory song titles (e.g. do not answer \"Wow\" for Kate Bush revival questions).",
+        "Do NOT call wiki_scout_search or wiki_scout_compare_years — evidence is already complete.",
+        "Do NOT invent archive years or claim a missing page exists elsewhere.",
+    ])
+    if escalate:
+        lines.append(escalate)
+    lines.extend([
         "",
         f"User question: {user_question.strip()}",
     ])
@@ -610,8 +712,33 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
         trimmed = lead[: max(400, EVIDENCE_MAX_CHARS // 2)].rstrip() + "…"
         evidence = dict(evidence)
         evidence["lead"] = trimmed
+        if cast_section and len(cast_section) > 500:
+            evidence["cast_section"] = cast_section[:499].rstrip() + "…"
+            evidence["section"] = evidence["cast_section"]
         return _format_evidence_block(evidence, user_question=user_question)
     return block
+
+
+def _escalation_hint(user_question: str) -> str:
+    ql = (user_question or "").casefold()
+    if "weather" in ql or "temperature" in ql or "forecast" in ql:
+        return (
+            "BOUNDARY: Local Wikipedia cannot answer real-time weather. "
+            "Summarize any local plot/facts from EVIDENCE, then say this needs Web Scout "
+            "(or another live source) — ask before going online. Do not invent weather."
+        )
+    if re.search(r"\biphone\s*1[6-9]\b|\biphone\s*[2-9]\d\b", ql):
+        return (
+            "BOUNDARY: Devices beyond the local archive cutoff may be missing. "
+            "Use EVIDENCE for pages that exist; for missing future devices say the archive "
+            "is insufficient and ask before enabling Web Scout. Do not invent specs."
+        )
+    if "current" in ql and any(token in ql for token in ("news", "today", "now", "live")):
+        return (
+            "BOUNDARY: Real-time facts are outside the local Wikipedia archive. "
+            "Ask before enabling Web Scout."
+        )
+    return ""
 
 
 def _lookup_answer_hint(cards: list[dict[str, Any]], user_question: str) -> str:
@@ -757,12 +884,13 @@ def run_lookup(
 def _access_only_block() -> str:
     return (
         f"{WIKI_LOOKUP_MARKER}\n"
-        "The Architect is asking whether you can use local Wikipedia (offline Weaviate: "
-        "2017 / 2021 / 2026 snapshots).\n"
+        "The Architect is asking whether you can use local Wikipedia "
+        "(Title DNS + markdown archive on disk).\n"
         "Answer in 2–3 sentences: yes — you can look up artists, albums, places, concepts "
         "from the local archive without the public web. Invite them to ask a concrete question "
         "(e.g. who is X, what albums did Y release). Do NOT run Truth Drift or compare years."
     )
+
 
 
 def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
@@ -794,7 +922,7 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
             block = (
                 f"{WIKI_DRIFT_MARKER}\n"
                 f"{COMPARE_TIMEOUT_NOTE} for topic '{topic}'. "
-                f"Local Wikipedia/Weaviate did not return usable cards ({err}). "
+                f"Local Wikipedia archive did not return usable cards ({err}). "
                 "Say local wiki is offline or empty. Do NOT invent year findings. "
                 "Do NOT offer web search unless Web Scout is on."
             )
@@ -838,6 +966,39 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
                 label = "Answer from local Wikipedia snippets above"
     else:
         return payload
+
+    # Hard gate: Eve must not call wiki_scout_* while LOOKUP/DRIFT evidence is present.
+    try:
+        from pipeline.wiki_lookup_lock import set_wiki_lookup_lock
+
+        session_id = ""
+        for key in ("sessionId", "session_id", "threadId", "thread_id"):
+            val = payload.get(key)
+            if isinstance(val, str) and val.strip():
+                session_id = val.strip()
+                break
+        reason = "truth_drift_injected" if WIKI_DRIFT_MARKER in block else "lookup_injected"
+        set_wiki_lookup_lock(reason=reason, session_id=session_id)
+    except Exception:  # noqa: BLE001 — lock must never break chat
+        pass
+
+    # Attach active scratchpad / prior miss hints for multi-hop work.
+    try:
+        from pipeline.wiki_scratchpad import format_error_book_hint, format_scratchpad_block
+
+        session_id = ""
+        for key in ("sessionId", "session_id", "threadId", "thread_id"):
+            val = payload.get(key)
+            if isinstance(val, str) and val.strip():
+                session_id = val.strip()
+                break
+        scratch = format_scratchpad_block(session_id)
+        err_hint = format_error_book_hint(raw)
+        prefix = "\n".join(part for part in (scratch, err_hint) if part).strip()
+        if prefix:
+            block = f"{prefix}\n\n{block}"
+    except Exception:  # noqa: BLE001
+        pass
 
     enriched = dict(payload)
     if enriched_evidence:

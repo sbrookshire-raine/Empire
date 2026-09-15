@@ -160,6 +160,11 @@ def _connect(index_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.executescript(SCHEMA_SQL)
+    cols = {str(row[1]) for row in conn.execute("PRAGMA table_info(pages)").fetchall()}
+    if "is_disambiguation" not in cols:
+        conn.execute(
+            "ALTER TABLE pages ADD COLUMN is_disambiguation INTEGER NOT NULL DEFAULT 0"
+        )
     return conn
 
 
@@ -195,6 +200,22 @@ def _row_to_hit(row: sqlite3.Row, year: str) -> DnsHit:
         page_id=str(row["page_id"] or ""),
         year=str(row["year"] or year),
     )
+
+
+def _page_is_disambiguation(conn: sqlite3.Connection, title_norm: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT is_disambiguation FROM pages WHERE title_norm = ?",
+            (title_norm,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return False
+    if not row:
+        return False
+    try:
+        return int(row[0] or 0) == 1
+    except (TypeError, ValueError):
+        return False
 
 
 def _lookup_exact(conn: sqlite3.Connection, title_norm: str, year: str) -> DnsHit | None:
@@ -246,6 +267,26 @@ def _years_from_question(user_question: str) -> tuple[str, ...]:
 
 def _is_generic_letter_title(title: str) -> bool:
     return len(normalize_text(title)) <= 2
+
+
+def _letter_needs_disambiguation(user_question: str) -> bool:
+    ql = (user_question or "").casefold()
+    return any(
+        token in ql
+        for token in (
+            "production",
+            "film",
+            "movie",
+            "horror",
+            "tv",
+            "television",
+            "series",
+            "miniseries",
+            "album",
+            "song",
+            "band",
+        )
+    )
 
 
 def _is_tv_page_title(title: str) -> bool:
@@ -340,8 +381,66 @@ def resolve(
             reason=f"title index missing ({path})",
         )
     tv_ask = _tv_context(user_question)
+    letter_mode = _is_generic_letter_title(query) and _letter_needs_disambiguation(
+        user_question
+    )
     conn = _connect(path)
     try:
+        if letter_mode:
+            branch = [
+                h
+                for h in _disambiguation_branch(
+                    conn, normalize_text(query), y, limit=80
+                )
+                if _reject_false_friend(h, tv_ask=tv_ask)
+            ]
+            ql = (user_question or "").casefold()
+            years = _years_from_question(user_question)
+            if any(token in ql for token in ("horror", "movie", "film", "production")):
+                films = [
+                    h
+                    for h in branch
+                    if any(
+                        marker in h.title.casefold()
+                        for marker in ("film", "movie", "horror")
+                    )
+                ]
+                if years:
+                    year_films = [
+                        h for h in films if any(year in h.title for year in years)
+                    ]
+                    if year_films:
+                        films = year_films
+                if len(films) == 1:
+                    return DnsResult(
+                        status="hit",
+                        query=query,
+                        year=y,
+                        hit=films[0],
+                        reason="letter_film",
+                    )
+                if len(films) > 1:
+                    return DnsResult(
+                        status="ambiguous",
+                        query=query,
+                        year=y,
+                        candidates=tuple(films[:8]),
+                        reason="letter_film_fork",
+                    )
+            if tv_ask:
+                branch = _filter_tv_branch(branch, user_question)
+            if len(branch) == 1:
+                return DnsResult(
+                    status="hit", query=query, year=y, hit=branch[0], reason="letter_branch"
+                )
+            if len(branch) > 1:
+                return DnsResult(
+                    status="ambiguous",
+                    query=query,
+                    year=y,
+                    candidates=tuple(branch[:8]),
+                    reason="letter_fork",
+                )
         seen: set[str] = set()
         hits: list[DnsHit] = []
         forms = list(subject_variants(query))
@@ -382,6 +481,43 @@ def resolve(
                     )
                 ):
                     continue
+            # Bare letter pages are rarely the answer when the user names film/TV/production.
+            if _is_generic_letter_title(hit.title) and _letter_needs_disambiguation(
+                user_question
+            ):
+                continue
+            # Disambiguation hub pages are not answers — expand to titled variants.
+            if _page_is_disambiguation(conn, normalize_text(hit.title)) or hit.title.casefold().endswith(
+                "(disambiguation)"
+            ):
+                branch = [
+                    h
+                    for h in _disambiguation_branch(
+                        conn,
+                        normalize_text(strip_parens(hit.title) or query),
+                        y,
+                        limit=60 if tv_ask else 12,
+                    )
+                    if _reject_false_friend(h, tv_ask=tv_ask)
+                ]
+                if tv_ask:
+                    branch = _filter_tv_branch(branch, user_question)
+                if len(branch) == 1:
+                    return DnsResult(
+                        status="hit",
+                        query=query,
+                        year=y,
+                        hit=branch[0],
+                        reason="disambiguation_hub",
+                    )
+                if len(branch) > 1:
+                    return DnsResult(
+                        status="ambiguous",
+                        query=query,
+                        year=y,
+                        candidates=tuple(branch[:8]),
+                        reason="disambiguation_hub",
+                    )
             return DnsResult(status="hit", query=query, year=y, hit=hit, reason="exact")
         if tv_ask:
             hits = _filter_tv_branch(hits, user_question)
@@ -483,6 +619,70 @@ def seed_parenthetical_aliases(conn: sqlite3.Connection) -> int:
             continue
         pairs.append((strip_parens(titles[0]), titles[0]))
     return upsert_aliases(conn, pairs)
+
+
+# High-value aliases for EMPIRE chat pain points (until a full MediaWiki redirect dump lands).
+COMMON_REDIRECT_ALIASES: tuple[tuple[str, str], ...] = (
+    ("Running Up That Hill (Kate Bush song)", "Running Up That Hill"),
+    ("running up that hill", "Running Up That Hill"),
+    ("kate bush running up the hill", "Running Up That Hill"),
+    ("Running Up That Hill (song)", "Running Up That Hill"),
+    ("A Deal with God", "Running Up That Hill"),
+    ("Stranger Things (TV series)", "Stranger Things"),
+    ("Stranger Things (Netflix series)", "Stranger Things"),
+    ("The Following (TV series)", "The Following"),
+    ("The Following (TV show)", "The Following"),
+    ("V (TV miniseries)", "V (1983 miniseries)"),
+    ("V the miniseries", "V (1983 miniseries)"),
+    ("V (1983)", "V (1983 miniseries)"),
+    ("V (1984)", "V (1984 TV series)"),
+    ("Kate Bush (singer)", "Kate Bush"),
+)
+
+
+def seed_common_aliases(conn: sqlite3.Connection) -> int:
+    """Seed curated alias→canonical pairs when the canonical page exists."""
+    existing = {
+        str(row["title_norm"])
+        for row in conn.execute("SELECT title_norm FROM pages").fetchall()
+    }
+    title_by_norm = {
+        str(row["title_norm"]): str(row["title"])
+        for row in conn.execute("SELECT title_norm, title FROM pages").fetchall()
+    }
+    pairs: list[tuple[str, str]] = []
+    for alias, canonical in COMMON_REDIRECT_ALIASES:
+        canon_n = normalize_text(canonical)
+        if canon_n not in existing:
+            continue
+        pairs.append((alias, title_by_norm.get(canon_n, canonical)))
+    return upsert_aliases(conn, pairs)
+
+
+def write_common_redirects_tsv(path: Path) -> int:
+    """Write COMMON_REDIRECT_ALIASES to redirects.tsv (merge with comments)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Title DNS aliases - tab-separated: alias<TAB>canonical",
+        "# Curated EMPIRE common redirects (seed_common_aliases).",
+        "# Full MediaWiki redirect dump can replace/extend this file.",
+        "",
+    ]
+    for alias, canonical in COMMON_REDIRECT_ALIASES:
+        lines.append(f"{alias}\t{canonical}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(COMMON_REDIRECT_ALIASES)
+
+
+def apply_common_aliases(index_path: Path) -> int:
+    conn = _connect(index_path)
+    try:
+        n = seed_common_aliases(conn)
+        conn.commit()
+        return n
+    finally:
+        conn.close()
+
 
 
 def _skip_link_target(title: str) -> bool:
@@ -654,6 +854,7 @@ def neighbors(
         ranked,
         user_question,
         landing_title=dns.hit.title,
+        limit=2,
     )
     out_keys = {normalize_text(title) for title in outbound_raw}
     outbound = [title for title in ranked if normalize_text(title) in out_keys][:cap]
@@ -788,11 +989,16 @@ def build_index(
             if i == 1 or i % 10 == 0 or i == len(batches):
                 logger.info("title index %s: batch %s/%s (%s titles)", y, i, len(batches), inserted)
         alias_n = seed_parenthetical_aliases(conn)
+        common_n = seed_common_aliases(conn)
         conn.commit()
     finally:
         conn.close()
 
     redir = redirects_path or default_redirects_path(y)
+    try:
+        write_common_redirects_tsv(redir)
+    except OSError:
+        pass
     imported = import_redirects(out, redir)
     return {
         "ok": True,
@@ -800,6 +1006,7 @@ def build_index(
         "index_path": str(out),
         "pages": inserted,
         "parenthetical_aliases": alias_n,
+        "common_aliases": common_n,
         "redirect_aliases": imported,
         "batches": len(batches),
     }
@@ -972,6 +1179,17 @@ def main(argv: list[str] | None = None) -> int:
     aliases.add_argument("--year", default="2026")
     aliases.add_argument("--redirects", required=True)
     aliases.add_argument("--index", default="")
+    common = sub.add_parser(
+        "seed-common-aliases",
+        help="Seed curated EMPIRE redirect aliases into an existing index",
+    )
+    common.add_argument("--year", default="2026")
+    common.add_argument("--index", default="")
+    common.add_argument(
+        "--write-tsv",
+        action="store_true",
+        help="Also refresh redirects.tsv under wiki-reports",
+    )
     remember = sub.add_parser("remember", help="Explicit Cognee remember of a DNS lead")
     remember.add_argument("subject")
     remember.add_argument("--year", default="2026")
@@ -1006,6 +1224,14 @@ def main(argv: list[str] | None = None) -> int:
         y = validate_year(args.year)
         index = Path(args.index) if args.index else default_index_path(y)
         n = import_redirects(index, Path(args.redirects))
+        print({"ok": True, "aliases": n, "index_path": str(index)})
+        return 0
+    if args.cmd == "seed-common-aliases":
+        y = validate_year(args.year)
+        index = Path(args.index) if args.index else default_index_path(y)
+        if getattr(args, "write_tsv", False):
+            write_common_redirects_tsv(default_redirects_path(y))
+        n = apply_common_aliases(index)
         print({"ok": True, "aliases": n, "index_path": str(index)})
         return 0
     if args.cmd == "remember":

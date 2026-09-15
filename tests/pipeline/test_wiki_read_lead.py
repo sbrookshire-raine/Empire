@@ -5,6 +5,7 @@ import unittest
 from pipeline.wiki_read_lead import (
     allowed_names_from_lead,
     extract_lead,
+    extract_named_section,
     pick_lead_target,
 )
 
@@ -44,6 +45,31 @@ class WikiReadLeadTests(unittest.TestCase):
         lead = extract_lead(body, max_chars=500)
         self.assertIn("Lead paragraph one", lead)
         self.assertNotIn("Later section", lead)
+
+    def test_extract_cast_section(self) -> None:
+        body = (
+            "---\ntitle: Stranger Things\n---\n"
+            "An American science fiction series.\n\n"
+            "## Cast\n"
+            "Millie Bobby Brown as Eleven. Finn Wolfhard as Mike.\n\n"
+            "## Production\n"
+            "Filmed in Georgia."
+        )
+        section = extract_named_section(body, ("cast", "casting"), max_chars=500)
+        self.assertIn("Millie Bobby Brown", section)
+        self.assertNotIn("Filmed in Georgia", section)
+
+    def test_prefer_section_for_cast_and_charts(self) -> None:
+        from pipeline.wiki_read_lead import prefer_section_for_question
+
+        self.assertEqual(
+            prefer_section_for_question("What actors played in Stranger Things?"),
+            "cast",
+        )
+        self.assertEqual(
+            prefer_section_for_question("summarize peak chart performance in 2022"),
+            "charts",
+        )
 
     def test_allowed_names_from_quoted_titles(self) -> None:
         lead = 'Kate Bush\'s "Running Up That Hill" featured in Stranger Things.'

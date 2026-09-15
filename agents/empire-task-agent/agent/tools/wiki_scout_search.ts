@@ -1,16 +1,20 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { isCapabilityActive } from "#lib/toolbelt";
+import {
+  isWikiLookupLocked,
+  WIKI_LOOKUP_LOCK_REPLY,
+} from "#lib/wiki-lookup-lock";
 import { wikiScoutSearchViaMcp } from "#lib/wiki-scout-mcp";
 
-/** Wiki Local limb — Wiki Interpreter over Weaviate; opt-in via Toolbelt. */
+/** Wiki Local limb — Title DNS first; Weaviate only if explicitly enabled. */
 export default defineDynamic({
   events: {
     "turn.started": () =>
-      isCapabilityActive("wiki_local")
+      isCapabilityActive("wiki_local") && !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Local Wikipedia lookup (Title DNS + article lead first; Weaviate only if DNS misses). " +
+              "Local Wikipedia lookup (Title DNS + article lead). " +
               "Pass the user's question verbatim. After calling: answer in 1–3 plain sentences. " +
               "NEVER paste rank, kind_hint, rank_why, or numbered card lists to the user. " +
               "If [[EMPIRE_WIKI_LOOKUP]] evidence is already in the turn, do NOT call this tool. " +
@@ -33,6 +37,9 @@ export default defineDynamic({
                 .describe("Max ranked cards to keep after interpret (default 5)."),
             }),
             async execute({ query, year, limit }) {
+              if (isWikiLookupLocked()) {
+                return WIKI_LOOKUP_LOCK_REPLY;
+              }
               return wikiScoutSearchViaMcp({ query, year, limit });
             },
           })

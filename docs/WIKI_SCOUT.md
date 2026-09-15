@@ -102,14 +102,36 @@ Needs Docker + `I:\weaviate_v2_archive\weaviate`. Full manual `docker run`: [WEA
 
 ### Title DNS (chat lookup)
 
-Normal who/what/cast questions do **not** use Weaviate. They resolve the title in SQLite, then read the lead from `D:\wiki_md`.
+Normal who/what/cast questions do **not** use Weaviate. They resolve the title in SQLite, then read the lead (and preferred H2 section) from `D:\wiki_md`. Cast questions pull the **Cast** section and may hop to actor pages.
+
+When Workbench injects `[[EMPIRE_WIKI_LOOKUP]]`, it sets `%LOCALAPPDATA%\EMPIRE\eve-wiki-lookup-lock.json` so Eve **does not register** `wiki_scout_search` / `wiki_scout_compare_years` for that turn (hard gate).
+
+Multi-hop work uses the research **scratchpad** + **Error Book** (`pipeline/wiki_scratchpad.py`) — not Cognee.
+
+`wiki_scout_search` is Title DNS only by default. Opt in to Weaviate similarity after a miss with `EMPIRE_WIKI_WEAVIATE_FALLBACK=1`.
+
+**Workbench eval (offline-first):** see [WIKI_WORKBENCH_EVAL.md](WIKI_WORKBENCH_EVAL.md).
 
 ```powershell
 .\scripts\build-wiki-title-index.ps1            # 2026 default
-.\scripts\build-wiki-title-index.ps1 -Year 2026 -LimitBatches 2   # smoke
+.\venv\Scripts\python.exe -m pipeline.wiki_title_dns seed-common-aliases --year 2026 --write-tsv
+.\scripts\import-wiki-mediawiki-meta.ps1 -Year 2026
+.\venv\Scripts\python.exe scripts\run-wiki-calibrate.py --suite workbench --injection
 ```
 
-Optional redirect aliases (tab-separated `alias<TAB>canonical`): `I:\EMPIRE_DATA\wiki-reports\2026\redirects.tsv`
+Optional redirect aliases (tab-separated `alias<TAB>canonical`): `I:\EMPIRE_DATA\wiki-reports\2026\redirects.tsv`  
+Optional disambiguation titles: `I:\EMPIRE_DATA\wiki-reports\2026\page_props_disambig.tsv`  
+Optional full dumps: `--RedirectSql` / `--PageSql` on `import-wiki-mediawiki-meta.ps1`.
+
+### Deferred (kill criteria)
+
+| Item | Build only if |
+|------|----------------|
+| **ZIM / openzim-mcp** | Section I/O from `D:\wiki_md` is too slow or Architect needs a single-file reader |
+| **GBNF / schema masks** | LOOKUP lock + tool hide still shows tool loops after scratchpad |
+| **DuckDB link analytics** | SQLite neighbor ranking becomes the bottleneck |
+| **SetFit intent router** | One-Letter Fork / follow-ups still fail after rule-based disambiguation |
+| **Full GraphRAG / embed-all** | Never for this corpus |
 
 ### Link web (title → title)
 
@@ -120,11 +142,11 @@ After the phone book exists, index `outgoing_links` from each article header:
 .\venv\Scripts\python.exe -m pipeline.wiki_title_dns neighbors "Cheese"
 ```
 
-This is Wikipedia’s own spiderweb, not embeddings. Lookup ranks those links by the question (cast vs song vs cheddar) and may inject one neighbor lead — still not Cognee.
+This is Wikipedia’s own spiderweb, not embeddings. Lookup ranks those links by the question (cast vs song vs cheddar) and may inject neighbor leads — still not Cognee.
 
 Redirect aliases: `python -m pipeline.wiki_title_dns import-redirects --year 2026 --redirects PATH`.
 
-Weaviate hybrid search stays for **Truth Drift / compare_years** only.
+Weaviate hybrid search stays for **Truth Drift / compare_years** only (unless `EMPIRE_WIKI_WEAVIATE_FALLBACK=1`).
 
 Ready check: `GET http://127.0.0.1:8091/v1/.well-known/ready` with  
 `Authorization: Bearer <WEAVIATE_API_KEY>`.
