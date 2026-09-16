@@ -85,11 +85,12 @@ def enrich_eve_message_payload(payload: dict[str, Any]) -> dict[str, Any]:
         return payload
     if SUMMARY_MARKER in message:
         return payload
-    # Wiki glasses already carry the task + evidence; prior-turn digests cause tool loops.
+    # Wiki glasses / pulse already carry the task + evidence; prior-turn digests cause tool loops.
     if (
         "[[EMPIRE_WIKI_EXTRACT]]" in message
         or "[[EMPIRE_WIKI_LOOKUP]]" in message
         or "[[EMPIRE_WIKI_DRIFT]]" in message
+        or "[[EMPIRE_RESOURCE_PULSE]]" in message
     ):
         return payload
 

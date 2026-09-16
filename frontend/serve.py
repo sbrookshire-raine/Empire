@@ -30,6 +30,7 @@ try:
         ollama_inventory,
         primitives_api,
         project_catalog,
+        resource_pulse_api,
         wiki_api,
         wiki_drift_api,
         workbench_ui_api,
@@ -47,6 +48,7 @@ except ModuleNotFoundError:
     import ollama_inventory  # type: ignore[no-redef]
     import project_catalog  # type: ignore[no-redef]
     import primitives_api  # type: ignore[no-redef]
+    import resource_pulse_api  # type: ignore[no-redef]
     import wiki_api  # type: ignore[no-redef]
     import wiki_drift_api  # type: ignore[no-redef]
     import workbench_ui_api  # type: ignore[no-redef]
@@ -456,6 +458,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = ollama_api.apply_chat_mode_payload(payload)
             try:
                 payload = wiki_drift_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
+            try:
+                payload = resource_pulse_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
             try:
@@ -1420,9 +1426,13 @@ class EmpireHandler(SimpleHTTPRequestHandler):
     def _wiki_get(self, path: str) -> None:
         try:
             qs = wiki_api.parse_query(self.path)
-            year = (qs.get("year") or ["2017"])[0]
+            year_q = qs.get("year") or []
+            year = year_q[0] if year_q else "2017"
             if path == "/api/wiki/status":
                 return self._send_json(200, wiki_api.wiki_status(year))
+            if path == "/api/wiki/glasses-health":
+                glasses_year = year_q[0] if year_q else None
+                return self._send_json(200, wiki_api.wiki_glasses_health(glasses_year))
             if path == "/api/wiki/titles":
                 offset = int((qs.get("offset") or ["0"])[0])
                 limit = int((qs.get("limit") or ["100"])[0])

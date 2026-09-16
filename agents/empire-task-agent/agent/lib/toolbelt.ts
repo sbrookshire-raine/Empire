@@ -118,13 +118,13 @@ export function isCategoryEnabled(category: ToolbeltCategory): boolean {
   return loadActiveToolCategories().includes(category);
 }
 
-/** Manual Toolbelt OR valid Research Autopilot session grant. */
+/** Manual Toolbelt OR valid session grant (Research Partner OR admit_for_goal). */
 export function isCapabilityActive(category: ToolbeltCategory): boolean {
   if (isCategoryEnabled(category)) {
     return true;
   }
   const session = parseSession();
-  if (!session.researchPartnerMode || !sessionStillValid(session.expiresAt)) {
+  if (!sessionStillValid(session.expiresAt)) {
     return false;
   }
   return session.sessionCapabilities.includes(category);
@@ -133,7 +133,7 @@ export function isCapabilityActive(category: ToolbeltCategory): boolean {
 export function loadEffectiveToolCategories(): ToolbeltCategory[] {
   const manual = loadActiveToolCategories();
   const session = parseSession();
-  if (!session.researchPartnerMode || !sessionStillValid(session.expiresAt)) {
+  if (!sessionStillValid(session.expiresAt)) {
     return manual;
   }
   const merged: ToolbeltCategory[] = [];

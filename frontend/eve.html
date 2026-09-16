@@ -143,6 +143,22 @@
                 </template>
               </div>
             </details>
+            <div class="ready-strip" role="group" aria-label="Core tools ready">
+              <template x-for="pill in readyStripPills" :key="pill.id">
+                <button
+                  type="button"
+                  class="ready-pill"
+                  :class="'ready-pill--' + readyPillTone(pill.id)"
+                  :aria-pressed="Boolean(activeTools[pill.id])"
+                  :title="readyPillTitle(pill)"
+                  :aria-label="readyPillTitle(pill)"
+                  @click="toggleReadyPill(pill.id)"
+                >
+                  <span class="ready-pill__dot" aria-hidden="true"></span>
+                  <span class="ready-pill__label" x-text="pill.short"></span>
+                </button>
+              </template>
+            </div>
             <button
               class="chat__icon-btn"
               type="button"
@@ -385,21 +401,29 @@
           </header>
           <div class="chat-dock__panel toolbelt" x-show="rightDock === 'tools'" role="tabpanel">
             <p class="toolbelt__summary" x-text="toolbeltToggleLabel"></p>
-            <div class="toolbelt__list" role="group" aria-label="Tool categories">
-              <template x-for="category in toolbeltCategories" :key="category.id">
-                <label class="toolbelt__item">
-                  <input
-                    type="checkbox"
-                    :checked="activeTools[category.id]"
-                    @change="setToolbeltCategory(category.id, $event.target.checked)"
-                  />
-                  <span class="toolbelt__item-text">
-                    <strong x-text="category.label"></strong>
-                    <small x-text="category.description"></small>
-                  </span>
-                </label>
-              </template>
-            </div>
+            <p class="toolbelt__hint">
+              Voice + Wiki live in the header ready strip. Session limbs for reach; Products open DAZE / Stem when you need them.
+            </p>
+            <template x-for="bucket in toolbeltBuckets" :key="bucket.id">
+              <div class="toolbelt__bucket" x-show="bucket.categories.length">
+                <h3 class="toolbelt__bucket-title" x-text="bucket.label"></h3>
+                <div class="toolbelt__list" role="group" :aria-label="bucket.label">
+                  <template x-for="category in bucket.categories" :key="category.id">
+                    <label class="toolbelt__item">
+                      <input
+                        type="checkbox"
+                        :checked="activeTools[category.id]"
+                        @change="setToolbeltCategory(category.id, $event.target.checked)"
+                      />
+                      <span class="toolbelt__item-text">
+                        <strong x-text="category.label"></strong>
+                        <small x-text="category.description"></small>
+                      </span>
+                    </label>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
           <div class="chat-dock__panel chat-dock__panel--daze" x-show="rightDock === 'daze'" role="tabpanel">
             <iframe class="chat-dock__frame" src="/daze.html?embed=1" title="DAZE radial day dial"></iframe>
@@ -1141,6 +1165,37 @@
           <p>Services, curated ingest, Research Autopilot, and other EMPIRE pages.</p>
         </header>
 
+        <section class="product-shelf" aria-labelledby="product-shelf-title">
+          <h3 id="product-shelf-title">LEGO products</h3>
+          <p class="product-shelf__hint">
+            Open these as products — not as a permanent Eve personality checklist.
+            Clarity: Core vs LEGO vs staging lives in <code>docs/EMPIRE_CLARITY.md</code>.
+          </p>
+          <ul class="product-shelf__grid">
+            <li class="product-card">
+              <h4>Truth Drift</h4>
+              <p>Compare Wikipedia archive years. Wiki Local in chat for glasses/lookup.</p>
+              <a class="button button--quiet" href="/wiki.html">Open Wiki Ops</a>
+            </li>
+            <li class="product-card">
+              <h4>DAZE</h4>
+              <p>Radial day dial — reclaim time. Enable Time Reclaim when Eve should schedule.</p>
+              <a class="button button--quiet" href="/daze.html">Open DAZE</a>
+            </li>
+            <li class="product-card">
+              <h4>Stem Factory</h4>
+              <p>Shard of the Division — drop MP3s in <code>stem_factory/input</code>, enable Stem limb.</p>
+              <button
+                class="button button--quiet"
+                type="button"
+                @click="setToolbeltCategory('stem_factory', true); setTab('chat'); openRightDock('tools')"
+              >
+                Enable Stem + open tools
+              </button>
+            </li>
+          </ul>
+        </section>
+
         <section class="admission-panel" aria-labelledby="admission-title">
           <h3 id="admission-title">Research Autopilot</h3>
           <p class="admission-panel__hint">
@@ -1194,6 +1249,9 @@
 
         <ul class="more-links">
           <li><a class="button button--quiet" href="/dashboard.html">Dashboard</a></li>
+          <li><a class="button button--quiet" href="/lego.html">LEGO whiteboard</a></li>
+          <li><a class="button button--quiet" href="/wiki.html">Truth Drift / Wiki Ops</a></li>
+          <li><a class="button button--quiet" href="/daze.html">DAZE</a></li>
           <li><a class="button button--quiet" href="/primitives.html">Curated primitives ingest</a></li>
           <li><a class="button button--quiet" href="/index.html">Classic tasks UI</a></li>
           <li><a class="button button--quiet" href="http://127.0.0.1:8090/_/" target="_blank" rel="noopener">PocketBase admin</a></li>

@@ -4,7 +4,7 @@ import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineTool({
   description:
-    "Request a session-scoped Toolbelt capability (read-only research limbs). Requires Research Partner mode for auto-enable categories.",
+    "Request a session-scoped Toolbelt capability (Research Partner Autopilot path). Prefer admit_for_goal + resource_pulse for day-to-day light skills so the Architect is not the button.",
   inputSchema: z.object({
     category: z
       .string()

@@ -32,10 +32,12 @@ We are building **Eve** — a sovereign, local AI orchestrator.
 ## Strict execution rules
 
 1. **Full scripts only — no negotiation:** Never give pieces of code to add or modify an existing file. Do not say "change lines 40–45" or show partial snippets that force manual hunt-and-replace. Always output the **full, complete file** — even for a one-line change — so the Architect can safely replace the whole file without guessing or breaking syntax. No exceptions.
-2. **Non-destructive:** Never write code that permanently deletes the user's personal files. Use **copy** instead of **move** when harvesting data. Exception: after a successful Forge Protocol on a Work Order, delete that Work Order file from `05_Work_Orders` only (see below).
+2. **Non-destructive:** Never write code that permanently deletes the user's personal files. Use **copy** instead of **move** when harvesting data. Exceptions: after a successful Forge Protocol on a Work Order, delete that Work Order file from `05_Work_Orders` only (see below); Eve may prune **her own** `eve_staging` sandbox (propose/confirm/drop/TTL sweep) — never Resource Queue or wiki corpus.
 3. **MCP native:** When adding Eve capabilities, check existing MCP servers first (`mcp/`, `.cursor/mcp.json`). If none fit, wrap CLI tools with `child_process` in TypeScript under `agents/empire-task-agent/`.
 4. **Graceful failures:** File-reading logic (memory banks, SQLite, workbench paths) must use `try/catch` or equivalent. Missing or locked files log and continue — never crash the stack.
 5. **No hallucinated paths:** Use real paths (`C:/Empire_Workbench/...`, `C:/EMPIRE/...`) or robust `path.join` / `EMPIRE_ROOT` resolution — never invent locations.
+6. **Mechanic green before Architect smoke:** After forge or fix, run `.\scripts\mechanic-green.ps1` (add `-Full` when live Eve chat is in scope) and exit 0 before asking the Architect to click through UX. See `docs/EMPIRE_CLARITY.md`.
+
 
 ## Processing Work Orders
 
@@ -49,6 +51,7 @@ When the Architect says **Process Work Orders** (or equivalent), you are the Sys
    - Write or update the Eve skill playbook under `agents/empire-task-agent/agent/skills/`.
    - Update `empire-routing.md` if tool routing must change.
    - Rebuild Eve when TypeScript tools change (`Restart-EMPIRE.bat` or `npm run build` in `agents/empire-task-agent`).
+   - Run `.\scripts\mechanic-green.ps1` to green before Architect UX smoke.
 3. **On successful implementation only**, delete that Work Order markdown from `05_Work_Orders/`. Do not delete Resource Queue sources unless the Architect explicitly asks.
 4. If a Work Order cannot be completed, leave the file in place and report the blocker in plain English.
 5. Remember: PocketBase **Tasks** are not Work Orders. Do not close triage requests by creating PocketBase tasks unless the Architect asks for a task separately.

@@ -2,10 +2,9 @@
 
 Core brain tools (Cognee memory + PocketBase tasks + health/models) are NEVER
 gated here — they stay permanently registered. This file only tracks optional
-external limbs (Gumloop, web research, Tool Forge / Active Tools, Wiki Local, Time Reclaim / DAZE).
+limbs, grouped into clarity buckets (Always / Session / Products).
 
-Note: PocketBase tasks are Tasks. A Work Order is a separate concept (Eve writing
-a .md request for Cursor) and must not be conflated with PocketBase.
+See docs/EMPIRE_CLARITY.md.
 """
 
 from __future__ import annotations
@@ -13,9 +12,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-# Optional limbs only — default all OFF except voice (spoken practice is core UX).
+Bucket = Literal["always", "session", "products"]
+
+# Optional limbs only — default Voice + Wiki Local (session glasses).
 ALLOWED_CATEGORIES = (
     "gumloop_cloud",
     "web_research",
@@ -34,8 +35,35 @@ ALLOWED_CATEGORIES = (
     "browser_local",
     "loom_intake",
 )
+
+CATEGORY_BUCKETS: dict[str, Bucket] = {
+    "voice_presence": "always",
+    "wiki_local": "session",
+    "web_scout": "session",
+    "github_scout": "session",
+    "thought_experiments": "session",
+    "container_scout": "session",
+    "structured_extract": "session",
+    "retrieval_rerank": "session",
+    "browser_local": "session",
+    "loom_intake": "session",
+    "tool_forge": "session",
+    "web_research": "session",
+    "gumloop_cloud": "session",
+    "vision_local": "session",
+    "time_reclaim": "products",
+    "stem_factory": "products",
+}
+
+BUCKET_ORDER: tuple[Bucket, ...] = ("always", "session", "products")
+BUCKET_LABELS: dict[Bucket, str] = {
+    "always": "Always (core UX)",
+    "session": "Session",
+    "products": "Products (LEGO)",
+}
+
 DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ("voice_presence", "wiki_local")
-DEFAULTS_VERSION = 1
+DEFAULTS_VERSION = 2
 
 
 def _toolbelt_path() -> Path:
@@ -49,6 +77,17 @@ def _toolbelt_path() -> Path:
             pass
     root = Path(__file__).resolve().parents[1]
     return root / "config" / "eve-toolbelt.json"
+
+
+def category_bucket(category: str) -> Bucket:
+    return CATEGORY_BUCKETS.get(category, "session")
+
+
+def categories_by_bucket() -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {b: [] for b in BUCKET_ORDER}
+    for cat in ALLOWED_CATEGORIES:
+        out[category_bucket(cat)].append(cat)
+    return out
 
 
 def normalize_active_tools(raw: Any) -> list[str]:
@@ -66,7 +105,11 @@ def normalize_active_tools(raw: Any) -> list[str]:
 
 def write_active_tools(categories: list[str]) -> Path:
     path = _toolbelt_path()
-    payload = {"active_tools": categories, "defaults_version": DEFAULTS_VERSION}
+    payload = {
+        "active_tools": categories,
+        "defaults_version": DEFAULTS_VERSION,
+        "buckets": categories_by_bucket(),
+    }
     try:
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     except OSError:
@@ -83,12 +126,14 @@ def load_active_tools() -> list[str]:
     if not isinstance(parsed, dict):
         return list(DEFAULT_ACTIVE_TOOLS)
     selected = normalize_active_tools(parsed.get("active_tools"))
-    if parsed.get("defaults_version") is None:
+    version = parsed.get("defaults_version")
+    if version is None or int(version or 0) < DEFAULTS_VERSION:
         for default_tool in DEFAULT_ACTIVE_TOOLS:
             if default_tool not in selected:
                 selected = normalize_active_tools([*selected, default_tool])
         parsed["active_tools"] = selected
         parsed["defaults_version"] = DEFAULTS_VERSION
+        parsed["buckets"] = categories_by_bucket()
         try:
             path.write_text(json.dumps(parsed, indent=2) + "\n", encoding="utf-8")
         except OSError:
@@ -129,3 +174,19 @@ def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:
     cleaned = dict(payload)
     cleaned.pop("active_tools", None)
     return cleaned
+
+
+def toolbelt_meta() -> dict[str, Any]:
+    """API-shaped metadata for Workbench grouping."""
+    return {
+        "buckets": [
+            {
+                "id": bucket,
+                "label": BUCKET_LABELS[bucket],
+                "categories": categories_by_bucket()[bucket],
+            }
+            for bucket in BUCKET_ORDER
+        ],
+        "defaults": list(DEFAULT_ACTIVE_TOOLS),
+        "defaults_version": DEFAULTS_VERSION,
+    }

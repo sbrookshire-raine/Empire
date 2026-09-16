@@ -280,99 +280,124 @@
         effective_tools: [],
       },
       admissionLoading: false,
+      readyStripIds: ["voice_presence", "wiki_local"],
+      readyStripPills: [
+        { id: "voice_presence", short: "Voice", label: "Voice Presence" },
+        { id: "wiki_local", short: "Wiki", label: "Wiki Local" },
+      ],
+      readyHealth: {
+        voice_presence: false,
+        wiki_local: false,
+      },
       toolbeltCategories: [
         {
-          id: "gumloop_cloud",
-          label: "Gumloop Cloud",
-          description: "Heavy remote workflows via Gumloop (external).",
-        },
-        {
-          id: "web_research",
-          label: "Web Research",
-          description: "Firecrawl / Exa scraping and external web research.",
-        },
-        {
-          id: "tool_forge",
-          label: "Tool Forge",
-          description: "Execute / read harvested 03_Active_Tools flattened scripts.",
-        },
-        {
-          id: "wiki_local",
-          label: "Wiki Local",
-          description:
-            "Query local Wikipedia Weaviate; cache md for triage (no auto-memory).",
-        },
-        {
-          id: "time_reclaim",
-          label: "Time Reclaim",
-          description:
-            "DAZE day blocks — list/schedule free windows (PocketBase radial day).",
-        },
-        {
-          id: "stem_factory",
-          label: "Stem Factory",
-          description:
-            "Split songs in stem_factory/input into Demucs stems + practice mixes.",
-        },
-        {
-          id: "web_scout",
-          label: "Web Scout",
-          description:
-            "Fetch public URLs into Thought Experiments/web_cache (no auto-memory).",
-        },
-        {
-          id: "thought_experiments",
-          label: "Thought Experiments",
-          description:
-            "Capture YouTube/URL ideas as Phase 3 notes for later discussion.",
-        },
-        {
           id: "voice_presence",
+          bucket: "always",
           label: "Voice Presence",
           description:
             "Local STT/TTS via Speaches/Voicebox (composer mic + Eve speak).",
         },
         {
-          id: "vision_local",
-          label: "Vision Local",
+          id: "wiki_local",
+          bucket: "session",
+          label: "Wiki Local",
           description:
-            "Describe screenshots/images with qwen3-vl (takes GPU lease).",
+            "Local Wikipedia glasses (Title DNS + extract). Enable for lookup/Truth Drift chat.",
         },
         {
-          id: "container_scout",
-          label: "Container Scout",
+          id: "web_scout",
+          bucket: "session",
+          label: "Web Scout",
           description:
-            "Docker Hub search + local empire-* status (no auto-pull / no K8s).",
+            "Fetch public URLs into Thought Experiments/web_cache (no auto-memory).",
         },
         {
           id: "github_scout",
+          bucket: "session",
           label: "GitHub Scout",
           description:
             "Search GitHub repos + README excerpts into github_cache (no clone).",
         },
         {
+          id: "thought_experiments",
+          bucket: "session",
+          label: "Thought Experiments",
+          description:
+            "Capture YouTube/URL ideas as Phase 3 notes for later discussion.",
+        },
+        {
+          id: "container_scout",
+          bucket: "session",
+          label: "Container Scout",
+          description:
+            "Docker Hub search + local empire-* status (no auto-pull / no K8s).",
+        },
+        {
           id: "structured_extract",
+          bucket: "session",
           label: "Structured Extract",
           description:
             "DocumentMetadata JSON via local llama.cpp worker (scratch only).",
         },
         {
           id: "retrieval_rerank",
+          bucket: "session",
           label: "Retrieval Rerank",
           description:
             "Eval-only passage rerank (nomic production embeds unchanged).",
         },
         {
           id: "browser_local",
+          bucket: "session",
           label: "Browser Local",
           description:
             "Allowlisted localhost Playwright fetch (Workbench/PB only).",
         },
         {
           id: "loom_intake",
+          bucket: "session",
           label: "Loom Intake",
           description:
             "Knowledge Shell CSV → primitive ledger (Keeper membrane, max 7/cycle).",
+        },
+        {
+          id: "tool_forge",
+          bucket: "session",
+          label: "Tool Forge",
+          description: "Execute / read harvested 03_Active_Tools flattened scripts.",
+        },
+        {
+          id: "web_research",
+          bucket: "session",
+          label: "Web Research",
+          description: "Firecrawl / Exa scraping and external web research.",
+        },
+        {
+          id: "gumloop_cloud",
+          bucket: "session",
+          label: "Gumloop Cloud",
+          description: "Heavy remote workflows via Gumloop (external).",
+        },
+        {
+          id: "vision_local",
+          bucket: "session",
+          label: "Vision Local",
+          description:
+            "Describe screenshots/images with qwen3-vl (takes GPU lease).",
+        },
+        {
+          id: "time_reclaim",
+          bucket: "products",
+          label: "Time Reclaim (DAZE)",
+          description:
+            "DAZE day blocks — open DAZE product or enable for Eve schedule tools.",
+        },
+        {
+          id: "stem_factory",
+          bucket: "products",
+          label: "Stem Factory",
+          description:
+            "Shard of the Division — Demucs stems from stem_factory/input (GPU).",
         },
       ],
       activeTools: {
@@ -544,6 +569,80 @@
         return count + " tool categories active";
       },
 
+      get toolbeltBuckets() {
+        var labels = {
+          always: "Always (core UX)",
+          session: "Session",
+          products: "Products (LEGO)",
+        };
+        var order = ["always", "session", "products"];
+        var hide = {};
+        var strip = this.readyStripIds || [];
+        for (var s = 0; s < strip.length; s += 1) {
+          hide[strip[s]] = true;
+        }
+        var categories = (this.toolbeltCategories || []).filter(function (c) {
+          return !hide[c.id];
+        });
+        return order.map(function (id) {
+          return {
+            id: id,
+            label: labels[id] || id,
+            categories: categories.filter(function (c) {
+              return (c.bucket || "session") === id;
+            }),
+          };
+        });
+      },
+
+      readyPillTone: function (categoryId) {
+        if (!this.activeTools || !this.activeTools[categoryId]) return "dim";
+        if (this.readyHealth && this.readyHealth[categoryId]) return "green";
+        return "amber";
+      },
+
+      readyPillTitle: function (pill) {
+        var label = (pill && pill.label) || "Tool";
+        var enabled = Boolean(this.activeTools && this.activeTools[pill.id]);
+        if (!enabled) return label + " · off";
+        var healthy = Boolean(this.readyHealth && this.readyHealth[pill.id]);
+        return label + " · enabled · " + (healthy ? "healthy" : "down");
+      },
+
+      toggleReadyPill: async function (categoryId) {
+        if (!categoryId || !this.activeTools) return;
+        var next = !Boolean(this.activeTools[categoryId]);
+        await this.setToolbeltCategory(categoryId, next);
+        await this.refreshReadyHealth();
+      },
+
+      refreshReadyHealth: async function () {
+        var voiceOk = false;
+        var wikiOk = false;
+        try {
+          var voiceRes = await fetch("/api/voice/health", { cache: "no-store" });
+          var voiceBody = await voiceRes.json().catch(function () {
+            return {};
+          });
+          voiceOk = Boolean(voiceBody && voiceBody.ok);
+        } catch (_voiceErr) {
+          voiceOk = false;
+        }
+        try {
+          var wikiRes = await fetch("/api/wiki/glasses-health", { cache: "no-store" });
+          var wikiBody = await wikiRes.json().catch(function () {
+            return {};
+          });
+          wikiOk = Boolean(wikiBody && wikiBody.glasses_ok);
+        } catch (_wikiErr) {
+          wikiOk = false;
+        }
+        this.readyHealth = {
+          voice_presence: voiceOk,
+          wiki_local: wikiOk,
+        };
+      },
+
       activeToolIds: function () {
         var ids = [];
         var categories = this.toolbeltCategories || [];
@@ -647,6 +746,7 @@
         this.refreshAdmission();
         this.refreshMemoryStatus();
         this.refreshHealth();
+        this.refreshReadyHealth();
         this.refreshTasks();
         // History stays available via ☰ — do not auto-load past chats into the transcript.
         this.historyOpen = false;
@@ -2861,6 +2961,7 @@
         this.health.summary = unavailable.length
           ? unavailable.join(", ") + (unavailable.length === 1 ? " is unavailable." : " are unavailable.")
           : "Eve and local memory services are ready.";
+        await this.refreshReadyHealth();
       },
 
       repairServices: async function () {

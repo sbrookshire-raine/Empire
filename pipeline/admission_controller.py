@@ -185,15 +185,21 @@ def set_research_partner(enabled: bool) -> dict[str, Any]:
 
 
 def _session_active(category: str) -> bool:
+    """True when category is in a non-expired session grant.
+
+    Grants may come from Research Partner Autopilot *or* resource-gated
+    admit_for_goal (Architect is not required to flip Partner mode).
+    """
     expire_stale()
     session = load_session()
-    if not session.get("research_partner_mode"):
-        return False
     caps = session.get("session_capabilities")
     if not isinstance(caps, list) or category not in caps:
         return False
     expires = _parse_iso(str(session.get("expires_at") or ""))
     if expires and _utc_now() >= expires:
+        return False
+    # Empty expires_at means no TTL — treat as inactive for safety.
+    if not expires:
         return False
     return True
 
@@ -214,10 +220,10 @@ def load_effective_tools() -> list[str]:
     expire_stale()
     session = load_session()
     caps = session.get("session_capabilities")
-    if not isinstance(caps, list) or not session.get("research_partner_mode"):
+    if not isinstance(caps, list):
         return manual
     expires = _parse_iso(str(session.get("expires_at") or ""))
-    if expires and _utc_now() >= expires:
+    if not expires or _utc_now() >= expires:
         return manual
     merged: list[str] = []
     for item in manual + caps:

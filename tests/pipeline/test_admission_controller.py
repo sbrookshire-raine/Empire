@@ -64,9 +64,19 @@ class AdmissionControllerTests(unittest.TestCase):
         result = admission_controller.request_capability("stem_factory", "test")
         self.assertFalse(result["ok"])
 
-    def test_capability_active_manual_toolbelt(self) -> None:
-        with mock.patch("frontend.eve_toolbelt.category_enabled", return_value=True):
-            self.assertTrue(admission_controller.capability_active("wiki_local"))
+    def test_resource_gated_admit_activates_without_partner(self) -> None:
+        with mock.patch("frontend.eve_toolbelt.category_enabled", return_value=False), mock.patch.object(
+            admission_controller, "_preflight", return_value={"ok": True}
+        ):
+            result = admission_controller.request_capability(
+                "github_scout",
+                "eve admit",
+                bypass_partner_check=True,
+            )
+        self.assertTrue(result["ok"])
+        self.assertTrue(admission_controller.capability_active("github_scout"))
+        effective = admission_controller.load_effective_tools()
+        self.assertIn("github_scout", effective)
 
     def test_release_clears_session(self) -> None:
         admission_controller.set_research_partner(True)

@@ -76,7 +76,7 @@
       "label": "Stem Factory",
       "auto_enable": false,
       "session_ttl_min": 0,
-      "gpu_tenant": "chat",
+      "gpu_tenant": "stem",
       "network": false,
       "requires_services": []
     },

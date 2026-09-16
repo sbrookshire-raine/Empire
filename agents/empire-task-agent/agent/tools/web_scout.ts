@@ -1,32 +1,28 @@
-import { defineDynamic, defineTool } from "eve/tools";
+import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCapabilityActive } from "#lib/toolbelt";
+import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
 
-export default defineDynamic({
-  events: {
-    "turn.started": () =>
-      isCapabilityActive("web_scout")
-        ? defineTool({
-            description:
-              "Fetch one public http(s) page URL and cache markdown under 04_Thought_Experiments/web_cache. Not a search engine — needs a full URL. Does NOT write Cognee. Requires Web Scout Toolbelt.",
-            inputSchema: z.object({
-              url: z
-                .string()
-                .min(1)
-                .describe(
-                  "Full page URL to fetch (https://…). Bare domains ok; not a search query.",
-                ),
-              note: z.string().optional().describe("Optional Architect note."),
-            }),
-            async execute({ url, note }) {
-              const args = [url];
-              if (note) {
-                args.push("--note", note);
-              }
-              return runPythonModule("pipeline.web_scout", args);
-            },
-          })
-        : null,
+export default defineTool({
+  description:
+    "Fetch one public http(s) page URL and cache markdown under 04_Thought_Experiments/web_cache. " +
+    "Not a search engine — needs a full URL. Auto-admits Web Scout when headroom allows. Does NOT write Cognee.",
+  inputSchema: z.object({
+    url: z
+      .string()
+      .min(1)
+      .describe("Full page URL to fetch (https://…). Bare domains ok; not a search query."),
+    note: z.string().optional().describe("Optional Architect note."),
+  }),
+  async execute({ url, note }) {
+    const gate = await ensureLightCapability("web_scout", `web scout: ${url}`);
+    if (!gate.ok) {
+      return gate;
+    }
+    const args = [url];
+    if (note) {
+      args.push("--note", note);
+    }
+    return runPythonModule("pipeline.web_scout", args);
   },
 });

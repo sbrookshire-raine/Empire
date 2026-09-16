@@ -1175,7 +1175,7 @@ def allowed_promote_datasets() -> frozenset[str]:
     raw = cfg.get("allowed_datasets")
     if isinstance(raw, list) and raw:
         return frozenset(str(item).strip() for item in raw if str(item).strip())
-    return frozenset({"eve_memory", "truth_drift", "eve_core", "primitives_test"})
+    return frozenset({"eve_memory", "truth_drift", "eve_core", "primitives_test", "eve_staging"})
 
 
 def resolve_promote_dataset(

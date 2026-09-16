@@ -75,5 +75,22 @@ async def gpu_lease_release() -> str:
     return _json(gpu_lease.release())
 
 
+@mcp.tool()
+async def resource_pulse() -> str:
+    """Headroom + inventory: what Eve has, what she can safely admit, what needs Architect OK."""
+    from pipeline import resource_pulse as rp
+
+    return _json(rp.pulse())
+
+
+@mcp.tool()
+async def admit_for_goal(category: str, reason: str = "", ttl_min: int = 0) -> str:
+    """Admit a light session skill when headroom OK (no Research Partner toggle). GPU/heavy asks Architect."""
+    from pipeline import resource_pulse as rp
+
+    ttl = ttl_min if ttl_min and ttl_min >= 5 else None
+    return _json(rp.admit_for_goal(category, reason, ttl_min=ttl))
+
+
 if __name__ == "__main__":
     mcp.run()

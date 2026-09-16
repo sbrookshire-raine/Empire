@@ -14,7 +14,9 @@ from pipeline.wiki_ops_paths import (
     status_path,
     subjects_path,
     validate_year,
+    wiki_md_root,
 )
+from pipeline.wiki_title_dns import default_index_path
 from pipeline.wiki_priority_resolved import (
     append_resolved,
     cancel_awaiting_for_subject,
@@ -31,6 +33,7 @@ from pipeline.wiki_priority_subjects import (
     save_subjects,
 )
 from pipeline.wiki_report_export import build_progress_block
+from pipeline.wiki_scout import default_snapshot_year
 from pipeline.wiki_titles_by_letter import list_letters, page_letter
 
 
@@ -75,6 +78,15 @@ def wiki_status(year: str) -> dict[str, Any]:
     phase = str(file_status.get("phase") or "idle")
     if alive:
         phase = "ingest"
+    index_path = default_index_path(y)
+    year_root = wiki_md_root() / y
+    glasses_ok = index_path.is_file() and year_root.is_dir()
+    if glasses_ok:
+        glasses_reason = "Title DNS index and wiki_md year root ready"
+    elif not index_path.is_file():
+        glasses_reason = f"title index missing ({index_path})"
+    else:
+        glasses_reason = f"wiki_md year folder missing ({year_root})"
     return {
         "ok": True,
         "year": y,
@@ -87,6 +99,24 @@ def wiki_status(year: str) -> dict[str, Any]:
         "titles": file_status.get("titles") or {},
         "updated_at": file_status.get("updated_at"),
         "status_path": str(sp),
+        "glasses_ok": glasses_ok,
+        "glasses_reason": glasses_reason,
+        "title_index_path": str(index_path),
+        "wiki_md_year_root": str(year_root),
+    }
+
+
+def wiki_glasses_health(year: str | None = None) -> dict[str, Any]:
+    """Lightweight glasses readiness for the Workbench ready strip."""
+    y = validate_year(year) if year else default_snapshot_year()
+    status = wiki_status(y)
+    return {
+        "ok": True,
+        "year": y,
+        "glasses_ok": bool(status.get("glasses_ok")),
+        "glasses_reason": str(status.get("glasses_reason") or ""),
+        "title_index_path": str(status.get("title_index_path") or ""),
+        "wiki_md_year_root": str(status.get("wiki_md_year_root") or ""),
     }
 
 

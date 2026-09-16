@@ -101,6 +101,23 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))
         self.assertFalse(wiki_drift_api.is_truth_drift_query(text))
 
+    def test_capability_headroom_question_not_wiki(self) -> None:
+        text = (
+            "What capabilities do you have right now, and what's free on the machine? "
+            "Summarize briefly"
+        )
+        self.assertTrue(wiki_drift_api.is_resource_pulse_query(text))
+        self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))
+        with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
+            payload = wiki_drift_api.enrich_eve_message_payload({"message": text})
+        msg = str(payload.get("message") or "")
+        self.assertNotIn(wiki_drift_api.WIKI_LOOKUP_MARKER, msg)
+        self.assertEqual(msg, text)
+
+    def test_summarize_about_topic_still_wiki(self) -> None:
+        text = "summarize about Kate Bush albums"
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+
     def test_enrich_access_does_not_default_post_truth(self) -> None:
         with patch.object(wiki_drift_api, "load_active_tools", return_value=["wiki_local"]):
             payload = wiki_drift_api.enrich_eve_message_payload(

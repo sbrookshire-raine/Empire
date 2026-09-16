@@ -259,6 +259,13 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
             return True, "SKIP: Cognee worker check disabled"
         if not python_bin.exists():
             return False, f"Python venv missing: {python_bin}"
+        worker_env = {
+            **os.environ,
+            "PYTHONPATH": str(ROOT),
+            # Stack verify already probes Ollama separately; Cognee's own LLM
+            # connection probe often times out under concurrent load and flakes green.
+            "COGNEE_SKIP_CONNECTION_TEST": "true",
+        }
         # Seed then recall so a cold Cognee archive still verifies the worker path.
         seed = subprocess.run(
             [
@@ -275,7 +282,7 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
             capture_output=True,
             text=True,
             timeout=120,
-            env={**os.environ, "PYTHONPATH": str(ROOT)},
+            env=worker_env,
         )
         if seed.returncode != 0:
             stderr = (seed.stderr or seed.stdout or "").strip()[:240]
@@ -295,7 +302,7 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
             capture_output=True,
             text=True,
             timeout=90,
-            env={**os.environ, "PYTHONPATH": str(ROOT)},
+            env=worker_env,
         )
         if result.returncode != 0:
             stderr = (result.stderr or result.stdout or "").strip()[:240]
@@ -332,6 +339,8 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
         return True, f"MCP Cognee recall ok ({len(recall)} chars)", None
 
     def mcp_cognee_check() -> tuple[bool, str]:
+        # Same flake guard as the Python worker path (see EMPIRE ingest scripts).
+        os.environ.setdefault("COGNEE_SKIP_CONNECTION_TEST", "true")
         return asyncio.run(run_async_check(mcp_cognee_async))
 
     add("mcp.cognee", "MCP empire-cognee -> Cognee", mcp_cognee_check)

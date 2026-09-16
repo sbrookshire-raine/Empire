@@ -18,6 +18,15 @@ class EveToolbeltTests(unittest.TestCase):
             ["tool_forge", "wiki_local", "gumloop_cloud"],
         )
 
+    def test_category_buckets(self) -> None:
+        self.assertEqual(eve_toolbelt.category_bucket("voice_presence"), "always")
+        self.assertEqual(eve_toolbelt.category_bucket("wiki_local"), "session")
+        self.assertEqual(eve_toolbelt.category_bucket("stem_factory"), "products")
+        self.assertEqual(eve_toolbelt.category_bucket("time_reclaim"), "products")
+        meta = eve_toolbelt.toolbelt_meta()
+        self.assertEqual(len(meta["buckets"]), 3)
+        self.assertIn("voice_presence", meta["buckets"][0]["categories"])
+
     def test_wiki_local_is_optional_limb(self) -> None:
         self.assertIn("wiki_local", eve_toolbelt.ALLOWED_CATEGORIES)
         self.assertIn("time_reclaim", eve_toolbelt.ALLOWED_CATEGORIES)

@@ -75,6 +75,23 @@ WIKI_ACCESS_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Stack / partner questions — must NOT fire Wikipedia glasses injection.
+RESOURCE_PULSE_QUERY_RE = re.compile(
+    r"(?:"
+    r"\bcapabilities?\b|"
+    r"\bresource(?:s|_pulse)?\b|"
+    r"\bheadroom\b|"
+    r"\bgpu\s+lease\b|"
+    r"\bwhat(?:'s|\s+is|\s+are)?\s+(?:free|available)\b.{0,48}\b(?:machine|system|gpu|ram|disk|vram)\b|"
+    r"\b(?:free|available)\s+on\s+the\s+(?:machine|system)\b|"
+    r"\btoolbelt\b|"
+    r"\badmit(?:_for_goal)?\b|"
+    r"\bwhat\s+(?:tools|skills|limbs)\b.{0,48}\b(?:have|do you|available|on|right now)\b|"
+    r"\bwhat\s+do\s+you\s+have\s+(?:available|right now|on)\b"
+    r")",
+    re.IGNORECASE,
+)
+
 WIKI_LOOKUP_RE = re.compile(
     r"\b(?:"
     r"who\s+(?:is|are|was|were)\b|"
@@ -84,7 +101,9 @@ WIKI_LOOKUP_RE = re.compile(
     r"(?:who|which)\b.{0,40}\b(?:acted|starred|played|appeared)\b|"
     r"\b(?:actors?|cast|stars?)\b.{0,48}\b(?:in|of|on|from)\b|"
     r"\b(?:tv\s+show|television\s+show|tv\s+series|series|miniseries)\b|"
-    r"(?:tell me|look up|find|trace|draft|extract|compare|summarize|research)\b|"
+    # Need a topical object — bare "summarize briefly" must not hijack stack questions.
+    r"(?:tell me|look up|find|trace|draft|extract|compare|research)\b|"
+    r"summarize\b.{0,80}\b(?:about|the|who|what|wikipedia|wiki|cast|album|film|show)\b|"
     r"discography\b|"
     r"\balbums?\s+(?:by|from|of)\b|"
     r"\bpopulation\b|"
@@ -134,9 +153,16 @@ def is_wiki_access_query(text: str) -> bool:
     return bool(WIKI_ACCESS_RE.search((text or "").strip()))
 
 
+def is_resource_pulse_query(text: str) -> bool:
+    """True for stack/capability/headroom questions — not encyclopedia lookups."""
+    return bool(RESOURCE_PULSE_QUERY_RE.search((text or "").strip()))
+
+
 def is_wiki_lookup_query(text: str) -> bool:
     raw = (text or "").strip()
     if not raw or is_truth_drift_query(raw):
+        return False
+    if is_resource_pulse_query(raw):
         return False
     if is_wiki_access_query(raw):
         return True

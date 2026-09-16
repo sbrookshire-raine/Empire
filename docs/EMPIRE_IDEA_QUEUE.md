@@ -14,6 +14,8 @@ This is **not**:
 
 **Capability north star:** [EMPIRE Capability Atlas](../.cursor/plans/empire_capability_atlas_00e4868b.plan.md) (plan file may live under user `.cursor/plans/`). Real Cognee memory + Eve partnership first; limbs default OFF; one heavy GPU tenant at a time.
 
+**Clarity (how the space is organized):** [`EMPIRE_CLARITY.md`](EMPIRE_CLARITY.md) — Eve Core vs LEGO products vs session reach; staging memory; Mechanic green before Architect smoke.
+
 ---
 
 ## How to use
@@ -41,7 +43,7 @@ Ordered unlock of stack + RTX 5080 16GB + OSS. Smoke Wave 0 before relying on ne
 
 | Wave | Theme | Status | Notes |
 |------|-------|--------|-------|
-| 0 | Prove forged limbs (Wiki / DAZE / Stem) | `in_progress` | Mechanic offline: stem CUDA OK. Live stack was cold 2026-09-06 — Architect UX still required before WO close |
+| 0 | Prove LEGO **products** (Truth Drift / DAZE / Stem) as products — not 16 chat limbs | `in_progress` | See [`EMPIRE_CLARITY.md`](EMPIRE_CLARITY.md). Mechanic: `.\scripts\mechanic-green.ps1` before Architect UX. Stem CUDA OK offline 2026-09-06 |
 | 1 | Partnership glue (summary, promote, Docling, Fast A/B, Ollama harden) | `done` | Forged 2026-09-06 |
 | 2 | Reach (web scout, thought experiments, provenance) | `done` | Forged 2026-09-06 |
 | 3 | Senses (voice + vision + GPU lease) | `done` | Forged 2026-09-06; speech server opt-in |
@@ -55,7 +57,9 @@ Do **not** forge: mega FastMCP gateway rewrite, Postgres-as-memory-authority, de
 
 ## Testing now (Architect smoke)
 
-These were shipped or partially forged and need **your** hands-on verification.
+**Mechanic gate:** Do not hand items below to the Architect until `.\scripts\mechanic-green.ps1` exits 0 (use `-Full` when Eve live chat is in scope). Architect smoke is optional UX feel, not CI.
+
+These were shipped or partially forged and need **your** hands-on verification when Mechanic is green.
 
 | ID | Item | Status | How to test | Notes |
 |----|------|--------|-------------|-------|
@@ -85,6 +89,7 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-24 | **Embedding stack audit** | `ready` | `.\scripts\audit-embedding-stack.ps1` — confirm **nomic-embed-text** for Weaviate + Cognee; Weaviate reachable optional. | Gap analysis item 7 — audit only, no re-embed |
 | T-25 | **Offline survival mirror** | `ready` | While online: `.\scripts\build-offline-mirror.ps1 -PullOllama -Wheelhouse`. Review `D:\empire\MANIFEST.md`. Pull `qwen2.5-coder:7b` if missing. | **Time-sensitive** — gap analysis #1 |
 | T-26 | **Wiki glasses (EXTRACT)** | `done` | New chat + Wiki Local ON. Ask Switch specs / Python paradigm / miss `Zxqwy Blorf Band`. Expect EXTRACT table or refuse — no invent. | Shipped `8a03097`; forward plan [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) |
+| T-27 | **Resource pulse / Eve-managed hands** | `ready` | Stack up. Ask Eve: *What do you have available, and can you turn on GitHub Scout if needed?* Expect `resource_pulse` summary + `admit_for_goal` without Toolbelt clicks. Optional: ask her to release session when done. GPU/Vision should get an ask, not a silent enable. | F-42; no Cognee auto-remember |
 
 ---
 
@@ -150,6 +155,9 @@ Engineering work not yet (or only partially) shipped.
 | F-37 | Piper TTS path (vs Speaches) | `parked` | Gap analysis §2 | Speaches already forged (F-10/T-08); compare only if voice quality insufficient |
 | F-38 | Ollama JSON-schema article selection | `ready` | Gap analysis §4; structured outputs | Wire `format` for title pick before prose — no second generator |
 | F-39 | Wiki glasses forward (filter → tables → sparse remember) | `done` | [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) | Battery + filter + multicol + remember pilot 2026-09-15; DuckDB/ZIM stay parked |
+| F-40 | Empire Clarity reorg (toolbelt buckets, staging memory, product doors, mechanic-green) | `done` | [`docs/EMPIRE_CLARITY.md`](EMPIRE_CLARITY.md) | Eve Core vs LEGO; `eve_staging` propose/confirm/drop |
+| F-41 | Core ready strip (Voice + Wiki header pills) | `done` | [`docs/superpowers/specs/2026-09-16-eve-core-ready-strip-design.md`](superpowers/specs/2026-09-16-eve-core-ready-strip-design.md) | Glasses health + click toggles; out of Tools dock list |
+| F-42 | Resource pulse + admit_for_goal (Eve-managed hands) | `done` | [`docs/superpowers/specs/2026-09-16-eve-resource-pulse-design.md`](superpowers/specs/2026-09-16-eve-resource-pulse-design.md) | Policy B; MCP atlas; Architect smoke **T-26** |
 
 ---
 

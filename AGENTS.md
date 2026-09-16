@@ -3,11 +3,26 @@
 Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; runtime code hardwires local tools for the Operational Phase.
 
 **Gemini / fresh-chat context brief:** [EMPIRE_GUIDE.md](EMPIRE_GUIDE.md)  
+**Clarity (Core vs LEGO vs staging):** [docs/EMPIRE_CLARITY.md](docs/EMPIRE_CLARITY.md)  
 **Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
 **Idea / test queue:** [docs/EMPIRE_IDEA_QUEUE.md](docs/EMPIRE_IDEA_QUEUE.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire
+
+## Mechanic green before Architect smoke
+
+After forge or fix, run from repo root:
+
+```powershell
+.\scripts\mechanic-green.ps1          # units + wiki battery + verify-stack
+.\scripts\mechanic-green.ps1 -Full    # also live Eve workbench verify
+.\venv\Scripts\python.exe scripts\smoke-eve-hands.py --eve-chat   # pulse/admit/GitHub hands
+```
+
+Do **not** ask the Architect to click through UX until mechanic-green exits 0. Architect smoke is optional product feel, not CI.
+
+Eve manages light hands via `resource_pulse` / `admit_for_goal` (see [`docs/EMPIRE_CLARITY.md`](docs/EMPIRE_CLARITY.md)); do not invent new Toolbelt checklists for day-to-day work.
 
 ## Start here (day-to-day)
 

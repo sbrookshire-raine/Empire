@@ -10,6 +10,7 @@
     "eve_memory",
     "truth_drift",
     "eve_core",
-    "primitives_test"
+    "primitives_test",
+    "eve_staging"
   ]
 }
