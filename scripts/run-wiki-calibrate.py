@@ -33,6 +33,7 @@ from unittest.mock import patch
 EMPIRE_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_JSONL = EMPIRE_ROOT / "data" / "eval" / "wiki_calibrate.jsonl"
 WORKBENCH_JSONL = EMPIRE_ROOT / "data" / "eval" / "wiki_workbench.jsonl"
+EXTRACT_JSONL = EMPIRE_ROOT / "data" / "eval" / "wiki_extract.jsonl"
 ORIGIN = "http://127.0.0.1:8080"
 
 BAD_REPLY_MARKERS = (
@@ -154,6 +155,7 @@ def _dedupe_issues(issues: list[str]) -> list[str]:
 def run_injection(case: dict[str, Any]) -> CaseResult:
     from frontend.wiki_drift_api import (
         WIKI_DRIFT_MARKER,
+        WIKI_EXTRACT_MARKER,
         WIKI_LOOKUP_MARKER,
         clear_dns_ambiguous,
         enrich_eve_message_payload,
@@ -187,9 +189,14 @@ def run_injection(case: dict[str, Any]) -> CaseResult:
         if "topic: truth" in lowered and "artificial intelligence" not in lowered:
             issues.append("compare topic collapsed to bare 'truth'")
     elif case.get("expect_miss"):
-        if WIKI_LOOKUP_MARKER not in msg:
-            issues.append("no WIKI_LOOKUP injection on miss")
-        if "did not return a usable page" not in lowered and "not in title registry" not in lowered:
+        if WIKI_LOOKUP_MARKER not in msg and WIKI_EXTRACT_MARKER not in msg:
+            issues.append("no WIKI_LOOKUP/EXTRACT injection on miss")
+        if (
+            "did not return a usable page" not in lowered
+            and "not in title registry" not in lowered
+            and "refuse" not in lowered
+            and "extract is not usable" not in lowered
+        ):
             if "no clear topic" not in lowered and "archive did not" not in lowered:
                 issues.append("expected miss contract missing")
     else:
@@ -197,8 +204,10 @@ def run_injection(case: dict[str, Any]) -> CaseResult:
             # Follow-up turns may not match lookup regex alone.
             if len(queries) == 1:
                 issues.append("is_wiki_lookup_query=False")
-        if WIKI_LOOKUP_MARKER not in msg:
-            issues.append("no WIKI_LOOKUP injection")
+        if WIKI_LOOKUP_MARKER not in msg and WIKI_EXTRACT_MARKER not in msg:
+            issues.append("no WIKI_LOOKUP/EXTRACT injection")
+        if "{|" in msg:
+            issues.append("raw wikitable markup leaked into injection")
 
     for needle in case.get("must_contain") or []:
         if str(needle).casefold() not in lowered:
@@ -315,9 +324,9 @@ def main() -> int:
     parser.add_argument("--jsonl", type=Path, default=None)
     parser.add_argument(
         "--suite",
-        choices=["calibrate", "workbench"],
+        choices=["calibrate", "workbench", "extract"],
         default=None,
-        help="calibrate=wiki_calibrate.jsonl; workbench=wiki_workbench.jsonl",
+        help="calibrate=wiki_calibrate.jsonl; workbench=wiki_workbench.jsonl; extract=wiki_extract.jsonl",
     )
     parser.add_argument("--tier", default="", help="Filter by tier (smoke, calibrate, workbench, …)")
     parser.add_argument("--tag", default="", help="Filter cases containing this tag")
@@ -338,6 +347,8 @@ def main() -> int:
     if jsonl is None:
         if args.suite == "workbench":
             jsonl = WORKBENCH_JSONL
+        elif args.suite == "extract":
+            jsonl = EXTRACT_JSONL
         else:
             jsonl = DEFAULT_JSONL
 
@@ -350,6 +361,10 @@ def main() -> int:
         cases = [c for c in cases if str(c.get("tier") or "") == "workbench"]
         if not args.tier:
             args.tier = "workbench"
+    elif args.suite == "extract":
+        cases = [c for c in cases if str(c.get("tier") or "") == "extract"]
+        if not args.tier:
+            args.tier = "extract"
     if args.tier:
         cases = [c for c in cases if str(c.get("tier") or "") == args.tier]
     if args.tag:
@@ -363,7 +378,10 @@ def main() -> int:
     if not (run_injection_flag or run_retrieval_flag or run_live_flag):
         run_injection_flag = True
         # Workbench suite defaults to injection-only (Weaviate off).
-        if args.suite != "workbench" and str(args.tier) != "workbench":
+        if args.suite not in {"workbench", "extract"} and str(args.tier) not in {
+            "workbench",
+            "extract",
+        }:
             run_retrieval_flag = True
 
     frontend_up = False

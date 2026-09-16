@@ -6,13 +6,15 @@ Treat local Wikipedia as a **navigable library** (Title DNS + markdown sections 
 
 ## Server glasses first (mandatory)
 
-If the turn already contains **`[[EMPIRE_WIKI_LOOKUP]]`** evidence:
+If the turn already contains **`[[EMPIRE_WIKI_LOOKUP]]`** or **`[[EMPIRE_WIKI_EXTRACT]]`** evidence:
 
-1. **Answer from that evidence only** (Title + Lead + Section + Related / Hop lines + scratchpad if present).
-2. **Do NOT** call `wiki_scout_search`, `wiki_scout_compare_years`, or any Weaviate tool (those tools are also hidden while the lookup lock is active).
-3. **Do NOT** mention Weaviate, Docker, port 8091, or docs about booting a container.
-4. For multi-hop work: use **`wiki_scratch_upsert`** to retain bridging facts between hops; read **`wiki_scratch_read`** when synthesizing.
-5. Reply in plain English. Name actors only if they appear in the evidence.
+1. **Answer from that evidence only** (Title + Lead/EXTRACT fields/tables/lists + Related / Hop lines + scratchpad if present).
+2. **Do NOT** call `wiki_scout_search`, `wiki_scout_compare_years`, `wiki_scratch_read`, or any Weaviate tool.
+3. **Do NOT** invent numbers, dates, cast names, or table cells missing from EXTRACT. If EXTRACT state is empty/unsupported, refuse clearly.
+4. **Do NOT** narrate “the scratchpad is empty” — that is normal for a single-page extract. Answer the user’s extract request from EXTRACT.
+5. **Do NOT** mention Weaviate, Docker, port 8091, or docs about booting a container.
+6. For multi-hop work across turns: use **`wiki_scratch_upsert`** to retain bridging facts; only **`wiki_scratch_read`** when synthesizing and no EXTRACT/LOOKUP block is present.
+7. Reply in plain English. Name actors only if they appear in the evidence.
 
 Same rule if the turn has **`[[EMPIRE_WIKI_DRIFT]]`** — answer from those cards only; do not re-search.
 
@@ -22,12 +24,14 @@ If a **BOUNDARY** line asks for Web Scout (weather / future devices): answer loc
 
 ## Tools
 
-1. **`wiki_scout_search`** — only when **no** `[[EMPIRE_WIKI_LOOKUP]]` block is in the turn. Title DNS only (Weaviate fallback is opt-in via env).
-2. **`wiki_read_section`** — Title DNS page + optional section (`cast`, `discography`, `filmography`, `charts`, `history`, …) when evidence needs a specific H2.
-3. **`wiki_scratch_upsert` / `wiki_scratch_read`** — multi-hop bridging facts / Error Book; never Cognee.
-4. **`wiki_scout_compare_years`** — **only** when they ask what changed across years or say Truth Drift (needs Weaviate).
-5. **`promote_wiki_cache`** — only when they explicitly ask to save a cache file to Cognee.
-6. **`remember_wiki_lead`** — only when they say remember/save/keep this lookup.
+1. **`wiki_scout_search`** — only when **no** LOOKUP/EXTRACT block is in the turn. Title DNS only (Weaviate fallback is opt-in via env).
+2. **`wiki_extract`** — structured fields/tables/lists for dates, numbers, specs, table rows. Prefer when the user wants data extracts.
+3. **`wiki_resolve`** — phone book only (exact/alias/ambiguous/missing).
+4. **`wiki_read_section`** — Title DNS page + optional section when a named H2 is needed.
+5. **`wiki_scratch_upsert` / `wiki_scratch_read`** — multi-hop bridging facts / Error Book; never Cognee.
+6. **`wiki_scout_compare_years`** — **only** when they ask what changed across years or say Truth Drift (needs Weaviate).
+7. **`promote_wiki_cache`** — only when they explicitly ask to save a cache file to Cognee.
+8. **`wiki_remember`** / **`remember_wiki_lead`** — only when they say remember/save/keep; `wiki_remember` rejects non-ok extracts.
 
 ## Simple questions
 

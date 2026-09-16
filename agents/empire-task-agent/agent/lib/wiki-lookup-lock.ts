@@ -57,8 +57,8 @@ export const WIKI_LOOKUP_LOCK_REPLY = {
   paths: [] as string[],
   titles: [] as string[],
   chat_reply_rule:
-    "[[EMPIRE_WIKI_LOOKUP]] evidence was already injected for this turn. " +
-    "Do NOT call wiki tools again. Answer only from that EVIDENCE / CONTRACT block. " +
-    "Do NOT mention Weaviate, Docker, or port 8091.",
+    "[[EMPIRE_WIKI_LOOKUP]] or [[EMPIRE_WIKI_EXTRACT]] evidence was already injected for this turn. " +
+    "Do NOT call wiki tools again. Answer only from that EVIDENCE / EXTRACT / CONTRACT block. " +
+    "Do NOT narrate an empty scratchpad. Do NOT mention Weaviate, Docker, or port 8091.",
   coverage_note: "Wiki lookup lock active — refuse redundant tool call.",
 };

@@ -86,11 +86,17 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
     try:
         from frontend.wiki_drift_api import (
             WIKI_DRIFT_MARKER,
+            WIKI_EXTRACT_MARKER,
             WIKI_LOOKUP_MARKER,
             is_wiki_enriched_query,
         )
 
-        if WIKI_DRIFT_MARKER in message or WIKI_LOOKUP_MARKER in message or is_wiki_enriched_query(raw):
+        if (
+            WIKI_DRIFT_MARKER in message
+            or WIKI_LOOKUP_MARKER in message
+            or WIKI_EXTRACT_MARKER in message
+            or is_wiki_enriched_query(raw)
+        ):
             return payload
     except Exception:  # noqa: BLE001
         pass

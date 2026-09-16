@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 WIKI_DRIFT_MARKER = "[[EMPIRE_WIKI_DRIFT]]"
 WIKI_LOOKUP_MARKER = "[[EMPIRE_WIKI_LOOKUP]]"
+WIKI_EXTRACT_MARKER = "[[EMPIRE_WIKI_EXTRACT]]"
 MAX_SNIPPET = 320
 MAX_CARDS_PER_YEAR = 3
 MAX_LOOKUP_CARDS = 3
@@ -141,6 +142,13 @@ def is_wiki_lookup_query(text: str) -> bool:
         return True
     if bool(WIKI_LOOKUP_RE.search(raw)):
         return True
+    try:
+        from pipeline.wiki_extract import is_extract_shaped_question
+
+        if is_extract_shaped_question(raw):
+            return True
+    except Exception:  # noqa: BLE001
+        pass
     # Clarification after Title DNS asked which page to open.
     if _LAST_DNS_AMBIGUOUS.get("candidates") and _DISAMBIG_FOLLOWUP_RE.search(raw):
         return True
@@ -301,7 +309,22 @@ def _clean_topic(value: str) -> str:
     topic = re.sub(r"\s+", " ", (value or "").strip(" .?!,\"'"))
     if not topic:
         return ""
+    keep_the = topic.casefold().startswith("the following")
     topic = re.split(r"\s+(?:and|or|using|from|with|that|who|which)\s+", topic, maxsplit=1)[0]
+    if not keep_the and topic.casefold().startswith("the "):
+        topic = topic[4:].strip()
+    if keep_the and not topic.casefold().startswith("the "):
+        topic = "The " + topic
+    aliases = {
+        "python": "Python (programming language)",
+        "python programming language": "Python (programming language)",
+        "following": "The Following",
+        "the following": "The Following",
+        "nintendo switch": "Nintendo Switch",
+    }
+    mapped = aliases.get(topic.casefold())
+    if mapped:
+        return mapped
     return topic[:120].strip()
 
 
@@ -334,23 +357,43 @@ def extract_search_query(text: str) -> str:
     for pattern in (
         re.compile(r"\bwho\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
         re.compile(r"\bwhat\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
+        re.compile(
+            r"\b(?:from|on|for)\s+(.+?)\s+page\b",
+            re.I,
+        ),
+        re.compile(
+            r"\blisted\s+for\s+(?:the\s+)?(.+?)[\?.!]*$",
+            re.I,
+        ),
+        re.compile(
+            r"\b(?:for|about|on)\s+(?:the\s+)?(.+?\s+programming language)\b",
+            re.I,
+        ),
+        re.compile(
+            r"\b(?:field|table|rows?|list(?:\s+items?)?|specifications?|population|release\s+date)\b.{"
+            r"0,80}?\b(?:from|on|for|of)\s+(?:the\s+)?(.+?)(?:\s+page)?[\?.!]*$",
+            re.I,
+        ),
         re.compile(r"\bdiscography\s+(?:of|for)\s+(.+?)[\?.!]*$", re.I),
         re.compile(r"\balbums?\s+(?:by|from|of)\s+(.+?)[\?.!]*$", re.I),
         re.compile(
             r"\bwhat\s+(?:albums?|records?)\s+(?:did|has|have)\s+(.+?)\s+(?:release|make|record|done)[\?.!]*$",
             re.I,
         ),
-        re.compile(r"\b(?:tell me about|look up|search for?|find)\s+(.+?)[\?.!]*$", re.I),
+        re.compile(r"\b(?:tell me about|look up|search for?|find|pull|extract)\s+(.+?)[\?.!]*$", re.I),
         re.compile(r"\bpopulation\s+of\s+(.+?)(?:\s+and\b|[?.!]|$)", re.I),
         re.compile(r"\breception\s+of\s+(?:the\s+)?(.+?)(?:\s+to\b|\s+versus\b|[?.!]|$)", re.I),
         re.compile(r"\bplot\s+of\s+(?:the\s+)?(?:movie\s+)?(.+?)(?:\s+and\b|[?.!]|$)", re.I),
         re.compile(r"\b(?:playstation\s*2|ps2)\b", re.I),
+        re.compile(r"\bnintendo\s+switch\b", re.I),
+        re.compile(r"\bpython\s+\(programming language\)|\bpython programming language\b", re.I),
+        re.compile(r"\bthe following\b", re.I),
         re.compile(r"\b(?:cheddar\s+cheese|cheddar)\b", re.I),
         re.compile(r"\bmindhunter\b", re.I),
         re.compile(r"\bdune:\s*part\s*two\b|\bdune\s+part\s*2\b", re.I),
         re.compile(r"\biphone\s*14\b", re.I),
         re.compile(r"\bzxqwy\s+blorf\s+band\b", re.I),
-        re.compile(r"\blibby,?\s+montana\b", re.I),
+        re.compile(r"\blibby,?\s*montana\b", re.I),
     ):
         match = pattern.search(raw)
         if not match:
@@ -522,11 +565,43 @@ def _lookup_from_title_dns(
         return _lookup_miss_block(query, err=result.reason or "not in title registry"), None
     clear_dns_ambiguous()
     hit = result.hit
+    from pipeline.wiki_extract import (
+        format_extract_injection,
+        is_extract_shaped_question,
+        wiki_extract,
+    )
     from pipeline.wiki_read_lead import (
         prefer_section_for_question,
         wiki_read,
         wiki_read_lead_enabled,
     )
+
+    # Extract-shaped asks: structured Evidence JSON first (fail closed when empty).
+    if is_extract_shaped_question(user_question):
+        section = prefer_section_for_question(user_question)
+        extracted = wiki_extract(
+            hit.title,
+            year,
+            need_hint=user_question,
+            section=section,
+            user_question=user_question,
+        )
+        extracted["title"] = hit.title
+        extracted["snapshot"] = year
+        if extracted.get("state") != "ok":
+            try:
+                from pipeline.wiki_scratchpad import error_book_append
+
+                error_book_append(
+                    query=user_question or query,
+                    reason=str(extracted.get("refusal_reason") or extracted.get("state")),
+                    title=hit.title,
+                    year=year,
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return format_extract_injection(extracted, user_question=user_question), extracted
+        return format_extract_injection(extracted, user_question=user_question), extracted
 
     if not wiki_read_lead_enabled():
         return _lookup_miss_block(query, err="lead read disabled"), None
@@ -549,6 +624,19 @@ def _lookup_from_title_dns(
             pass
         return _lookup_miss_block(query, err=f"page listed but {err}"), None
     lead["user_question"] = user_question
+    # Attach a bounded extract summary when structure exists (no lead dump of tables).
+    try:
+        extracted = wiki_extract(
+            hit.title,
+            year,
+            need_hint=user_question,
+            section=section,
+            user_question=user_question,
+        )
+        if extracted.get("state") == "ok":
+            lead["extract"] = extracted
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("wiki extract attach failed for %r: %s", hit.title, exc)
     from pipeline.wiki_title_dns import neighbors as dns_neighbors
 
     related = dns_neighbors(
@@ -674,7 +762,22 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
     cast_section = str(evidence.get("cast_section") or evidence.get("section") or "").strip()
     if cast_section:
         section_name = str(evidence.get("section_name") or "Cast").strip() or "Cast"
-        lines.append(f"{section_name} section: {cast_section}")
+        # Prefer structured extract over raw wikitable markup in section dumps.
+        extract = evidence.get("extract")
+        if isinstance(extract, dict) and extract.get("state") == "ok":
+            from pipeline.wiki_extract import format_extract_prose
+
+            lines.append(f"{section_name} EXTRACT:\n{format_extract_prose(extract, max_chars=1200)}")
+        elif "{|" in cast_section:
+            lines.append(
+                f"{section_name} section: (raw wikitable omitted — use wiki_extract / structured EXTRACT)"
+            )
+        else:
+            lines.append(f"{section_name} section: {cast_section}")
+    elif isinstance(evidence.get("extract"), dict) and evidence["extract"].get("state") == "ok":
+        from pipeline.wiki_extract import format_extract_prose
+
+        lines.append("EXTRACT:\n" + format_extract_prose(evidence["extract"], max_chars=1200))
     if related_text:
         lines.append(f"Related titles (page links): {related_text}")
     hop_leads = evidence.get("hop_leads")
@@ -694,9 +797,10 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
     escalate = _escalation_hint(user_question)
     lines.extend([
         "",
-        "CONTRACT: Answer only from EVIDENCE above (and scratchpad notes if present).",
+        "CONTRACT: Answer only from EVIDENCE / EXTRACT above (and scratchpad notes if present).",
         "If the user asked for a song/person not named in EVIDENCE, say it is not in this archive.",
         "Never use training-memory song titles (e.g. do not answer \"Wow\" for Kate Bush revival questions).",
+        "Do NOT invent numbers, dates, or table cells that are absent from EXTRACT.",
         "Do NOT call wiki_scout_search or wiki_scout_compare_years — evidence is already complete.",
         "Do NOT invent archive years or claim a missing page exists elsewhere.",
     ])
@@ -899,7 +1003,7 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
     message = payload.get("message")
     if not isinstance(message, str) or not message.strip():
         return payload
-    if WIKI_DRIFT_MARKER in message or WIKI_LOOKUP_MARKER in message:
+    if WIKI_DRIFT_MARKER in message or WIKI_LOOKUP_MARKER in message or WIKI_EXTRACT_MARKER in message:
         return payload
 
     try:
@@ -977,7 +1081,13 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
             if isinstance(val, str) and val.strip():
                 session_id = val.strip()
                 break
-        reason = "truth_drift_injected" if WIKI_DRIFT_MARKER in block else "lookup_injected"
+        reason = (
+            "truth_drift_injected"
+            if WIKI_DRIFT_MARKER in block
+            else "extract_injected"
+            if WIKI_EXTRACT_MARKER in block
+            else "lookup_injected"
+        )
         set_wiki_lookup_lock(reason=reason, session_id=session_id)
     except Exception:  # noqa: BLE001 — lock must never break chat
         pass

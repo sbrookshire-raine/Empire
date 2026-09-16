@@ -1352,9 +1352,9 @@
       isMemoryQuery: function (text) {
         var cleaned = plainText(text || "").trim();
         if (!cleaned) return false;
-        // Truth Drift / wiki must go to Eve tools — never Cognee memory answer.
+        // Truth Drift / wiki / structured extract must go to Eve — never Cognee memory answer.
         if (
-          /\b(?:truth\s*drift|wikipedia|wiki(?:\s*local)?|encyclopedia|weaviate|compare\s+years?|across\s+years?|2017|2021|2026)\b/i.test(
+          /\b(?:truth\s*drift|wikipedia|wiki(?:\s*local)?|encyclopedia|weaviate|compare\s+years?|across\s+years?|2017|2021|2026|extract\b|specifications?|wikitable|infobox)\b/i.test(
             cleaned
           )
         ) {

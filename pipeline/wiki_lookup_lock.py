@@ -1,6 +1,6 @@
 """Cross-process lock: Title DNS evidence was already injected this turn.
 
-When Workbench injects [[EMPIRE_WIKI_LOOKUP]], Eve must not register or call
+When Workbench injects [[EMPIRE_WIKI_LOOKUP]] or [[EMPIRE_WIKI_EXTRACT]], Eve must not register or call
 wiki_scout_search / Weaviate. Prompt text alone is soft; this file is the hard gate.
 """
 

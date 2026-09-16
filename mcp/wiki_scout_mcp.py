@@ -107,6 +107,65 @@ async def remember_wiki_lead(
 
 
 @mcp.tool()
+async def wiki_resolve(
+    subject: str,
+    year: str = "2026",
+    question: str = "",
+) -> str:
+    """Exact Title DNS resolve (phone book). Does not read Cognee or Weaviate."""
+    from pipeline.wiki_extract import wiki_resolve as _resolve
+
+    return _json(_resolve(subject, year.strip() or "2026", user_question=question))
+
+
+@mcp.tool()
+async def wiki_extract(
+    subject: str,
+    year: str = "2026",
+    need_hint: str = "",
+    section: str = "",
+    question: str = "",
+) -> str:
+    """Locate a local wiki page and return structured Evidence JSON (fields/tables/lists).
+
+    Deterministic parse only. Empty extract fails closed — does not invent. Does NOT write Cognee.
+    """
+    from pipeline.wiki_extract import wiki_extract as _extract
+
+    return _json(
+        _extract(
+            subject,
+            year.strip() or "2026",
+            need_hint=need_hint or question,
+            section=section.strip(),
+            user_question=question,
+        )
+    )
+
+
+@mcp.tool()
+async def wiki_remember(
+    subject: str,
+    year: str = "2026",
+    dataset: str = "eve_memory",
+    need_hint: str = "",
+    extract_id: str = "",
+) -> str:
+    """Remember a successful structured wiki extract into Cognee. Never automatic. Rejects non-ok extracts."""
+    from pipeline.wiki_extract import remember_wiki_extract
+
+    return _json(
+        remember_wiki_extract(
+            subject,
+            year.strip() or "2026",
+            dataset=(dataset.strip() or "eve_memory"),
+            need_hint=need_hint,
+            extract_id=extract_id.strip(),
+        )
+    )
+
+
+@mcp.tool()
 async def wiki_read_section(
     title: str,
     year: str = "2026",
