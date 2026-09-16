@@ -149,7 +149,7 @@ Engineering work not yet (or only partially) shipped.
 | F-36 | GLiNER CPU entity grounding gate | `done` | `pipeline/wiki_entity_guard.py` | Opt-in: `pip install gliner` + `EMPIRE_GLINER_GROUNDING=1` |
 | F-37 | Piper TTS path (vs Speaches) | `parked` | Gap analysis §2 | Speaches already forged (F-10/T-08); compare only if voice quality insufficient |
 | F-38 | Ollama JSON-schema article selection | `ready` | Gap analysis §4; structured outputs | Wire `format` for title pick before prose — no second generator |
-| F-39 | Wiki glasses forward (filter → tables → sparse remember) | `ready` | [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) | EXTRACT shipped `8a03097`; DuckDB/ZIM stay parked |
+| F-39 | Wiki glasses forward (filter → tables → sparse remember) | `done` | [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) | Battery + filter + multicol + remember pilot 2026-09-15; DuckDB/ZIM stay parked |
 
 ---
 
