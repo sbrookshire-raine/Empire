@@ -84,6 +84,7 @@ These were shipped or partially forged and need **your** hands-on verification.
 | T-23 | **Playwright wiki Eve UI smoke** | `ready` | Stack up + Weaviate. `$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\test-wiki-eve-playwright.py` (add `--headful` to watch). | Mechanic PASS 2026-09-10 (~48s); may timeout if Eve busy |
 | T-24 | **Embedding stack audit** | `ready` | `.\scripts\audit-embedding-stack.ps1` — confirm **nomic-embed-text** for Weaviate + Cognee; Weaviate reachable optional. | Gap analysis item 7 — audit only, no re-embed |
 | T-25 | **Offline survival mirror** | `ready` | While online: `.\scripts\build-offline-mirror.ps1 -PullOllama -Wheelhouse`. Review `D:\empire\MANIFEST.md`. Pull `qwen2.5-coder:7b` if missing. | **Time-sensitive** — gap analysis #1 |
+| T-26 | **Wiki glasses (EXTRACT)** | `done` | New chat + Wiki Local ON. Ask Switch specs / Python paradigm / miss `Zxqwy Blorf Band`. Expect EXTRACT table or refuse — no invent. | Shipped `8a03097`; forward plan [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) |
 
 ---
 
@@ -148,6 +149,7 @@ Engineering work not yet (or only partially) shipped.
 | F-36 | GLiNER CPU entity grounding gate | `done` | `pipeline/wiki_entity_guard.py` | Opt-in: `pip install gliner` + `EMPIRE_GLINER_GROUNDING=1` |
 | F-37 | Piper TTS path (vs Speaches) | `parked` | Gap analysis §2 | Speaches already forged (F-10/T-08); compare only if voice quality insufficient |
 | F-38 | Ollama JSON-schema article selection | `ready` | Gap analysis §4; structured outputs | Wire `format` for title pick before prose — no second generator |
+| F-39 | Wiki glasses forward (filter → tables → sparse remember) | `ready` | [`docs/superpowers/plans/2026-09-15-wiki-glasses-forward.md`](superpowers/plans/2026-09-15-wiki-glasses-forward.md) | EXTRACT shipped `8a03097`; DuckDB/ZIM stay parked |
 
 ---
 
