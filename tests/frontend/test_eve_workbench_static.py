@@ -19,7 +19,6 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "Eve",
             "mode-picker",
             "toolbelt",
-            "toolbeltOpen",
             "PocketBase tasks",
             "Memory &amp; indexing",
             "Add task",
@@ -30,6 +29,7 @@ class EveWorkbenchStaticTests(unittest.TestCase):
             "workbench-tabs",
         ):
             self.assertIn(text, self.html)
+        self.assertIn("toolbeltOpen", self.js)
         for token in (
             "chatLineStatus",
             "compactChatStatus",

@@ -424,12 +424,12 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 run_ps_script(ROOT / "scripts" / "refresh-dashboard.ps1", timeout=60)
             if snapshot_path.exists() and snapshot_path.stat().st_size > 0:
                 try:
-                    payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                    payload = json.loads(snapshot_path.read_text(encoding="utf-8-sig"))
                     return self._send_json(200, payload)
                 except json.JSONDecodeError:
                     run_ps_script(ROOT / "scripts" / "refresh-dashboard.ps1", timeout=60)
                     try:
-                        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                        payload = json.loads(snapshot_path.read_text(encoding="utf-8-sig"))
                         return self._send_json(200, payload)
                     except json.JSONDecodeError:
                         pass

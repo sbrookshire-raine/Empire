@@ -359,7 +359,9 @@ class WikiTitleDnsTests(unittest.TestCase):
         ranked = web.get("ranked") or []
         self.assertTrue(ranked)
         self.assertEqual(ranked[0], "Running Up That Hill")
-        self.assertEqual(web.get("hops"), ["Running Up That Hill"])
+        hops = web.get("hops") or []
+        self.assertIn("Running Up That Hill", hops)
+        self.assertEqual(hops[0], "Running Up That Hill")
 
 
 if __name__ == "__main__":

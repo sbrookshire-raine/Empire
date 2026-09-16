@@ -1850,18 +1850,24 @@ textarea[data-state="success"] {
 }
 
 .chat-dock {
-  --tool-dock-bg: #040814;
-  --tool-dock-panel: #0a1020;
-  --tool-dock-ink: #e0f2fe;
-  --tool-dock-muted: rgba(0, 191, 255, 0.55);
-  --tool-dock-border: rgba(0, 191, 255, 0.28);
-  --tool-dock-accent: #00e5ff;
+  --tool-dock-bg: oklch(0.14 0.03 255);
+  --tool-dock-panel: oklch(0.18 0.03 255);
+  --tool-dock-ink: oklch(0.93 0.03 230);
+  --tool-dock-muted: color-mix(in oklch, var(--color-neon-cyan) 55%, transparent);
+  --tool-dock-border: color-mix(in oklch, var(--color-neon-cyan) 28%, transparent);
+  --tool-dock-accent: var(--color-neon-cyan);
+  --tool-dock-accent-soft: color-mix(in oklch, var(--color-neon-cyan) 12%, transparent);
+  --tool-dock-accent-mid: color-mix(in oklch, var(--color-neon-cyan) 35%, transparent);
+  --tool-dock-accent-strong: color-mix(in oklch, var(--color-neon-cyan) 45%, transparent);
+  --tool-dock-panel-soft: color-mix(in oklch, var(--tool-dock-bg) 88%, transparent);
+  --tool-dock-glow: color-mix(in oklch, var(--color-neon-cyan) 18%, transparent);
+  --tool-dock-summary: var(--color-neon-green);
   display: flex;
   flex-direction: column;
   gap: 0;
   min-width: 0;
   min-height: 0;
-  border-left: 1px solid rgba(0, 229, 255, 0.35);
+  border-left: 1px solid var(--tool-dock-accent-mid);
   background: var(--tool-dock-bg);
   overflow: hidden;
 }
@@ -1874,7 +1880,7 @@ textarea[data-state="success"] {
   flex: 0 0 auto;
   padding: var(--space-2xs) var(--space-xs) 0.15rem;
   background: var(--tool-dock-bg);
-  border-bottom: 1px solid rgba(0, 191, 255, 0.18);
+  border-bottom: 1px solid var(--tool-dock-border);
 }
 
 .chat-dock__tabs {
@@ -1898,8 +1904,8 @@ textarea[data-state="success"] {
 
 .chat-dock__tab[aria-selected="true"] {
   color: var(--tool-dock-accent);
-  border-color: rgba(0, 229, 255, 0.45);
-  background: rgba(0, 191, 255, 0.12);
+  border-color: var(--tool-dock-accent-strong);
+  background: var(--tool-dock-accent-soft);
 }
 
 .chat-dock__panel {
@@ -1943,18 +1949,18 @@ textarea[data-state="success"] {
 }
 
 .chat-dock .toolbelt__summary {
-  color: #00fa9a;
+  color: var(--tool-dock-summary);
 }
 
 .chat-dock .toolbelt__item {
-  background: rgba(4, 8, 20, 0.88);
-  border-color: rgba(0, 191, 255, 0.22);
+  background: var(--tool-dock-panel-soft);
+  border-color: var(--tool-dock-border);
 }
 
 .chat-dock .toolbelt__item:has(input:checked) {
-  border-color: rgba(0, 229, 255, 0.55);
-  background: rgba(0, 191, 255, 0.1);
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.18);
+  border-color: var(--tool-dock-accent-strong);
+  background: var(--tool-dock-accent-soft);
+  box-shadow: 0 0 10px var(--tool-dock-glow);
 }
 
 .chat-dock .toolbelt__item-text strong {
@@ -1966,8 +1972,8 @@ textarea[data-state="success"] {
 }
 
 .chat-dock .chat__icon-btn {
-  background: rgba(4, 8, 20, 0.85);
-  border-color: rgba(0, 191, 255, 0.28);
+  background: var(--tool-dock-panel-soft);
+  border-color: var(--tool-dock-border);
   color: var(--tool-dock-accent);
 }
 

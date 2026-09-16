@@ -75,7 +75,25 @@ async def _dispatch(args: argparse.Namespace) -> int:
 
     if args.command == "recall":
         dataset = args.dataset or None
-        results = await recall(args.query, dataset=dataset)
+        try:
+            results = await recall(args.query, dataset=dataset)
+        except Exception as exc:  # noqa: BLE001 — missing dataset = empty, not crash
+            name = type(exc).__name__
+            msg = str(exc)
+            if "DatasetNotFound" in name or "No datasets found" in msg or "404" in msg:
+                print(
+                    json.dumps(
+                        {
+                            "query": args.query,
+                            "dataset": dataset,
+                            "results": [],
+                            "warning": "dataset_not_found",
+                        },
+                        default=str,
+                    )
+                )
+                return 0
+            raise
         print(json.dumps({"query": args.query, "dataset": dataset, "results": results}, default=str))
         return 0
 

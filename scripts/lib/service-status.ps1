@@ -139,17 +139,19 @@ function Write-EmpireDashboardSnapshot {
     }
 
     $runtimePath = Get-EmpireDashboardStatusPath
-    $snapshot | ConvertTo-Json -Depth 8 | Set-Content -Path $runtimePath -Encoding UTF8
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    $json = $snapshot | ConvertTo-Json -Depth 8
+    [System.IO.File]::WriteAllText($runtimePath, $json, $utf8NoBom)
 
     $frontendCopy = Join-Path (Get-EmpireRoot) "frontend\dashboard-status.json"
-    $snapshot | ConvertTo-Json -Depth 8 | Set-Content -Path $frontendCopy -Encoding UTF8
+    [System.IO.File]::WriteAllText($frontendCopy, $json, $utf8NoBom)
 
     $pbCopyDir = Join-Path (Get-EmpireRoot) "backend\pocketbase\pb_public\dashboard"
     if (-not (Test-Path $pbCopyDir)) {
         New-Item -ItemType Directory -Force -Path $pbCopyDir | Out-Null
     }
     $pbCopy = Join-Path $pbCopyDir "status.json"
-    $snapshot | ConvertTo-Json -Depth 8 | Set-Content -Path $pbCopy -Encoding UTF8
+    [System.IO.File]::WriteAllText($pbCopy, $json, $utf8NoBom)
 
     return $snapshot
 }

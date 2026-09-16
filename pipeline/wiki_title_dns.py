@@ -361,6 +361,51 @@ def subject_variants(subject: str) -> list[str]:
     return forms
 
 
+def _prefer_primary_title(
+    hits: list[DnsHit],
+    query: str,
+    user_question: str,
+) -> DnsHit | None:
+    """Collapse show-vs-film forks when the question clearly names one branch."""
+    if len(hits) < 2:
+        return hits[0] if hits else None
+    ql = (user_question or "").casefold()
+    qn = normalize_text(query)
+    series_cues = (
+        "song",
+        "songs",
+        "series",
+        "episode",
+        "cast",
+        "season",
+        "netflix",
+        "tv",
+        "television",
+        "show",
+    )
+    film_cues = ("film", "movie", "cinema", "theatrical")
+    series_ask = any(token in ql for token in series_cues)
+    film_ask = any(token in ql for token in film_cues)
+    if film_ask and not series_ask:
+        films = [
+            h
+            for h in hits
+            if "(film)" in h.title.casefold() or re.search(r"\bfilm\b", h.title, re.I)
+        ]
+        if len(films) == 1:
+            return films[0]
+        return None
+    # Default / series-flavored asks: prefer the bare encyclopedia title over "(film)".
+    bare = [h for h in hits if normalize_text(h.title) == qn]
+    if len(bare) == 1:
+        return bare[0]
+    if series_ask:
+        non_film = [h for h in hits if "(film)" not in h.title.casefold()]
+        if len(non_film) == 1:
+            return non_film[0]
+    return None
+
+
 def resolve(
     subject: str,
     year: str = "2026",
@@ -529,6 +574,15 @@ def resolve(
             else:
                 return DnsResult(status="hit", query=query, year=y, hit=only, reason="alias")
         if len(hits) > 1:
+            preferred = _prefer_primary_title(hits, query, user_question)
+            if preferred is not None:
+                return DnsResult(
+                    status="hit",
+                    query=query,
+                    year=y,
+                    hit=preferred,
+                    reason="preferred_primary_title",
+                )
             return DnsResult(
                 status="ambiguous",
                 query=query,
@@ -551,6 +605,15 @@ def resolve(
         if len(branch) == 1:
             return DnsResult(status="hit", query=query, year=y, hit=branch[0], reason="disambiguation")
         if len(branch) > 1:
+            preferred = _prefer_primary_title(branch, query, user_question)
+            if preferred is not None:
+                return DnsResult(
+                    status="hit",
+                    query=query,
+                    year=y,
+                    hit=preferred,
+                    reason="preferred_primary_title",
+                )
             return DnsResult(
                 status="ambiguous",
                 query=query,

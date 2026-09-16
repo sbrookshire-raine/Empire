@@ -249,7 +249,9 @@ class EveRequestTests(unittest.TestCase):
                 connection = FakeConnection(response)
                 with patch.object(eve_proxy, "HTTPConnection", return_value=connection) as constructor:
                     result = eve_request(method, path, {"message": "hello"} if method == "POST" else None)
-                constructor.assert_called_once_with("127.0.0.1", 2000, timeout=15)
+                constructor.assert_called_once_with(
+                    "127.0.0.1", 2000, timeout=eve_proxy.EVE_TIMEOUT_SECONDS
+                )
                 self.assertEqual(connection.requests[0][0:2], (method, path))
                 self.assertNotIn("Host", connection.requests[0][3])
                 result.close()

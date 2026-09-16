@@ -259,6 +259,27 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
             return True, "SKIP: Cognee worker check disabled"
         if not python_bin.exists():
             return False, f"Python venv missing: {python_bin}"
+        # Seed then recall so a cold Cognee archive still verifies the worker path.
+        seed = subprocess.run(
+            [
+                str(python_bin),
+                "-m",
+                "pipeline.cognee_worker",
+                "remember",
+                "--content",
+                "EMPIRE integration probe marker for verify-stack.",
+                "--dataset",
+                "mock",
+            ],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env={**os.environ, "PYTHONPATH": str(ROOT)},
+        )
+        if seed.returncode != 0:
+            stderr = (seed.stderr or seed.stdout or "").strip()[:240]
+            return False, stderr or f"remember exit {seed.returncode}"
         result = subprocess.run(
             [
                 str(python_bin),
@@ -298,6 +319,13 @@ def build_checks(env: dict[str, str], args: argparse.Namespace) -> list[tuple[st
         if args.skip_cognee:
             return True, "SKIP: Cognee checks disabled", None
         mod = load_mcp_module("mcp/cognee_mcp.py")
+        # Ensure the probe dataset exists, then recall (handles empty archives).
+        stored = await mod.cognee_remember(
+            "EMPIRE integration probe marker for verify-stack.",
+            dataset="mock",
+        )
+        if not stored:
+            return False, "Cognee remember returned empty response"
         recall = await mod.cognee_recall("integration probe", dataset="mock")
         if not recall or len(recall) < 20:
             return False, "Cognee recall returned empty/weak response"
@@ -469,8 +497,9 @@ def print_report(report: VerifyReport) -> None:
             flag = "[ OK ]"
         else:
             flag = "[FAIL]"
+        detail = str(check.detail or "").encode("ascii", "replace").decode("ascii")
         print(f"{flag} {check.label}")
-        print(f"       {check.detail} ({check.duration_ms} ms)")
+        print(f"       {detail} ({check.duration_ms} ms)")
     print("")
     print(
         f"Summary: {report.passed} passed, {report.failed} failed, {report.skipped} skipped"
