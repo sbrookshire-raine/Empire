@@ -42,3 +42,22 @@ Examples:
 ## Gate for later phases
 
 Proceed to Evidence JSON + fail-closed injection. DuckDB/ZIM remain gated per plan.
+
+## Sparse remember / recall (pilot)
+
+Only **ok** extracts. Never bulk pages.
+
+```powershell
+$env:PYTHONPATH='C:\EMPIRE'
+.\venv\Scripts\python.exe -m pipeline.wiki_extract remember "Nintendo Switch" --need "technical specifications"
+```
+
+Writes `C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\extract_2026_*.md` and promotes into Cognee dataset `eve_memory` (allowlisted). Eve tool: `wiki_remember` when the Architect asks to remember/save.
+
+## Regression
+
+```powershell
+.\scripts\wiki-extract-battery.ps1        # CLI ~11 cases
+.\scripts\wiki-extract-battery.ps1 -Live  # + Eve sessions (stack up)
+```
+

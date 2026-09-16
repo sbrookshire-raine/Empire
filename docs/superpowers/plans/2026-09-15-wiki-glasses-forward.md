@@ -45,10 +45,10 @@
 - Create: `scripts/wiki-extract-battery.ps1`
 - Move/adapt: `tmp/wiki_extract_battery.py` + `tmp/wiki_extract_battery_live.py` → `scripts/wiki_extract_battery.py` (CLI + optional `-Live`)
 
-- [ ] Copy the working battery scripts into `scripts/` with a thin `wiki-extract-battery.ps1` wrapper that uses `venv\Scripts\python.exe`.
-- [ ] Default = CLI only (~5s). `-Live` runs the 8 Eve sessions (slower, needs stack up).
-- [ ] Run CLI mode; confirm **11/11** (or update counts in the script docstring).
-- [ ] Commit: `Add wiki extract regression battery script.`
+- [x] Copy the working battery scripts into `scripts/` with a thin `wiki-extract-battery.ps1` wrapper that uses `venv\Scripts\python.exe`.
+- [x] Default = CLI only (~5s). `-Live` runs the 8 Eve sessions (slower, needs stack up).
+- [x] Run CLI mode; confirm **11/11** (or update counts in the script docstring).
+- [x] Commit: `Add wiki extract regression battery script.`
 
 **Done when:** From repo root, `.\scripts\wiki-extract-battery.ps1` prints a pass count without opening Cursor plans.
 
@@ -62,13 +62,13 @@
 - Modify: `pipeline/wiki_extract.py` (`_filter_by_need`)
 - Modify: `tests/pipeline/test_wiki_extract.py`
 
-- [ ] Add a failing test: question containing `paradigm field` / `infobox fields` on a fixture with both fields + an extra table → result has fields, **zero** tables (or only tables whose caption/headers match the need tokens).
-- [ ] Implement filter: if need looks field-scoped (`field`, `infobox`, `paradigm`, `developer`, `os`) and not `table`/`specs`/`ratings`, drop tables unless a table caption clearly matches.
-- [ ] Run `.\venv\Scripts\python.exe -m pytest tests/pipeline/test_wiki_extract.py -q`.
-- [ ] Re-run CLI battery; live spot-check:  
+- [x] Add a failing test: question containing `paradigm field` / `infobox fields` on a fixture with both fields + an extra table → result has fields, **zero** tables (or only tables whose caption/headers match the need tokens).
+- [x] Implement filter: if need looks field-scoped (`field`, `infobox`, `paradigm`, `developer`, `os`) and not `table`/`specs`/`ratings`, drop tables unless a table caption clearly matches.
+- [x] Run `.\venv\Scripts\python.exe -m pytest tests/pipeline/test_wiki_extract.py -q`.
+- [x] Re-run CLI battery; live spot-check:  
   `What paradigm field is listed for the Python programming language?`  
   Expect paradigm line **without** the built-in types table.
-- [ ] Commit: `Tighten wiki extract need filter for field-only asks.`
+- [x] Commit: `Tighten wiki extract need filter for field-only asks.`
 
 **Done when:** Live Eve G2-style ask is short and field-focused.
 
@@ -82,11 +82,11 @@
 - Modify: `pipeline/wiki_extract.py` (`_parse_wikitable_block` / Evidence table render)
 - Modify: `tests/pipeline/test_wiki_extract.py`
 
-- [ ] Add fixture snippet from Following-style header row + 1–2 data rows.
-- [ ] Failing test: rendered Markdown keeps multiple columns (not one Property/Value mash of all headers).
-- [ ] Fix parser/render for multi-column `{|` tables when first row is headers.
-- [ ] CLI + one live ask: `Pull the U.S. television ratings table rows from The Following page.`
-- [ ] Commit: `Preserve multi-column layout in wiki extract tables.`
+- [x] Add fixture snippet from Following-style header row + 1–2 data rows.
+- [x] Failing test: rendered Markdown keeps multiple columns (not one Property/Value mash of all headers).
+- [x] Fix parser/render for multi-column `{|` tables when first row is headers.
+- [x] CLI + one live ask: `Pull the U.S. television ratings table rows from The Following page.`
+- [x] Commit: `Preserve multi-column layout in wiki extract tables.`
 
 **Done when:** Ratings table is readable as a real grid in Eve.
 
@@ -100,11 +100,11 @@
 - Touch: `agents/.../wiki_remember.ts`, `pipeline/wiki_extract.py` `remember_wiki_extract`
 - Optional dataset: Cognee `wiki_extracts` or reuse `eve_memory` with clear tags
 
-- [ ] Allowlist pilot titles: `Nintendo Switch`, `Python (programming language)`, `The Following`.
-- [ ] Manual: run extract → `wiki_remember` (or Workbench phrasing “remember this extract”) only when state=`ok`.
-- [ ] Verify Cognee recall returns the extract packet (or a clear pointer), not a prose hallucination.
-- [ ] Document 5-line “how to remember / recall” in `docs/WIKI_EXTRACT_FIDELITY.md`.
-- [ ] Commit: `Pilot sparse Cognee remember for ok wiki extracts.`
+- [x] Allowlist pilot titles: `Nintendo Switch`, `Python (programming language)`, `The Following`.
+- [x] Manual: run extract → `wiki_remember` (or Workbench phrasing “remember this extract”) only when state=`ok`.
+- [x] Verify Cognee recall returns the extract packet (or a clear pointer), not a prose hallucination.
+- [x] Document 5-line “how to remember / recall” in `docs/WIKI_EXTRACT_FIDELITY.md`.
+- [x] Commit: `Pilot sparse Cognee remember for ok wiki extracts.`
 
 **Done when:** You can remember Switch specs once, then recall them in a later chat without re-opening the page (or with a clear extract_id hit).
 

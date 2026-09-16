@@ -96,94 +96,165 @@ def _strip_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     return (meta if isinstance(meta, dict) else {}), body
 
 
+def _cell_parts(line: str, *, bang: bool) -> list[tuple[str, str]]:
+    """Split a ! or | table line into (raw_segment, cleaned_text) cells."""
+    stripped = line.strip()
+    if bang:
+        body = stripped.lstrip("!").strip()
+        parts = re.split(r"\s*!!\s*", body)
+    else:
+        body = stripped[1:] if stripped.startswith("|") else stripped
+        parts = body.split("||") if "||" in body else [body]
+    out: list[tuple[str, str]] = []
+    for part in parts:
+        raw = part
+        cell = part
+        if "|" in cell and not cell.strip().startswith("[["):
+            left, right = cell.split("|", 1)
+            if re.search(r"\b(?:style|class|rowspan|colspan|align|scope|width|height|bgcolor)\b", left, re.I):
+                cell = right
+        out.append((raw, _clean_cell(cell)))
+    return out
+
+
 def _parse_wikitable_block(block: str) -> dict[str, Any] | None:
-    """Parse one {| … |} body into caption/headers/rows (and label/value pairs when present)."""
+    """Parse one {| … |} body into caption/headers/rows.
+
+    Columnar tables (scope=col / multi-column ratings) keep real headers.
+    Nested tech KV tables (scope=row / rowgroup) become Property/Value.
+    """
     caption = ""
-    headers: list[str] = []
-    rows: list[list[str]] = []
+    col_headers: list[str] = []
+    matrix_rows: list[list[str]] = []
     kv_rows: list[list[str]] = []
     warnings: list[str] = []
-    row_labels: list[str] = []
-    row_values: list[str] = []
+    current: list[str] = []
+    mode = "headers"  # headers | data
+    saw_col_scope = False
+    saw_row_scope = False
 
-    def flush_kv_row() -> None:
-        nonlocal row_labels, row_values
-        labels = [_clean_cell(x) for x in row_labels if _clean_cell(x)]
-        values = [_clean_cell(x) for x in row_values]
-        row_labels = []
-        row_values = []
-        if not labels and not any(values):
+    def flush_row() -> None:
+        nonlocal current
+        cells = [c for c in current]
+        current = []
+        if not any(str(c).strip() for c in cells):
             return
-        label = " / ".join(labels) if labels else ""
-        value = " | ".join(v for v in values if v)
-        if label or value:
-            kv_rows.append([label, value])
-            rows.append([label, value] if label else values)
+        matrix_rows.append(cells)
+        if len(cells) == 2:
+            kv_rows.append([cells[0], cells[1]])
+        elif len(cells) >= 3:
+            # First cell often a row label in tech tables; keep matrix as-is.
+            pass
+        elif len(cells) == 1 and cells[0]:
+            kv_rows.append([cells[0], ""])
 
-    lines = block.splitlines()
-    i = 0
-    collecting_col_headers = True
-    while i < len(lines):
-        line = lines[i].rstrip()
-        stripped = line.strip()
-        i += 1
+    for raw_line in block.splitlines():
+        stripped = raw_line.strip()
         if not stripped:
             continue
         if stripped.startswith("|+"):
             caption = _clean_cell(stripped[2:])
             continue
         if stripped == "|-" or stripped.startswith("|-"):
-            if collecting_col_headers and headers:
-                collecting_col_headers = False
-            flush_kv_row()
+            flush_row()
+            if col_headers:
+                mode = "data"
             continue
         if stripped.startswith("!"):
-            parts = re.split(r"\s*!!\s*", stripped.lstrip("!"))
-            for part in parts:
-                raw = part
-                cell = part
-                if "|" in cell and not cell.strip().startswith("[["):
-                    cell = cell.split("|", 1)[-1]
-                cleaned = _clean_cell(cell)
-                if "rowspan" in raw.casefold() or "colspan" in raw.casefold():
+            for raw, cleaned in _cell_parts(stripped, bang=True):
+                low = raw.casefold()
+                if "rowspan" in low or "colspan" in low:
                     warnings.append("rowspan_or_colspan_present")
-                # Column headers only before first data row when no scope=row
-                if collecting_col_headers and "scope" not in raw.casefold() and cleaned:
-                    headers.append(cleaned)
-                elif cleaned:
-                    collecting_col_headers = False
-                    row_labels.append(cleaned)
+                is_row = "scope=\"row" in low or "scope=row" in low or "scope=\"rowgroup" in low
+                is_col = "scope=\"col" in low or "scope=col" in low
+                if is_row:
+                    saw_row_scope = True
+                if is_col:
+                    saw_col_scope = True
+                if not cleaned:
+                    continue
+                # Column headers: scope=col, or bang cells before any data when not row-scoped.
+                if is_col or (mode == "headers" and not is_row and not saw_row_scope):
+                    col_headers.append(cleaned)
+                    continue
+                mode = "data"
+                current.append(cleaned)
             continue
         if stripped.startswith("|"):
-            collecting_col_headers = False
-            body = stripped[1:]
-            parts = body.split("||") if "||" in body else [body]
-            for part in parts:
-                cell = part
-                if "|" in cell:
-                    left, right = cell.split("|", 1)
-                    if re.search(r"\b(?:style|class|rowspan|colspan|align|scope)\b", left, re.I):
-                        cell = right
-                        if "rowspan" in left.casefold() or "colspan" in left.casefold():
-                            warnings.append("rowspan_or_colspan_present")
-                cleaned = _clean_cell(cell)
-                row_values.append(cleaned)
+            mode = "data"
+            for raw, cleaned in _cell_parts(stripped, bang=False):
+                low = raw.casefold()
+                if "rowspan" in low or "colspan" in low:
+                    warnings.append("rowspan_or_colspan_present")
+                current.append(cleaned)
             continue
-    flush_kv_row()
+    flush_row()
 
-    usable_rows = [r for r in rows if any(str(c).strip() for c in r)]
-    # Prefer label/value presentation for technical tables
-    if kv_rows and any(r[0] and r[1] for r in kv_rows):
-        headers = ["Property", "Value"]
-        usable_rows = [r for r in kv_rows if r[0] or r[1]][:40]
-    if not usable_rows and not headers:
-        return None
-    return {
-        "caption": caption,
-        "headers": headers,
-        "rows": usable_rows[:40],
-        "warnings": sorted(set(warnings)),
-    }
+    max_width = max((len(r) for r in matrix_rows), default=0)
+    # Row-scoped tech tables (Switch specs) stay Property/Value even if some rows are wide.
+    if saw_row_scope and not saw_col_scope:
+        columnar = False
+    else:
+        columnar = (
+            saw_col_scope
+            or len(col_headers) >= 3
+            or max_width >= 4
+            or (len(col_headers) >= 2 and not saw_row_scope)
+        )
+    if columnar and (matrix_rows or col_headers):
+        headers = col_headers[:]
+        if not headers and max_width:
+            headers = [f"Col {i + 1}" for i in range(max_width)]
+        width = len(headers) if headers else max_width
+        usable_rows: list[list[str]] = []
+        for row in matrix_rows:
+            # Skip header-echo rows that only repeat header labels
+            if headers and [c.casefold() for c in row[: len(headers)]] == [h.casefold() for h in headers]:
+                continue
+            padded = list(row[:width]) + [""] * max(0, width - len(row))
+            if any(str(c).strip() for c in padded):
+                usable_rows.append(padded)
+        usable_rows = usable_rows[:40]
+        if not usable_rows and not headers:
+            return None
+        return {
+            "caption": caption,
+            "headers": headers,
+            "rows": usable_rows,
+            "warnings": sorted(set(warnings)),
+        }
+
+    # Tech / infobox-style KV presentation — fold multi-label rows into Property/Value.
+    usable_kv: list[list[str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in matrix_rows:
+        if not any(str(c).strip() for c in row):
+            continue
+        if len(row) == 1:
+            pair = (row[0], "")
+        elif len(row) == 2:
+            pair = (row[0], row[1])
+        else:
+            pair = (" / ".join(x for x in row[:-1] if x), row[-1])
+        if pair in seen:
+            continue
+        seen.add(pair)
+        usable_kv.append([pair[0], pair[1]])
+    if usable_kv:
+        return {
+            "caption": caption,
+            "headers": ["Property", "Value"],
+            "rows": usable_kv[:40],
+            "warnings": sorted(set(warnings)),
+        }
+    if col_headers:
+        return {
+            "caption": caption,
+            "headers": col_headers,
+            "rows": [],
+            "warnings": sorted(set(warnings)),
+        }
+    return None
 
 
 def extract_wikitables(body: str) -> list[dict[str, Any]]:
@@ -329,49 +400,76 @@ def _filter_by_need(
         cf = text.casefold()
         return sum(1 for t in tokens if t in cf)
 
+    table_scoped = any(
+        t in hint
+        for t in ("table", "spec", "specs", "rating", "ratings", "rows", "wikitable")
+    )
+    # Word-boundary list cues — do not match "listed" inside field asks.
+    list_scoped = (
+        bool(
+            re.search(
+                r"\b(?:lists?|see also|bullets?|items under|section on)\b",
+                hint,
+            )
+        )
+        and not table_scoped
+    )
+    field_scoped = (
+        bool(re.search(r"\b(?:fields?|paradigm|infobox)\b", hint))
+        and not table_scoped
+        and not list_scoped
+    )
+    # "infobox fields" / "paradigm field" are field-only; bare "infobox" without table still fields.
+    if re.search(r"\binfobox\b", hint) and "table" not in hint and "spec" not in hint:
+        field_scoped = True
+        list_scoped = False
+        table_scoped = False
+
     ranked_fields = sorted(
         fields,
         key=lambda f: score_text(f"{f.get('key', '')} {f.get('value', '')}"),
         reverse=True,
     )
-    keep_fields = [f for f in ranked_fields if score_text(f"{f.get('key', '')} {f.get('value', '')}") > 0]
-    if not keep_fields:
-        keep_fields = ranked_fields[:12]
-    else:
-        keep_fields = keep_fields[:20]
+    scored_fields = [
+        f for f in ranked_fields if score_text(f"{f.get('key', '')} {f.get('value', '')}") > 0
+    ]
 
-    ranked_tables = []
+    ranked_tables: list[tuple[int, dict[str, Any]]] = []
     for table in tables:
         blob = " ".join(table.get("headers") or [])
         blob += " " + " ".join(c for row in (table.get("rows") or [])[:5] for c in row)
         blob += " " + str(table.get("caption") or "")
         ranked_tables.append((score_text(blob), table))
     ranked_tables.sort(key=lambda x: x[0], reverse=True)
-    keep_tables = [t for s, t in ranked_tables if s > 0] or [t for _, t in ranked_tables[:3]]
-    tableish = any(t in hint for t in ("table", "spec", "rating", "infobox", "field"))
-    if tableish:
-        # One best-matching table for extract asks (avoid sales dumps).
-        keep_tables = keep_tables[:1]
-    else:
-        keep_tables = keep_tables[:5]
 
-    ranked_lists = []
+    ranked_lists: list[tuple[int, dict[str, Any]]] = []
     for lst in lists:
         blob = str(lst.get("section") or "") + " " + " ".join(lst.get("items") or [])
         ranked_lists.append((score_text(blob), lst))
     ranked_lists.sort(key=lambda x: x[0], reverse=True)
-    if tableish:
-        # Spec/table extracts: do not attach unrelated list sections.
-        keep_lists = []
-        if keep_tables:
-            keep_fields = [
-                f
-                for f in keep_fields
-                if score_text(f"{f.get('key', '')} {f.get('value', '')}") > 0
-            ][:8]
-    else:
-        keep_lists = [lst for s, lst in ranked_lists if s > 0] or [lst for _, lst in ranked_lists[:3]]
-        keep_lists = keep_lists[:8]
+
+    if field_scoped:
+        keep_fields = scored_fields[:12] if scored_fields else ranked_fields[:8]
+        return keep_fields, [], []
+
+    if list_scoped:
+        keep_lists = [lst for s, lst in ranked_lists if s > 0] or [
+            lst for _, lst in ranked_lists[:2]
+        ]
+        keep_lists = keep_lists[:6]
+        return [], [], keep_lists
+
+    if table_scoped:
+        keep_tables = [t for s, t in ranked_tables if s > 0] or [t for _, t in ranked_tables[:1]]
+        keep_tables = keep_tables[:1]
+        # Specs tables stand alone — do not attach infobox fields/lists.
+        return [], keep_tables, []
+
+    keep_fields = scored_fields[:20] if scored_fields else ranked_fields[:12]
+    keep_tables = [t for s, t in ranked_tables if s > 0] or [t for _, t in ranked_tables[:3]]
+    keep_tables = keep_tables[:5]
+    keep_lists = [lst for s, lst in ranked_lists if s > 0] or [lst for _, lst in ranked_lists[:3]]
+    keep_lists = keep_lists[:8]
     return keep_fields, keep_tables, keep_lists
 
 
