@@ -11,3 +11,6 @@ litellm>=1.90
 filelock>=3.16
 trafilatura>=2.0
 matplotlib>=3.8
+openpyxl>=3.1
+duckdb==1.2.2
+markitdown>=0.0.1

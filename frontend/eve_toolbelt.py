@@ -34,6 +34,13 @@ ALLOWED_CATEGORIES = (
     "retrieval_rerank",
     "browser_local",
     "loom_intake",
+    "workspace_search",
+    "query_data",
+    "read_document",
+    "create_spreadsheet",
+    "author_code",
+    "python_verify",
+    "switchboard",
 )
 
 CATEGORY_BUCKETS: dict[str, Bucket] = {
@@ -53,6 +60,13 @@ CATEGORY_BUCKETS: dict[str, Bucket] = {
     "vision_local": "session",
     "time_reclaim": "products",
     "stem_factory": "products",
+    "workspace_search": "session",
+    "query_data": "session",
+    "read_document": "session",
+    "create_spreadsheet": "session",
+    "author_code": "session",
+    "python_verify": "session",
+    "switchboard": "session",
 }
 
 BUCKET_ORDER: tuple[Bucket, ...] = ("always", "session", "products")

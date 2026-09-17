@@ -136,7 +136,70 @@
       "network": false,
       "requires_services": [],
       "min_disk_free_gb": 1
+    },
+    "workspace_search": {
+      "label": "Workspace Search",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "query_data": {
+      "label": "Query Data",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "read_document": {
+      "label": "Read Document",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "create_spreadsheet": {
+      "label": "Spreadsheet",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "author_code": {
+      "label": "Code Author",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "python_verify": {
+      "label": "Python Verify",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
+    },
+    "switchboard": {
+      "label": "Switchboard",
+      "auto_enable": true,
+      "session_ttl_min": 30,
+      "gpu_tenant": "ops",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1
     }
   },
-  "max_session_capabilities": 4
+  "max_session_capabilities": 6
 }

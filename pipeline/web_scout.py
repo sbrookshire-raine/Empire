@@ -296,6 +296,16 @@ def fetch_url(url: str, *, timeout: float = 45.0) -> dict[str, Any]:
             "ok": False,
             "error": "url required — Web Scout fetches a page URL; it is not a search engine",
         }
+    # SSRF guard: validate the target host before any outbound request.
+    from pipeline.url_broker import validate_final_url, validate_url
+
+    guard = validate_url(cleaned)
+    if not guard.get("ok"):
+        return {
+            "ok": False,
+            "error": str(guard.get("error")),
+            "url": cleaned,
+        }
     parsed = urlparse(cleaned)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return {
@@ -305,9 +315,24 @@ def fetch_url(url: str, *, timeout: float = 45.0) -> dict[str, Any]:
         }
 
     primary = _http_get(cleaned, timeout=timeout)
+    # Re-validate the post-redirect URL (redirect must not land on private IP).
+    if primary.get("ok"):
+        final_url = str(primary.get("final_url") or cleaned)
+        final_guard = validate_final_url(final_url)
+        if not final_guard.get("ok"):
+            return {
+                "ok": False,
+                "error": str(final_guard.get("error")),
+                "url": cleaned,
+                "final_url": final_url,
+            }
+
     used_fallback = ""
     if not primary.get("ok") and int(primary.get("status") or 0) in {403, 429}:
         for alt in _feed_fallback_urls(cleaned):
+            alt_guard = validate_url(alt)
+            if not alt_guard.get("ok"):
+                continue
             alt_result = _http_get(alt, timeout=timeout)
             if alt_result.get("ok"):
                 primary = alt_result
@@ -387,6 +412,14 @@ def fetch_url(url: str, *, timeout: float = 45.0) -> dict[str, Any]:
         "chars": len(body),
         "extractor": extractor,
     }
+    # Prompt-injection isolation: a turn consuming public-web content is
+    # untrusted; write/shell/memory tools must not auto-acquire this turn.
+    try:
+        from pipeline import trust_gate
+
+        trust_gate.mark_untrusted(domain="public_web", reason=cleaned)
+    except Exception:  # noqa: BLE001
+        pass
     if used_fallback:
         result["fallback_url"] = used_fallback
         result["note_fetch"] = (

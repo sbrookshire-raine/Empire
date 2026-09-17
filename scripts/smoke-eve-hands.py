@@ -66,7 +66,6 @@ def main() -> int:
 
     from pipeline import admission_controller, github_scout, resource_pulse
     from frontend import resource_pulse_api, wiki_drift_api
-
     print("=== Eve hands smoke ===")
 
     admission_controller.release_session("smoke-hands-start")
@@ -140,6 +139,26 @@ def main() -> int:
     check(
         "github inactive after release",
         not admission_controller.capability_active("github_scout"),
+    )
+
+    # 8) Governed arms: evidence arm + switchboard plan (no service mutation)
+    from pipeline import switchboard, workspace_search
+
+    arm_search = workspace_search.search("switchboard", roots=[ROOT / "docs"], max_results=3)
+    check(
+        "workspace_search arm runs offline",
+        bool(arm_search.get("ok")) and isinstance(arm_search.get("results"), list),
+        f"engine={arm_search.get('engine')} count={arm_search.get('count')}",
+    )
+    sb_plan = switchboard.plan(["pocketbase", "frontend"])
+    check(
+        "switchboard plan is dry-run and correct",
+        bool(sb_plan.get("ok")) and bool(sb_plan.get("dry_run")),
+        f"start={sb_plan.get('start')} stop={sb_plan.get('stop')}",
+    )
+    check(
+        "switchboard never starts ollama/eve",
+        "ollama" not in (sb_plan.get("start") or []) and "eve" not in (sb_plan.get("start") or []),
     )
 
     if args.eve_chat:

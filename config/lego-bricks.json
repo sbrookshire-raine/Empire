@@ -174,6 +174,46 @@
       "ports": { "in": ["text"], "out": ["scratch"] },
       "tools": ["loom_status", "loom_process_shell_csv"],
       "note": "Knowledge Shell CSV → primitive_ledger.csv (Keeper membrane)."
+    },
+    {
+      "id": "evidence",
+      "label": "Local Evidence",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["scratch"] },
+      "tools": ["workspace_search", "query_data", "read_document"],
+      "note": "Read-only local evidence (search, SQL, documents). Always on — never gated by Toolbelt."
+    },
+    {
+      "id": "spreadsheet",
+      "label": "Spreadsheet",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["artifact"] },
+      "tools": ["create_spreadsheet"],
+      "note": "openpyxl → .xlsx in eve-output; formula-injection blocked. Always on."
+    },
+    {
+      "id": "code",
+      "label": "Code Author + Verify",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "none",
+      "ports": { "in": ["text"], "out": ["diff"] },
+      "tools": ["author_code", "python_verify"],
+      "note": "Disposable worktree code authoring + verification; reviewable diffs, never merges."
+    },
+    {
+      "id": "switchboard",
+      "label": "Switchboard",
+      "toolbelt": null,
+      "default_on": true,
+      "gpu_tenant": "ops",
+      "ports": { "in": ["ops"], "out": ["ops"] },
+      "tools": ["switchboard_status", "switchboard_ensure", "switchboard_release", "switchboard_tenant"],
+      "note": "Governed service control + GPU tenant serialization. Always on."
     }
   ]
 }

@@ -76,6 +76,13 @@ Talk like a sharp co-worker on the same project — concise, human, lightly dry 
 | Voice / mic / speak | **`voice_transcribe`** / **`voice_speak`** (requires **Voice Presence**; speech API on :8000) |
 | Screenshot / image describe | **`vision_describe`** (requires **Vision Local**; `qwen3-vl:8b`; GPU lease) |
 | Who has the GPU | **`gpu_lease_status`** |
+| Start/stop local services for a task, service health, or GPU tenant serialization | Load **skill-switchboard**; **`switchboard_status`** then **`switchboard_plan`** then **`switchboard_ensure`**/`switchboard_release`/`switchboard_tenant` (dry-run first; only mutate on headroom green; never start/stop Ollama or Eve) |
+| Find text/files locally, keyword search across notes and docs | **`workspace_search`** — read-only; no network |
+| Pull answers from a local CSV/JSON/Parquet/SQLite file | **`query_data`** — read-only SQL (SELECT only); pass `data_file` + query against `data` |
+| Read a local PDF/DOCX/XLSX/HTML/markdown file | **`read_document`** — MarkItDown → Docling fallback; read-only |
+| Turn a table/list into an actual spreadsheet file | **`create_spreadsheet`** — writes `.xlsx` to `eve-output`; formula injection blocked |
+| Write or change code (build with me) | Load **skill-author-code**; **`author_code`** (disposable worktree) then **`python_verify`**; show the diff, never merge |
+| Verify Python changes are safe | **`python_verify`** — syntax + lint + tests in the worktree |
 | Any file inside `03_Active_Tools/` — flattened codebases, `*_flattened.txt`, harvested tool scripts | **`read_active_tool`** (requires Tool Forge in Toolbelt) — **mandatory**, see rule below |
 | Scrape official docs site → Markdown guide (llms.txt / sitemap) | Load **skill-tool-forge**; **`docs_guide_scrape`** with full docs root URL (requires **Tool Forge**) — writes `harvest_cache/*_Complete_Guide.md`; never auto-Cognee |
 | Skill zip/dump 3-Bin triage for Build1 | **`skill_triage_manifest`** (requires **Tool Forge**) — heuristic triage of `.cursor/skills` ± uploaded paths; writes `harvest_cache/SKILL_TRIAGE_MANIFEST.md` |

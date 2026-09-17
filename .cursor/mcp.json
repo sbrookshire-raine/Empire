@@ -151,6 +151,36 @@
         "EMPIRE_GITHUB_CACHE_DIR": "C:/Empire_Workbench/04_Thought_Experiments/github_cache"
       }
     },
+    "empire-switchboard": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": [
+        "C:/EMPIRE/mcp/switchboard_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE"
+      }
+    },
+    "empire-evidence": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": [
+        "C:/EMPIRE/mcp/evidence_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_EVE_OUTPUT_DIR": "C:/EMPIRE/eve-output"
+      }
+    },
+    "empire-artifact": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": [
+        "C:/EMPIRE/mcp/artifact_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_EVE_OUTPUT_DIR": "C:/EMPIRE/eve-output",
+        "EMPIRE_WORKTREE_DIR": "C:/EMPIRE/eve-worktrees"
+      }
+    },
     "empire-atlas": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
       "args": [
