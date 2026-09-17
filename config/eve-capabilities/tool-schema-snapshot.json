@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "tools": {
+    "workspace_search": "36dfc0005aeb896bc702232b85454985944bee9ec12ea839e161d28eb7bbc878",
+    "query_data": "13d518721b251f0b365c7260f59a66b26387e6009abf2751646e1354184e36c7",
+    "read_document": "ba8e4630363a70e6d615a61b58e5b9bc39abce4d8ea45065ced028bc797aaa51",
+    "create_spreadsheet": "6a260ea4abe9f6a18ac64a121f68fb10fa2d396d5229d197bc11ab9c2166b867",
+    "author_code_create_worktree": "5e8ac7a6dbcd65195b7936a61022c2c6e59094bf68b2e8aaef26c0beb1287210",
+    "author_code_apply_patch": "3f80d8ada89d619f016a3b630c5ab41b889c3744598a416ff93039afd2cd724c",
+    "author_code_remove_worktree": "e5c3824ed4ce1a9ba74256b433591d06d5b6a6c7bd0f3e36323c95d240f3d546",
+    "python_verify": "29e78410c52945abffd903212f58e3d9e6c74bf5391b55e23ea2558902a89238",
+    "switchboard_status": "2ac783a7602b988682fd4fa01f270ce71a6b9046c14ba496acfc1b34eda0c3e6",
+    "switchboard_plan": "7d299df5379488153ddd82d40414b6aa780ebe6480be1615d06cb2e914706af7",
+    "switchboard_ensure": "68d6b45d17f1d74068457954be46de6d82884dc54b0204c3af61bdc509627d6f",
+    "switchboard_release": "d85b81bd17c60a1789741cdebf970b1cc344418122fe2c916451e8174f5eb939",
+    "switchboard_tenant": "69b02ba22a11bbb8a3c5a341059dda3c9192217151a2f336953ebe74544b8986"
+  }
+}

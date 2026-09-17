@@ -45,6 +45,25 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
 "@
 }
 
+Invoke-Step "capability governance (fail-closed)" {
+    & $py -c @"
+import json, sys
+from pipeline import capability_registry as cr
+from pipeline import capability_seed as cs
+# Verify every canonical capability against the on-disk snapshot. A missing
+# snapshot or drifted schema reports fail-closed (exit 1).
+missing = []
+for cap in cs.canonical_capabilities():
+    res = cr.verify_capability(cap['capability_id'])
+    if not res.get('ok'):
+        missing.append((cap['capability_id'], res.get('reason'), res.get('mismatches')))
+print(f'capabilities verified={len(cs.canonical_capabilities())} fail={len(missing)}')
+for cid, reason, mm in missing:
+    print('X', cid, reason, mm)
+raise SystemExit(0 if not missing else 1)
+"@
+}
+
 Invoke-Step "wiki extract battery (CLI)" {
     & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
 }

@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "trust_domains": [
+    "local_evidence",
+    "artifact",
+    "public_web",
+    "code",
+    "memory",
+    "ops"
+  ],
+  "capabilities": [
+    {
+      "id": "workspace_search",
+      "label": "Workspace Search",
+      "domain": "local_evidence",
+      "entrypoint": "pipeline.workspace_search",
+      "note": "Read-only ripgrep/builtin text search over allowlisted roots.",
+      "tools": [
+        {
+          "name": "workspace_search",
+          "description": "Search allowlisted local roots for text (offline, no network).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query."
+              },
+              "max_results": {
+                "type": "integer",
+                "description": "Max results (default 100)."
+              },
+              "note": {
+                "type": "string",
+                "description": "Optional Architect note."
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "36dfc0005aeb896bc702232b85454985944bee9ec12ea839e161d28eb7bbc878"
+        }
+      ]
+    },
+    {
+      "id": "query_data",
+      "label": "Query Data",
+      "domain": "local_evidence",
+      "entrypoint": "pipeline.query_data",
+      "note": "Read-only DuckDB query over local CSV/JSON/Parquet/SQLite.",
+      "tools": [
+        {
+          "name": "query_data",
+          "description": "Run a read-only DuckDB query over a local data file.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "sql": {
+                "type": "string",
+                "description": "Read-only SELECT SQL."
+              },
+              "data_file": {
+                "type": "string",
+                "description": "Allowlisted data file path."
+              },
+              "max_rows": {
+                "type": "integer",
+                "description": "Max rows returned (default 1000)."
+              }
+            },
+            "required": [
+              "sql"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "13d518721b251f0b365c7260f59a66b26387e6009abf2751646e1354184e36c7"
+        }
+      ]
+    },
+    {
+      "id": "read_document",
+      "label": "Read Document",
+      "domain": "local_evidence",
+      "entrypoint": "pipeline.read_document",
+      "note": "MarkItDown -> Docling fallback extraction from local files.",
+      "tools": [
+        {
+          "name": "read_document",
+          "description": "Extract text/markdown from a local document.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "input_path": {
+                "type": "string",
+                "description": "Allowlisted document path."
+              },
+              "max_chars": {
+                "type": "integer",
+                "description": "Max characters returned (default 200000)."
+              }
+            },
+            "required": [
+              "input_path"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "ba8e4630363a70e6d615a61b58e5b9bc39abce4d8ea45065ced028bc797aaa51"
+        }
+      ]
+    },
+    {
+      "id": "create_spreadsheet",
+      "label": "Spreadsheet",
+      "domain": "artifact",
+      "entrypoint": "pipeline.create_spreadsheet",
+      "note": "openpyxl .xlsx into eve-output; formula-injection blocked.",
+      "tools": [
+        {
+          "name": "create_spreadsheet",
+          "description": "Write an .xlsx into eve-output (formula injection blocked).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string",
+                "description": "Output .xlsx filename."
+              },
+              "headers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {}
+                }
+              },
+              "sheet_name": {
+                "type": "string",
+                "description": "Sheet name (default Sheet1)."
+              },
+              "note": {
+                "type": "string",
+                "description": "Optional Architect note."
+              }
+            },
+            "required": [
+              "filename",
+              "headers",
+              "rows"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "6a260ea4abe9f6a18ac64a121f68fb10fa2d396d5229d197bc11ab9c2166b867"
+        }
+      ]
+    },
+    {
+      "id": "author_code",
+      "label": "Code Author",
+      "domain": "code",
+      "entrypoint": "pipeline.author_code",
+      "note": "Disposable Git worktree authoring; reviewable diffs, never merges.",
+      "tools": [
+        {
+          "name": "author_code_create_worktree",
+          "description": "Create a disposable Git worktree for code authoring.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "note": {
+                "type": "string",
+                "description": "Optional Architect note."
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "signature_hash": "5e8ac7a6dbcd65195b7936a61022c2c6e59094bf68b2e8aaef26c0beb1287210"
+        },
+        {
+          "name": "author_code_apply_patch",
+          "description": "Write a file in a disposable worktree and return its diff.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "worktree": {
+                "type": "string",
+                "description": "Worktree id."
+              },
+              "relative_path": {
+                "type": "string",
+                "description": "Repo-relative file path."
+              },
+              "content": {
+                "type": "string",
+                "description": "Full file content."
+              }
+            },
+            "required": [
+              "worktree",
+              "relative_path",
+              "content"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "3f80d8ada89d619f016a3b630c5ab41b889c3744598a416ff93039afd2cd724c"
+        },
+        {
+          "name": "author_code_remove_worktree",
+          "description": "Remove a disposable worktree.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "worktree": {
+                "type": "string",
+                "description": "Worktree id."
+              }
+            },
+            "required": [
+              "worktree"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "e5c3824ed4ce1a9ba74256b433591d06d5b6a6c7bd0f3e36323c95d240f3d546"
+        }
+      ]
+    },
+    {
+      "id": "python_verify",
+      "label": "Python Verify",
+      "domain": "code",
+      "entrypoint": "pipeline.python_verify",
+      "note": "Syntax + optional lint/test in a disposable worktree.",
+      "tools": [
+        {
+          "name": "python_verify",
+          "description": "Syntax-check + (optional) lint/test a disposable worktree.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "worktree": {
+                "type": "string",
+                "description": "Worktree id."
+              },
+              "run_tests": {
+                "type": "boolean",
+                "description": "Run tests (default true)."
+              }
+            },
+            "required": [
+              "worktree"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "29e78410c52945abffd903212f58e3d9e6c74bf5391b55e23ea2558902a89238"
+        }
+      ]
+    },
+    {
+      "id": "switchboard",
+      "label": "Switchboard",
+      "domain": "ops",
+      "entrypoint": "pipeline.switchboard",
+      "note": "Governed service control + GPU tenant serialization (dry-run first).",
+      "tools": [
+        {
+          "name": "switchboard_status",
+          "description": "Snapshot of services, headroom, and GPU lease (read-only).",
+          "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "signature_hash": "2ac783a7602b988682fd4fa01f270ce71a6b9046c14ba496acfc1b34eda0c3e6"
+        },
+        {
+          "name": "switchboard_plan",
+          "description": "Dry-run plan for which services a task needs (no mutation).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "services": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "services"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "7d299df5379488153ddd82d40414b6aa780ebe6480be1615d06cb2e914706af7"
+        },
+        {
+          "name": "switchboard_ensure",
+          "description": "Start services a task needs (headroom-gated; dry_run default true).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "services": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dry_run": {
+                "type": "boolean",
+                "description": "Plan only (default true)."
+              }
+            },
+            "required": [
+              "services"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "68d6b45d17f1d74068457954be46de6d82884dc54b0204c3af61bdc509627d6f"
+        },
+        {
+          "name": "switchboard_release",
+          "description": "Stop managed services a task no longer needs (dry_run default true).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "services": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dry_run": {
+                "type": "boolean",
+                "description": "Plan only (default true)."
+              }
+            },
+            "required": [
+              "services"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "d85b81bd17c60a1789741cdebf970b1cc344418122fe2c916451e8174f5eb939"
+        },
+        {
+          "name": "switchboard_tenant",
+          "description": "GPU tenant lease: acquire/release/status (dry_run default true).",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "description": "acquire | release | status."
+              },
+              "tenant": {
+                "type": "string",
+                "description": "Tenant name (for acquire)."
+              },
+              "dry_run": {
+                "type": "boolean",
+                "description": "Plan only (default true)."
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "69b02ba22a11bbb8a3c5a341059dda3c9192217151a2f336953ebe74544b8986"
+        }
+      ]
+    }
+  ]
+}

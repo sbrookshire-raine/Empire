@@ -32,7 +32,7 @@ DEFAULT_OUTPUT_DIR = Path(r"C:\EMPIRE\eve-output")
 DEFAULT_STAGING_DIR = Path(r"C:\Empire_Workbench\04_Thought_Experiments\eve_staging")
 DEFAULT_WORKTREE_DIR = Path(r"C:\EMPIRE\eve-worktrees")
 
-TRUST_DOMAINS = ("local_evidence", "artifact", "public_web", "code", "memory")
+TRUST_DOMAINS = ("local_evidence", "artifact", "public_web", "code", "memory", "ops")
 
 
 def registry_dir() -> Path:
