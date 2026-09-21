@@ -1,0 +1,71 @@
+{
+  "name": "forecast-baseline",
+  "version": "0.1.0",
+  "description": "Produce transparent univariate forecast baselines",
+  "author": "Original AI-generated implementation; RESEARCH THOUGHT EXPERIMENT",
+  "license": "MIT",
+  "source_references": [
+    "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
+    "https://modelcontextprotocol.io/specification/2025-11-25/schema.md",
+    "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+    "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning"
+  ],
+  "research_context": [
+    "INITIAL RESEARCH PROMPT.MD",
+    "Persona__You are an expert Open-Source Intelligence (OSINT)....md",
+    "open-source-predictive-analysis-tools.md"
+  ],
+  "supported_platforms": [
+    {
+      "platform": "Linux x86_64",
+      "status": "OFFLINE VERIFIED"
+    },
+    {
+      "platform": "Windows/macOS",
+      "status": "portable design; untested"
+    }
+  ],
+  "runtime_requirements": {
+    "python": ">=3.10",
+    "third_party_dependencies": []
+  },
+  "install_command": "python -m pip install --no-index --no-deps dist/forecast_baseline-0.1.0-py3-none-any.whl",
+  "offline_status": "OFFLINE VERIFIED",
+  "required_local_models": [],
+  "required_datasets": [],
+  "required_binaries": [
+    "externally installed Python; pip and venv needed for installation"
+  ],
+  "cli_entry_point": "forecast-baseline",
+  "mcp_entry_point": "python -m local_forecast_baseline mcp",
+  "mcp": {
+    "protocol": "2025-11-25",
+    "transport": "stdio newline-delimited JSON-RPC 2.0",
+    "tool_name": "forecast_baseline",
+    "current_revision_2026_07_28_supported": false
+  },
+  "declared_capabilities": [
+    "Produce transparent univariate forecast baselines"
+  ],
+  "permissions": {
+    "network": "denied by default audit hook; no network functionality",
+    "data_file_read": false,
+    "file_write": false,
+    "subprocess": false,
+    "telemetry": false
+  },
+  "resource_limits": {
+    "input_bytes": 262144,
+    "max_json_depth": 32,
+    "output_bytes": 262144,
+    "algorithm_bounds": "mcp/input-schema.json and docs/specification.md",
+    "timeout": "client-enforced; recommended 15 seconds; no hard process memory limit"
+  },
+  "test_command": "python -m unittest discover -s tests -v",
+  "package_checksum": {
+    "algorithm": "sha256",
+    "artifact": "dist/forecast_baseline-0.1.0-py3-none-any.whl",
+    "value": "6077073c292d7a14ab8389da4e9e0db694cd11c19f084f75895e415463fc2250"
+  },
+  "limitations": "No uncertainty intervals, ARIMA, financial advice, automatic model selection, date parsing, exogenous variables, or accuracy guarantees."
+}

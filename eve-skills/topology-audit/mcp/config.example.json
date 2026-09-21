@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "topology-audit": {
+      "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
+      "args": [
+        "-m",
+        "local_topology_audit",
+        "mcp"
+      ],
+      "env": {
+        "LOCAL_SKILL_NETWORK": "deny",
+        "PYTHONNOUSERSITE": "1"
+      }
+    }
+  }
+}

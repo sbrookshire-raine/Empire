@@ -1,0 +1,14 @@
+{
+  "hypotheses": [
+    "rain",
+    "dry"
+  ],
+  "prior": [
+    0.5,
+    0.5
+  ],
+  "likelihood": [
+    0.8,
+    0.2
+  ]
+}

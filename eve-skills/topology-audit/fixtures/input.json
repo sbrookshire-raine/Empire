@@ -1,0 +1,18 @@
+{
+  "nodes": [
+    "app",
+    "api",
+    "db"
+  ],
+  "edges": [
+    {
+      "source": "app",
+      "target": "api"
+    },
+    {
+      "source": "api",
+      "target": "db"
+    }
+  ],
+  "outage": "db"
+}

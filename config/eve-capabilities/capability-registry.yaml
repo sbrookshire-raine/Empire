@@ -1,0 +1,61 @@
+schema_version: 1
+approval:
+  status: pending_manual_review
+  reviewer: architect
+  compiled_registry: config/eve-capabilities/capability-registry.json
+  compiled_snapshot: config/eve-capabilities/tool-schema-snapshot.json
+defaults:
+  trust_domain: local_evidence
+  network: deny
+  audit: eve-audit/skill-runs.jsonl
+  max_input_bytes: 1048576
+  max_output_bytes: 1048576
+skills:
+  thought-map:
+    capability_id: thought_map
+    description: Analyze an explicitly supplied signed directed graph.
+    entrypoint: eve-skills/thought-map/src/local_thought_map/__main__.py
+    command: run
+    read_roots: [eve-skills/thought-map, eve-audit/skill-inputs]
+    write_roots: [eve-audit/skill-runs]
+    max_json_depth: 32
+    max_nodes: 10000
+    max_edges: 20000
+  scenario-regret:
+    capability_id: scenario_regret
+    description: Rank supplied options across scenarios using minimax regret.
+    entrypoint: eve-skills/scenario-regret/src/local_scenario_regret/__main__.py
+    command: run
+    read_roots: [eve-skills/scenario-regret, eve-audit/skill-inputs]
+    write_roots: [eve-audit/skill-runs]
+    max_json_depth: 32
+    max_options: 1000
+    max_scenarios: 1000
+  forecast-baseline:
+    capability_id: forecast_baseline
+    description: Produce transparent univariate forecast baselines.
+    entrypoint: eve-skills/forecast-baseline/src/local_forecast_baseline/__main__.py
+    command: run
+    read_roots: [eve-skills/forecast-baseline, eve-audit/skill-inputs]
+    write_roots: [eve-audit/skill-runs]
+    max_json_depth: 32
+    max_observations: 100000
+  topology-audit:
+    capability_id: topology_audit
+    description: Analyze declared dependencies and outage propagation.
+    entrypoint: eve-skills/topology-audit/src/local_topology_audit/__main__.py
+    command: run
+    read_roots: [eve-skills/topology-audit, eve-audit/skill-inputs]
+    write_roots: [eve-audit/skill-runs]
+    max_json_depth: 32
+    max_nodes: 10000
+    max_edges: 20000
+  bayes-update:
+    capability_id: bayes_update
+    description: Update finite categorical hypotheses from explicit priors and likelihoods.
+    entrypoint: eve-skills/bayes-update/src/local_bayes_update/__main__.py
+    command: run
+    read_roots: [eve-skills/bayes-update, eve-audit/skill-inputs]
+    write_roots: [eve-audit/skill-runs]
+    max_json_depth: 32
+    max_hypotheses: 1000

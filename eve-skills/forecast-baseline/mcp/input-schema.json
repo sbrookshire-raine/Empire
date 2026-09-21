@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "forecast_baseline_input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "series",
+    "method",
+    "holdout"
+  ],
+  "properties": {
+    "series": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2000,
+      "items": {
+        "type": "number"
+      }
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "naive",
+        "mean",
+        "drift",
+        "seasonal_naive"
+      ]
+    },
+    "holdout": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1998
+    },
+    "season": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 1998
+    }
+  }
+}

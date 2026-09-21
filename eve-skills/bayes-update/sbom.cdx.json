@@ -1,0 +1,49 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "bayes-update",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "bom-ref": "bayes-update"
+    }
+  },
+  "components": [
+    {
+      "type": "file",
+      "name": "bayes_update-0.1.0-py3-none-any.whl",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "40058c8152eed4d4fe17be2a608c5d19b182a26a06556d8ccbfea1ce549a7a26"
+        }
+      ]
+    },
+    {
+      "type": "platform",
+      "name": "CPython",
+      "description": "External prerequisite, not bundled. Exact test runtime in test report."
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "bayes-update",
+      "dependsOn": []
+    }
+  ],
+  "properties": [
+    {
+      "name": "scope",
+      "value": "No third-party runtime/build packages; platform interpreter external."
+    }
+  ]
+}

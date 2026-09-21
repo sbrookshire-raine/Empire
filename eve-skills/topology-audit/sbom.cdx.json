@@ -1,0 +1,49 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "topology-audit",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "bom-ref": "topology-audit"
+    }
+  },
+  "components": [
+    {
+      "type": "file",
+      "name": "topology_audit-0.1.0-py3-none-any.whl",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "867b8bc70d2642d1170ff2e7495ea3ce8c654a94b5459e026f2cf94e4637f268"
+        }
+      ]
+    },
+    {
+      "type": "platform",
+      "name": "CPython",
+      "description": "External prerequisite, not bundled. Exact test runtime in test report."
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "topology-audit",
+      "dependsOn": []
+    }
+  ],
+  "properties": [
+    {
+      "name": "scope",
+      "value": "No third-party runtime/build packages; platform interpreter external."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "forecast-baseline",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "bom-ref": "forecast-baseline"
+    }
+  },
+  "components": [
+    {
+      "type": "file",
+      "name": "forecast_baseline-0.1.0-py3-none-any.whl",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6077073c292d7a14ab8389da4e9e0db694cd11c19f084f75895e415463fc2250"
+        }
+      ]
+    },
+    {
+      "type": "platform",
+      "name": "CPython",
+      "description": "External prerequisite, not bundled. Exact test runtime in test report."
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "forecast-baseline",
+      "dependsOn": []
+    }
+  ],
+  "properties": [
+    {
+      "name": "scope",
+      "value": "No third-party runtime/build packages; platform interpreter external."
+    }
+  ]
+}

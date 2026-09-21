@@ -1,0 +1,26 @@
+{
+  "assumption": "finite categorical update; not causal identification",
+  "evidence": 0.5,
+  "hypotheses": [
+    "rain",
+    "dry"
+  ],
+  "likelihood": [
+    0.8,
+    0.2
+  ],
+  "map_hypothesis": "rain",
+  "map_probability": 0.8,
+  "posterior": [
+    0.8,
+    0.2
+  ],
+  "prior": [
+    0.5,
+    0.5
+  ],
+  "unnormalized": [
+    0.4,
+    0.1
+  ]
+}

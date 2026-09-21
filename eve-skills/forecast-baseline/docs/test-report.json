@@ -1,0 +1,258 @@
+{
+  "name": "forecast-baseline",
+  "started_at_utc": "2026-09-19T02:45:34.510348+00:00",
+  "environment": {
+    "python": "3.12.12 (main, Nov  4 2025, 14:39:41) [GCC 14.2.0]",
+    "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "network_isolation": {
+    "method": "Linux x86_64 seccomp inherited across exec; socket syscall family denied",
+    "probes": [
+      {
+        "family": 2,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 2,
+        "type": 2,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 10,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 1,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "scripts/build.py"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:34.523545+00:00",
+      "seconds": 0.064,
+      "exit_code": 0,
+      "stdout": "forecast_baseline-0.1.0-py3-none-any.whl\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "-m",
+        "venv",
+        "/tmp/local_skill_verify_8i3pix90/venv"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90",
+      "timestamp_utc": "2026-09-19T02:45:34.587975+00:00",
+      "seconds": 3.205,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "--version"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:37.792874+00:00",
+      "seconds": 0.272,
+      "exit_code": 0,
+      "stdout": "pip 25.0.1 from /tmp/local_skill_verify_8i3pix90/venv/lib/python3.12/site-packages/pip (python 3.12)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_8i3pix90/extracted/dist/forecast_baseline-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:38.065297+00:00",
+      "seconds": 0.517,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/forecast_baseline-0.1.0-py3-none-any.whl\nInstalling collected packages: forecast-baseline\nSuccessfully installed forecast-baseline-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:38.582627+00:00",
+      "seconds": 0.381,
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/forecast-baseline",
+        "--help"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:38.964087+00:00",
+      "seconds": 0.044,
+      "exit_code": 0,
+      "stdout": "usage: forecast-baseline [-h] [--version] {run,schema,mcp}\n\nforecast_baseline: chronological holdout MAE for simple baseline forecasts.\nOriginal generated implementation. License: MIT. No confidence intervals, no\ncalibration claims, no leakage from holdout.\n\npositional arguments:\n  {run,schema,mcp}  run reads one JSON object from stdin; mcp serves newline-\n                    delimited JSON-RPC\n\noptions:\n  -h, --help        show this help message and exit\n  --version         show program's version number and exit\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/forecast-baseline",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:39.007734+00:00",
+      "seconds": 0.041,
+      "exit_code": 0,
+      "stdout": "{\"forecast\":[4.0,4.0],\"holdout_actual\":[5.0,6.0],\"mae\":1.5,\"method\":\"naive\",\"n_holdout\":2,\"n_obs\":6,\"n_train\":4}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:39.048614+00:00",
+      "seconds": 2.227,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_determinism (integration.test_runtime.CLI.test_determinism) ... ok\ntest_extra_key (integration.test_runtime.CLI.test_extra_key) ... ok\ntest_fixture (integration.test_runtime.CLI.test_fixture) ... ok\ntest_help (integration.test_runtime.CLI.test_help) ... ok\ntest_invalid_configuration (integration.test_runtime.CLI.test_invalid_configuration) ... ok\ntest_malformed (integration.test_runtime.CLI.test_malformed) ... ok\ntest_missing_path_unsupported (integration.test_runtime.CLI.test_missing_path_unsupported) ... ok\ntest_network_guard (integration.test_runtime.CLI.test_network_guard) ... ok\ntest_oversized (integration.test_runtime.CLI.test_oversized) ... ok\ntest_schema (integration.test_runtime.CLI.test_schema) ... ok\ntest_unknown_command (integration.test_runtime.CLI.test_unknown_command) ... ok\ntest_version (integration.test_runtime.CLI.test_version) ... ok\ntest_before_initialize (integration.test_runtime.MCP.test_before_initialize) ... ok\ntest_before_initialized_notification (integration.test_runtime.MCP.test_before_initialized_notification) ... ok\ntest_duplicate_initialize (integration.test_runtime.MCP.test_duplicate_initialize) ... ok\ntest_identifier_limits (integration.test_runtime.MCP.test_identifier_limits) ... ok\ntest_invalid_envelopes (integration.test_runtime.MCP.test_invalid_envelopes) ... ok\ntest_invalid_initialize (integration.test_runtime.MCP.test_invalid_initialize) ... ok\ntest_lifecycle_discovery_call (integration.test_runtime.MCP.test_lifecycle_discovery_call) ... ok\ntest_malformed_recovery (integration.test_runtime.MCP.test_malformed_recovery) ... ok\ntest_notification_silence (integration.test_runtime.MCP.test_notification_silence) ... ok\ntest_oversized_frame (integration.test_runtime.MCP.test_oversized_frame) ... ok\ntest_pagination_rejected (integration.test_runtime.MCP.test_pagination_rejected) ... ok\ntest_rate_limit (integration.test_runtime.MCP.test_rate_limit) ... ok\ntest_tool_error (integration.test_runtime.MCP.test_tool_error) ... ok\ntest_unknown_method (integration.test_runtime.MCP.test_unknown_method) ... ok\ntest_unknown_tool (integration.test_runtime.MCP.test_unknown_tool) ... ok\ntest_version_negotiation (integration.test_runtime.MCP.test_version_negotiation) ... ok\ntest_boolean_is_not_number (integration.test_runtime.Validation.test_boolean_is_not_number) ... ok\ntest_fixture_schema (integration.test_runtime.Validation.test_fixture_schema) ... ok\ntest_nonfinite (integration.test_runtime.Validation.test_nonfinite) ... ok\ntest_schema_subset_is_supported (integration.test_runtime.Validation.test_schema_subset_is_supported) ... ok\ntest_static_runtime_imports (integration.test_runtime.Validation.test_static_runtime_imports) ... ok\ntest_bool_observation_rejected (unit.test_kernel.ForecastBaselineTests.test_bool_observation_rejected) ... ok\ntest_drift (unit.test_kernel.ForecastBaselineTests.test_drift) ... ok\ntest_drift_needs_two_train (unit.test_kernel.ForecastBaselineTests.test_drift_needs_two_train) ... ok\ntest_holdout_bool_rejected (unit.test_kernel.ForecastBaselineTests.test_holdout_bool_rejected) ... ok\ntest_holdout_float_rejected (unit.test_kernel.ForecastBaselineTests.test_holdout_float_rejected) ... ok\ntest_holdout_too_large (unit.test_kernel.ForecastBaselineTests.test_holdout_too_large) ... ok\ntest_inf_rejected (unit.test_kernel.ForecastBaselineTests.test_inf_rejected) ... ok\ntest_invalid_method (unit.test_kernel.ForecastBaselineTests.test_invalid_method) ... ok\ntest_mean_no_leakage (unit.test_kernel.ForecastBaselineTests.test_mean_no_leakage) ... ok\ntest_nan_rejected (unit.test_kernel.ForecastBaselineTests.test_nan_rejected) ... ok\ntest_sample_matches_expected (unit.test_kernel.ForecastBaselineTests.test_sample_matches_expected) ... ok\ntest_schema_bounds (unit.test_kernel.ForecastBaselineTests.test_schema_bounds) ... ok\ntest_season_only_for_seasonal (unit.test_kernel.ForecastBaselineTests.test_season_only_for_seasonal) ... ok\ntest_season_required (unit.test_kernel.ForecastBaselineTests.test_season_required) ... ok\ntest_season_too_large (unit.test_kernel.ForecastBaselineTests.test_season_too_large) ... ok\ntest_seasonal_naive (unit.test_kernel.ForecastBaselineTests.test_seasonal_naive) ... ok\ntest_series_not_array (unit.test_kernel.ForecastBaselineTests.test_series_not_array) ... ok\ntest_too_many_obs (unit.test_kernel.ForecastBaselineTests.test_too_many_obs) ... ok\ntest_unknown_keys (unit.test_kernel.ForecastBaselineTests.test_unknown_keys) ... ok\n\n----------------------------------------------------------------------\nRan 52 tests in 2.103s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "forecast-baseline"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:41.276168+00:00",
+      "seconds": 0.442,
+      "exit_code": 0,
+      "stdout": "Found existing installation: forecast-baseline 0.1.0\nUninstalling forecast-baseline-0.1.0:\n  Successfully uninstalled forecast-baseline-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_forecast_baseline\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:41.718625+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_8i3pix90/extracted/dist/forecast_baseline-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:41.736735+00:00",
+      "seconds": 0.521,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/forecast_baseline-0.1.0-py3-none-any.whl\nInstalling collected packages: forecast-baseline\nSuccessfully installed forecast-baseline-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/forecast-baseline",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:42.257868+00:00",
+      "seconds": 0.041,
+      "exit_code": 0,
+      "stdout": "{\"forecast\":[4.0,4.0],\"holdout_actual\":[5.0,6.0],\"mae\":1.5,\"method\":\"naive\",\"n_holdout\":2,\"n_obs\":6,\"n_train\":4}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "forecast-baseline"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:42.299222+00:00",
+      "seconds": 0.443,
+      "exit_code": 0,
+      "stdout": "Found existing installation: forecast-baseline 0.1.0\nUninstalling forecast-baseline-0.1.0:\n  Successfully uninstalled forecast-baseline-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_8i3pix90/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_forecast_baseline\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_8i3pix90/extracted",
+      "timestamp_utc": "2026-09-19T02:45:42.742624+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "status": "OFFLINE VERIFIED",
+  "wheel_sha256": "6077073c292d7a14ab8389da4e9e0db694cd11c19f084f75895e415463fc2250",
+  "source_sha256": {
+    "src/local_forecast_baseline/__init__.py": "43d51643b6e72c81c131f5b72f641b2b87a23897284392750f4aae9a45ffddff",
+    "src/local_forecast_baseline/__main__.py": "60d995b7671f45da591152a466f1c45db19bc6e71d6de539075c979c3aa13586",
+    "src/local_forecast_baseline/kernel.py": "5c4ba8778d48f14f339453092451043f254d3cb541131eab9c9bae203b4c1cb4",
+    "src/local_forecast_baseline/runtime.py": "f2e0ed340cb731b84381f50cbd538f7fda25730c446cd0b78df18ec8ac68073d"
+  },
+  "structure_license_manifest_checksum_checks": "passed (generated files; no upstream redistribution)",
+  "reproducible_wheel_rebuild": "identical bytes",
+  "test_summary": [
+    "----------------------------------------------------------------------",
+    "Ran 52 tests in 2.103s",
+    "",
+    "OK"
+  ],
+  "installation_reinstallation_uninstallation": "passed",
+  "scope": "Linux x86_64 CPython 3.12; minimal venv with pip, installed wheel; all listed tests under seccomp. Not EVE-client or current MCP revision certification.",
+  "finished_at_utc": "2026-09-19T02:45:42.771387+00:00"
+}

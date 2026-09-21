@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "forecast-baseline": {
+      "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
+      "args": [
+        "-m",
+        "local_forecast_baseline",
+        "mcp"
+      ],
+      "env": {
+        "LOCAL_SKILL_NETWORK": "deny",
+        "PYTHONNOUSERSITE": "1"
+      }
+    }
+  }
+}

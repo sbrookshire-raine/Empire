@@ -1,0 +1,49 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "thought-map",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "bom-ref": "thought-map"
+    }
+  },
+  "components": [
+    {
+      "type": "file",
+      "name": "thought_map-0.1.0-py3-none-any.whl",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d57f4215233d991e4d01c0701604aada12dca349651b226f00bad4fceb9a8797"
+        }
+      ]
+    },
+    {
+      "type": "platform",
+      "name": "CPython",
+      "description": "External prerequisite, not bundled. Exact test runtime in test report."
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "thought-map",
+      "dependsOn": []
+    }
+  ],
+  "properties": [
+    {
+      "name": "scope",
+      "value": "No third-party runtime/build packages; platform interpreter external."
+    }
+  ]
+}

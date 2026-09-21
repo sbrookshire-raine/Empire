@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 import urllib.error
 import urllib.request
 from email import policy
@@ -84,6 +85,55 @@ def run_ps_script(script: Path, extra_args: list[str] | None = None, timeout: in
         "stdout": result.stdout.strip(),
         "stderr": result.stderr.strip(),
     }
+
+
+AMBIENT_LOG_PATH = ROOT / "eve-audit" / "active_chat.log"
+AMBIENT_LOG_MAX_BYTES = 5 * 1024 * 1024
+AMBIENT_LOG_BACKUPS = 3
+
+
+def _ambient_text(value: object, max_chars: int = 4000) -> str:
+    text = str(value or "").strip()
+    return text[: max_chars - 1].rstrip() + "..." if len(text) > max_chars else text
+
+
+def _append_ambient_event(
+    *,
+    role: str,
+    text: str,
+    status: str,
+    session_id: str = "",
+    turn_id: str = "",
+) -> None:
+    """Best-effort bounded event output; audit failure must not break chat."""
+    if not text.strip():
+        return
+    try:
+        AMBIENT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if AMBIENT_LOG_PATH.exists() and AMBIENT_LOG_PATH.stat().st_size >= AMBIENT_LOG_MAX_BYTES:
+            for index in range(AMBIENT_LOG_BACKUPS, 0, -1):
+                source = AMBIENT_LOG_PATH.with_name(f"{AMBIENT_LOG_PATH.name}.{index}")
+                target = AMBIENT_LOG_PATH.with_name(f"{AMBIENT_LOG_PATH.name}.{index + 1}")
+                if index == AMBIENT_LOG_BACKUPS:
+                    target.unlink(missing_ok=True)
+                if source.exists():
+                    source.replace(target)
+            AMBIENT_LOG_PATH.replace(AMBIENT_LOG_PATH.with_name(f"{AMBIENT_LOG_PATH.name}.1"))
+        event = {
+            "schema_version": 1,
+            "event_id": uuid.uuid4().hex,
+            "session_id": _ambient_text(session_id, 128),
+            "turn_id": _ambient_text(turn_id, 128),
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "role": role,
+            "text": _ambient_text(text),
+            "status": status,
+            "source": "frontend.serve",
+        }
+        with AMBIENT_LOG_PATH.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except (OSError, TypeError, ValueError):
+        pass
 
 
 def run_ps_command(command: str, timeout: int = 30) -> dict:
@@ -482,6 +532,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 pass
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
+            self._ambient_user_text = str(payload.get("message") or "")
+            self._ambient_turn_id = uuid.uuid4().hex
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -704,6 +756,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         session_id: str = "",
     ) -> None:
         client_connected = True
+        assistant_text = ""
         try:
             if response.stream is None:
                 return
@@ -718,6 +771,27 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     projected,
                     session_id=session_id,
                 )
+                event_type = str(projected.get("type") or "")
+                data = projected.get("data")
+                if isinstance(data, dict):
+                    cumulative = data.get("messageSoFar") or data.get("message")
+                    if isinstance(cumulative, str) and cumulative.strip():
+                        assistant_text = cumulative
+                if event_type == "message.completed" and assistant_text:
+                    _append_ambient_event(
+                        role="user",
+                        text=getattr(self, "_ambient_user_text", ""),
+                        status="completed",
+                        session_id=session_id,
+                        turn_id=getattr(self, "_ambient_turn_id", ""),
+                    )
+                    _append_ambient_event(
+                        role="assistant",
+                        text=assistant_text,
+                        status="completed",
+                        session_id=session_id,
+                        turn_id=getattr(self, "_ambient_turn_id", ""),
+                    )
                 projected = eve_proxy.with_upstream_next_index(
                     projected,
                     upstream_next_index,

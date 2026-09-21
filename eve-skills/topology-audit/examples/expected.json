@@ -1,0 +1,26 @@
+{
+  "affected": [
+    "api",
+    "app",
+    "db"
+  ],
+  "cyclic_components": [],
+  "has_cycle": false,
+  "n_affected": 3,
+  "n_edges": 2,
+  "n_nodes": 3,
+  "n_scc": 3,
+  "outage": "db",
+  "strongly_connected_components": [
+    [
+      "api"
+    ],
+    [
+      "app"
+    ],
+    [
+      "db"
+    ]
+  ],
+  "unaffected": []
+}

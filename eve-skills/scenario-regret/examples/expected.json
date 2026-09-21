@@ -1,0 +1,41 @@
+{
+  "objective": "maximize",
+  "ranking": [
+    {
+      "max_regret": 5.0,
+      "option": "beta",
+      "rank": 1,
+      "regrets": [
+        5.0,
+        0.0
+      ]
+    },
+    {
+      "max_regret": 6.0,
+      "option": "alpha",
+      "rank": 2,
+      "regrets": [
+        0.0,
+        6.0
+      ]
+    }
+  ],
+  "regret": [
+    {
+      "max_regret": 6.0,
+      "option": "alpha",
+      "regrets": [
+        0.0,
+        6.0
+      ]
+    },
+    {
+      "max_regret": 5.0,
+      "option": "beta",
+      "regrets": [
+        5.0,
+        0.0
+      ]
+    }
+  ]
+}

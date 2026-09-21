@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "topology_audit_input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "nodes",
+    "edges",
+    "outage"
+  ],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "target"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      }
+    },
+    "outage": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  }
+}

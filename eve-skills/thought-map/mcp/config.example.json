@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "thought-map": {
+      "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
+      "args": [
+        "-m",
+        "local_thought_map",
+        "mcp"
+      ],
+      "env": {
+        "LOCAL_SKILL_NETWORK": "deny",
+        "PYTHONNOUSERSITE": "1"
+      }
+    }
+  }
+}

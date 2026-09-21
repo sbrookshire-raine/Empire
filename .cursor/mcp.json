@@ -206,6 +206,18 @@
         "EMPIRE_CURSOR_SKILLS_DIR": "C:/EMPIRE/.cursor/skills"
       }
     },
+    "empire-discovery": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": [
+        "C:/EMPIRE/config/eve-capabilities/discovery-router.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "EMPIRE_ROOT": "C:/EMPIRE",
+        "EMPIRE_CATALOG_DB": "C:/EMPIRE/config/eve-capabilities/catalog.db",
+        "EMPIRE_SKILLS_DIR": "C:/EMPIRE/eve-skills"
+      }
+    },
     "empire-loom-intake": {
       "command": "C:/EMPIRE/venv/Scripts/python.exe",
       "args": [

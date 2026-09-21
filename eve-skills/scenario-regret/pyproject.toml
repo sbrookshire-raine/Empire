@@ -1,0 +1,15 @@
+[build-system]
+requires = []
+build-backend = "build_backend"
+backend-path = ["."]
+
+[project]
+name = "scenario-regret"
+version = "0.1.0"
+description = "Rank decisions using minimax regret"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+scenario-regret = "local_scenario_regret.runtime:main"

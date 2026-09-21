@@ -1,0 +1,1 @@
+The integration suite runs under scripts/offline_exec.py during release verification. The Linux x86_64 seccomp filter blocks socket-family syscalls across all child processes. See docs/test-report.json for evidence.

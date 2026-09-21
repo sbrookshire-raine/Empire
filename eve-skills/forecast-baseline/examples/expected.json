@@ -1,0 +1,15 @@
+{
+  "forecast": [
+    4.0,
+    4.0
+  ],
+  "holdout_actual": [
+    5.0,
+    6.0
+  ],
+  "mae": 1.5,
+  "method": "naive",
+  "n_holdout": 2,
+  "n_obs": 6,
+  "n_train": 4
+}

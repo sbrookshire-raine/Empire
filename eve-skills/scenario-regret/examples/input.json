@@ -1,0 +1,21 @@
+{
+  "options": [
+    "alpha",
+    "beta"
+  ],
+  "scenarios": [
+    "s1",
+    "s2"
+  ],
+  "payoffs": [
+    [
+      10,
+      0
+    ],
+    [
+      5,
+      6
+    ]
+  ],
+  "objective": "maximize"
+}

@@ -1,0 +1,258 @@
+{
+  "name": "topology-audit",
+  "started_at_utc": "2026-09-19T02:45:42.772927+00:00",
+  "environment": {
+    "python": "3.12.12 (main, Nov  4 2025, 14:39:41) [GCC 14.2.0]",
+    "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "network_isolation": {
+    "method": "Linux x86_64 seccomp inherited across exec; socket syscall family denied",
+    "probes": [
+      {
+        "family": 2,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 2,
+        "type": 2,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 10,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 1,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "scripts/build.py"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:42.785056+00:00",
+      "seconds": 0.062,
+      "exit_code": 0,
+      "stdout": "topology_audit-0.1.0-py3-none-any.whl\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "-m",
+        "venv",
+        "/tmp/local_skill_verify_y6xryat2/venv"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2",
+      "timestamp_utc": "2026-09-19T02:45:42.847069+00:00",
+      "seconds": 3.198,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "--version"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:46.045562+00:00",
+      "seconds": 0.268,
+      "exit_code": 0,
+      "stdout": "pip 25.0.1 from /tmp/local_skill_verify_y6xryat2/venv/lib/python3.12/site-packages/pip (python 3.12)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_y6xryat2/extracted/dist/topology_audit-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:46.313425+00:00",
+      "seconds": 0.541,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/topology_audit-0.1.0-py3-none-any.whl\nInstalling collected packages: topology-audit\nSuccessfully installed topology-audit-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:46.854766+00:00",
+      "seconds": 0.369,
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/topology-audit",
+        "--help"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:47.223727+00:00",
+      "seconds": 0.045,
+      "exit_code": 0,
+      "stdout": "usage: topology-audit [-h] [--version] {run,schema,mcp}\n\ntopology_audit: dependency-graph outage propagation and cycle detection.\nOriginal generated implementation. License: MIT. Edge source depends_on\ntarget. Outage of a node reaches transitive dependents.\n\npositional arguments:\n  {run,schema,mcp}  run reads one JSON object from stdin; mcp serves newline-\n                    delimited JSON-RPC\n\noptions:\n  -h, --help        show this help message and exit\n  --version         show program's version number and exit\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/topology-audit",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:47.268762+00:00",
+      "seconds": 0.042,
+      "exit_code": 0,
+      "stdout": "{\"affected\":[\"api\",\"app\",\"db\"],\"cyclic_components\":[],\"has_cycle\":false,\"n_affected\":3,\"n_edges\":2,\"n_nodes\":3,\"n_scc\":3,\"outage\":\"db\",\"strongly_connected_components\":[[\"api\"],[\"app\"],[\"db\"]],\"unaffected\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:47.310908+00:00",
+      "seconds": 2.243,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_determinism (integration.test_runtime.CLI.test_determinism) ... ok\ntest_extra_key (integration.test_runtime.CLI.test_extra_key) ... ok\ntest_fixture (integration.test_runtime.CLI.test_fixture) ... ok\ntest_help (integration.test_runtime.CLI.test_help) ... ok\ntest_invalid_configuration (integration.test_runtime.CLI.test_invalid_configuration) ... ok\ntest_malformed (integration.test_runtime.CLI.test_malformed) ... ok\ntest_missing_path_unsupported (integration.test_runtime.CLI.test_missing_path_unsupported) ... ok\ntest_network_guard (integration.test_runtime.CLI.test_network_guard) ... ok\ntest_oversized (integration.test_runtime.CLI.test_oversized) ... ok\ntest_schema (integration.test_runtime.CLI.test_schema) ... ok\ntest_unknown_command (integration.test_runtime.CLI.test_unknown_command) ... ok\ntest_version (integration.test_runtime.CLI.test_version) ... ok\ntest_before_initialize (integration.test_runtime.MCP.test_before_initialize) ... ok\ntest_before_initialized_notification (integration.test_runtime.MCP.test_before_initialized_notification) ... ok\ntest_duplicate_initialize (integration.test_runtime.MCP.test_duplicate_initialize) ... ok\ntest_identifier_limits (integration.test_runtime.MCP.test_identifier_limits) ... ok\ntest_invalid_envelopes (integration.test_runtime.MCP.test_invalid_envelopes) ... ok\ntest_invalid_initialize (integration.test_runtime.MCP.test_invalid_initialize) ... ok\ntest_lifecycle_discovery_call (integration.test_runtime.MCP.test_lifecycle_discovery_call) ... ok\ntest_malformed_recovery (integration.test_runtime.MCP.test_malformed_recovery) ... ok\ntest_notification_silence (integration.test_runtime.MCP.test_notification_silence) ... ok\ntest_oversized_frame (integration.test_runtime.MCP.test_oversized_frame) ... ok\ntest_pagination_rejected (integration.test_runtime.MCP.test_pagination_rejected) ... ok\ntest_rate_limit (integration.test_runtime.MCP.test_rate_limit) ... ok\ntest_tool_error (integration.test_runtime.MCP.test_tool_error) ... ok\ntest_unknown_method (integration.test_runtime.MCP.test_unknown_method) ... ok\ntest_unknown_tool (integration.test_runtime.MCP.test_unknown_tool) ... ok\ntest_version_negotiation (integration.test_runtime.MCP.test_version_negotiation) ... ok\ntest_boolean_is_not_number (integration.test_runtime.Validation.test_boolean_is_not_number) ... ok\ntest_fixture_schema (integration.test_runtime.Validation.test_fixture_schema) ... ok\ntest_nonfinite (integration.test_runtime.Validation.test_nonfinite) ... ok\ntest_schema_subset_is_supported (integration.test_runtime.Validation.test_schema_subset_is_supported) ... ok\ntest_static_runtime_imports (integration.test_runtime.Validation.test_static_runtime_imports) ... ok\ntest_bool_node_rejected (unit.test_kernel.TopologyAuditTests.test_bool_node_rejected) ... ok\ntest_cycle_detected_via_scc (unit.test_kernel.TopologyAuditTests.test_cycle_detected_via_scc) ... ok\ntest_cycle_propagates_all_members (unit.test_kernel.TopologyAuditTests.test_cycle_propagates_all_members) ... ok\ntest_duplicate_edge (unit.test_kernel.TopologyAuditTests.test_duplicate_edge) ... ok\ntest_leaf_outage_isolated (unit.test_kernel.TopologyAuditTests.test_leaf_outage_isolated) ... ok\ntest_malformed_edges (unit.test_kernel.TopologyAuditTests.test_malformed_edges) ... ok\ntest_not_object (unit.test_kernel.TopologyAuditTests.test_not_object) ... ok\ntest_outage_unknown_node (unit.test_kernel.TopologyAuditTests.test_outage_unknown_node) ... ok\ntest_sample_matches_expected (unit.test_kernel.TopologyAuditTests.test_sample_matches_expected) ... ok\ntest_schema_bounds (unit.test_kernel.TopologyAuditTests.test_schema_bounds) ... ok\ntest_self_loop_is_cycle (unit.test_kernel.TopologyAuditTests.test_self_loop_is_cycle) ... ok\ntest_too_many_nodes (unit.test_kernel.TopologyAuditTests.test_too_many_nodes) ... ok\ntest_unknown_edge_keys (unit.test_kernel.TopologyAuditTests.test_unknown_edge_keys) ... ok\ntest_unknown_keys (unit.test_kernel.TopologyAuditTests.test_unknown_keys) ... ok\n\n----------------------------------------------------------------------\nRan 47 tests in 2.112s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "topology-audit"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:49.553601+00:00",
+      "seconds": 0.439,
+      "exit_code": 0,
+      "stdout": "Found existing installation: topology-audit 0.1.0\nUninstalling topology-audit-0.1.0:\n  Successfully uninstalled topology-audit-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_topology_audit\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:49.992978+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_y6xryat2/extracted/dist/topology_audit-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:50.011395+00:00",
+      "seconds": 0.519,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/topology_audit-0.1.0-py3-none-any.whl\nInstalling collected packages: topology-audit\nSuccessfully installed topology-audit-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/topology-audit",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:50.530895+00:00",
+      "seconds": 0.04,
+      "exit_code": 0,
+      "stdout": "{\"affected\":[\"api\",\"app\",\"db\"],\"cyclic_components\":[],\"has_cycle\":false,\"n_affected\":3,\"n_edges\":2,\"n_nodes\":3,\"n_scc\":3,\"outage\":\"db\",\"strongly_connected_components\":[[\"api\"],[\"app\"],[\"db\"]],\"unaffected\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "topology-audit"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:50.571390+00:00",
+      "seconds": 0.442,
+      "exit_code": 0,
+      "stdout": "Found existing installation: topology-audit 0.1.0\nUninstalling topology-audit-0.1.0:\n  Successfully uninstalled topology-audit-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_y6xryat2/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_topology_audit\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_y6xryat2/extracted",
+      "timestamp_utc": "2026-09-19T02:45:51.013236+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "status": "OFFLINE VERIFIED",
+  "wheel_sha256": "867b8bc70d2642d1170ff2e7495ea3ce8c654a94b5459e026f2cf94e4637f268",
+  "source_sha256": {
+    "src/local_topology_audit/__init__.py": "43d51643b6e72c81c131f5b72f641b2b87a23897284392750f4aae9a45ffddff",
+    "src/local_topology_audit/__main__.py": "60d995b7671f45da591152a466f1c45db19bc6e71d6de539075c979c3aa13586",
+    "src/local_topology_audit/kernel.py": "d8c25edd87d7998fc09bcd029abff31f308786565f3b7e18a9add3d4022e1f49",
+    "src/local_topology_audit/runtime.py": "3b382882a85568c231f6280eee482b898128ca420e17744b276914492795972e"
+  },
+  "structure_license_manifest_checksum_checks": "passed (generated files; no upstream redistribution)",
+  "reproducible_wheel_rebuild": "identical bytes",
+  "test_summary": [
+    "----------------------------------------------------------------------",
+    "Ran 47 tests in 2.112s",
+    "",
+    "OK"
+  ],
+  "installation_reinstallation_uninstallation": "passed",
+  "scope": "Linux x86_64 CPython 3.12; minimal venv with pip, installed wheel; all listed tests under seccomp. Not EVE-client or current MCP revision certification.",
+  "finished_at_utc": "2026-09-19T02:45:51.043137+00:00"
+}

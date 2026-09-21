@@ -1,0 +1,258 @@
+{
+  "name": "thought-map",
+  "started_at_utc": "2026-09-19T02:45:17.911633+00:00",
+  "environment": {
+    "python": "3.12.12 (main, Nov  4 2025, 14:39:41) [GCC 14.2.0]",
+    "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "network_isolation": {
+    "method": "Linux x86_64 seccomp inherited across exec; socket syscall family denied",
+    "probes": [
+      {
+        "family": 2,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 2,
+        "type": 2,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 10,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 1,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "scripts/build.py"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:17.929707+00:00",
+      "seconds": 0.064,
+      "exit_code": 0,
+      "stdout": "thought_map-0.1.0-py3-none-any.whl\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "-m",
+        "venv",
+        "/tmp/local_skill_verify_2czvrmzn/venv"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn",
+      "timestamp_utc": "2026-09-19T02:45:17.993468+00:00",
+      "seconds": 3.326,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "--version"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:21.319295+00:00",
+      "seconds": 0.268,
+      "exit_code": 0,
+      "stdout": "pip 25.0.1 from /tmp/local_skill_verify_2czvrmzn/venv/lib/python3.12/site-packages/pip (python 3.12)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_2czvrmzn/extracted/dist/thought_map-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:21.586903+00:00",
+      "seconds": 0.519,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/thought_map-0.1.0-py3-none-any.whl\nInstalling collected packages: thought-map\nSuccessfully installed thought-map-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:22.106247+00:00",
+      "seconds": 0.368,
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/thought-map",
+        "--help"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:22.474104+00:00",
+      "seconds": 0.044,
+      "exit_code": 0,
+      "stdout": "usage: thought-map [-h] [--version] {run,schema,mcp}\n\ngraph_map: structural analysis of an explicitly supplied signed directed\ngraph. Original generated implementation. License: MIT. No causal discovery,\nno dynamics, no cycle enumeration, no network I/O.\n\npositional arguments:\n  {run,schema,mcp}  run reads one JSON object from stdin; mcp serves newline-\n                    delimited JSON-RPC\n\noptions:\n  -h, --help        show this help message and exit\n  --version         show program's version number and exit\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/thought-map",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:22.518347+00:00",
+      "seconds": 0.041,
+      "exit_code": 0,
+      "stdout": "{\"degrees\":[{\"in_degree\":2,\"node\":\"A\",\"out_degree\":2},{\"in_degree\":1,\"node\":\"B\",\"out_degree\":1},{\"in_degree\":1,\"node\":\"C\",\"out_degree\":1}],\"has_cycle\":true,\"n_edges\":4,\"n_nodes\":3,\"n_scc\":1,\"self_loops\":[{\"node\":\"A\",\"polarity\":\"reinforcing\",\"sign\":1}],\"strongly_connected_components\":[[\"A\",\"B\",\"C\"]]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:22.559483+00:00",
+      "seconds": 2.206,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_determinism (integration.test_runtime.CLI.test_determinism) ... ok\ntest_extra_key (integration.test_runtime.CLI.test_extra_key) ... ok\ntest_fixture (integration.test_runtime.CLI.test_fixture) ... ok\ntest_help (integration.test_runtime.CLI.test_help) ... ok\ntest_invalid_configuration (integration.test_runtime.CLI.test_invalid_configuration) ... ok\ntest_malformed (integration.test_runtime.CLI.test_malformed) ... ok\ntest_missing_path_unsupported (integration.test_runtime.CLI.test_missing_path_unsupported) ... ok\ntest_network_guard (integration.test_runtime.CLI.test_network_guard) ... ok\ntest_oversized (integration.test_runtime.CLI.test_oversized) ... ok\ntest_schema (integration.test_runtime.CLI.test_schema) ... ok\ntest_unknown_command (integration.test_runtime.CLI.test_unknown_command) ... ok\ntest_version (integration.test_runtime.CLI.test_version) ... ok\ntest_before_initialize (integration.test_runtime.MCP.test_before_initialize) ... ok\ntest_before_initialized_notification (integration.test_runtime.MCP.test_before_initialized_notification) ... ok\ntest_duplicate_initialize (integration.test_runtime.MCP.test_duplicate_initialize) ... ok\ntest_identifier_limits (integration.test_runtime.MCP.test_identifier_limits) ... ok\ntest_invalid_envelopes (integration.test_runtime.MCP.test_invalid_envelopes) ... ok\ntest_invalid_initialize (integration.test_runtime.MCP.test_invalid_initialize) ... ok\ntest_lifecycle_discovery_call (integration.test_runtime.MCP.test_lifecycle_discovery_call) ... ok\ntest_malformed_recovery (integration.test_runtime.MCP.test_malformed_recovery) ... ok\ntest_notification_silence (integration.test_runtime.MCP.test_notification_silence) ... ok\ntest_oversized_frame (integration.test_runtime.MCP.test_oversized_frame) ... ok\ntest_pagination_rejected (integration.test_runtime.MCP.test_pagination_rejected) ... ok\ntest_rate_limit (integration.test_runtime.MCP.test_rate_limit) ... ok\ntest_tool_error (integration.test_runtime.MCP.test_tool_error) ... ok\ntest_unknown_method (integration.test_runtime.MCP.test_unknown_method) ... ok\ntest_unknown_tool (integration.test_runtime.MCP.test_unknown_tool) ... ok\ntest_version_negotiation (integration.test_runtime.MCP.test_version_negotiation) ... ok\ntest_boolean_is_not_number (integration.test_runtime.Validation.test_boolean_is_not_number) ... ok\ntest_fixture_schema (integration.test_runtime.Validation.test_fixture_schema) ... ok\ntest_nonfinite (integration.test_runtime.Validation.test_nonfinite) ... ok\ntest_schema_subset_is_supported (integration.test_runtime.Validation.test_schema_subset_is_supported) ... ok\ntest_static_runtime_imports (integration.test_runtime.Validation.test_static_runtime_imports) ... ok\ntest_bool_sign_rejected (unit.test_kernel.GraphMapTests.test_bool_sign_rejected) ... ok\ntest_dag_no_cycle (unit.test_kernel.GraphMapTests.test_dag_no_cycle) ... ok\ntest_degrees_isolated (unit.test_kernel.GraphMapTests.test_degrees_isolated) ... ok\ntest_duplicate_edge (unit.test_kernel.GraphMapTests.test_duplicate_edge) ... ok\ntest_duplicate_node (unit.test_kernel.GraphMapTests.test_duplicate_node) ... ok\ntest_empty_nodes (unit.test_kernel.GraphMapTests.test_empty_nodes) ... ok\ntest_float_sign_rejected (unit.test_kernel.GraphMapTests.test_float_sign_rejected) ... ok\ntest_invalid_sign (unit.test_kernel.GraphMapTests.test_invalid_sign) ... ok\ntest_malformed_edge_not_object (unit.test_kernel.GraphMapTests.test_malformed_edge_not_object) ... ok\ntest_nan_not_applicable_nodes_are_strings (unit.test_kernel.GraphMapTests.test_nan_not_applicable_nodes_are_strings) ... ok\ntest_not_object (unit.test_kernel.GraphMapTests.test_not_object) ... ok\ntest_sample_matches_expected (unit.test_kernel.GraphMapTests.test_sample_matches_expected) ... ok\ntest_scc_two_components (unit.test_kernel.GraphMapTests.test_scc_two_components) ... ok\ntest_schema_additional_properties_false (unit.test_kernel.GraphMapTests.test_schema_additional_properties_false) ... ok\ntest_self_loop_is_cycle (unit.test_kernel.GraphMapTests.test_self_loop_is_cycle) ... ok\ntest_too_many_edges (unit.test_kernel.GraphMapTests.test_too_many_edges) ... ok\ntest_too_many_nodes (unit.test_kernel.GraphMapTests.test_too_many_nodes) ... ok\ntest_unknown_edge_keys (unit.test_kernel.GraphMapTests.test_unknown_edge_keys) ... ok\ntest_unknown_keys (unit.test_kernel.GraphMapTests.test_unknown_keys) ... ok\ntest_unknown_node_on_edge (unit.test_kernel.GraphMapTests.test_unknown_node_on_edge) ... ok\n\n----------------------------------------------------------------------\nRan 53 tests in 2.073s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "thought-map"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:24.765368+00:00",
+      "seconds": 0.443,
+      "exit_code": 0,
+      "stdout": "Found existing installation: thought-map 0.1.0\nUninstalling thought-map-0.1.0:\n  Successfully uninstalled thought-map-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_thought_map\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:25.208532+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_2czvrmzn/extracted/dist/thought_map-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:25.226656+00:00",
+      "seconds": 0.514,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/thought_map-0.1.0-py3-none-any.whl\nInstalling collected packages: thought-map\nSuccessfully installed thought-map-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/thought-map",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:25.740960+00:00",
+      "seconds": 0.042,
+      "exit_code": 0,
+      "stdout": "{\"degrees\":[{\"in_degree\":2,\"node\":\"A\",\"out_degree\":2},{\"in_degree\":1,\"node\":\"B\",\"out_degree\":1},{\"in_degree\":1,\"node\":\"C\",\"out_degree\":1}],\"has_cycle\":true,\"n_edges\":4,\"n_nodes\":3,\"n_scc\":1,\"self_loops\":[{\"node\":\"A\",\"polarity\":\"reinforcing\",\"sign\":1}],\"strongly_connected_components\":[[\"A\",\"B\",\"C\"]]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "thought-map"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:25.782535+00:00",
+      "seconds": 0.444,
+      "exit_code": 0,
+      "stdout": "Found existing installation: thought-map 0.1.0\nUninstalling thought-map-0.1.0:\n  Successfully uninstalled thought-map-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_2czvrmzn/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_thought_map\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_2czvrmzn/extracted",
+      "timestamp_utc": "2026-09-19T02:45:26.226322+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "status": "OFFLINE VERIFIED",
+  "wheel_sha256": "d57f4215233d991e4d01c0701604aada12dca349651b226f00bad4fceb9a8797",
+  "source_sha256": {
+    "src/local_thought_map/__init__.py": "43d51643b6e72c81c131f5b72f641b2b87a23897284392750f4aae9a45ffddff",
+    "src/local_thought_map/__main__.py": "60d995b7671f45da591152a466f1c45db19bc6e71d6de539075c979c3aa13586",
+    "src/local_thought_map/kernel.py": "0e0909941230ea63ec61171c657ff16aa359eb0be5ad7837eb7580ebc171097f",
+    "src/local_thought_map/runtime.py": "c31241b2268f46ad2f05dc09ccc0d53a00928e96f285cbb40868b121cb662b6e"
+  },
+  "structure_license_manifest_checksum_checks": "passed (generated files; no upstream redistribution)",
+  "reproducible_wheel_rebuild": "identical bytes",
+  "test_summary": [
+    "----------------------------------------------------------------------",
+    "Ran 53 tests in 2.073s",
+    "",
+    "OK"
+  ],
+  "installation_reinstallation_uninstallation": "passed",
+  "scope": "Linux x86_64 CPython 3.12; minimal venv with pip, installed wheel; all listed tests under seccomp. Not EVE-client or current MCP revision certification.",
+  "finished_at_utc": "2026-09-19T02:45:26.255599+00:00"
+}

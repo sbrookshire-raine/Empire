@@ -1,0 +1,1 @@
+Security cases are in tests/integration/test_runtime.py and tests/unit/test_kernel.py: bounded frames, schema validation, duplicate fields, nesting, numeric validity, unknown inputs, disallowed configuration, no subprocess/eval/network runtime imports. This is bounded review, not an external audit.

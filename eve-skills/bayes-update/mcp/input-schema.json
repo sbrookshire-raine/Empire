@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "bayes_update_input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "hypotheses",
+    "prior",
+    "likelihood"
+  ],
+  "properties": {
+    "hypotheses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "prior": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "number"
+      }
+    },
+    "likelihood": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}

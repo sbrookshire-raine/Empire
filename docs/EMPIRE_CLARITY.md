@@ -10,7 +10,7 @@ This document is the bounding box for how the space stays clean. It does not rep
 |-------|------------|----------------|
 | **Eve Core** | Chat, PocketBase tasks, Cognee recall, staging→confirm memory, wiki *glasses* (locate→extract→refuse) when Wiki Local is in session | Not a stem engineer, not a day planner UI, not Truth Drift year-compare |
 | **LEGO shelf** | Named products with their own pages or drop-folder workflows: Truth Drift (Wiki Ops), DAZE, Stem Factory (Shard) | Not 16 peer checkboxes that redefine Eve’s personality |
-| **Session reach** | Research Partner grants + short Toolbelt session limbs (GitHub/Web scout, forge, etc.) | Not always-on; never silent auto-Cognee from caches |
+| **Session reach** | Research Partner grants + short Toolbelt session limbs (GitHub/Web scout, forge, etc.) | Not always-on; research caches never silently enter Cognee |
 
 ## Eve Core (always)
 
@@ -44,6 +44,16 @@ work → propose_remember → eve_staging (+ ledger file)
 - No full Wikipedia → Cognee. No auto-remember from wiki_cache / scout caches.
 - Eve may create/revise/delete **her** staging sandbox. Mechanic never deletes your Resource Queue or wiki corpus.
 - TTL sweeper: `.\scripts\sweep-eve-staging.ps1` (or `python -m pipeline.eve_staging sweep`).
+
+### Approved ambient-memory exception
+
+The `EMPIRE-AmbientMemoryWatchdog` Task Scheduler worker may extract at most one
+bounded fact from a successful user turn when the user's text contains one of the
+approved whole-phrase triggers: `that worked`, `perfect`, `finally`,
+`this is exactly it`, `keep this`, `looks good`, `resolved`, or `nailed it`.
+It writes only to Cognee dataset `eve_ambient`, capped at 10 facts per hour,
+with event provenance and audit output. Deliberate memories remain in `eve_memory`;
+research abstracts remain in the SQLite catalog and are never automatically promoted.
 
 ## Toolbelt buckets
 

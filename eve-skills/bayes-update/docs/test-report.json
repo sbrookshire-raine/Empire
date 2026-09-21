@@ -1,0 +1,258 @@
+{
+  "name": "bayes-update",
+  "started_at_utc": "2026-09-19T02:45:51.044698+00:00",
+  "environment": {
+    "python": "3.12.12 (main, Nov  4 2025, 14:39:41) [GCC 14.2.0]",
+    "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "network_isolation": {
+    "method": "Linux x86_64 seccomp inherited across exec; socket syscall family denied",
+    "probes": [
+      {
+        "family": 2,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 2,
+        "type": 2,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 10,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      },
+      {
+        "family": 1,
+        "type": 1,
+        "errno": 1,
+        "result": "denied"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "scripts/build.py"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:51.057018+00:00",
+      "seconds": 0.07,
+      "exit_code": 0,
+      "stdout": "bayes_update-0.1.0-py3-none-any.whl\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/user/.cache/installs/python/bin/python3",
+        "-m",
+        "venv",
+        "/tmp/local_skill_verify_6s2m_1ez/venv"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez",
+      "timestamp_utc": "2026-09-19T02:45:51.127121+00:00",
+      "seconds": 3.173,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "--version"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:54.299880+00:00",
+      "seconds": 0.26,
+      "exit_code": 0,
+      "stdout": "pip 25.0.1 from /tmp/local_skill_verify_6s2m_1ez/venv/lib/python3.12/site-packages/pip (python 3.12)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_6s2m_1ez/extracted/dist/bayes_update-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:54.560287+00:00",
+      "seconds": 0.517,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/bayes_update-0.1.0-py3-none-any.whl\nInstalling collected packages: bayes-update\nSuccessfully installed bayes-update-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:55.077193+00:00",
+      "seconds": 0.35,
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/bayes-update",
+        "--help"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:55.427517+00:00",
+      "seconds": 0.044,
+      "exit_code": 0,
+      "stdout": "usage: bayes-update [-h] [--version] {run,schema,mcp}\n\nbayes_update: finite categorical Bayes update from prior and likelihood.\nOriginal generated implementation. License: MIT. Not causal identification.\nZero evidence is rejected.\n\npositional arguments:\n  {run,schema,mcp}  run reads one JSON object from stdin; mcp serves newline-\n                    delimited JSON-RPC\n\noptions:\n  -h, --help        show this help message and exit\n  --version         show program's version number and exit\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/bayes-update",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:55.471691+00:00",
+      "seconds": 0.041,
+      "exit_code": 0,
+      "stdout": "{\"assumption\":\"finite categorical update; not causal identification\",\"evidence\":0.5,\"hypotheses\":[\"rain\",\"dry\"],\"likelihood\":[0.8,0.2],\"map_hypothesis\":\"rain\",\"map_probability\":0.8,\"posterior\":[0.8,0.2],\"prior\":[0.5,0.5],\"unnormalized\":[0.4,0.1]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:55.512626+00:00",
+      "seconds": 2.219,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_determinism (integration.test_runtime.CLI.test_determinism) ... ok\ntest_extra_key (integration.test_runtime.CLI.test_extra_key) ... ok\ntest_fixture (integration.test_runtime.CLI.test_fixture) ... ok\ntest_help (integration.test_runtime.CLI.test_help) ... ok\ntest_invalid_configuration (integration.test_runtime.CLI.test_invalid_configuration) ... ok\ntest_malformed (integration.test_runtime.CLI.test_malformed) ... ok\ntest_missing_path_unsupported (integration.test_runtime.CLI.test_missing_path_unsupported) ... ok\ntest_network_guard (integration.test_runtime.CLI.test_network_guard) ... ok\ntest_oversized (integration.test_runtime.CLI.test_oversized) ... ok\ntest_schema (integration.test_runtime.CLI.test_schema) ... ok\ntest_unknown_command (integration.test_runtime.CLI.test_unknown_command) ... ok\ntest_version (integration.test_runtime.CLI.test_version) ... ok\ntest_before_initialize (integration.test_runtime.MCP.test_before_initialize) ... ok\ntest_before_initialized_notification (integration.test_runtime.MCP.test_before_initialized_notification) ... ok\ntest_duplicate_initialize (integration.test_runtime.MCP.test_duplicate_initialize) ... ok\ntest_identifier_limits (integration.test_runtime.MCP.test_identifier_limits) ... ok\ntest_invalid_envelopes (integration.test_runtime.MCP.test_invalid_envelopes) ... ok\ntest_invalid_initialize (integration.test_runtime.MCP.test_invalid_initialize) ... ok\ntest_lifecycle_discovery_call (integration.test_runtime.MCP.test_lifecycle_discovery_call) ... ok\ntest_malformed_recovery (integration.test_runtime.MCP.test_malformed_recovery) ... ok\ntest_notification_silence (integration.test_runtime.MCP.test_notification_silence) ... ok\ntest_oversized_frame (integration.test_runtime.MCP.test_oversized_frame) ... ok\ntest_pagination_rejected (integration.test_runtime.MCP.test_pagination_rejected) ... ok\ntest_rate_limit (integration.test_runtime.MCP.test_rate_limit) ... ok\ntest_tool_error (integration.test_runtime.MCP.test_tool_error) ... ok\ntest_unknown_method (integration.test_runtime.MCP.test_unknown_method) ... ok\ntest_unknown_tool (integration.test_runtime.MCP.test_unknown_tool) ... ok\ntest_version_negotiation (integration.test_runtime.MCP.test_version_negotiation) ... ok\ntest_boolean_is_not_number (integration.test_runtime.Validation.test_boolean_is_not_number) ... ok\ntest_fixture_schema (integration.test_runtime.Validation.test_fixture_schema) ... ok\ntest_nonfinite (integration.test_runtime.Validation.test_nonfinite) ... ok\ntest_schema_subset_is_supported (integration.test_runtime.Validation.test_schema_subset_is_supported) ... ok\ntest_static_runtime_imports (integration.test_runtime.Validation.test_static_runtime_imports) ... ok\ntest_bool_prior_rejected (unit.test_kernel.BayesUpdateTests.test_bool_prior_rejected) ... ok\ntest_duplicate_hypothesis (unit.test_kernel.BayesUpdateTests.test_duplicate_hypothesis) ... ok\ntest_inf_prior_rejected (unit.test_kernel.BayesUpdateTests.test_inf_prior_rejected) ... ok\ntest_length_mismatch (unit.test_kernel.BayesUpdateTests.test_length_mismatch) ... ok\ntest_malformed_arrays (unit.test_kernel.BayesUpdateTests.test_malformed_arrays) ... ok\ntest_map_tie_lexicographic (unit.test_kernel.BayesUpdateTests.test_map_tie_lexicographic) ... ok\ntest_nan_likelihood_rejected (unit.test_kernel.BayesUpdateTests.test_nan_likelihood_rejected) ... ok\ntest_negative_likelihood (unit.test_kernel.BayesUpdateTests.test_negative_likelihood) ... ok\ntest_negative_prior (unit.test_kernel.BayesUpdateTests.test_negative_prior) ... ok\ntest_not_object (unit.test_kernel.BayesUpdateTests.test_not_object) ... ok\ntest_posterior_sums_to_one (unit.test_kernel.BayesUpdateTests.test_posterior_sums_to_one) ... ok\ntest_prior_must_sum_to_one (unit.test_kernel.BayesUpdateTests.test_prior_must_sum_to_one) ... ok\ntest_sample_matches_expected (unit.test_kernel.BayesUpdateTests.test_sample_matches_expected) ... ok\ntest_schema_bounds (unit.test_kernel.BayesUpdateTests.test_schema_bounds) ... ok\ntest_too_many_hypotheses (unit.test_kernel.BayesUpdateTests.test_too_many_hypotheses) ... ok\ntest_unknown_keys (unit.test_kernel.BayesUpdateTests.test_unknown_keys) ... ok\ntest_zero_evidence_rejected (unit.test_kernel.BayesUpdateTests.test_zero_evidence_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 50 tests in 2.093s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "bayes-update"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:57.731454+00:00",
+      "seconds": 0.603,
+      "exit_code": 0,
+      "stdout": "Found existing installation: bayes-update 0.1.0\nUninstalling bayes-update-0.1.0:\n  Successfully uninstalled bayes-update-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_bayes_update\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:58.334520+00:00",
+      "seconds": 0.03,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "/tmp/local_skill_verify_6s2m_1ez/extracted/dist/bayes_update-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:58.364255+00:00",
+      "seconds": 0.695,
+      "exit_code": 0,
+      "stdout": "Processing ./dist/bayes_update-0.1.0-py3-none-any.whl\nInstalling collected packages: bayes-update\nSuccessfully installed bayes-update-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/bayes-update",
+        "run"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:59.059077+00:00",
+      "seconds": 0.042,
+      "exit_code": 0,
+      "stdout": "{\"assumption\":\"finite categorical update; not causal identification\",\"evidence\":0.5,\"hypotheses\":[\"rain\",\"dry\"],\"likelihood\":[0.8,0.2],\"map_hypothesis\":\"rain\",\"map_probability\":0.8,\"posterior\":[0.8,0.2],\"prior\":[0.5,0.5],\"unnormalized\":[0.4,0.1]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        "bayes-update"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:59.101239+00:00",
+      "seconds": 0.46,
+      "exit_code": 0,
+      "stdout": "Found existing installation: bayes-update 0.1.0\nUninstalling bayes-update-0.1.0:\n  Successfully uninstalled bayes-update-0.1.0\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/local_skill_verify_6s2m_1ez/venv/bin/python",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"local_bayes_update\") is None"
+      ],
+      "cwd": "/tmp/local_skill_verify_6s2m_1ez/extracted",
+      "timestamp_utc": "2026-09-19T02:45:59.561568+00:00",
+      "seconds": 0.018,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "status": "OFFLINE VERIFIED",
+  "wheel_sha256": "40058c8152eed4d4fe17be2a608c5d19b182a26a06556d8ccbfea1ce549a7a26",
+  "source_sha256": {
+    "src/local_bayes_update/__init__.py": "43d51643b6e72c81c131f5b72f641b2b87a23897284392750f4aae9a45ffddff",
+    "src/local_bayes_update/__main__.py": "60d995b7671f45da591152a466f1c45db19bc6e71d6de539075c979c3aa13586",
+    "src/local_bayes_update/kernel.py": "9f455725d514fe455d855f205f45b00e7ef578c09cf22313b6aedea862a6c3e0",
+    "src/local_bayes_update/runtime.py": "33490ea7a862ee627a49c0c6e48384b613da15c6b275a6f0e149133929cabd31"
+  },
+  "structure_license_manifest_checksum_checks": "passed (generated files; no upstream redistribution)",
+  "reproducible_wheel_rebuild": "identical bytes",
+  "test_summary": [
+    "----------------------------------------------------------------------",
+    "Ran 50 tests in 2.093s",
+    "",
+    "OK"
+  ],
+  "installation_reinstallation_uninstallation": "passed",
+  "scope": "Linux x86_64 CPython 3.12; minimal venv with pip, installed wheel; all listed tests under seccomp. Not EVE-client or current MCP revision certification.",
+  "finished_at_utc": "2026-09-19T02:45:59.590642+00:00"
+}

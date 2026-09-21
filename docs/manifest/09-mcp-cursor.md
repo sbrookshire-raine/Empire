@@ -11,6 +11,7 @@ File: `.cursor/mcp.json`
 | `empire-pocketbase` | `mcp/pocketbase_mcp.py` | PocketBase CRUD + health |
 | `empire-cognee` | `mcp/cognee_mcp.py` | Cognee remember/recall/improve/forget/ingest |
 | `empire-wiki` | `mcp/wiki_mcp.py` | Wiki ingest (pilot **halted**) |
+| `empire-discovery` | `config/eve-capabilities/discovery-router.py` | Read-only local capability and research catalog |
 
 After clone, update `.cursor/mcp.json` paths if the repo is not at `C:\EMPIRE`. See [16-github-prep](../manifest/16-github-prep.md).
 
@@ -88,6 +89,13 @@ pb_list_records collection=tasks perPage=20
 | Auth failed (PB) | Verify `.env.local` admin email/password |
 
 ## Deferred wiring
+
+### empire-discovery tools
+
+The discovery router reads `config/eve-capabilities/catalog.db` through SQLite read-only connections.
+It exposes `search_catalog`, `inspect_tool_metadata`, `load_skill_manifest`,
+`search_research_library`, and `catalog_status`. It cannot mutate the catalog.
+The JSON capability registry remains the authorization source; catalog rows are discovery metadata only.
 
 See [docs/reference/MCP_WIRING_DEFERRED.md](../reference/MCP_WIRING_DEFERRED.md) for planned Postgres MCP and other integrations.
 

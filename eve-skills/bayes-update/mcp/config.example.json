@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "bayes-update": {
+      "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
+      "args": [
+        "-m",
+        "local_bayes_update",
+        "mcp"
+      ],
+      "env": {
+        "LOCAL_SKILL_NETWORK": "deny",
+        "PYTHONNOUSERSITE": "1"
+      }
+    }
+  }
+}
