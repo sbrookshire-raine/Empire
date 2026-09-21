@@ -15,12 +15,13 @@ from email import policy
 from email.parser import BytesParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 try:
     from frontend import (
         chat_continuity,
         chat_history,
+        dashboard_api,
         companion_api,
         eve_proxy,
         eve_toolbelt,
@@ -39,6 +40,7 @@ try:
 except ModuleNotFoundError:
     import chat_continuity  # type: ignore[no-redef]
     import chat_history  # type: ignore[no-redef]
+    import dashboard_api  # type: ignore[no-redef]
     import companion_api  # type: ignore[no-redef]
     import eve_proxy  # type: ignore[no-redef]
     import eve_toolbelt  # type: ignore[no-redef]
@@ -432,6 +434,14 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._gpu_lease_get()
         if path == "/api/admission":
             return self._admission_get()
+        if path == "/api/resource-pulse":
+            return self._send_json(200, dashboard_api.resource())
+        if path == "/api/catalog":
+            params = parse_qs(urlparse(self.path).query)
+            payload = {key: (values[0] if values else "") for key, values in params.items()}
+            return self._send_json(200, dashboard_api.catalog(payload))
+        if path == "/api/workers/status":
+            return self._send_json(200, dashboard_api.workers())
         if path.startswith("/api/lego/"):
             return self._lego_get(path)
         if path.startswith("/api/daze/"):
