@@ -61,8 +61,13 @@ class AdmissionControllerTests(unittest.TestCase):
 
     def test_non_auto_category_denied(self) -> None:
         admission_controller.set_research_partner(True)
-        result = admission_controller.request_capability("stem_factory", "test")
+        # Manual Toolbelt state is user-owned and may have Stem Factory enabled.
+        # This test exercises the distinct auto-admission path, where GPU-heavy
+        # product limbs must remain unavailable for session auto-enable.
+        with mock.patch("frontend.eve_toolbelt.category_enabled", return_value=False):
+            result = admission_controller.request_capability("stem_factory", "test")
         self.assertFalse(result["ok"])
+        self.assertIn("cannot be auto-enabled", result.get("error", ""))
 
     def test_resource_gated_admit_activates_without_partner(self) -> None:
         with mock.patch("frontend.eve_toolbelt.category_enabled", return_value=False), mock.patch.object(

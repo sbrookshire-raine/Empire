@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-16T21:12:36Z",
+  "updated": "2026-09-18T02:28:57Z",
   "ok": true,
   "passed": 19,
   "failed": 0,
@@ -12,7 +12,7 @@
       "ok": true,
       "detail": "HTTP 200",
       "skipped": false,
-      "duration_ms": 9
+      "duration_ms": 8
     },
     {
       "id": "ollama.model",
@@ -20,7 +20,7 @@
       "ok": true,
       "detail": "compatible model found for llama3.1:8b",
       "skipped": false,
-      "duration_ms": 3
+      "duration_ms": 26
     },
     {
       "id": "pocketbase.health",
@@ -28,7 +28,7 @@
       "ok": true,
       "detail": "HTTP 200",
       "skipped": false,
-      "duration_ms": 24
+      "duration_ms": 12
     },
     {
       "id": "pocketbase.tasks",
@@ -36,7 +36,7 @@
       "ok": true,
       "detail": "tasks collection readable (totalItems=8)",
       "skipped": false,
-      "duration_ms": 0
+      "duration_ms": 4
     },
     {
       "id": "frontend.static",
@@ -44,7 +44,7 @@
       "ok": true,
       "detail": "HTTP 200",
       "skipped": false,
-      "duration_ms": 14
+      "duration_ms": 1
     },
     {
       "id": "frontend.to_pocketbase",
@@ -52,7 +52,7 @@
       "ok": true,
       "detail": "Tasks UI can reach PocketBase (same API path as index.html)",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 24
     },
     {
       "id": "frontend.control_api",
@@ -60,7 +60,7 @@
       "ok": true,
       "detail": "dashboard control API ok (healthy=4)",
       "skipped": false,
-      "duration_ms": 15
+      "duration_ms": 16
     },
     {
       "id": "eve.info",
@@ -68,7 +68,7 @@
       "ok": true,
       "detail": "HTTP 200",
       "skipped": false,
-      "duration_ms": 17
+      "duration_ms": 20
     },
     {
       "id": "eve.to_pocketbase",
@@ -76,7 +76,7 @@
       "ok": true,
       "detail": "Eve configured PocketBase reachable at http://127.0.0.1:8090",
       "skipped": false,
-      "duration_ms": 12
+      "duration_ms": 24
     },
     {
       "id": "eve.to_ollama",
@@ -84,7 +84,7 @@
       "ok": true,
       "detail": "Eve configured Ollama reachable at http://localhost:11434/v1",
       "skipped": false,
-      "duration_ms": 19
+      "duration_ms": 21
     },
     {
       "id": "voice.speaches",
@@ -92,7 +92,7 @@
       "ok": true,
       "detail": "Voice API ok at http://127.0.0.1:8000",
       "skipped": false,
-      "duration_ms": 14
+      "duration_ms": 26
     },
     {
       "id": "eve.to_cognee_worker",
@@ -100,7 +100,7 @@
       "ok": true,
       "detail": "Eve Python/Cognee worker subprocess ok",
       "skipped": false,
-      "duration_ms": 28675
+      "duration_ms": 38701
     },
     {
       "id": "mcp.pocketbase",
@@ -108,7 +108,7 @@
       "ok": true,
       "detail": "MCP PocketBase tools ok (2654 chars)",
       "skipped": false,
-      "duration_ms": 658
+      "duration_ms": 645
     },
     {
       "id": "mcp.cognee",
@@ -116,13 +116,13 @@
       "ok": true,
       "detail": "MCP Cognee recall ok (72 chars)",
       "skipped": false,
-      "duration_ms": 27156
+      "duration_ms": 25555
     },
     {
       "id": "pipeline.loom_intake",
       "label": "Loom intake pipeline + ledger",
       "ok": true,
-      "detail": "Loom intake ok (ledger rows=305)",
+      "detail": "Loom intake ok (ledger rows=327)",
       "skipped": false,
       "duration_ms": 1
     },
@@ -132,15 +132,15 @@
       "ok": true,
       "detail": "Tool Forge pipelines ok (47 skills indexed)",
       "skipped": false,
-      "duration_ms": 7
+      "duration_ms": 6
     },
     {
       "id": "mcp.loom_intake",
       "label": "MCP empire-loom-intake",
       "ok": true,
-      "detail": "MCP loom_status ok (305 rows)",
+      "detail": "MCP loom_status ok (327 rows)",
       "skipped": false,
-      "duration_ms": 5
+      "duration_ms": 4
     },
     {
       "id": "mcp.tool_forge",
@@ -148,7 +148,7 @@
       "ok": true,
       "detail": "MCP tool_forge ok (2 harvest files)",
       "skipped": false,
-      "duration_ms": 12
+      "duration_ms": 11
     },
     {
       "id": "integration.task_roundtrip",
@@ -156,7 +156,7 @@
       "ok": true,
       "detail": "task create -> read -> delete round-trip ok",
       "skipped": false,
-      "duration_ms": 2
+      "duration_ms": 56
     }
   ],
   "summary": {
