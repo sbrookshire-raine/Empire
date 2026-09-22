@@ -249,6 +249,35 @@ def _disambiguation_branch(
     return [_row_to_hit(row, year) for row in rows]
 
 
+def _close_match_branch(
+    conn: sqlite3.Connection,
+    title_norm: str,
+    year: str,
+    *,
+    limit: int = 3,
+) -> list[DnsHit]:
+    """Return bounded alias/title substring candidates after exact lookup fails."""
+    needle = (title_norm or "").strip()
+    if not needle:
+        return []
+    safe_limit = max(1, min(int(limit), 3))
+    rows = conn.execute(
+        """
+        SELECT DISTINCT p.title, p.path, p.rel_path, p.page_id, p.year
+        FROM pages AS p
+        LEFT JOIN aliases AS a ON p.title_norm = a.title_norm
+        WHERE a.alias_norm LIKE ? COLLATE NOCASE
+           OR p.title_norm LIKE ? COLLATE NOCASE
+           OR p.title LIKE ? COLLATE NOCASE
+        ORDER BY CASE WHEN p.title_norm LIKE ? COLLATE NOCASE THEN 0 ELSE 1 END,
+                 length(p.title), p.title
+        LIMIT ?
+        """,
+        (f"%{needle}%", f"%{needle}%", f"%{needle}%", f"%{needle}%", safe_limit),
+    ).fetchall()
+    return [_row_to_hit(row, year) for row in rows]
+
+
 def _tv_context(user_question: str) -> bool:
     ql = (user_question or "").casefold()
     return any(
@@ -620,6 +649,19 @@ def resolve(
                 year=y,
                 candidates=tuple(branch[:8]),
                 reason="multiple titled variants",
+            )
+        close_matches = [
+            h
+            for h in _close_match_branch(conn, normalize_text(query), y, limit=3)
+            if _reject_false_friend(h, tv_ask=tv_ask)
+        ]
+        if close_matches:
+            return DnsResult(
+                status="ambiguous",
+                query=query,
+                year=y,
+                candidates=tuple(close_matches[:3]),
+                reason="close substring or alias matches",
             )
         return DnsResult(status="miss", query=query, year=y, reason="not in title registry")
     finally:

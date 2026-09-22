@@ -101,11 +101,23 @@ def _task_state(name: str) -> dict[str, Any]:
         return {"name": name, "status": "unknown", "detail": "Scheduler probe unavailable"}
 
 
+def _status_file(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+
+
 def workers() -> dict[str, Any]:
+    watchdog_path = AUDIT_DIR / "ambient-memory-status.json"
+    scavenger_path = AUDIT_DIR / "research-scavenger-status.json"
+    watchdog = _status_file(watchdog_path)
+    scavenger = _status_file(scavenger_path)
     return {
         "ok": True,
         "workers": [
-            {**_task_state(TASK_NAMES[0]), "label": "Memory Watchdog", "status_path": str(AUDIT_DIR / "ambient-memory-status.json")},
-            {**_task_state(TASK_NAMES[1]), "label": "Research Scavenger", "status_path": str(AUDIT_DIR / "research-scavenger-status.json")},
+            {**_task_state(TASK_NAMES[0]), "label": "Memory Watchdog", "status_path": str(watchdog_path), "last_update": watchdog.get("updated_at") or watchdog.get("started_at", ""), "facts_this_hour": watchdog.get("facts_this_hour", 0), "last_commit": watchdog.get("last_commit", "")},
+            {**_task_state(TASK_NAMES[1]), "label": "Research Scavenger", "status_path": str(scavenger_path), "last_update": scavenger.get("updated_at") or scavenger.get("started_at", ""), "requests_this_hour": scavenger.get("requests_this_hour", 0), "last_query": scavenger.get("last_query", "")},
         ],
     }

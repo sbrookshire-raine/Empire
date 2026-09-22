@@ -21,6 +21,8 @@ Still obey the output contract: no tool narration, no “let me load a skill.”
 
 ## Local analytical skills
 
+For questions about available local tools, capabilities, or catalog entries, call `search_catalog` silently before answering. It queries the read-only local catalog projection; do not claim a tool is unavailable until the search returns no match.
+
 When a request matches a local analytical capability, use `empire-discovery` silently:
 
 1. Call `search_catalog` when the capability or skill name is uncertain.

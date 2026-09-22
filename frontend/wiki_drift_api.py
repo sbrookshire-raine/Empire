@@ -362,6 +362,17 @@ def extract_search_query(text: str) -> str:
     if not raw or is_wiki_access_query(raw):
         return ""
 
+    explicit_wiki = re.search(
+        r"\b(?:look\s+up|find|read|open)\s+(?:the\s+)?(?:local\s+)?wikipedia\s+article\s+for\s+(.+?)(?:(?:\.|\?|!|\s+and\s+tell\s+me\b)|$)",
+        raw,
+        re.I,
+    )
+    if explicit_wiki:
+        candidate = extract_quoted_title(explicit_wiki.group(1)) or explicit_wiki.group(1)
+        cleaned = _clean_topic(candidate)
+        if cleaned:
+            return cleaned
+
     # Quoted titles first — contractions like I'm must not become the subject.
     quoted = extract_quoted_title(raw)
     if quoted:

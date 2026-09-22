@@ -40,6 +40,13 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
         self.assertEqual(wiki_drift_api.extract_search_query(text), "Kate Bush")
 
+    def test_explicit_wikipedia_target_wins_in_multi_part_prompt(self) -> None:
+        text = (
+            "Query the catalog for 'decision making'. Then, look up the Wikipedia "
+            "article for 'Agent-based model'. Summarize the lead."
+        )
+        self.assertEqual(wiki_drift_api.extract_search_query(text), "Agent-based model")
+
     def test_explicit_drift_still_triggers_compare(self) -> None:
         text = "Compare post-truth across 2017, 2021, and 2026"
         self.assertTrue(wiki_drift_api.is_truth_drift_query(text))

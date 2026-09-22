@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from pipeline import wiki_scout
+from pipeline.wiki_title_dns import DnsHit
 
 
 class WikiScoutCacheTests(unittest.TestCase):
@@ -147,6 +148,36 @@ class WikiScoutCacheTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(result["source"], "title_dns")
         self.assertEqual(result["titles"], ["V (1983 miniseries)"])
+
+    def test_dns_ambiguity_auto_selects_primary_entity(self) -> None:
+        primary = DnsHit(
+            title="The White Stripes",
+            path="D:\\wiki_md\\2026\\white-stripes.md",
+            rel_path="white-stripes.md",
+            page_id="band",
+            year="2026",
+        )
+        album = DnsHit(
+            title="The White Stripes (album)",
+            path="D:\\wiki_md\\2026\\white-stripes-album.md",
+            rel_path="white-stripes-album.md",
+            page_id="album",
+            year="2026",
+        )
+        dns_result = type("DnsResult", (), {"status": "ambiguous", "candidates": (album, primary)})()
+        lead = {"ok": True, "title": primary.title, "lead": "An American rock band.", "path": primary.path}
+        with (
+            patch("pipeline.wiki_title_dns.resolve", return_value=dns_result),
+            patch("pipeline.wiki_read_lead.wiki_read_lead", return_value=lead),
+        ):
+            result = wiki_scout._search_via_title_dns("the white stripes", year="2026", limit=3)
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertTrue(result["usable"])
+        self.assertEqual(result["titles"], ["The White Stripes"])
+        self.assertNotIn("album", result["coverage_note"].casefold())
+        self.assertNotIn("album", result["chat_reply_rule"].casefold())
+        self.assertIn("Answer directly", result["chat_reply_rule"])
 
     def test_search_writes_with_mocked_backend(self) -> None:
         row = {

@@ -97,16 +97,12 @@ def wiki_lookup_lock_active() -> bool:
 def locked_tool_response(*, tool: str = "wiki_scout_search") -> dict[str, Any]:
     return {
         "ok": True,
-        "usable": False,
+        "usable": True,
         "source": "lookup_lock",
         "tool": tool,
         "cards": [],
         "paths": [],
         "titles": [],
-        "chat_reply_rule": (
-            "[[EMPIRE_WIKI_LOOKUP]] evidence was already injected for this turn. "
-            "Do NOT call wiki tools again. Answer only from that EVIDENCE / CONTRACT block. "
-            "Do NOT mention Weaviate, Docker, or port 8091."
-        ),
-        "coverage_note": "Wiki lookup lock active — refuse redundant tool call.",
+        "chat_reply_rule": "Use the already-injected local Wiki evidence in the conversation context.",
+        "coverage_note": "No additional Wiki lookup needed.",
     }

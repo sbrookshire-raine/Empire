@@ -38,6 +38,20 @@ def _seed(index: Path) -> None:
                 "2026",
             ),
             (
+                "The White Stripes",
+                r"D:\wiki_md\2026\batch_00002\tws.md",
+                "batch_00002/tws.md",
+                "tws",
+                "2026",
+            ),
+            (
+                "Jack White",
+                r"D:\wiki_md\2026\batch_00002\jw.md",
+                "batch_00002/jw.md",
+                "jw",
+                "2026",
+            ),
+            (
                 "Cult following",
                 r"D:\wiki_md\2026\batch_00003\cf.md",
                 "batch_00003/cf.md",
@@ -122,6 +136,16 @@ class WikiTitleDnsTests(unittest.TestCase):
         assert result.hit is not None
         self.assertEqual(result.hit.title, "Stranger Things")
         self.assertEqual(result.hit.rel_path, "batch_00001/st.md")
+
+    def test_close_match_suggests_article_title(self) -> None:
+        result = resolve("white stripes", "2026", index_path=self.index)
+        self.assertEqual(result.status, "ambiguous")
+        self.assertEqual([candidate.title for candidate in result.candidates], ["The White Stripes"])
+
+    def test_close_match_is_bounded(self) -> None:
+        result = resolve("white", "2026", index_path=self.index)
+        self.assertEqual(result.status, "ambiguous")
+        self.assertLessEqual(len(result.candidates), 3)
 
     def test_following_tv_is_miss(self) -> None:
         result = resolve(

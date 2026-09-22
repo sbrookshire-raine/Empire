@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 import uuid
+import asyncio
+import re
 import urllib.error
 import urllib.request
 from email import policy
@@ -92,6 +94,100 @@ def run_ps_script(script: Path, extra_args: list[str] | None = None, timeout: in
 AMBIENT_LOG_PATH = ROOT / "eve-audit" / "active_chat.log"
 AMBIENT_LOG_MAX_BYTES = 5 * 1024 * 1024
 AMBIENT_LOG_BACKUPS = 3
+VOICE_ROUTER_MODEL = "llama3.1:latest"
+VOICE_ROUTER_PROMPT = (
+    "You are Eve's presentation layer. Your ONLY function is to rewrite the provided "
+    "payload into Eve's voice. CRITICAL RULES: 1. PRESERVATION: You MUST preserve every "
+    "number, date format (for example YYYY-MM-DD), URL, and proper noun exactly as it "
+    "appears. Do not summarize or alter data. 2. NO INVENTION: Do not add any new claims, "
+    "consequences, or recommendations that are not explicitly in the payload. 3. "
+    "CONCISENESS: Be highly competent, direct, and concise. Never use conversational "
+    "filler like 'Certainly!' or 'Here is the info'. 4. FAILURE TONE: Exhibit dry, subtle "
+    "gallows humor ONLY if the payload explicitly describes a system failure or blocked "
+    "action. Do not invent the failure. 5. SUCCESS TONE: If the payload is a success or "
+    "data extraction, state the result flatly without humor or celebration."
+)
+CATALOG_INTENT_RE = re.compile(
+    r"\b(?:query|search|find)\s+(?:your\s+)?catalog\b|"
+    r"\bfind\s+tools\s+related\s+to\b|\bcatalog\s+search\b",
+    re.IGNORECASE,
+)
+CATALOG_ROUTER_PROMPT = (
+    "You are an intent router. Extract the catalog search query from the user's prompt. "
+    "Do NOT extract Wikipedia titles. Return ONLY JSON: "
+    '{"catalog_query": "extracted term"}. If no catalog search is requested, '
+    'return {"catalog_query": null}. Keep the extracted term concise. If multiple catalog '
+    "concepts are requested, select the most specific tool-bearing term (for example, use "
+    "'minimax' rather than combining it with generic words like 'decision making')."
+)
+
+
+def _catalog_context(message: str) -> str:
+    """Run explicit catalog intent before Qwen synthesis; return empty when absent."""
+    if not CATALOG_INTENT_RE.search(message or ""):
+        return ""
+    catalog_text = re.split(r"\bthen\b", message or "", maxsplit=1, flags=re.IGNORECASE)[0]
+    targets = re.findall(r"['\"]([^'\"]{2,120})['\"]", catalog_text)
+    for term in re.findall(r"\bminimax\b", catalog_text, re.IGNORECASE):
+        if term.casefold() not in {target.casefold() for target in targets}:
+            targets.append(term)
+    if not targets:
+        match = re.search(r"(?:catalog|tools? related to)\s+(.{2,120})", catalog_text, re.I)
+        if match:
+            targets.append(re.split(r"\b(?:then|and)\b", match.group(1), maxsplit=1, flags=re.I)[0].strip(" .?!"))
+    if not targets:
+        return ""
+    try:
+        from pipeline.discovery_catalog import search_catalog
+
+        results = [search_catalog(target, limit=5) for target in targets[:4]]
+    except Exception as exc:  # noqa: BLE001
+        return f"\n\n[SYSTEM NOTE: Catalog search unavailable: {exc}]"
+    compact = json.dumps({"queries": targets[:4], "results": results}, ensure_ascii=False, default=str)
+    return f"\n\n[SYSTEM NOTE: Catalog search returned these local tool facts: {compact}]"
+
+
+async def _extract_catalog_intent(message: str) -> str | None:
+    """Use the fast local model to separate catalog intent from Wiki intent."""
+    if not CATALOG_INTENT_RE.search(message or ""):
+        return None
+    try:
+        result = await asyncio.to_thread(
+            ollama_api.chat_completion,
+            system_prompt=CATALOG_ROUTER_PROMPT,
+            user_prompt=message[:8000],
+            model=VOICE_ROUTER_MODEL,
+            temperature=0.0,
+        )
+        raw = str(result.get("content") or "").strip()
+        parsed = json.loads(raw)
+        query = parsed.get("catalog_query") if isinstance(parsed, dict) else None
+        if not isinstance(query, str) or not query.strip():
+            return None
+        return query.strip()[:160]
+    except Exception:
+        return None
+
+
+async def _catalog_context_async(message: str) -> str:
+    query = await _extract_catalog_intent(message)
+    if not query:
+        return ""
+    try:
+        from pipeline.discovery_catalog import search_catalog
+
+        result = await asyncio.to_thread(search_catalog, query, 5)
+        if result.get("ok") and not result.get("results"):
+            for candidate in re.findall(r"\bminimax\b|\b[A-Za-z][A-Za-z-]{3,}\b", query, re.I):
+                retry = await asyncio.to_thread(search_catalog, candidate, 5)
+                if retry.get("results"):
+                    result = retry
+                    query = candidate
+                    break
+    except Exception as exc:  # noqa: BLE001
+        return f"\n\n[SYSTEM NOTE: Catalog search unavailable: {exc}]"
+    compact = json.dumps({"query": query, "result": result}, ensure_ascii=False, default=str)
+    return f"\n\n[SYSTEM NOTE: Catalog search returned these local tool facts: {compact}]"
 
 
 def _ambient_text(value: object, max_chars: int = 4000) -> str:
@@ -136,6 +232,46 @@ def _append_ambient_event(
             stream.write(json.dumps(event, ensure_ascii=False) + "\n")
     except (OSError, TypeError, ValueError):
         pass
+
+
+async def _voice_router(text: str) -> tuple[str, float, bool]:
+    """Rewrite final assistant text and return (text, elapsed seconds, fallback)."""
+    raw = (text or "").strip()
+    if not raw:
+        return raw, 0.0, True
+    voice_start = time.perf_counter()
+    try:
+        result = await asyncio.to_thread(
+            ollama_api.chat_completion,
+            system_prompt=VOICE_ROUTER_PROMPT,
+            user_prompt=raw,
+            model=VOICE_ROUTER_MODEL,
+            temperature=0.25,
+        )
+        rewritten = str(result.get("content") or "").strip()
+        candidate = rewritten or raw
+        safe = _voice_output_is_safe(raw, candidate)
+        return (candidate if safe else raw), time.perf_counter() - voice_start, not safe
+    except Exception:
+        return raw, time.perf_counter() - voice_start, True
+
+
+def _voice_output_is_safe(raw: str, candidate: str) -> bool:
+    """Reject rewrites that drop protected literals or failure/refusal semantics."""
+    import re
+
+    for token in re.findall(r"https?://\S+|\b\d+(?:[.,:-]\d+)*\b", raw):
+        if token.casefold() not in candidate.casefold():
+            return False
+    for phrase in re.findall(r"\([^)]{2,120}\)|'[^']{2,120}'|\"[^\"]{2,120}\"", raw):
+        if phrase.casefold() not in candidate.casefold():
+            return False
+    raw_lower = raw.casefold()
+    candidate_lower = candidate.casefold()
+    if any(term in raw_lower for term in ("cannot", "can't", "unable", "no usable", "not found", "blocked", "failure", "error")):
+        if not any(term in candidate_lower for term in ("cannot", "can't", "unable", "no usable", "not found", "blocked", "failure", "error")):
+            return False
+    return True
 
 
 def run_ps_command(command: str, timeout: int = 30) -> dict:
@@ -540,8 +676,23 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 payload = workbench_ui_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
+            if isinstance(payload.get("message"), str):
+                payload = dict(payload)
+                payload["message"] = payload["message"] + asyncio.run(
+                    _catalog_context_async(payload["message"])
+                )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
+            if self._pending_wiki_evidence and isinstance(payload.get("message"), str):
+                message = str(payload["message"])
+                if "[[EMPIRE_WIKI_LOOKUP]]" not in message and "[[EMPIRE_WIKI_EXTRACT]]" not in message:
+                    try:
+                        payload["message"] = wiki_drift_api._format_evidence_block(
+                            self._pending_wiki_evidence,
+                            user_question=message,
+                        )
+                    except Exception:
+                        pass
             self._ambient_user_text = str(payload.get("message") or "")
             self._ambient_turn_id = uuid.uuid4().hex
             return self._eve_proxy_request("POST", payload)
@@ -767,6 +918,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
     ) -> None:
         client_connected = True
         assistant_text = ""
+        qwen_start = time.perf_counter()
         try:
             if response.stream is None:
                 return
@@ -788,6 +940,22 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     if isinstance(cumulative, str) and cumulative.strip():
                         assistant_text = cumulative
                 if event_type == "message.completed" and assistant_text:
+                    qwen_time = time.perf_counter() - qwen_start
+                    assistant_text, voice_time, used_fallback = asyncio.run(_voice_router(assistant_text))
+                    print(
+                        f"[TRACER] Qwen Generation: {qwen_time:.2f}s | "
+                        f"Llama Voice Styling: {voice_time:.2f}s | "
+                        f"Total: {(qwen_time + voice_time):.2f}s | "
+                        f"Fallback Used: {used_fallback}",
+                        flush=True,
+                    )
+                    if isinstance(data, dict):
+                        data = dict(data)
+                        for key in ("message", "messageSoFar", "text", "content"):
+                            if isinstance(data.get(key), str):
+                                data[key] = assistant_text
+                        projected = dict(projected)
+                        projected["data"] = data
                     _append_ambient_event(
                         role="user",
                         text=getattr(self, "_ambient_user_text", ""),
@@ -795,6 +963,12 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         session_id=session_id,
                         turn_id=getattr(self, "_ambient_turn_id", ""),
                     )
+                    try:
+                        from pipeline.wiki_lookup_lock import clear_wiki_lookup_lock
+
+                        clear_wiki_lookup_lock()
+                    except Exception:
+                        pass
                     _append_ambient_event(
                         role="assistant",
                         text=assistant_text,

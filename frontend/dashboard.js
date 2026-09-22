@@ -72,6 +72,9 @@ document.addEventListener("alpine:init", function () {
         if (this.pulse.ask_architect_first?.length) return "Heavy capabilities remain behind an Architect approval boundary.";
         return this.pulse.summary || "All local safety checks are within limits.";
       },
+      get activeTools() {
+        return this.pulse.inventory?.effective_tools || [];
+      },
       formatMetric(source, available, total, unit) {
         const a = Number(source?.[available]); const t = Number(source?.[total]);
         return Number.isFinite(a) && Number.isFinite(t) ? `${a.toFixed(1)} / ${t.toFixed(1)} ${unit}` : "Unavailable";

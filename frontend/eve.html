@@ -400,30 +400,16 @@
             </button>
           </header>
           <div class="chat-dock__panel toolbelt" x-show="rightDock === 'tools'" role="tabpanel">
-            <p class="toolbelt__summary" x-text="toolbeltToggleLabel"></p>
+            <p class="toolbelt__summary">Currently loaded skills</p>
             <p class="toolbelt__hint">
-              Voice + Wiki live in the header ready strip. Session limbs for reach; Products open DAZE / Stem when you need them.
+              Eve discovers and admits capabilities as needed. This panel is read-only; no manual session toggles are required.
             </p>
-            <template x-for="bucket in toolbeltBuckets" :key="bucket.id">
-              <div class="toolbelt__bucket" x-show="bucket.categories.length">
-                <h3 class="toolbelt__bucket-title" x-text="bucket.label"></h3>
-                <div class="toolbelt__list" role="group" :aria-label="bucket.label">
-                  <template x-for="category in bucket.categories" :key="category.id">
-                    <label class="toolbelt__item">
-                      <input
-                        type="checkbox"
-                        :checked="activeTools[category.id]"
-                        @change="setToolbeltCategory(category.id, $event.target.checked)"
-                      />
-                      <span class="toolbelt__item-text">
-                        <strong x-text="category.label"></strong>
-                        <small x-text="category.description"></small>
-                      </span>
-                    </label>
-                  </template>
-                </div>
-              </div>
-            </template>
+            <div class="toolbelt__list" role="status" aria-live="polite">
+              <template x-for="category in (admissionSession.session_capabilities || [])" :key="category">
+                <span class="toolbelt__item toolbelt__item--readonly"><strong x-text="category"></strong><small>discovered for this conversation</small></span>
+              </template>
+              <span class="toolbelt__item toolbelt__item--readonly" x-show="!(admissionSession.session_capabilities || []).length"><strong>Core tools only</strong><small>No optional skills currently loaded</small></span>
+            </div>
           </div>
           <div class="chat-dock__panel chat-dock__panel--daze" x-show="rightDock === 'daze'" role="tabpanel">
             <iframe class="chat-dock__frame" src="/daze.html?embed=1" title="DAZE radial day dial"></iframe>

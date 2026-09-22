@@ -681,6 +681,37 @@ def _summarize_hit(hit: dict[str, Any]) -> str:
     return f"{title} ({year}): {snippet}"
 
 
+def _pick_primary_dns_hit(subject: str, candidates: list[Any]) -> Any | None:
+    """Prefer a canonical bare entity over albums, songs, and parenthetical variants."""
+    if not candidates:
+        return None
+    from pipeline.wiki_title_matcher import normalize_text, strip_leading_article
+
+    query = normalize_text(subject)
+    query_without_article = strip_leading_article(subject)
+    query_without_article = normalize_text(query_without_article)
+
+    def score(candidate: Any) -> tuple[int, int, int, str]:
+        title = str(getattr(candidate, "title", "") or "")
+        normalized = normalize_text(title)
+        bare = strip_leading_article(title)
+        value = 0
+        if normalized == query:
+            value += 1000
+        if normalize_text(bare) == query_without_article:
+            value += 700
+        if "(" not in title:
+            value += 300
+        lower = title.casefold()
+        if any(token in lower for token in (" album", " song", " discography", " ep")):
+            value -= 180
+        if "disambiguation" in lower:
+            value -= 500
+        return (value, -title.count("("), -len(title), title.casefold())
+
+    return sorted(candidates, key=score, reverse=True)[0]
+
+
 def _search_via_title_dns(
     query: str,
     *,
@@ -718,33 +749,49 @@ def _search_via_title_dns(
         return None
     dns = dns_resolve(subject, year_str, user_question=query)
     if dns.status == "ambiguous":
-        titles = [c.title for c in dns.candidates[: max(1, min(int(limit), 8))]]
-        cards = [
-            {
-                "title": title,
-                "snippet": "Title DNS found multiple pages — ask which title to open.",
-                "kind_hint": "disambiguation",
+        candidates = list(dns.candidates[: max(1, min(int(limit), 8))])
+        primary = _pick_primary_dns_hit(subject, candidates)
+        if primary is not None:
+            lead = wiki_read_lead(
+                primary.title,
+                year_str,
+                corpus_rel_path=primary.rel_path or None,
+                max_chars=1800,
+            )
+            if lead.get("ok"):
+                snippet = str(lead.get("lead") or "").strip()
+                return {
+                    "ok": True,
+                    "query": query,
+                    "snapshot_year": year_str,
+                    "source": "title_dns",
+                    "collection": f"title_dns_{year_str}",
+                    "count": 1,
+                    "paths": [],
+                    "titles": [primary.title],
+                    "summaries": [f"{primary.title} ({year_str}): {snippet[:240]}"],
+                    "hit_meta": [{"title": primary.title, "corpus_rel_path": primary.rel_path, "page_id": primary.page_id}],
+                    "cards": [{"title": primary.title, "snippet": snippet[:1200], "kind_hint": "article", "path": str(lead.get("path") or "")}],
+                    "chat_reply_rule": f"{WIKI_CHAT_REPLY_RULE} Answer directly from this selected local page. Do not restart disambiguation.",
+                    "coverage_note": "Resolved via Title DNS (primary local page).",
+                    "usable": True,
+                }
+            return {
+                "ok": False,
+                "query": query,
+                "snapshot_year": year_str,
+                "source": "title_dns",
+                "count": 0,
+                "paths": [],
+                "titles": [],
+                "summaries": [],
+                "cards": [],
+                "chat_reply_rule": "The selected local page has no usable lead. State that the local archive has no usable evidence. Do not ask the user to disambiguate.",
+                "coverage_note": "Selected local page unavailable.",
+                "usable": False,
             }
-            for title in titles
-        ]
-        return {
-            "ok": True,
-            "query": query,
-            "snapshot_year": year_str,
-            "source": "title_dns",
-            "collection": f"title_dns_{year_str}",
-            "count": len(titles),
-            "paths": [],
-            "titles": titles,
-            "summaries": [f"Ambiguous: {title}" for title in titles],
-            "cards": cards,
-            "chat_reply_rule": (
-                "Ask which Title DNS page to open. Do NOT invent a pick. "
-                "Do NOT mention Weaviate or Docker port 8091."
-            ),
-            "coverage_note": f"Title DNS ambiguous for {subject!r}.",
-            "usable": False,
-        }
+        titles = [c.title for c in candidates]
+        return {"ok": True, "query": query, "snapshot_year": year_str, "source": "title_dns", "collection": f"title_dns_{year_str}", "count": len(titles), "paths": [], "titles": titles, "summaries": [f"Ambiguous: {title}" for title in titles], "cards": [{"title": title, "snippet": "Title DNS found multiple pages — ask which title to open.", "kind_hint": "disambiguation"} for title in titles], "chat_reply_rule": "Ask which Title DNS page to open. Do NOT mention Weaviate or Docker port 8091.", "coverage_note": f"Title DNS ambiguous for {subject!r}.", "usable": False}
     if dns.status != "hit" or dns.hit is None:
         return None
     lead = wiki_read_lead(
