@@ -77,6 +77,11 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
     $env:OLLAMA_BASE_URL = "http://localhost:11434/v1"
     $env:OLLAMA_MODEL = "richardyoung/qwen2.5-14b-instruct-abliterated:latest"
     $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
+
+    # Sweep orphaned workflow runs so Eve boots with a clean queue instead of
+    # re-enqueuing stale "running" runs left behind by a crash or forced stop.
+    & (Join-Path $PSScriptRoot "cleanup-stale-runs.ps1")
+
     Start-Process -FilePath $npm `
         -ArgumentList "exec","--","eve","start","--host","127.0.0.1","--port","2000" `
         -WorkingDirectory (Join-Path $Root "agents\empire-task-agent")

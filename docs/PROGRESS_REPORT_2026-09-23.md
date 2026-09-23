@@ -196,16 +196,36 @@ Added to `.gitignore` (these were previously untracked noise or risked being com
 
 ## 8. Open items / what to investigate next
 
-### 8.1 Startup sweep for stale runs — **NOT IMPLEMENTED** (interrupted)
+### 8.1 Startup sweep for stale runs — ✅ **IMPLEMENTED** (2026-09-23)
 
-A `scripts/cleanup-stale-runs.ps1` was requested to sweep
-`.eve/.workflow-data/runs` at startup and mark `status: "running"` runs as failed, hooked
-into `scripts/start-stack.ps1` before the Eve launch. **This was not completed** — the
-working session was interrupted mid-task and the file does not exist.
+`scripts/cleanup-stale-runs.ps1` sweeps `agents/empire-task-agent/.eve/.workflow-data/runs`
+and rewrites any run with `status: "running"` to `status: "failed"`,
+`errorCode: "PURGED_STALE"`, `completedAt`/`updatedAt` = now (UTC ISO-8601); every other
+field (including deep `input.data` and `attributes`) is preserved. It is hooked into
+`scripts/start-stack.ps1` immediately before the Eve launch.
 
-The queue was purged manually (three times) during debugging, but **it re-accumulates**
-(~27–30 runs per diagnostic cycle) because the harness leaves sessions non-terminal. Until
-the sweep exists, expect the `Re-enqueued N active run(s)` message to return.
+Verified by A/B test with a seeded stale run:
+
+| | Sweep | Eve boot output |
+|---|---|---|
+| **Before** | not run | `[world-local] Re-enqueued 1 active run(s) on startup` + `[workflow-sdk] Error while running workflow` |
+| **After** | `purged 1 stale run(s)` | **no** re-enqueue line, **no** workflow error — clean boot |
+
+Additional properties confirmed:
+
+- **Idempotent** — a second run purges 0 (`skipped 805, 0 error(s)`).
+- **BOM-free UTF-8 output** — safe for Node's `JSON.parse` (verified by parsing the
+  rewritten file with `node`).
+- **Deep nesting preserved** — all 9 sampled top-level/opaque fields byte-identical after
+  the PowerShell `ConvertFrom-Json` / `ConvertTo-Json -Depth 64` round-trip.
+- **Missing-property safe** — running runs often lack `completedAt` (and sometimes
+  `errorCode`); `Add-Member -Force` adds-or-sets, since PS 5.1 PSCustomObject rejects
+  direct assignment to an absent property.
+
+**Caveat:** the sweep runs only when `start-stack.ps1` actually launches Eve (i.e. Eve is
+not already healthy). It is not a daemon; it does not catch runs that become orphaned
+*while* Eve is running — those surface on the next cold start.
+
 
 ### 8.2 `injectOllamaChatOptions` is now redundant
 
