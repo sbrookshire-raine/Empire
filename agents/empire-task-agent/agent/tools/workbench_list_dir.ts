@@ -1,12 +1,17 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import {
   listWorkbenchDir,
   WORKBENCH_FOLDERS,
   WORKBENCH_ROOT,
 } from "#lib/workbench";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("file_ops")
+        ? defineTool({
   description:
     `List files and folders under the local Windows workbench at ${WORKBENCH_ROOT}. Pass ONLY a relative path (e.g. 00_Resource_Queue). Never pass /home/vercel-sandbox or absolute C:\\ paths — the tool always roots on the local machine.`,
   inputSchema: z.object({
@@ -29,5 +34,8 @@ export default defineTool({
         requested: dirPath,
       };
     }
+  },
+})
+        : null,
   },
 });

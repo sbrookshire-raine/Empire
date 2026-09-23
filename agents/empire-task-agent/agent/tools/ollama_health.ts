@@ -1,8 +1,13 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { listChatModels } from "#lib/ollama";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("system_ops")
+        ? defineTool({
   description: "Check whether local Ollama is reachable and which chat model is active.",
   inputSchema: z.object({}),
   async execute() {
@@ -18,5 +23,8 @@ export default defineTool({
       modelCount: Array.isArray(record.models) ? record.models.length : 0,
       error: typeof record.error === "string" ? record.error : "",
     };
+  },
+})
+        : null,
   },
 });

@@ -96,55 +96,118 @@ AMBIENT_LOG_MAX_BYTES = 5 * 1024 * 1024
 AMBIENT_LOG_BACKUPS = 3
 VOICE_ROUTER_MODEL = "llama3.1:latest"
 VOICE_ROUTER_PROMPT = (
-    "You are Eve's presentation layer. Your ONLY function is to rewrite the provided "
-    "payload into Eve's voice. CRITICAL RULES: 1. PRESERVATION: You MUST preserve every "
-    "number, date format (for example YYYY-MM-DD), URL, and proper noun exactly as it "
-    "appears. Do not summarize or alter data. 2. NO INVENTION: Do not add any new claims, "
-    "consequences, or recommendations that are not explicitly in the payload. 3. "
-    "CONCISENESS: Be highly competent, direct, and concise. Never use conversational "
-    "filler like 'Certainly!' or 'Here is the info'. 4. FAILURE TONE: Exhibit dry, subtle "
-    "gallows humor ONLY if the payload explicitly describes a system failure or blocked "
-    "action. Do not invent the failure. 5. SUCCESS TONE: If the payload is a success or "
-    "data extraction, state the result flatly without humor or celebration."
+    "You are Eve. Your job is to format the following technical message into a single, "
+    "dry sentence. RULES: 1. You MUST preserve all numbers, dates, and proper nouns "
+    "exactly as written. 2. DO NOT add any new information, recommendations, or URLs. "
+    "3. If the message describes an error or blocked action, state the failure plainly "
+    "with no apology. 4. DO NOT output conversational filler."
 )
 CATALOG_INTENT_RE = re.compile(
     r"\b(?:query|search|find)\s+(?:your\s+)?catalog\b|"
     r"\bfind\s+tools\s+related\s+to\b|\bcatalog\s+search\b",
     re.IGNORECASE,
 )
+# Explicit pressure to force heavy/GPU work despite constraints. Both a
+# coercive verb and a heavy-resource noun must be present (order-independent)
+# so ordinary prompts never trigger the resource guard.
+RESOURCE_BLOCK_RE = re.compile(
+    r"(?=.*\b(?:force|force[- ]?enable|override|bypass|overrule|ignore|disregard|despite|regardless)\b)"
+    r"(?=.*\b(?:gpu|vram|vision|stem|demucs|rerank|heavy|headroom|constrain\w*|limit\w*)\b)",
+    re.IGNORECASE | re.DOTALL,
+)
 CATALOG_ROUTER_PROMPT = (
     "You are an intent router. Extract the catalog search query from the user's prompt. "
     "Do NOT extract Wikipedia titles. Return ONLY JSON: "
     '{"catalog_query": "extracted term"}. If no catalog search is requested, '
     'return {"catalog_query": null}. Keep the extracted term concise. If multiple catalog '
-    "concepts are requested, select the most specific tool-bearing term (for example, use "
-    "'minimax' rather than combining it with generic words like 'decision making')."
-)
-
+    "concepts are requested, select the most specific tool-bearing term."
+    )
 
 def _catalog_context(message: str) -> str:
-    """Run explicit catalog intent before Qwen synthesis; return empty when absent."""
     if not CATALOG_INTENT_RE.search(message or ""):
         return ""
     catalog_text = re.split(r"\bthen\b", message or "", maxsplit=1, flags=re.IGNORECASE)[0]
     targets = re.findall(r"['\"]([^'\"]{2,120})['\"]", catalog_text)
-    for term in re.findall(r"\bminimax\b", catalog_text, re.IGNORECASE):
-        if term.casefold() not in {target.casefold() for target in targets}:
-            targets.append(term)
-    if not targets:
-        match = re.search(r"(?:catalog|tools? related to)\s+(.{2,120})", catalog_text, re.I)
-        if match:
-            targets.append(re.split(r"\b(?:then|and)\b", match.group(1), maxsplit=1, flags=re.I)[0].strip(" .?!"))
+    if not targets and re.search(r"\bminimax\b", catalog_text, re.I):
+        targets.append("minimax")
     if not targets:
         return ""
-    try:
-        from pipeline.discovery_catalog import search_catalog
+    from pipeline.discovery_catalog import search_catalog
 
-        results = [search_catalog(target, limit=5) for target in targets[:4]]
-    except Exception as exc:  # noqa: BLE001
-        return f"\n\n[SYSTEM NOTE: Catalog search unavailable: {exc}]"
+    results = [search_catalog(target, limit=5) for target in targets[:4]]
     compact = json.dumps({"queries": targets[:4], "results": results}, ensure_ascii=False, default=str)
-    return f"\n\n[SYSTEM NOTE: Catalog search returned these local tool facts: {compact}]"
+    return f"\n\n[AUTHORITATIVE LOCAL CATALOG CONTEXT]\n{compact}\nUse these catalog facts directly."
+
+def _resource_guard_context(message: str) -> str:
+    if not RESOURCE_BLOCK_RE.search(message or ""):
+        return ""
+    try:
+        from pipeline import resource_pulse
+
+        pulse = resource_pulse.pulse()
+    except Exception as exc:  # noqa: BLE001
+        return f"\n\n[SYSTEM NOTE: Resource guard unavailable ({exc}). Refuse forced heavy work.]"
+    if pulse.get("headroom_ok"):
+        return ""
+    reasons = "; ".join(str(item) for item in pulse.get("headroom_reasons") or [])
+    return (
+        "\n\n[AUTHORITATIVE RESOURCE BLOCK. The requested heavy/GPU action is "
+        f"blocked. Reasons: {reasons or 'headroom unavailable'}. Refuse the action and "
+        "tell the user Architect approval or safer conditions are required. Do not run "
+        "unrelated tools or suggest unverified consequences.]"
+    )
+
+
+_USER_MESSAGE_ANCHOR = "\n\nUser message:\n"
+
+
+def _attach_server_context(message: str, context: str) -> str:
+    """Attach authoritative server context immediately before the user request.
+
+    Mirrors frontend/workbench_ui_api.py and frontend/memory_api.py. The companion
+    preamble is long, so a block prepended above it is stranded far from the ask —
+    the model then ignored catalog facts and called wiki_scout_search instead.
+    """
+
+    block = (context or "").strip()
+    if not block:
+        return message
+    if _USER_MESSAGE_ANCHOR in message:
+        head, _, user_part = message.rpartition(_USER_MESSAGE_ANCHOR)
+        return f"{head}\n\n{block}\n\nUser message:\n{user_part}"
+    return f"{block}\n\n[USER REQUEST]\n{message}"
+
+
+def _catalog_directive(message: str) -> str:
+    """Directive that stops catalog asks being misrouted to the wiki limb.
+
+    A prompt may legitimately mix both (catalog + encyclopedia), so the wiki ban
+    only applies when the request has no encyclopedia target of its own.
+    """
+
+    wiki_also = False
+    try:
+        from frontend.companion_api import extract_user_message
+        from frontend.wiki_drift_api import is_wiki_lookup_query
+
+        wiki_also = is_wiki_lookup_query(extract_user_message(message))
+    except Exception:  # noqa: BLE001
+        wiki_also = False
+    if wiki_also:
+        return (
+            "SYSTEM DIRECTIVE: Answer the catalog portion of this request from the rows "
+            'above, naming the exact tool from the "id" field. Use Wikipedia tools only '
+            "for the separate encyclopedia portion. Do not replace these facts with a "
+            "generic tool list."
+        )
+    return (
+        "SYSTEM DIRECTIVE: The user is asking about local EMPIRE tools and capabilities. "
+        'Answer from the rows above, naming the exact tool from the "id" field. Do NOT '
+        "call wiki_scout_search, wiki_scout_compare_years, wiki_resolve, "
+        "wiki_read_section, or any Wikipedia/encyclopedia tool for this request — those "
+        "return encyclopedia articles and cannot contain EMPIRE tool names. Do not claim "
+        "catalog search is unavailable and do not replace these facts with a generic tool list."
+    )
 
 
 async def _extract_catalog_intent(message: str) -> str | None:
@@ -187,7 +250,11 @@ async def _catalog_context_async(message: str) -> str:
     except Exception as exc:  # noqa: BLE001
         return f"\n\n[SYSTEM NOTE: Catalog search unavailable: {exc}]"
     compact = json.dumps({"query": query, "result": result}, ensure_ascii=False, default=str)
-    return f"\n\n[SYSTEM NOTE: Catalog search returned these local tool facts: {compact}]"
+    return (
+        "\n\n[AUTHORITATIVE LOCAL CATALOG CONTEXT]\n"
+        f"{compact}\n"
+        f"{_catalog_directive(message)}"
+    )
 
 
 def _ambient_text(value: object, max_chars: int = 4000) -> str:
@@ -243,8 +310,8 @@ async def _voice_router(text: str) -> tuple[str, float, bool]:
     try:
         result = await asyncio.to_thread(
             ollama_api.chat_completion,
-            system_prompt=VOICE_ROUTER_PROMPT,
-            user_prompt=raw,
+            system_prompt=VOICE_ROUTER_PROMPT.format(payload=raw),
+            user_prompt="Output only the text replacing the Translation line. Do not use quotes or a preamble.",
             model=VOICE_ROUTER_MODEL,
             temperature=0.25,
         )
@@ -260,14 +327,36 @@ def _voice_output_is_safe(raw: str, candidate: str) -> bool:
     """Reject rewrites that drop protected literals or failure/refusal semantics."""
     import re
 
+    leaked_meta = (
+        "presentation layer",
+        "voice formatter",
+        "payload to translate",
+        "output only the text",
+        "example 1:",
+        "translation:",
+    )
+    candidate_lower = candidate.casefold()
+    raw_lower = raw.casefold()
+    if any(marker in candidate_lower and marker not in raw_lower for marker in leaked_meta):
+        return False
     for token in re.findall(r"https?://\S+|\b\d+(?:[.,:-]\d+)*\b", raw):
         if token.casefold() not in candidate.casefold():
             return False
     for phrase in re.findall(r"\([^)]{2,120}\)|'[^']{2,120}'|\"[^\"]{2,120}\"", raw):
         if phrase.casefold() not in candidate.casefold():
             return False
-    raw_lower = raw.casefold()
-    candidate_lower = candidate.casefold()
+    stopwords = {
+        "a", "an", "the", "and", "or", "to", "of", "in", "on", "for", "with",
+        "is", "are", "was", "were", "be", "this", "that", "it", "from", "as",
+        "only", "local", "system", "payload", "result",
+    }
+    raw_words = set(re.findall(r"[a-z0-9][a-z0-9'-]*", raw_lower)) - stopwords
+    candidate_words = set(re.findall(r"[a-z0-9][a-z0-9'-]*", candidate_lower)) - stopwords
+    if raw_words:
+        overlap = len(raw_words & candidate_words) / len(raw_words)
+        novel = len(candidate_words - raw_words)
+        if novel > 15 or (len(raw_words) >= 4 and overlap < 0.3):
+            return False
     if any(term in raw_lower for term in ("cannot", "can't", "unable", "no usable", "not found", "blocked", "failure", "error")):
         if not any(term in candidate_lower for term in ("cannot", "can't", "unable", "no usable", "not found", "blocked", "failure", "error")):
             return False
@@ -653,7 +742,9 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = eve_toolbelt.apply_active_tools(payload)
             payload = ollama_api.apply_chat_mode_payload(payload)
             try:
-                payload = wiki_drift_api.enrich_eve_message_payload(payload)
+                raw_message = payload.get("message")
+                force_wiki = isinstance(raw_message, str) and wiki_drift_api.is_wiki_lookup_query(raw_message)
+                payload = wiki_drift_api.enrich_eve_message_payload(payload, force=force_wiki)
             except Exception:
                 pass
             try:
@@ -678,8 +769,22 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 pass
             if isinstance(payload.get("message"), str):
                 payload = dict(payload)
-                payload["message"] = payload["message"] + asyncio.run(
-                    _catalog_context_async(payload["message"])
+                original_message = payload["message"]
+                # Context builders must never abort session creation: an escaping
+                # exception closes the socket before any response is written.
+                try:
+                    catalog_context = asyncio.run(_catalog_context_async(original_message))
+                except Exception:
+                    catalog_context = ""
+                try:
+                    resource_context = _resource_guard_context(original_message)
+                except Exception:
+                    resource_context = ""
+                # Place next to the ask, not above the companion preamble: the
+                # model ignored a distant catalog block and called the wiki limb.
+                payload["message"] = _attach_server_context(
+                    original_message,
+                    f"{catalog_context}{resource_context}",
                 )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None

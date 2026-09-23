@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Read-only DuckDB over local data files. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("query_data")
+        ? defineTool({
   description:
     "Run a read-only SQL query (DuckDB) over a local CSV/JSON/Parquet/SQLite file. Pass data_file (allowlisted local path) and query against table `data`; or pass a full SELECT with no file. No network, no writes, no extensions. Caps rows/bytes/time.",
   inputSchema: z.object({
@@ -32,5 +37,8 @@ export default defineTool({
       args.push("--max-rows", String(max_rows));
     }
     return runPythonModule("pipeline.query_data", args);
+  },
+})
+        : null,
   },
 });

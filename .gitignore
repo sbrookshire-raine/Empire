@@ -42,3 +42,21 @@ config/cognee.env
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Local scratch: debug logs, edit backups, one-off probes (never commit)
+/tmp/
+
+# Eve ambient audit log — runtime chat transcript, privacy-sensitive
+/eve-audit/
+
+# SQLite WAL/SHM sidecars (live DB state, not source)
+*.db-shm
+*.db-wal
+
+# Runtime capture logs from eval/verification runs
+data/eval/*_stdout.txt
+data/eval/*_stderr.txt
+
+# Regenerated integration report
+frontend/verify-stack.json
+

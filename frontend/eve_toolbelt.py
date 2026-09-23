@@ -41,6 +41,8 @@ ALLOWED_CATEGORIES = (
     "author_code",
     "python_verify",
     "switchboard",
+    "system_ops",
+    "file_ops",
 )
 
 CATEGORY_BUCKETS: dict[str, Bucket] = {
@@ -67,6 +69,8 @@ CATEGORY_BUCKETS: dict[str, Bucket] = {
     "author_code": "session",
     "python_verify": "session",
     "switchboard": "session",
+    "system_ops": "session",
+    "file_ops": "session",
 }
 
 BUCKET_ORDER: tuple[Bucket, ...] = ("always", "session", "products")
@@ -131,6 +135,27 @@ def write_active_tools(categories: list[str]) -> Path:
     return path
 
 
+def _version_number(raw: Any) -> int:
+    """Coerce a stored defaults_version to int, tolerating legacy shapes.
+
+    Older/foreign toolbelt files may hold a string ("1", "2.0") or junk. An
+    unparsable value reads as 0 so the file is treated as legacy and migrated
+    toward DEFAULT_ACTIVE_TOOLS instead of raising inside session creation.
+    """
+    if isinstance(raw, bool):
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        return int(raw)
+    if isinstance(raw, str):
+        try:
+            return int(float(raw.strip()))
+        except ValueError:
+            return 0
+    return 0
+
+
 def load_active_tools() -> list[str]:
     path = _toolbelt_path()
     try:
@@ -140,8 +165,8 @@ def load_active_tools() -> list[str]:
     if not isinstance(parsed, dict):
         return list(DEFAULT_ACTIVE_TOOLS)
     selected = normalize_active_tools(parsed.get("active_tools"))
-    version = parsed.get("defaults_version")
-    if version is None or int(version or 0) < DEFAULTS_VERSION:
+    version = _version_number(parsed.get("defaults_version"))
+    if version < DEFAULTS_VERSION:
         for default_tool in DEFAULT_ACTIVE_TOOLS:
             if default_tool not in selected:
                 selected = normalize_active_tools([*selected, default_tool])

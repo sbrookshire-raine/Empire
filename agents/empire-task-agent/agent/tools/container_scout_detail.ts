@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("container_scout")
+        ? defineTool({
   description:
     "Docker Hub repo detail + recent tags (e.g. semitechnologies/weaviate). " +
     "Auto-admits Container Scout when headroom allows. Cache only — never pull/run.",
@@ -34,5 +39,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.container_scout", args);
+  },
+})
+        : null,
   },
 });

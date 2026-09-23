@@ -16,6 +16,11 @@ class DiscoveryCatalogTests(unittest.TestCase):
         result = discovery_catalog.search_catalog("tool", limit=1000)
         self.assertLessEqual(len(result["results"]), 20)
 
+    def test_decision_making_resolves_minimax_tool(self) -> None:
+        result = discovery_catalog.search_catalog("decision making")
+        self.assertTrue(result["ok"])
+        self.assertIn("local/scenario-regret", {row["id"] for row in result["results"]})
+
 
 if __name__ == "__main__":
     unittest.main()

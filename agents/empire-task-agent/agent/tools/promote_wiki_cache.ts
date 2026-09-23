@@ -1,8 +1,13 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("wiki_local")
+        ? defineTool({
   description:
     "Explicitly promote a wiki_cache .md file into Cognee memory. Never automatic — only when the Architect asks. Compare files route to truth_drift; single hits to eve_memory unless dataset override is set.",
   inputSchema: z.object({
@@ -20,5 +25,8 @@ export default defineTool({
       args.push("--dataset", dataset);
     }
     return runPythonModule("pipeline.wiki_scout", args);
+  },
+})
+        : null,
   },
 });

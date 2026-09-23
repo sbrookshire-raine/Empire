@@ -33,6 +33,8 @@ export const TOOLBELT_CATEGORIES = [
   "author_code",
   "python_verify",
   "switchboard",
+  "system_ops",
+  "file_ops",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

@@ -19,6 +19,9 @@ def search_catalog(query: str, limit: int = 10) -> dict[str, Any]:
         return {"ok": False, "error": "query is required", "results": []}
     if not CATALOG_DB.is_file():
         return {"ok": False, "error": f"catalog missing: {CATALOG_DB}", "results": []}
+    search_terms = [term]
+    if term.casefold() in {"decision making", "decision-making", "strategic decisions", "uncertainty"}:
+        search_terms.append("minimax")
     try:
         with sqlite3.connect(f"file:{CATALOG_DB.as_posix()}?mode=ro", uri=True) as conn:
             conn.row_factory = sqlite3.Row
@@ -32,8 +35,21 @@ def search_catalog(query: str, limit: int = 10) -> dict[str, Any]:
                 ORDER BY score_functional DESC, score_local DESC, stars DESC, id
                 LIMIT ?
                 """,
-                (f"%{term}%", f"%{term}%", f"%{term}%", bounded_limit),
+                (f"%{search_terms[0]}%", f"%{search_terms[0]}%", f"%{search_terms[0]}%", bounded_limit),
             ).fetchall()
+            if not rows and len(search_terms) > 1:
+                rows = conn.execute(
+                    """
+                    SELECT id, description, category, eve_capability, trust_domain,
+                           primary_language, score_local, score_cli, score_mcp,
+                           score_functional, stars
+                    FROM repositories
+                    WHERE id LIKE ? OR description LIKE ? OR category LIKE ?
+                    ORDER BY score_functional DESC, score_local DESC, stars DESC, id
+                    LIMIT ?
+                    """,
+                    tuple([f"%{search_terms[1]}%"] * 3 + [bounded_limit]),
+                ).fetchall()
         return {"ok": True, "query": term, "count": len(rows), "results": [dict(row) for row in rows]}
     except (OSError, sqlite3.Error) as exc:
         return {"ok": False, "error": str(exc), "results": []}

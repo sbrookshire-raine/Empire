@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("web_scout")
+        ? defineTool({
   description:
     "Fetch one public http(s) page URL and cache markdown under 04_Thought_Experiments/web_cache. " +
     "Not a search engine — needs a full URL. Auto-admits Web Scout when headroom allows. Does NOT write Cognee.",
@@ -24,5 +29,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.web_scout", args);
+  },
+})
+        : null,
   },
 });

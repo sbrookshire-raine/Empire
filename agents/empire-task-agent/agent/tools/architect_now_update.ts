@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Core brain — persist Architect corrections that beat old journal distillations. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("system_ops")
+        ? defineTool({
   description:
     "Persist a durable CURRENT fact about the Architect into ARCHITECT_NOW.md (overrides old Obsidian companion distillations). Use when they correct timeline, work status, goals, or say to remember something lasting. Not Cognee; not a PocketBase task.",
   inputSchema: z.object({
@@ -24,5 +29,8 @@ export default defineTool({
       args.push("--replace-all");
     }
     return runPythonModule("pipeline.architect_now", args, 30_000);
+  },
+})
+        : null,
   },
 });

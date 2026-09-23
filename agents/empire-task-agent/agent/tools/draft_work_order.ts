@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { draftWorkOrderViaMcp } from "#lib/work-order-mcp";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Core brain handoff — always registered (not a Toolbelt limb). */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("file_ops")
+        ? defineTool({
   description:
     "Draft a Work Order markdown for the Systems Mechanic (Cursor) in 05_Work_Orders. Use after triage when something is USEFUL NOW and needs forging. Not a PocketBase task.",
   inputSchema: z.object({
@@ -28,5 +33,8 @@ export default defineTool({
       justification,
       source_file,
     });
+  },
+})
+        : null,
   },
 });

@@ -40,6 +40,24 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
         self.assertEqual(wiki_drift_api.extract_search_query(text), "Kate Bush")
 
+    def test_band_called_phrase_extracts_proper_entity(self) -> None:
+        self.assertEqual(
+            wiki_drift_api.extract_search_query("name the albums from the band called The White Stripes"),
+            "White Stripes",
+        )
+
+    def test_quoted_band_phrase_extracts_proper_entity(self) -> None:
+        self.assertEqual(
+            wiki_drift_api.extract_search_query("name the albums released by the band 'the white stripes'"),
+            "white stripes",
+        )
+
+    def test_band_tail_with_lead_singer_context_extracts_entity(self) -> None:
+        self.assertEqual(
+            wiki_drift_api.extract_search_query("who was a lead singer for the band Type O-Megative"),
+            "Type O-Megative",
+        )
+
     def test_explicit_wikipedia_target_wins_in_multi_part_prompt(self) -> None:
         text = (
             "Query the catalog for 'decision making'. Then, look up the Wikipedia "
@@ -107,6 +125,21 @@ class WikiDriftApiTests(unittest.TestCase):
         text = "hows it going?"
         self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))
         self.assertFalse(wiki_drift_api.is_truth_drift_query(text))
+
+    def test_bare_tell_me_does_not_hijack_local_tool_request(self) -> None:
+        text = (
+            "Check the health of the Workbench using your local tools, "
+            "then tell me how much free disk space is available."
+        )
+        self.assertFalse(wiki_drift_api.is_wiki_lookup_query(text))
+
+    def test_tell_me_about_encyclopedia_object_still_lookup(self) -> None:
+        self.assertTrue(
+            wiki_drift_api.is_wiki_lookup_query("can you tell me about black holes please?")
+        )
+        self.assertTrue(
+            wiki_drift_api.is_wiki_lookup_query("tell me about a sci-fi series in the 80s called 'V'")
+        )
 
     def test_capability_headroom_question_not_wiki(self) -> None:
         text = (

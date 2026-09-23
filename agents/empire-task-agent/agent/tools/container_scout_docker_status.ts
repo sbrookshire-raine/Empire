@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("container_scout")
+        ? defineTool({
   description:
     "List local Docker containers matching EMPIRE names (default empire-*). " +
     "Auto-admits Container Scout when headroom allows. Status only — does not start/stop.",
@@ -26,5 +31,8 @@ export default defineTool({
       args.push("--filter", name_filter);
     }
     return runPythonModule("pipeline.container_scout", args);
+  },
+})
+        : null,
   },
 });

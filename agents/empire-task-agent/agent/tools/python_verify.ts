@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Verify Python in a disposable worktree (syntax + optional lint/tests). */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("python_verify")
+        ? defineTool({
   description:
     "Verify Python code in a disposable worktree: syntax check (always) plus optional ruff lint and pytest/unittest. Never merges, pushes, or mutates production. Returns a report; if ok is false, do not merge.",
   inputSchema: z.object({
@@ -19,5 +24,8 @@ export default defineTool({
       args.push("--no-tests");
     }
     return runPythonModule("pipeline.python_verify", args);
+  },
+})
+        : null,
   },
 });

@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Read a local document to text/markdown. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("read_document")
+        ? defineTool({
   description:
     "Extract text/markdown from a local document (md/txt/csv/json/pdf/docx/pptx/xlsx/html). Uses MarkItDown with Docling fallback; read-only, offline. Returns provenance-stamped content. Never writes Cognee.",
   inputSchema: z.object({
@@ -24,5 +29,8 @@ export default defineTool({
       args.push("--max-chars", String(max_chars));
     }
     return runPythonModule("pipeline.read_document", args);
+  },
+})
+        : null,
   },
 });

@@ -1,8 +1,13 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { listChatModels } from "#lib/ollama";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("system_ops")
+        ? defineTool({
   description:
     "List installed Ollama chat models and the active Eve chat model.",
   inputSchema: z.object({}),
@@ -19,5 +24,8 @@ export default defineTool({
       models: Array.isArray(record.models) ? record.models : [],
       error: typeof record.error === "string" ? record.error : "",
     };
+  },
+})
+        : null,
   },
 });

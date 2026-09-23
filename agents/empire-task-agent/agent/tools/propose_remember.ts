@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Propose a short note into eve_staging (Architect must confirm to keep). */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("file_ops")
+        ? defineTool({
   description:
     "Propose remembering a short note into Eve's staging sandbox (eve_staging). " +
     "Use when something seems worth keeping. Do NOT confirm permanence yourself — " +
@@ -24,5 +29,8 @@ export default defineTool({
     if (reason) args.push("--reason", reason);
     if (crumb) args.push("--crumb", crumb);
     return runPythonModule("pipeline.eve_staging", args);
+  },
+})
+        : null,
   },
 });

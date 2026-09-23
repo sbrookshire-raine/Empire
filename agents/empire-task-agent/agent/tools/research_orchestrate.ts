@@ -1,8 +1,13 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("web_research")
+        ? defineTool({
   description:
     "Run Research Autopilot: admit read-only limbs, query Wikipedia (Weaviate), GitHub, Product Hunt feed, optional web URL. Requires Research Partner mode ON. Never writes Cognee.",
   inputSchema: z.object({
@@ -30,5 +35,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.research_orchestrator", args);
+  },
+})
+        : null,
   },
 });

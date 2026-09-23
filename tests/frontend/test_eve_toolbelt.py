@@ -90,6 +90,46 @@ class EveToolbeltTests(unittest.TestCase):
             saved = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(saved["defaults_version"], eve_toolbelt.DEFAULTS_VERSION)
 
+    def test_load_honors_string_current_version_without_forcing_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "active_tools": ["tool_forge"],
+                        "defaults_version": str(eve_toolbelt.DEFAULTS_VERSION),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
+
+    def test_load_tolerates_legacy_version_shapes(self) -> None:
+        for raw_version in ("1", "1.0", "legacy", [], {"v": 1}, True):
+            with self.subTest(raw_version=raw_version):
+                with tempfile.TemporaryDirectory() as tmp:
+                    path = Path(tmp) / "eve-toolbelt.json"
+                    path.write_text(
+                        json.dumps({"active_tools": ["tool_forge"], "defaults_version": raw_version}),
+                        encoding="utf-8",
+                    )
+                    with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                        self.assertEqual(
+                            eve_toolbelt.load_active_tools(),
+                            ["tool_forge", "voice_presence", "wiki_local"],
+                        )
+                    saved = json.loads(path.read_text(encoding="utf-8"))
+                    self.assertEqual(saved["defaults_version"], eve_toolbelt.DEFAULTS_VERSION)
+
+    def test_version_number_coercion(self) -> None:
+        self.assertEqual(eve_toolbelt._version_number(None), 0)
+        self.assertEqual(eve_toolbelt._version_number("2.0"), 2)
+        self.assertEqual(eve_toolbelt._version_number("  3 "), 3)
+        self.assertEqual(eve_toolbelt._version_number("legacy"), 0)
+        self.assertEqual(eve_toolbelt._version_number([1]), 0)
+        self.assertEqual(eve_toolbelt._version_number(4), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

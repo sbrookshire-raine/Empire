@@ -10,14 +10,18 @@
     and warms nomic-embed-text.
 #>
 param(
-    [int]$NumParallel = 8
+    [int]$NumParallel = 8,
+    [int]$ContextLength = 8192
 )
 
 $ErrorActionPreference = "Stop"
 if ($NumParallel -lt 1) { throw "NumParallel must be >= 1" }
+if ($ContextLength -lt 1024) { throw "ContextLength must be >= 1024" }
 
 $env:OLLAMA_NUM_PARALLEL = "$NumParallel"
+$env:OLLAMA_CONTEXT_LENGTH = "$ContextLength"
 Write-Host "Desired OLLAMA_NUM_PARALLEL=$($env:OLLAMA_NUM_PARALLEL)"
+Write-Host "Desired OLLAMA_CONTEXT_LENGTH=$($env:OLLAMA_CONTEXT_LENGTH)"
 
 function Get-OllamaServePid {
     $procs = Get-CimInstance Win32_Process -Filter "Name='ollama.exe'" -ErrorAction SilentlyContinue
@@ -129,8 +133,10 @@ if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
 }
 
 # cmd.exe so Windows PowerShell 5.1 and PS7 both pass the env into the serve process.
-$cmdLine = "set OLLAMA_NUM_PARALLEL=$NumParallel&& ollama serve"
-Write-Host ("Starting ollama serve with OLLAMA_NUM_PARALLEL={0}..." -f $NumParallel)
+# OLLAMA_CONTEXT_LENGTH sets the server-wide default context (Ollama's OpenAI-compat
+# endpoint ignores per-request options.num_ctx, so the default must be raised here).
+$cmdLine = "set OLLAMA_NUM_PARALLEL=$NumParallel&& set OLLAMA_CONTEXT_LENGTH=$ContextLength&& ollama serve"
+Write-Host ("Starting ollama serve with OLLAMA_NUM_PARALLEL={0} OLLAMA_CONTEXT_LENGTH={1}..." -f $NumParallel, $ContextLength)
 Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $cmdLine) -WindowStyle Hidden | Out-Null
 
 $ready = $false

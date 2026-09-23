@@ -1,8 +1,13 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { readWorkbenchFile, WORKBENCH_ROOT } from "#lib/workbench";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("file_ops")
+        ? defineTool({
   description:
     `Read a text file under the local Windows workbench at ${WORKBENCH_ROOT} (max 512 KiB). Pass ONLY a relative path (e.g. 00_Resource_Queue/notes.md). Never pass /home/vercel-sandbox or absolute C:\\ paths.`,
   inputSchema: z.object({
@@ -32,5 +37,8 @@ export default defineTool({
         requested: filePath,
       };
     }
+  },
+})
+        : null,
   },
 });

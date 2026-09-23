@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("github_scout")
+        ? defineTool({
   description:
     "Fetch README excerpt for a GitHub repo (owner/name). Scratch cache only. " +
     "Auto-admits GitHub Scout when headroom allows. Never claim you lack GitHub access — call this tool.",
@@ -21,5 +26,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.github_scout", args);
+  },
+})
+        : null,
   },
 });

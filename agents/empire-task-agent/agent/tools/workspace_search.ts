@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Search allowlisted local roots (read-only). */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("workspace_search")
+        ? defineTool({
   description:
     "Search local text across allowlisted roots (C:/Empire_Workbench, C:/EMPIRE/docs) for a literal substring. Read-only; results are redacted. Use to find notes, files, or code references locally without the network.",
   inputSchema: z.object({
@@ -26,5 +31,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.workspace_search", args);
+  },
+})
+        : null,
   },
 });

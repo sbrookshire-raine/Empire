@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Write an .xlsx to eve-output (openpyxl, formula-injection blocked). */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("create_spreadsheet")
+        ? defineTool({
   description:
     "Write an Excel (.xlsx) file into eve-output from headers + rows. Blocks formula injection (cells starting =,+,-,@ are escaped). Pure local, offline. Never writes Cognee.",
   inputSchema: z.object({
@@ -28,5 +33,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.create_spreadsheet", args);
+  },
+})
+        : null,
   },
 });

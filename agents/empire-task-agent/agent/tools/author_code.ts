@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Code autonomy: disposable worktree authoring with reviewable diffs. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("author_code")
+        ? defineTool({
   description:
     "Author code in a disposable Git worktree. `create` makes a fresh worktree; `apply` writes one file and returns a reviewable diff; `remove` deletes a worktree. Never pushes, merges, or touches the production tree. Never writes credential files.",
   inputSchema: z.object({
@@ -38,5 +43,8 @@ export default defineTool({
       relative_path ?? "",
       content ?? "",
     ]);
+  },
+})
+        : null,
   },
 });

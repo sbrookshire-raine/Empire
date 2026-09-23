@@ -102,7 +102,10 @@ WIKI_LOOKUP_RE = re.compile(
     r"\b(?:actors?|cast|stars?)\b.{0,48}\b(?:in|of|on|from)\b|"
     r"\b(?:tv\s+show|television\s+show|tv\s+series|series|miniseries)\b|"
     # Need a topical object — bare "summarize briefly" must not hijack stack questions.
-    r"(?:tell me|look up|find|trace|draft|extract|compare|research)\b|"
+    # "tell me" is also scoped to an encyclopedia object ("tell me about ..."):
+    # a bare "tell me" hijacked local tool requests such as
+    # "...then tell me how much free disk space is available".
+    r"(?:tell me about|look up|find|trace|draft|extract|compare|research)\b|"
     r"summarize\b.{0,80}\b(?:about|the|who|what|wikipedia|wiki|cast|album|film|show)\b|"
     r"discography\b|"
     r"\balbums?\s+(?:by|from|of)\b|"
@@ -163,6 +166,13 @@ def is_wiki_lookup_query(text: str) -> bool:
     if not raw or is_truth_drift_query(raw):
         return False
     if is_resource_pulse_query(raw):
+        return False
+    if re.search(
+        r"\b(?:query|search|find)\s+(?:your\s+)?catalog\b|"
+        r"\bfind\s+tools\s+related\s+to\b|\bcatalog\s+search\b",
+        raw,
+        re.I,
+    ) and not re.search(r"\b(?:wikipedia|wiki|encyclopedia|article)\b", raw, re.I):
         return False
     if is_wiki_access_query(raw):
         return True
@@ -370,6 +380,26 @@ def extract_search_query(text: str) -> str:
     if explicit_wiki:
         candidate = extract_quoted_title(explicit_wiki.group(1)) or explicit_wiki.group(1)
         cleaned = _clean_topic(candidate)
+        if cleaned:
+            return cleaned
+
+    conversational_entity = re.search(
+        r"\b(?:the\s+)?(?:band|artist|group|singer)\s+(?:called|named)\s+(.+?)(?:[?.!]|\s+and\s+|$)",
+        raw,
+        re.I,
+    )
+    if conversational_entity:
+        cleaned = _clean_topic(conversational_entity.group(1))
+        if cleaned:
+            return cleaned
+
+    band_tail = re.search(
+        r"\b(?:band|group)\s+(?:(?:called|named)\s+)?(?:the\s+)?(.+?)(?:[?.!]\s*|\s+and\s+|$)",
+        raw,
+        re.I,
+    )
+    if band_tail:
+        cleaned = _clean_topic(band_tail.group(1))
         if cleaned:
             return cleaned
 
@@ -584,10 +614,20 @@ def _lookup_from_title_dns(
     resolve_query = follow or query
     result = dns_resolve(resolve_query, year, user_question=user_question)
     status = result.status
+    selected_hit = result.hit
     if status == "ambiguous":
-        titles = [c.title for c in result.candidates]
-        return _dns_ambiguous_block(query, year, titles), None
-    if status != "hit" or result.hit is None:
+        candidates = list(result.candidates)
+        if candidates:
+            # Prefer the canonical bare title over parenthetical albums/variants.
+            normalized_query = _clean_topic(query).casefold()
+            selected_hit = next(
+                (candidate for candidate in candidates if candidate.title.casefold() == normalized_query),
+                sorted(candidates, key=lambda candidate: ("(" in candidate.title, len(candidate.title), candidate.title.casefold()))[0],
+            )
+            status = "hit"
+        else:
+            return _dns_ambiguous_block(query, year, []), None
+    if status != "hit" or selected_hit is None:
         try:
             from pipeline.wiki_scratchpad import error_book_append
 
@@ -601,7 +641,7 @@ def _lookup_from_title_dns(
             pass
         return _lookup_miss_block(query, err=result.reason or "not in title registry"), None
     clear_dns_ambiguous()
-    hit = result.hit
+    hit = selected_hit
     from pipeline.wiki_extract import (
         format_extract_injection,
         is_extract_shaped_question,
@@ -1034,7 +1074,7 @@ def _access_only_block() -> str:
 
 
 
-def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
+def enrich_eve_message_payload(payload: dict[str, object], *, force: bool = False) -> dict[str, object]:
     """Inject Wikipedia cards so Fast mode cannot skip the archive."""
 
     message = payload.get("message")
@@ -1047,7 +1087,7 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
         active = set(load_active_tools())
     except Exception:  # noqa: BLE001
         active = set()
-    if "wiki_local" not in active:
+    if "wiki_local" not in active and not force:
         return payload
 
     raw = extract_user_message(message)

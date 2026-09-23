@@ -1,9 +1,14 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Stop managed services a task no longer needs. Never stops Eve or Ollama. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("switchboard")
+        ? defineTool({
   description:
     "Release EMPIRE managed services a task no longer needs (pocketbase, frontend). Never stops Ollama or Eve. Defaults to dry-run planning; pass dry_run=false to actually stop.",
   inputSchema: z.object({
@@ -22,5 +27,8 @@ export default defineTool({
       args.push("--dry-run");
     }
     return runPythonModule("pipeline.switchboard", args);
+  },
+})
+        : null,
   },
 });

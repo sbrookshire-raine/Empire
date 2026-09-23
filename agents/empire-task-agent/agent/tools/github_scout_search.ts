@@ -1,10 +1,15 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
 import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 /** Always registered — auto-admits github_scout when headroom allows. */
-export default defineTool({
+export default defineDynamic({
+  events: {
+    "turn.started": () =>
+      isCapabilityActive("github_scout")
+        ? defineTool({
   description:
     "Search GitHub repositories by keyword; cache markdown under 04_Thought_Experiments/github_cache. " +
     "Auto-admits GitHub Scout when resource headroom allows (no Toolbelt click). " +
@@ -27,5 +32,8 @@ export default defineTool({
       args.push("--note", note);
     }
     return runPythonModule("pipeline.github_scout", args);
+  },
+})
+        : null,
   },
 });
