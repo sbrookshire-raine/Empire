@@ -204,6 +204,89 @@ feature unless the Architect explicitly requests that scope.
 
 ---
 
+## 2026-09-23 — Eve tool-loop root cause fixed; startup queue sweep added
+
+### Intent
+
+Diagnose and fix Eve calling no tools in chat (`[eve:harness.tool-loop] empty model
+response`) and stop orphaned workflow runs re-enqueuing on every boot.
+
+### Changed
+
+- `scripts/ensure-ollama-parallel.ps1`: added `-ContextLength` (default 8192); serve now
+  starts with `OLLAMA_CONTEXT_LENGTH=8192`. **This is the root-cause fix** — Ollama's
+  OpenAI-compat endpoint silently ignores `options.num_ctx`, so the model was loading at
+  4096 and truncating Eve's ~9k-token prompt.
+- `frontend/serve.py`: defined the missing `RESOURCE_BLOCK_RE` (undefined name raised
+  `NameError`, which escaped the handler before any response — clients saw
+  `Remote end closed connection without response`); wrapped context builders in
+  `try/except`; added `_attach_server_context()` + `_catalog_directive()` so catalog
+  context sits next to the user request and forbids wiki tools for catalog-only asks.
+- `frontend/wiki_drift_api.py`: narrowed the bare `tell me` alternative in
+  `WIKI_LOOKUP_RE` to `tell me about` (it hijacked local tool prompts).
+- `agents/empire-task-agent/agent/instructions.ts`: routing prompt was resolved from the
+  bundle dir, so the 17 KB routing table was silently dropped from the production system
+  prompt. Added a source-tree fallback plus `console.warn`.
+- `frontend/eve_toolbelt.py`: `_version_number()` safe cast for legacy `defaults_version`.
+- `agents/empire-task-agent/agent/lib/toolbelt.ts` + `frontend/eve_toolbelt.py`: new
+  `system_ops` and `file_ops` categories (both default OFF).
+- 30 × `agents/empire-task-agent/agent/tools/*.ts`: converted static tools to
+  `defineDynamic` per-session gating.
+- `agents/empire-task-agent/agent/skills/empire-routing-detail.md` (new): holds the full
+  routing table that left `empire-routing.md`; compact index + "Missing tool path" remain
+  in the prompt.
+- `eve_instructions.md`: slimmed to core identity / persona / response styles / boundaries.
+- `scripts/cleanup-stale-runs.ps1` (new) + `scripts/start-stack.ps1`: sweeps orphaned
+  `running` runs to `failed`/`PURGED_STALE` immediately before the Eve launch.
+- `scripts/diagnostic.py` (new): 3-turn tool-loop battery.
+- `.gitignore`: added `/tmp/`, `/eve-audit/`, `*.db-shm`, `*.db-wal`, eval capture logs,
+  `frontend/verify-stack.json`.
+- `docs/PROGRESS_REPORT_2026-09-23.md` (new): full write-up + open items.
+
+### Validated
+
+| Command / check | Result | Relevant output |
+|---|---:|---|
+| `python -m unittest discover tests` | PASS | 391 tests fail=0 err=0 |
+| `python scripts\diagnostic.py` | PASS | 3/3; T1 `search_catalog`→`local/scenario-regret`, T3 `check_workbench_health`→291.94 GB free |
+| `GET http://127.0.0.1:11434/api/ps` | PASS | `context_length` 4096 → **8192** after `-ContextLength` |
+| A/B: seed stale run, boot Eve **without** sweep | PASS (reproduced bug) | `[world-local] Re-enqueued 1 active run(s)` + `[workflow-sdk] Error while running workflow` |
+| A/B: seed stale run, boot Eve **with** sweep | PASS (fixed) | `purged 1 stale run(s)`; no re-enqueue line |
+| `cleanup-stale-runs.ps1` re-run (idempotency) | PASS | `purged 0, skipped 805` |
+| `node -e JSON.parse(rewritten run file)` | PASS | BOM-free; deep fields byte-identical |
+| `GET /api/toolbelt` | PASS | `["voice_presence","wiki_local"]` |
+
+### Known limitations / blockers
+
+- **Startup sweep is not a daemon.** It runs only when `start-stack.ps1` actually launches
+  Eve. Runs orphaned *while Eve is running* are caught on the next cold start, not live.
+- **Deep / Librarian context unverified.** Only Fast was confirmed at 8192.
+- `injectOllamaChatOptions` still writes `options.num_ctx`, which the OpenAI-compat
+  endpoint ignores — now redundant, not harmful.
+- Queue **growth** is unbounded (no retention); the sweep only stops re-enqueue.
+- Progressive-disclosure reductions alone did **not** fix the failures; the context-length
+  fix did. Kept for genuine headroom, but do not conflate the two.
+- Model tool-choice is improved but not exhaustive — regression battery not yet written.
+
+### Resume next
+
+1. Pick up **E-01** in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md) (*Eve tool-loop /
+   context session* section): verify Deep + Librarian load at 8192 via `/api/ps`.
+2. Then **E-02** (decide `num_ctx` injection) and **E-03** (routing regression battery).
+3. Do not re-open the fixed items; re-read
+   [`PROGRESS_REPORT_2026-09-23.md`](PROGRESS_REPORT_2026-09-23.md) §2 before touching
+   context/Ollama behavior.
+
+### Workspace caution
+
+- Branch: `cursor/eve-context-and-routing-fix` (pushed; `9a6d3fb`, `c4544de`)
+- Intentional modified files: see **Changed** above
+- Incidental/generated files to preserve: `frontend/verify-stack.json` and
+  `backend/pocketbase/pb_public/dashboard/status.json` are now **untracked** and
+  regenerated at runtime — leave them on disk, do not re-add to git
+
+---
+
 ## Append template
 
 Copy this section to the end for every meaningful work session:

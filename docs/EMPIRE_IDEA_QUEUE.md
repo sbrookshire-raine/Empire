@@ -93,6 +93,38 @@ These were shipped or partially forged and need **your** hands-on verification w
 
 ---
 
+## Eve tool-loop / context session (2026-09-23)
+
+Follow-ups from the branch `cursor/eve-context-and-routing-fix` (commits `9a6d3fb`,
+`c4544de`). Context: Ollama's OpenAI-compat endpoint ignored `options.num_ctx`, so the
+model loaded at 4096 and truncated Eve's prompt — root cause of the empty-response /
+hallucinated-refusal failures. Full write-up: [`PROGRESS_REPORT_2026-09-23.md`](PROGRESS_REPORT_2026-09-23.md).
+
+**Fixed and green (do not re-open):** context truncation, `RESOURCE_BLOCK_RE` NameError
+crash, catalog-context placement, bare `tell me` wiki false-positive, routing-prompt
+loaded from the wrong directory, `defaults_version` `ValueError` risk, startup queue sweep.
+Mechanic: 391 tests pass; `scripts/diagnostic.py` 3/3 with real tool calls.
+
+### Ready to forge (Mechanic)
+
+| ID | Item | Status | How to verify / do | Notes |
+|----|------|--------|--------------------|-------|
+| E-01 | **Verify Deep + Librarian modes load at 8192** | `ready` | Stack up, switch Workbench to **Deep**, then `Invoke-RestMethod http://127.0.0.1:11434/api/ps \| Select -Expand models \| Select name,context_length`. Expect `8192` (not 4096/2048). Repeat for **Librarian** (`command-r:35b`). | `SHARED_NUM_CTX=8192` should now come from `OLLAMA_CONTEXT_LENGTH`; unverified for these two models. Watch 16 GB VRAM — 27B GSQ ≈ 12 GB |
+| E-02 | **Decide fate of `injectOllamaChatOptions` num_ctx** | `ready` | Either (a) leave as harmless belt-and-braces, (b) remove it, or (c) move Eve to the native `/api/chat` endpoint so per-request `num_ctx` is honored. Pick one and note why. | Currently redundant: the OpenAI-compat endpoint ignores it. Leaving it implies it works |
+| E-03 | **Routing regression battery** | `ready` | Extend `scripts/diagnostic.py` with ~10 prompts spanning catalog / wiki / tasks / memory / files / headroom; assert the expected tool name appears in the `actions.requested` trace. | Now that truncation is gone, tool choice is testable. Earlier runs sometimes picked a plausible-but-wrong tool (e.g. `resource_pulse` beside `check_workbench_health`) |
+| E-04 | **Queue retention policy for `.eve/.workflow-data`** | `ready` | Define a retention window for `runs/`, `events/`, `streams/` (was 800 runs + 12k events + 51k streams). Implement prune or document why unbounded is acceptable. | Startup sweep stops re-enqueue; it does not stop growth |
+| E-05 | **Delete stray `tests/routing,ps`** | `ready` | `Remove-Item "tests\routing,ps","tests\routing.ps"` (confirm first). The comma looks like a bad redirect typo; neither is collected by `unittest discover`. | Ad-hoc probe scripts, not suite tests |
+| E-06 | **Consider continuous stale-run protection** | `idea` | Startup sweep only runs when `start-stack.ps1` actually launches Eve. For runs orphaned *while Eve is up*, add a scheduled task or a `session.completed` hook in the agent. | Not a bug — a deliberate coverage gap. Only if it bites |
+
+### Architect smoke (optional feel, not CI)
+
+| ID | Item | Status | How to test | Notes |
+|----|------|--------|-------------|-------|
+| E-07 | **Confirm push-to-talk survived** | `ready` | Stack up → `http://127.0.0.1:8080/eve.html` → mic button. Also `GET /api/toolbelt` should list `voice_presence`. | `voice_presence` was accidentally stripped during debugging and restored; worth one personal check |
+| E-08 | **Wiki Local (Weaviate) is opt-in** | `ready` | Confirm intended: `weaviate:8091` starts only with `-Weaviate`. Wikipedia test passes via server-injected evidence, not a tool call. | Decide whether Operational Phase wants it default-on |
+
+---
+
 ## Incoming from documents
 
 Paste or summarize the next document here. Mechanic will triage into Testing / Forge / Parked.
