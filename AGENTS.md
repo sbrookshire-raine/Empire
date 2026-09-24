@@ -7,6 +7,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 **Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
 **Idea / test queue:** [docs/EMPIRE_IDEA_QUEUE.md](docs/EMPIRE_IDEA_QUEUE.md)  
+**Idea deep store (deferred ideas with stack plans):** [docs/ideas/README.md](docs/ideas/README.md)  
 **Structural plan (diagnosis, answer-path spine, tool triage, phases):** [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md)  
 **Refactor evaluation (what is here, what is junk, resource map):** [docs/REFACTOR_EVAL.md](docs/REFACTOR_EVAL.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
