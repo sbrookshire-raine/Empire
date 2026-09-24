@@ -126,9 +126,11 @@ $env:EMPIRE_TRACE='1'; .\venv\Scripts\python.exe -m frontend.serve      # turn o
 $env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\trace-eve-browser.py --questions "q1|q2|q3"
 ```
 
-Logs: `eve-audit/eve-trace.jsonl` (server: turn/step/tool/timing events — now also `model`/`mode` on
-`turn.start`, so an A/B run is attributable) and `eve-audit/browser-trace.jsonl` (every HTTP hop with
-ms). The tracer reports bubbles added per question, so a future regression shows up as
+Logs: `eve-audit/eve-trace.jsonl` (server: turn/step/tool/timing events — `turn.start` carries
+`model`/`mode`, and **every record carries a per-turn `turn` id**, so with two sessions in flight the
+tracer can still group one question's tool events; the id is minted on the POST and bridged to the
+GET `/stream` through a bounded session→turn map, E-18) and `eve-audit/browser-trace.jsonl` (every HTTP
+hop with ms). The tracer reports bubbles added per question, so a future regression shows up as
 `bubbles_added=2`.
 
 ### Fast model A/B (measured 2026-09-23)

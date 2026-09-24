@@ -1,7 +1,8 @@
 """Browser tracer: every HTTP hop + the server-side event/tool timeline for one turn.
 
 Answers "where do the ~90 seconds go, and does anything loop?" from the browser the Architect
-actually uses.
+actually uses. The server timeline is grouped by the per-turn `turn` id (E-18), so a second
+session in flight — another tab, the voice router, a harness — cannot be read as this run's.
 
 Start the Workbench with tracing on first:
 
@@ -162,6 +163,86 @@ def run(*, headful: bool, questions: list[str]) -> tuple[list[dict], list[dict]]
     return http, turns
 
 
+UNATTRIBUTED = "(no turn id)"
+
+
+def _describe(record: dict) -> str | None:
+    """One printable line for the trace records this probe cares about."""
+
+    kind = record.get("kind")
+    if kind == "tool.requested":
+        return f"tool.requested  {record.get('tools')}"
+    if kind == "tool.result":
+        return f"tool.result     {record.get('ms')} ms"
+    if kind == "stream.end":
+        return f"stream.end      {record.get('seconds')}s"
+    if kind == "event" and record.get("type") in {"turn.completed", "session.waiting"}:
+        return f"event           {record.get('type')}"
+    return None
+
+
+def _read_new_records(offset: int) -> list[dict]:
+    """Read the trace records written since `offset` (the size before the run)."""
+
+    records: list[dict] = []
+    if not TRACE_PATH.exists():
+        return records
+    with TRACE_PATH.open(encoding="utf-8") as handle:
+        handle.seek(offset)
+        for line in handle:
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return records
+
+
+def _group_by_turn(records: list[dict]) -> list[dict]:
+    """Group records by the `turn` id minted per browser turn (E-18).
+
+    Without this, a second session in flight (another tab, the voice router, a harness)
+    interleaves its tool events into this run's timeline. Records that carry no turn id —
+    written before E-18, or by something else — are kept together and labelled rather than
+    being silently attributed to this run.
+    """
+
+    groups: dict[str, dict] = {}
+    order: list[str] = []
+    for record in records:
+        key = str(record.get("turn") or "") or UNATTRIBUTED
+        group = groups.get(key)
+        if group is None:
+            group = {"key": key, "start": None, "lines": []}
+            groups[key] = group
+            order.append(key)
+        if record.get("kind") == "turn.start":
+            group["start"] = record
+            continue
+        line = _describe(record)
+        if line:
+            group["lines"].append(line)
+    return [groups[key] for key in order]
+
+
+def _print_turn_trace(offset: int) -> None:
+    print("\n=== Server trace (per turn: tools + timings) ===")
+    groups = _group_by_turn(_read_new_records(offset))
+    if not groups:
+        print("  (no records after the mark — start the Workbench with EMPIRE_TRACE=1)")
+        return
+    for group in groups:
+        start = group["start"] or {}
+        header = (
+            f"model={start.get('model') or '?'} mode={start.get('mode') or '?'} "
+            f"session={start.get('session') or '-'} "
+            f"{str(start.get('message') or '')[:48]!r}"
+        )
+        label = group["key"] if group["key"] == UNATTRIBUTED else group["key"][:12]
+        print(f"  turn {label}  {header}")
+        for line in group["lines"]:
+            print(f"    {line}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Browser + server trace for Eve turns")
     parser.add_argument("--headful", action="store_true")
@@ -203,24 +284,7 @@ def main() -> int:
         flag = "DOUBLE" if turn["bubbles"] > 1 else "ok    "
         print(f"  {flag}  {turn['seconds']:5.1f}s  bubbles={turn['bubbles']}  {turn['question'][:52]}")
 
-    print("\n=== Server trace (tools + timings) ===")
-    if TRACE_PATH.exists():
-        with TRACE_PATH.open(encoding="utf-8") as handle:
-            handle.seek(before)
-            for line in handle:
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                kind = record.get("kind")
-                if kind == "tool.requested":
-                    print(f"  tool.requested  {record.get('tools')}")
-                elif kind == "tool.result":
-                    print(f"  tool.result     {record.get('ms')} ms")
-                elif kind == "stream.end":
-                    print(f"  stream.end      {record.get('seconds')}s")
-                elif kind == "event" and record.get("type") in {"turn.completed", "session.waiting"}:
-                    print(f"  event           {record.get('type')}")
+    _print_turn_trace(before)
 
     if doubled:
         print(f"\nRESULT: {len(doubled)} question(s) rendered multiple assistant bubbles")

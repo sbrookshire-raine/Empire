@@ -293,6 +293,32 @@ def _ambient_text(value: object, max_chars: int = 4000) -> str:
 TRACE_ENABLED = os.environ.get("EMPIRE_TRACE", "").strip().casefold() in {"1", "true", "yes", "on"}
 TRACE_LOG_PATH = ROOT / "eve-audit" / "eve-trace.jsonl"
 
+# A browser turn spans two HTTP requests: the POST that starts it (which mints the turn id and is
+# where `turn.start` is written) and the GET `/stream` that carries every tool/step event. They are
+# *different handler instances*, so the per-request `_ambient_turn_id` cannot reach the stream — this
+# small session→turn map bridges them. Without it the tool events land in a separate "(no turn id)"
+# group and cannot be attributed to the question that caused them (measured 2026-09-24).
+_TURN_BY_SESSION: dict[str, str] = {}
+_MAX_TRACKED_SESSIONS = 64
+
+
+def remember_turn(session_id: str, turn_id: str) -> None:
+    """Record which turn is current for a session (called by the POST that starts it)."""
+
+    session = str(session_id or "").strip()
+    turn = str(turn_id or "").strip()
+    if not session or not turn:
+        return
+    _TURN_BY_SESSION[session] = turn
+    while len(_TURN_BY_SESSION) > _MAX_TRACKED_SESSIONS:
+        _TURN_BY_SESSION.pop(next(iter(_TURN_BY_SESSION)), None)
+
+
+def turn_for_session(session_id: str) -> str:
+    """The current turn id for a session, or "" when unknown."""
+
+    return _TURN_BY_SESSION.get(str(session_id or "").strip(), "")
+
 
 def trace_event(kind: str, **fields: object) -> None:
     """Append one trace record when EMPIRE_TRACE is on.
@@ -844,8 +870,18 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = eve_toolbelt.apply_active_tools(payload)
             payload = ollama_api.apply_chat_mode_payload(payload)
             active_config = ollama_api.load_active_config()
+            # One id per browser turn, minted before the first trace record so every later
+            # record for this turn (tool latency, step events, stream end, ambient capture)
+            # can be attributed to it. The agent session id only exists after the session
+            # is created — never on the first turn — so `turn` is the join key and
+            # `session` is attached whenever the request path already carries it.
+            self._ambient_turn_id = uuid.uuid4().hex
+            # The turn id must survive to the GET /stream request that carries the tool events.
+            remember_turn(self._eve_session_id_from_path(), self._ambient_turn_id)
             trace_event(
                 "turn.start",
+                turn=self._ambient_turn_id,
+                session=self._eve_session_id_from_path(),
                 message=str(payload.get("message") or "")[:400],
                 active_tools=payload.get("active_tools"),
                 # Which model the agent was told to use — makes Fast A/B runs attributable
@@ -923,7 +959,6 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     except Exception:
                         pass
             self._ambient_user_text = str(payload.get("message") or "")
-            self._ambient_turn_id = uuid.uuid4().hex
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1075,10 +1110,22 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 response,
                 eve_proxy.stream_start_index(upstream_path),
                 session_id=self._eve_session_id_from_path(),
+                turn_id=getattr(self, "_ambient_turn_id", ""),
             )
 
         try:
             body = response.body
+            # A *new* session has no id in the request path; the response carries it, so map it here
+            # (the browser then streams from `/api/eve/session/<id>/stream`, a separate request).
+            if body:
+                try:
+                    created = json.loads(body.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+                    created = {}
+                if isinstance(created, dict):
+                    created_session = str(created.get("sessionId") or "")
+                    if created_session:
+                        remember_turn(created_session, getattr(self, "_ambient_turn_id", ""))
             pending = getattr(self, "_pending_wiki_evidence", None)
             if pending and body:
                 try:
@@ -1144,7 +1191,13 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         upstream_next_index: int = 0,
         *,
         session_id: str = "",
+        turn_id: str = "",
     ) -> None:
+        # `turn_id` is the caller's, else the turn the session is currently on (the POST that
+        # started it is a *different handler instance* — see `remember_turn`), else this
+        # request's own id. All three must agree so trace records and ambient capture join
+        # on one id.
+        turn_id = turn_id or turn_for_session(session_id) or getattr(self, "_ambient_turn_id", "")
         client_connected = True
         assistant_text = ""
         qwen_start = time.perf_counter()
@@ -1176,12 +1229,18 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         for action in (data.get("actions") if isinstance(data, dict) else []) or []
                         if isinstance(action, dict)
                     ]
-                    trace_event("tool.requested", tools=requested, session=session_id)
+                    trace_event(
+                        "tool.requested",
+                        tools=requested,
+                        turn=turn_id,
+                        session=session_id,
+                    )
                     tool_started = time.perf_counter()
                 elif event_type == "action.result" and tool_started is not None:
                     trace_event(
                         "tool.result",
                         ms=round((time.perf_counter() - tool_started) * 1000, 1),
+                        turn=turn_id,
                         session=session_id,
                     )
                     tool_started = None
@@ -1196,6 +1255,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         "event",
                         type=event_type,
                         step=(data or {}).get("stepIndex") if isinstance(data, dict) else None,
+                        turn=turn_id,
                         session=session_id,
                     )
                 elif event_type in {"message.appended", "message.completed"} and isinstance(data, dict):
@@ -1205,6 +1265,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         type=event_type,
                         step=data.get("stepIndex"),
                         chars=len(chunk) if isinstance(chunk, str) else 0,
+                        turn=turn_id,
                         session=session_id,
                     )
                 data = projected.get("data")
@@ -1233,6 +1294,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         voice_s=round(voice_time, 2),
                         total_s=round(qwen_time + voice_time, 2),
                         fallback=used_fallback,
+                        turn=turn_id,
                         session=session_id,
                     )
                     if isinstance(data, dict):
@@ -1247,7 +1309,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         text=getattr(self, "_ambient_user_text", ""),
                         status="completed",
                         session_id=session_id,
-                        turn_id=getattr(self, "_ambient_turn_id", ""),
+                        turn_id=turn_id,
                     )
                     try:
                         from pipeline.wiki_lookup_lock import clear_wiki_lookup_lock
@@ -1260,7 +1322,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         text=assistant_text,
                         status="completed",
                         session_id=session_id,
-                        turn_id=getattr(self, "_ambient_turn_id", ""),
+                        turn_id=turn_id,
                     )
                 projected = eve_proxy.with_upstream_next_index(
                     projected,
@@ -1286,6 +1348,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             trace_event(
                 "stream.end",
                 seconds=round(time.perf_counter() - stream_started, 2),
+                turn=turn_id,
                 session=session_id,
             )
             response.close()
