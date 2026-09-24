@@ -274,6 +274,26 @@ class EveProxyProjectionTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertEqual(eve_proxy.sanitize_assistant_text(message), message)
 
+    def test_a_tool_call_written_as_an_xml_envelope_never_reaches_the_bubble(self) -> None:
+        """Measured 2026-09-24 with an always-on provenance rule: the reply was
+        `<wiki_scout_search>\\n\\n{"name": …, "arguments": …}` and no tool ran."""
+
+        leaked = (
+            '<wiki_scout_search>\n\n{"name": "wiki_scout_search", "arguments": '
+            '{"query": "The White Stripes", "year": "2026"}}\n}'
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
+        # Prose that follows the envelope survives.
+        with_prose = leaked + "\n\nThey were a rock duo from Detroit."
+        self.assertIn("rock duo from Detroit", eve_proxy.sanitize_assistant_text(with_prose))
+        # A tag the user is actually discussing, or HTML, is untouched.
+        for safe in ("The `<div>` element wraps the block.", "print(\"hello\") prints text."):
+            with self.subTest(safe=safe):
+                self.assertEqual(eve_proxy.sanitize_assistant_text(safe), safe)
+
     def test_sanitize_assistant_text_strips_think_blocks(self) -> None:
         leaked = "<think>Planning tools.</think>Yes — ready when you are."
         self.assertEqual(

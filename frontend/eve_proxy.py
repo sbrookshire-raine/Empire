@@ -592,6 +592,56 @@ def _strip_reasoning_json_envelope(text: str) -> str:
     return stripped[end:].lstrip()
 
 
+# A tool call written as an XML-ish envelope + JSON args. Measured 2026-09-24 (with an always-on
+# provenance rule in the prompt): the reply was
+#   `<wiki_scout_search>\n\n{"name": "wiki_scout_search", "arguments": {"query": "The W…`
+# — nothing ran, and it reached the bubble. Namespace-restricted like _BARE_TOOL_CALL_RE, and only a
+# reply that *begins* with the tag is treated this way, so prose about a tag is untouched.
+_XML_TOOL_TAG_RE = re.compile(
+    rf"\A\s*<\s*({_TOOL_NAMESPACE})_[a-z0-9_]+[ \t]*>",
+    re.IGNORECASE,
+)
+
+
+def _strip_xml_tool_call(text: str) -> str:
+    """Drop a leading `<tool_name>` + JSON-arguments envelope. Returns "" when that was all of it."""
+
+    match = _XML_TOOL_TAG_RE.match(text)
+    if not match:
+        return text
+    index = match.end()
+    while index < len(text) and text[index].isspace():
+        index += 1
+    if index >= len(text) or text[index] != "{":
+        return text[: match.start()] + text[match.end() :]
+    depth = 0
+    in_string = False
+    escaped = False
+    end = None
+    for position in range(index, len(text)):
+        char = text[position]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                end = position + 1
+                break
+    if end is None:
+        return text[: match.start()]
+    return (text[: match.start()] + text[end:]).strip()
+
+
 def sanitize_assistant_text(text: str) -> str:
     """Strip leaked reasoning / meta-commentary from assistant-visible text."""
 
@@ -603,6 +653,12 @@ def sanitize_assistant_text(text: str) -> str:
         cleaned = envelope_free.strip()
         if not cleaned:
             # The whole reply was the protocol in a JSON envelope — a failed turn, not an answer.
+            return EMPTY_AFTER_CLEAN_REPLY
+    call_free = _strip_xml_tool_call(cleaned)
+    if call_free != cleaned:
+        cleaned = call_free.strip()
+        if not cleaned or set(cleaned) <= set("{}[](),:;"):
+            # The whole reply was a tool call the model never made (a stray "}" often remains).
             return EMPTY_AFTER_CLEAN_REPLY
     cleaned = _LEADING_NONLATIN_RE.sub("", cleaned).strip()
     if _INTERNAL_MARKER_RE.search(cleaned):
