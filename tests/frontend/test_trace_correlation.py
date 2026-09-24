@@ -149,6 +149,34 @@ class StreamCorrelationTests(_TraceFileTestCase):
         self.assertTrue(records)
         self.assertTrue(all(record.get("turn") == "caller-turn" for record in records), records)
 
+    def test_message_records_report_growth_not_cumulative_length(self) -> None:
+        """Measured 2026-09-24: 289 records summed 209,011 chars for a ~1.5k answer because
+        `messageSoFar` is cumulative. `chars` is now the growth; `total` is the running length."""
+
+        answer = "x" * 100
+        events = [
+            {"type": "message.appended", "data": {"messageSoFar": answer[:40], "stepIndex": 0}},
+            {"type": "message.appended", "data": {"messageSoFar": answer[:80], "stepIndex": 0}},
+            {"type": "message.completed", "data": {"messageSoFar": answer, "stepIndex": 0}},
+        ]
+        handler = object.__new__(EmpireHandler)
+        handler.wfile = _RecordingWriter()
+        handler._ambient_user_text = ""
+        response = eve_proxy.EveResponse(
+            status=200,
+            headers={"Content-Type": "application/x-ndjson; charset=utf-8"},
+            body=b"",
+            stream=io.BytesIO(_ndjson(events)),
+            connection=_Closable(),
+        )
+        handler._write_eve_stream(response, session_id="ses_len", turn_id="turn-len")
+
+        messages = [record for record in self.records() if record["kind"] == "message"]
+        self.assertEqual(len(messages), 3)
+        self.assertEqual([record["chars"] for record in messages], [40, 40, 20])
+        self.assertEqual(sum(record["chars"] for record in messages), len(answer))
+        self.assertEqual(messages[-1]["total"], len(answer))
+
     def test_stream_resolves_the_turn_id_through_the_session_bridge(self) -> None:
         """The POST mints the turn id; the GET /stream carries the tool events on another handler.
 

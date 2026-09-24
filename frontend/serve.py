@@ -1357,11 +1357,24 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     )
                 elif event_type in {"message.appended", "message.completed"} and isinstance(data, dict):
                     chunk = data.get("messageSoFar") or data.get("message") or data.get("messageDelta")
+                    # `messageSoFar`/`message` are *cumulative* (measured 2026-09-24: one turn logged
+                    # 289 records summing 209,011 chars for a ~1.5k answer), so a single `chars` read
+                    # as the answer size and misled every latency review. Record the growth plus the
+                    # running total; a true delta event still reports its own length.
+                    previous_len = len(assistant_text)
+                    candidate = data.get("messageSoFar") or data.get("message")
+                    if isinstance(candidate, str) and candidate.strip():
+                        growth = max(0, len(candidate) - previous_len)
+                        running_total = len(candidate)
+                    else:
+                        growth = len(chunk) if isinstance(chunk, str) else 0
+                        running_total = previous_len + growth
                     trace_event(
                         "message",
                         type=event_type,
                         step=data.get("stepIndex"),
-                        chars=len(chunk) if isinstance(chunk, str) else 0,
+                        chars=growth,
+                        total=running_total,
                         turn=turn_id,
                         session=session_id,
                     )

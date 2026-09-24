@@ -185,6 +185,14 @@ Only on the legacy escape hatch (`EMPIRE_WIKI_MIDDLEWARE=1`) does Workbench set 
 
 Multi-hop work uses the research **scratchpad** + **Error Book** (`pipeline/wiki_scratchpad.py`) — not Cognee.
 
+**The Error Book is written automatically since 2026-09-24** (it used to be inert outside the legacy
+middleware: 52 `wiki_scout_search` calls in a day, zero entries). `mcp/wiki_scout_mcp.py` appends a
+miss server-side — deduped by query, so repeats do not spam it — and returns `known_miss` plus the
+hint, which is retry-aware: *this exact query has missed, never invent a page, try the bare title
+once, then say plainly it is not in the archive*. That closes the loop that let "the local archive
+doesn't have a page on X" stand while `Drum kit` and `Juggling` sat in the index. The file is bounded
+(`EMPIRE_WIKI_ERROR_BOOK_MAX`, default 500 entries).
+
 **Question shapes.** `pipeline/wiki_interpreter.extract_wiki_subject` pulls the subject out of a conversational question. Measured live 2026-09-23: `What is magnetism?` resolved but **`How do magnets work?` missed the wiki entirely** (the question form fell through to a literal title lookup), which is why the 14B looped on a "no page" answer. `how do/does <noun> work|function|operate` and `how <noun> work(s)` now yield the subject noun (`How does magnetism work?` → `Magnetism`). Pronouns are excluded, so `how do I install python?` stays a non-lookup question.
 
 **Repeat refusal (bounded loops).** `wiki_scout_search` counts identical searches per subject/year inside a 180 s window: strike 1 = normal, strike 2 = cards + "do NOT repeat, call `wiki_read_section`/`wiki_extract`", **strike 3 = refused with no cards** (`HARD_STOP_REPEAT_HINT`). Measured: the 14B issued **7 identical searches / 66 s** and ended in an apology (the soft hint alone was ignored 6×); after the guard the same question costs 2 searches / 14–26 s. The window means a later genuine question about the same subject is not refused. Unit tests: `tests/pipeline/test_wiki_scout.py`.

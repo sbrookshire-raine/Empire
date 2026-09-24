@@ -51,6 +51,34 @@ def error_book_path() -> Path:
     return _local_empire_dir() / "wiki-error-book.jsonl"
 
 
+# The book is append-only and now written automatically on every miss, so it needs a ceiling:
+# distinct misses still accumulate over months of use.
+_MAX_ERROR_BOOK_ENTRIES = int(os.environ.get("EMPIRE_WIKI_ERROR_BOOK_MAX", "500"))
+
+
+def _trim_error_book(path: Path) -> None:
+    """Keep at most `_MAX_ERROR_BOOK_ENTRIES` lines, newest last. Never raises."""
+
+    if _MAX_ERROR_BOOK_ENTRIES <= 0:
+        return
+    try:
+        lines = [
+            line
+            for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if line.strip()
+        ]
+        if len(lines) <= _MAX_ERROR_BOOK_ENTRIES:
+            return
+        temp = path.with_suffix(path.suffix + ".tmp")
+        temp.write_text(
+            "\n".join(lines[-_MAX_ERROR_BOOK_ENTRIES:]) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temp, path)
+    except OSError:
+        return
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
@@ -160,6 +188,7 @@ def error_book_append(
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        _trim_error_book(path)
     except OSError as exc:
         return {"ok": False, "error": str(exc)}
     return {"ok": True, "path": str(path), "entry": row}
@@ -219,6 +248,7 @@ def format_error_book_hint(query: str) -> str:
         return ""
     return (
         "[[EMPIRE_WIKI_ERROR_BOOK]]\n"
-        "This subject (or a close query) already missed in the local archive. "
-        "Do NOT invent a page. Say it is not in the local Wikipedia archive.\n"
+        "This exact query has missed before — never invent a page for it. Try the bare subject/title "
+        'once (`Drum kit`, not `how to play the drums`); if that misses too, say plainly that it is '
+        "not in the local Wikipedia archive.\n"
     )

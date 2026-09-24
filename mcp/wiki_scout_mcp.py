@@ -97,6 +97,30 @@ async def wiki_scout_search(
             "candidate_titles": list(result.get("candidate_titles") or []),
         }
         return _json(slim)
+    # Miss. The Error Book is the only place a dead end is remembered, and nothing in the autonomous
+    # path wrote or read it (measured 2026-09-24: 52 searches in a day, zero entries) — which is how
+    # "the local archive doesn't have a page on X" survived as a conclusion while `Drum kit` and
+    # `Juggling` were in the index. Log it here, server-side, so no model compliance is required, and
+    # dedupe by query so a stuck turn's repeats do not spam the book.
+    if isinstance(result, dict):
+        try:
+            from pipeline.wiki_scratchpad import (
+                error_book_append,
+                error_book_mentions_miss,
+                format_error_book_hint,
+            )
+
+            if not error_book_mentions_miss(query):
+                error_book_append(
+                    query=query,
+                    reason=str(result.get("error") or "title_dns_miss")[:200],
+                    year=str(result.get("snapshot_year") or year_value or ""),
+                )
+            result = dict(result)
+            result["known_miss"] = True
+            result["error_book_hint"] = format_error_book_hint(query)
+        except Exception:  # noqa: BLE001 — the book must never break a lookup
+            pass
     return _json(result)
 
 
