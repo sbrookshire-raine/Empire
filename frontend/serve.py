@@ -170,6 +170,56 @@ def _resource_guard_context(message: str) -> str:
 
 _USER_MESSAGE_ANCHOR = "\n\nUser message:\n"
 
+# Cross-domain asks ("can I learn drums using the rules of juggling?") need the Architect's decoded
+# ledger, not just an encyclopedia lookup. Measured 2026-09-24: with only a prompt hint, that
+# question produced 6 phrase-shaped wiki searches and ZERO primitive_lookup calls, so the ledger
+# route never fired. Same remedy as the catalog block: run the lookup server-side and put the
+# mechanisms next to the ask.
+_TRANSFER_RE = re.compile(
+    r"(?:using the rules of|rules of [a-z][a-z ]{2,40} (?:for|on|in)|"
+    r"apply(?:ing)? (?:the )?(?:rules|principles|idea|concept|logic|thinking) of|"
+    r"borrow(?:ing)? (?:from|the)|inspired by|inspiration from|"
+    r"take [a-z][a-z ]{2,30} and (?:apply|use|try|map)|"
+    r"same (?:way|principle|mechanism|pattern|rules) as|"
+    r"(?:work|apply|transfer)(?:s|ing)? (?:the same|to|for|with)|"
+    r"could [a-z][a-z ]{2,30} (?:work|apply|help))",
+    re.IGNORECASE,
+)
+
+
+def _transfer_context(message: str) -> str:
+    """Attach the Architect's own decoded primitives when the ask transfers A onto B."""
+
+    if not _TRANSFER_RE.search(message or ""):
+        return ""
+    try:
+        from pipeline import primitive_lookup
+
+        result = primitive_lookup.lookup(text=message, limit=3)
+    except Exception:  # noqa: BLE001 — never let context building break a turn
+        return ""
+    matches = result.get("matches") or []
+    if not matches:
+        vocabulary = ", ".join(
+            str(entry.get("primitive")) for entry in (result.get("vocabulary") or [])[:12]
+        )
+        return (
+            "\n\n[AUTHORITATIVE PRIMITIVE LEDGER: no decoded row matches this ask. The ledger's own "
+            f"vocabulary is: {vocabulary}. Name the closest of these, or say plainly that this "
+            "connection is not in the ledger yet — do not invent a mechanism.]"
+        )
+    lines = [
+        f"- {match['thing']} ({match['domain']}): mechanism = {match['mechanism'][:170]}; "
+        f"primitives = {match['primitives']}; sibling = {match['sibling'][:130]}"
+        for match in matches
+    ]
+    return (
+        "\n\n[AUTHORITATIVE PRIMITIVE LEDGER CONTEXT — the Architect's own decoded mechanisms, from "
+        "his thought-experiment ledger. Name the shared primitive, state the mapping in one sentence, "
+        "say where the analogy breaks, and label what came from a tool vs what is your inference. "
+        "Do not answer this from general knowledge alone.]\n" + "\n".join(lines)
+    )
+
 
 def _attach_server_context(message: str, context: str) -> str:
     """Attach authoritative server context immediately before the user request.
@@ -300,6 +350,11 @@ TRACE_LOG_PATH = ROOT / "eve-audit" / "eve-trace.jsonl"
 # group and cannot be attributed to the question that caused them (measured 2026-09-24).
 _TURN_BY_SESSION: dict[str, str] = {}
 _MAX_TRACKED_SESSIONS = 64
+# Same two-request problem for the *text*: the enriched user message is built on the POST, but the
+# ambient record is written on the GET /stream handler, so `_ambient_user_text` was always empty
+# there — the audit log held the answer but never the question. Measured 2026-09-24 while checking
+# whether a server-injected context block reached the model.
+_USER_TEXT_BY_SESSION: dict[str, str] = {}
 
 
 def remember_turn(session_id: str, turn_id: str) -> None:
@@ -318,6 +373,24 @@ def turn_for_session(session_id: str) -> str:
     """The current turn id for a session, or "" when unknown."""
 
     return _TURN_BY_SESSION.get(str(session_id or "").strip(), "")
+
+
+def remember_user_text(session_id: str, text: str) -> None:
+    """Keep the enriched user message so the stream handler can log it."""
+
+    session = str(session_id or "").strip()
+    value = str(text or "")
+    if not session or not value:
+        return
+    _USER_TEXT_BY_SESSION[session] = value
+    while len(_USER_TEXT_BY_SESSION) > _MAX_TRACKED_SESSIONS:
+        _USER_TEXT_BY_SESSION.pop(next(iter(_USER_TEXT_BY_SESSION)), None)
+
+
+def user_text_for_session(session_id: str) -> str:
+    """The enriched user message for a session, or "" when unknown."""
+
+    return _USER_TEXT_BY_SESSION.get(str(session_id or "").strip(), "")
 
 
 def trace_event(kind: str, **fields: object) -> None:
@@ -933,11 +1006,15 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     resource_context = _resource_guard_context(original_message)
                 except Exception:
                     resource_context = ""
+                try:
+                    transfer_context = _transfer_context(original_message)
+                except Exception:
+                    transfer_context = ""
                 # Place next to the ask, not above the companion preamble: the
                 # model ignored a distant catalog block and called the wiki limb.
                 payload["message"] = _attach_server_context(
                     original_message,
-                    f"{catalog_context}{resource_context}",
+                    f"{catalog_context}{resource_context}{transfer_context}",
                 )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
@@ -959,6 +1036,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     except Exception:
                         pass
             self._ambient_user_text = str(payload.get("message") or "")
+            remember_user_text(self._eve_session_id_from_path(), self._ambient_user_text)
             return self._eve_proxy_request("POST", payload)
         if path.startswith("/api/memory/") and not self._memory_origin_allowed():
             return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1126,6 +1204,9 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     created_session = str(created.get("sessionId") or "")
                     if created_session:
                         remember_turn(created_session, getattr(self, "_ambient_turn_id", ""))
+                        remember_user_text(
+                            created_session, getattr(self, "_ambient_user_text", "")
+                        )
             pending = getattr(self, "_pending_wiki_evidence", None)
             if pending and body:
                 try:
@@ -1306,7 +1387,7 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         projected["data"] = data
                     _append_ambient_event(
                         role="user",
-                        text=getattr(self, "_ambient_user_text", ""),
+                        text=getattr(self, "_ambient_user_text", "") or user_text_for_session(session_id),
                         status="completed",
                         session_id=session_id,
                         turn_id=turn_id,

@@ -127,19 +127,97 @@ def capture(
     }
 
 
+def list_experiments(*, limit: int = 20, out_dir: Path | None = None) -> dict[str, Any]:
+    """Newest first. Capture was write-only, so a past experiment could not feed a new one."""
+
+    dest = Path(out_dir) if out_dir else DEFAULT_DIR
+    if not dest.is_dir():
+        return {"ok": False, "error": f"thought-experiment dir missing: {dest}", "dir": str(dest)}
+    files = [path for path in dest.glob("TE_*.md") if path.is_file()]
+    files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    entries = []
+    for path in files[: max(1, limit)]:
+        topic = path.stem
+        try:
+            head = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            head = ""
+        for line in head.splitlines():
+            if line.startswith("# Thought experiment: "):
+                topic = line.removeprefix("# Thought experiment: ").strip()
+                break
+        entries.append(
+            {
+                "name": path.stem,
+                "topic": topic,
+                "path": str(path),
+                "modified": round(path.stat().st_mtime, 1),
+                "chars": len(head),
+            }
+        )
+    return {"ok": True, "dir": str(dest), "count": len(files), "experiments": entries}
+
+
+def read_experiment(
+    name_or_path: str,
+    *,
+    out_dir: Path | None = None,
+    max_chars: int = 6000,
+) -> dict[str, Any]:
+    """Read one note. The path is resolved strictly inside `out_dir` — no traversal."""
+
+    raw = (name_or_path or "").strip()
+    if not raw:
+        return {"ok": False, "error": "name required"}
+    dest = (Path(out_dir) if out_dir else DEFAULT_DIR).resolve()
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = dest / (raw if raw.endswith(".md") else f"{raw}.md")
+    try:
+        resolved = candidate.resolve()
+        resolved.relative_to(dest)
+    except (OSError, ValueError):
+        return {"ok": False, "error": "note must be inside 04_Thought_Experiments"}
+    if not resolved.is_file():
+        return {"ok": False, "error": f"no such note: {raw}"}
+    try:
+        text = resolved.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {
+        "ok": True,
+        "name": resolved.stem,
+        "path": str(resolved),
+        "truncated": len(text) > max_chars,
+        "text": text[:max_chars],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Capture EMPIRE thought experiment notes")
-    parser.add_argument("topic")
+    parser = argparse.ArgumentParser(description="Capture or read EMPIRE thought experiment notes")
+    parser.add_argument("topic", nargs="?", default="")
     parser.add_argument("--url", default="")
     parser.add_argument("--notes", default="")
     parser.add_argument("--out-dir", default=str(DEFAULT_DIR))
+    parser.add_argument("--list", action="store_true", help="list saved notes, newest first")
+    parser.add_argument("--read", default="", help="read one saved note by name or path")
+    parser.add_argument("--limit", type=int, default=20)
     args = parser.parse_args(argv)
-    result = capture(
-        args.topic,
-        source_url=args.url,
-        notes=args.notes,
-        out_dir=Path(args.out_dir),
-    )
+
+    dest = Path(args.out_dir)
+    if args.list:
+        result = list_experiments(limit=max(1, min(args.limit, 50)), out_dir=dest)
+    elif args.read:
+        result = read_experiment(args.read, out_dir=dest)
+    elif args.topic:
+        result = capture(
+            args.topic,
+            source_url=args.url,
+            notes=args.notes,
+            out_dir=dest,
+        )
+    else:
+        result = {"ok": False, "error": "pass a topic, or --list, or --read NAME"}
     print(json.dumps(result, indent=2, default=str))
     return 0 if result.get("ok") else 1
 
