@@ -67,8 +67,16 @@ If a **BOUNDARY** line asks for Web Scout (weather / future devices): answer loc
 ## Simple questions
 
 1. Call **`wiki_scout_search`** once with the subject the user actually means (default year **2026**).
-2. If Title DNS is ambiguous, ask which title — do not invent.
-3. Lead too thin for the question? Escalate to **`wiki_extract`** (or
+2. **Read the `ambiguous` flag before you answer.** When the tool returns `ambiguous: true`, the
+   archive has several readings of that subject (e.g. asked *magnets* → **Magnet**, **Magnetism**,
+   **The Magnets**), and each candidate arrives as its own card with a short lead:
+   - if the question clearly means one of them, answer from **that** page and **name the page** you
+     used ("In *Magnetism*: …");
+   - if the question does not favour one, name the candidates and **ask which** the user means;
+   - never answer from one candidate as if it were the only match, and never write a tool call as
+     prose ("Called wiki_scout_search with…") — make the call or ask.
+3. If Title DNS is genuinely ambiguous with no candidates, ask which title — do not invent.
+4. Lead too thin for the question? Escalate to **`wiki_extract`** (or
    **`wiki_read_section`** for a named section) in the same turn instead of guessing.
 
 ## Multi-hop work

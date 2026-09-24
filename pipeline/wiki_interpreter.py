@@ -193,6 +193,15 @@ _DATE_SPAN_RE = re.compile(
 )
 
 
+# Kind phrases that lead a conversational subject ("the band the white stripes"). Stripped in
+# _trim_subject so question-shaped queries still resolve in Title DNS.
+_KIND_PHRASE_RE = re.compile(
+    r"^(?:the\s+|a\s+|an\s+)?(?:band|group|song|single|album|film|movie|tv\s+series|series|show|"
+    r"book|novel|artist|musician|singer|actor|actress|player|team|city|town|country|company)\s+",
+    re.I,
+)
+
+
 def _trim_subject(value: str) -> str:
     topic = re.sub(r"\s+", " ", (value or "").strip(" .?!,\"'"))
     if not topic:
@@ -204,6 +213,13 @@ def _trim_subject(value: str) -> str:
     )[0]
     topic = _YEAR_RANGE_RE.sub("", topic).strip(" ,;")
     topic = re.sub(r"\s+(?:in|during|from)\s+(?:19|20)\d{2}.*$", "", topic, flags=re.I).strip()
+    # "tell me about the band the white stripes" keeps the kind noun phrase, and Title DNS cannot
+    # resolve "the band the white stripes" (measured 2026-09-24: miss → ~1.8 s fuzzy fallback with
+    # no page). Strip a leading kind phrase only when a real subject remains and no preposition
+    # follows, so "the city of London" and a bare "the band" are left alone.
+    stripped_kind = _KIND_PHRASE_RE.sub("", topic, count=1).strip(" ,;")
+    if stripped_kind and not re.match(r"^(?:of|in|at|from|for|with|on)\b", stripped_kind, re.I):
+        topic = stripped_kind
     return topic[:120].strip()
 
 

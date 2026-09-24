@@ -216,7 +216,21 @@ def main() -> int:
         help="Seconds to keep listening for TTS calls after the reply renders",
     )
     parser.add_argument("--no-voice", action="store_true", help="Skip speech assertions")
+    parser.add_argument(
+        "--must-contain",
+        default="",
+        help=(
+            "Comma-separated phrases the reply must contain (default: the White Stripes phrase). "
+            "Used by the R-02 A/B to grade other questions, e.g. --must-contain magnetism,magnet"
+        ),
+    )
     args = parser.parse_args()
+
+    global MUST_CONTAIN
+    if args.must_contain.strip():
+        MUST_CONTAIN = tuple(
+            phrase.strip() for phrase in args.must_contain.split(",") if phrase.strip()
+        )
 
     if not _frontend_up():
         print("SKIP: frontend not reachable on 8080")

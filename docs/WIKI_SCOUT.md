@@ -191,7 +191,20 @@ Multi-hop work uses the research **scratchpad** + **Error Book** (`pipeline/wiki
 
 `wiki_scout_search` is Title DNS only by default. Opt in to Weaviate similarity after a miss with `EMPIRE_WIKI_WEAVIATE_FALLBACK=1`.
 
-**Known limitation (tracked E-13):** Title DNS is exact-title, so a bare common noun can land on a same-named entity — `magnets` resolves to **The Magnets** (a group) with `usable: true`. A model that trusts the first card then answers a physics question with a band (measured on the 7B; the 14B recovered by searching more).
+**Ambiguity is a first-class outcome (R-02, 2026-09-24).** A bare subject that has no page of its own while its singular family does gets flagged, and the tool returns every reading as its own card with a short lead:
+
+| Asked | Bare page? | Family found | Result |
+|-------|-----------|--------------|--------|
+| `magnets` | no | `Magnet`, `Magnetism` | **`ambiguous: true`**, 3 cards (adds **The Magnets**, an a cappella group) |
+| `magnetism`, `magnet` | yes | — | plain hit — not flagged |
+| `white stripes` | no | none | plain hit (**The White Stripes**) — no false ambiguity |
+| `batteries` | alias → `Batteries (journal)` | `Battery` | **`ambiguous: true`** |
+
+Trigger precision comes from three conditions together (bare page absent · singular stem page present · stem page is a concrete article; alias redirection counts as "resolves elsewhere"). Cost: **~20 ms** — exact PK lookups (0.3 ms) plus one range scan (3.0 ms) on the 7.1M-row index; `LIKE 'magnet%'` measured **701 ms**, so candidates are found with an explicit range predicate, never LIKE.
+
+The tool's `chat_reply_rule` for this case instructs Eve to answer from the candidate that matches the question's meaning **and name the page**, or to name the candidates and **ask** — never to present one reading as the only match. Measured effect on `How do magnets work?` (see the A/B in [`VOICE_PRESENCE.md`](VOICE_PRESENCE.md)): the 14B now asks "…could refer to the musical group **The Magnets**, a **Magnet**, or **Magnetism** — which did you mean?" instead of grounding on a band.
+
+**Question-shaped queries** also resolve now: `tell me about the band the white stripes` used to keep the kind phrase (`the band the white stripes` → miss, 1.8 s in the fuzzy fallback); `_trim_subject` strips a leading kind phrase when a real subject remains, so it resolves in 0.58 s. "the city of London" and bare "the band" are deliberately left alone.
 
 **Workbench eval (offline-first):** see [WIKI_WORKBENCH_EVAL.md](WIKI_WORKBENCH_EVAL.md).
 

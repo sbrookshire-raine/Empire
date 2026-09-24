@@ -91,6 +91,10 @@ async def wiki_scout_search(
             "chat_reply_rule": f"{rule} {REPEAT_CALL_HINT}".strip() if repeated else rule,
             "repeat_call": repeated,
             "coverage_note": result.get("coverage_note"),
+            # R-02: ambiguity is a first-class outcome. Pass the candidates through so Eve can name
+            # the readings and choose (or ask) instead of grounding on whichever page matched first.
+            "ambiguous": bool(result.get("ambiguous")),
+            "candidate_titles": list(result.get("candidate_titles") or []),
         }
         return _json(slim)
     return _json(result)

@@ -1694,6 +1694,11 @@
         }
         if (type === "actions.requested") {
           this.addActions(data.actions || data.requests || []);
+          // A tool step means the text streamed so far was mid-turn narration ("let's look into
+          // the basics of magnetism"), not the answer — measured 2026-09-24: the speaker played
+          // that filler while the final reply said something else. Drop what has not been spoken
+          // yet; the answer text that follows the last tool step is spoken from its own start.
+          this.dropUnspokenVoice();
           return;
         }
         if (type === "action.result") {
@@ -1781,6 +1786,13 @@
         // "Called wiki_read_section with object(title=magnetism, section=basics, year=2026)".
         // Never read that aloud (mirrors frontend/eve_proxy.py _TOOL_CALL_AS_TEXT_RE).
         text = text.replace(/^\s*(?:[-*>]\s*)?(?:called|invoking|invoke|call|requesting|request)\s+[a-z_][a-z0-9_]{2,}\s+(?:with|using)\s+(?:object\(|\{[^}]*\}|[a-z_]+\s*=).*$/gim, " ");
+        // Bare reasoning-protocol scratch lines (no <thought> wrapper): measured live —
+        // the speaker received "Ask:howdomagnetswork." while the visible reply was clean.
+        text = text.replace(/^[ \t>*\-]*(?:ask|have|next|plan|step|thought|reasoning)\s*:.*$/gim, " ");
+        // A bare tool call rendered as text: measured live on empire-fast:7b, whose whole reply was
+        // `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` — and it was spoken.
+        // Namespace-restricted so code the user discusses (`print("hi")`) is untouched.
+        text = text.replace(/^[ \t>*\-]*(?:wiki|cognee|daze|stem|switchboard|workbench|author|python|voice|vision|web|github|container|loom|resource|admit|release|request|promote|remember|docling|docs|structured|retrieval|browser|query|search|list|create|update|delete|read|write|check|drop|glob|grep|bash)_[a-z0-9_]+\s*\(\s*(?:"[^"]*"|'[^']*'|[a-z_]+\s*=\s*"[^"]*")(?:\s*,\s*[a-z_]+\s*=\s*(?:"[^"]*"|'[^']*'|\d+|true|false))*\s*\)\s*$/gim, " ");
         // Degenerate non-Latin prefixes (observed: Thai tokens before the answer) are not speech.
         text = text.replace(/^[\s\u0e00-\u0e7f\u4e00-\u9fff\u3040-\u30ff\u0400-\u04ff\u0600-\u06ff\u0590-\u05ff]{3,}/, " ");
         // Light cleanup so Kokoro does not read markdown punctuation aloud.
@@ -1847,6 +1859,15 @@
           if (chunk) workbench.voiceSpeakQueue.push(chunk);
         });
         this.pumpSpeakQueue();
+      },
+
+      dropUnspokenVoice: function () {
+        // Mid-turn narration is not the answer: clear queued-but-unspoken chunks and rewind the
+        // cursor so the post-tool answer is spoken from its beginning (single-step turns are
+        // unaffected — no tool action, nothing dropped).
+        this.voiceSpeakQueue = [];
+        this.voiceSpokenOffset = 0;
+        this.voiceSpokenText = "";
       },
 
       stopVoicePlayback: function () {

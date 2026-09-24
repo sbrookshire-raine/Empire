@@ -329,6 +329,44 @@ class EveProxyProjectionTests(unittest.TestCase):
         text = "I called wiki_read_section to find that section for you."
         self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
 
+    def test_sanitize_assistant_text_strips_bare_protocol_scratch_lines(self) -> None:
+        """Measured live: the speaker received 'Ask:howdomagnetswork.' with no <thought> wrapper."""
+
+        leaked = "Ask:howdomagnetswork.\nMagnets work through magnetism."
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Magnets work through magnetism.",
+        )
+        scratch_only = "Ask: what do they want?\nHave: nothing\nNext: search"
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(scratch_only),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
+
+    def test_sanitize_assistant_text_keeps_prose_starting_with_ask(self) -> None:
+        text = "Ask me anything about the archive."
+        self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
+
+    def test_sanitize_assistant_text_strips_bare_tool_call_expression(self) -> None:
+        """Measured live on empire-fast:7b: the whole reply was the call it never made."""
+
+        leaked = 'wiki_read_section("magnetism", section="magnetic_fields_and_theory")'
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
+        with_answer = 'wiki_scout_search("magnets")\nMagnetism is a class of physical phenomena.'
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(with_answer),
+            "Magnetism is a class of physical phenomena.",
+        )
+
+    def test_sanitize_assistant_text_keeps_code_the_user_may_discuss(self) -> None:
+        """The namespace restriction must not eat ordinary code snippets."""
+
+        for text in ('print("hello")', "df.head()", 'requests.get("https://example.com")'):
+            self.assertEqual(eve_proxy.sanitize_assistant_text(text), text, text)
+
     def test_stream_filter_withholds_deltas_inside_an_open_block(self) -> None:
         """The bug that made Eve *speak* her reasoning: deltas inside a block carry no tag."""
         stream_filter = eve_proxy.ReasoningStreamFilter()

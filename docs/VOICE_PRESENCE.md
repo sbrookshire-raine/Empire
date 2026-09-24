@@ -143,12 +143,25 @@ $env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\ab-fast-toolcalli
 ```
 
 `empire-fast:7b` (`config/ollama/Modelfile.empire-fast-7b`, built from `qwen2.5:7b-instruct`) passes
-both gates: native `tool_calls=['wiki_scout_search']`, prompt **10,022 tokens** ingested uncut. In the
-browser A/B (same 3 questions, variant switched via `/api/ollama/fast-ab`) it was **3× faster** —
-25.2 s vs 76.9 s total — **but answered "How do magnets work?" from "The Magnets" (a cappella group)**
-with a single search, while the 14B's extra searches corrected to **magnetism** and followed up on
-that page. Grounding beats speed, so Fast stays **`empire-fast:14b`**; the retrieval cause and the
-fix idea are tracked as E-13 in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md).
+both gates: native `tool_calls=['wiki_scout_search']`, prompt **10,022 tokens** ingested uncut.
+
+#### Ambiguity A/B (R-02, 2026-09-24) — the acceptance case
+
+Question: **"How do magnets work?"** — the resolver reports three readings (`The Magnets` a cappella
+group, `Magnet` the device, `Magnetism` the concept) and the tool rule says to name the page used or
+ask which was meant.
+
+| | `empire-fast:14b` (variant a) | `empire-fast:7b` (variant b) |
+|---|---|---|
+| Tool trace | `wiki_scout_search` 70.4 ms | `wiki_scout_search` 46.8 ms → `wiki_read_section` 232.0 ms |
+| Reply | *"The term \"magnets\" is ambiguous in the local archive. It could refer to the musical group **The Magnets**, the concept of a **Magnet**, or the broader topic of **Magnetism**. Could you specify which…"* | `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` then, on retry, a **301.6 s / 304.7 s** turn |
+| Hygiene | **PASS** (1 bubble, speech calls 15 → 3 after the mid-turn-narration fix) | FAIL — the leak is now converted to an honest "that answer didn't come through" instead of gibberish in the speaker |
+| Verdict | **grounded and safe** — no hallucinated answer, no invented tool call | small model still blocked by *text-step fluency*, not by context, tool calling or routing (**E-16**) |
+
+The 14B asks rather than guesses; the 7B's failure is documented with its trace in
+`eve-audit/r02-b-7b-graded.txt` and `eve-audit/r02-trace-summary.txt`. Grounding beats speed, so Fast
+stays **`empire-fast:14b`**; the retrieval cause is fixed (**E-13** closed by R-02) and the remaining
+small-model gap is tracked as **E-16** in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md).
 
 ## Architect smoke
 

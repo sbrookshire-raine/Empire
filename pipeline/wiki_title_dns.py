@@ -469,6 +469,128 @@ def _prefer_primary_title(
     return None
 
 
+# --- Same-noun-family ambiguity (refactor plan R-02) -------------------------------------------
+# Measured 2026-09-24 on the real 31 GB index (7,138,751 pages, I:\EMPIRE_DATA\wiki-reports\2026):
+#   exact PK lookup 0.3 ms · prefix RANGE scan 3.0 ms · LIKE 'x%' 701.7 ms (not index-optimised)
+# Candidate lookup therefore uses an explicit range predicate over pages.title_norm (the PK) and
+# never LIKE. Real data behind the trigger: `magnets` has NO page, but `magnet` and `magnetism` do,
+# while `white stripe(s)` has none — so the signal fires exactly on the bare-plural case.
+_NEARBY_LIMIT = 4
+_NOUN_VARIANTS = ("ism", "ics")  # magnet -> Magnetism; "+ity" was dropped (attracted 'Magnetity', a locality)
+_PLURAL_GUARDS = ("ss", "us", "is", "as", "os", "ics", "news", "series", "species")
+
+
+def singular_stem(subject: str) -> str:
+    """Best-effort singular of a bare plural subject; returns the subject unchanged when unsure."""
+
+    text = normalize_text(strip_leading_article(subject))
+    if len(text) < 4 or not text.endswith("s"):
+        return text
+    if any(text.endswith(guard) for guard in _PLURAL_GUARDS):
+        return text
+    if text.endswith("ies") and len(text) > 4:
+        return f"{text[:-3]}y"
+    if text.endswith(("ses", "xes", "zes", "ches", "shes")):
+        return text[:-2]
+    return text[:-1]
+
+
+def family_candidates(
+    subject: str,
+    year: str = "2026",
+    *,
+    conn: sqlite3.Connection | None = None,
+    index_path: Path | None = None,
+    limit: int = _NEARBY_LIMIT,
+) -> dict[str, Any]:
+    """Sibling pages in the same noun family as `subject` — the R-02 ambiguity signal.
+
+    Fires only when all three hold, which is what keeps it precise instead of noisy:
+
+    1. the bare subject has **no page of its own** (the index resolves it via a prefixed variant),
+    2. its singular stem **does** have a page, and the stem is a different word, and
+    3. that stem page is a concrete article (not a disambiguation page).
+
+    `magnets` → no page, but `Magnet`/`Magnetism` exist → ambiguous (answering from "The Magnets",
+    a band, is a grounding error waiting to happen). `white stripes` → no stem page → not flagged.
+    """
+
+    empty: dict[str, Any] = {"ambiguous": False, "reason": "", "candidates": []}
+    text = (subject or "").strip()
+    if not text:
+        return empty
+    subject_norm = normalize_text(strip_leading_article(text))
+    stem = singular_stem(text)
+    if not subject_norm or stem == subject_norm or len(stem) < 4:
+        return empty
+    y = validate_year(year)
+    path = index_path or default_index_path(y)
+    if not path.is_file():
+        return empty
+
+    owns_conn = conn is None
+    link = conn if conn is not None else _connect(path)
+    try:
+        bare_hit = _lookup_exact(link, subject_norm, y)
+        if bare_hit is not None and normalize_text(bare_hit.title) == subject_norm:
+            return empty  # the bare word is a page of its own: nothing ambiguous about it
+        # A bare word that resolves *elsewhere* (prefix variant "The Magnets", or an alias like
+        # batteries -> "Batteries (journal)") is the ambiguity signature — keep the redirection
+        # itself as a candidate so Eve can disclose both readings.
+        alias_target = bare_hit
+        stem_hit = _lookup_exact(link, stem, y)
+        if stem_hit is None:
+            return empty
+        stem_norm = normalize_text(stem_hit.title)
+        ordered: list[tuple[DnsHit, str]] = []
+        reason_kind = "singular family"
+        if _page_is_disambiguation(link, stem_norm):
+            # "batteries" asked; stem page "Battery" is a disambiguation page — the concept itself
+            # is split, so the concrete members are the candidates (measured gap: this case used to
+            # fall through silently to "The Batteries", a band).
+            members = _disambiguation_branch(link, stem_norm, y, limit=max(2, int(limit)))
+            ordered.extend((member, "disambiguation_member") for member in members)
+            reason_kind = "disambiguation page"
+            if not ordered:
+                return empty
+        else:
+            ordered.append((stem_hit, "concept"))
+            seen_stem = {stem_norm}
+            for suffix in _NOUN_VARIANTS:
+                variant = _lookup_exact(link, f"{stem}{suffix}", y)
+                if variant is None:
+                    continue
+                key = normalize_text(variant.title)
+                if key in seen_stem or _page_is_disambiguation(link, key):
+                    continue
+                seen_stem.add(key)
+                ordered.append((variant, "concept"))
+            if len(ordered) == 1 and alias_target is not None:
+                ordered.append((alias_target, "alias_target"))
+    finally:
+        if owns_conn:
+            link.close()
+
+    capped = ordered[: max(1, min(int(limit), _NEARBY_LIMIT))]
+    return {
+        "ambiguous": True,
+        "reason": (
+            f"the bare subject {subject_norm!r} has no page of its own, while its "
+            f"{reason_kind} ({', '.join(hit.title for hit, _ in capped)}) does"
+        ),
+        "stem": stem,
+        "candidates": [
+            {
+                "title": hit.title,
+                "rel_path": hit.rel_path,
+                "page_id": hit.page_id,
+                "kind": kind,
+            }
+            for hit, kind in capped
+        ],
+    }
+
+
 def resolve(
     subject: str,
     year: str = "2026",

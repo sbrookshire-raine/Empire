@@ -449,6 +449,22 @@ _LEADING_NONLATIN_RE = re.compile(
 # Internal markers (chat digest, wiki evidence, pulse, NOW) are prompt scaffolding, not prose.
 # A model that echoes them into its reply must not expose them to the user.
 _INTERNAL_MARKER_RE = re.compile(r"\[\[EMPIRE_[A-Z0-9_]+\]\]")
+# Bare call-expression leaks: the model sometimes renders the call it *wanted* to make as text —
+# measured 2026-09-24 on empire-fast:7b, whose entire reply was
+# `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` (and the speaker read it).
+# Restricted to EMPIRE's tool namespace so real code the user may be discussing (`print("hi")`,
+# `df.head()` inside an explanation) is never touched.
+_TOOL_NAMESPACE = (
+    r"wiki|cognee|daze|stem|switchboard|workbench|author|python|voice|vision|web|github|container|"
+    r"loom|resource|admit|release|request|promote|remember|docling|docs|structured|retrieval|"
+    r"browser|query|search|list|create|update|delete|read|write|check|drop|glob|grep|bash"
+)
+_BARE_TOOL_CALL_RE = re.compile(
+    rf"^[ \t>*\-]*(?:{_TOOL_NAMESPACE})_[a-z0-9_]+\s*\(\s*"
+    r"(?:\"[^\"]*\"|'[^']*'|[a-z_]+\s*=\s*[\"'][^\"']*[\"'])"
+    r"(?:\s*,\s*[a-z_]+\s*=\s*(?:\"[^\"]*\"|'[^']*'|\d+|true|false))*\s*\)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 # Qwen's tool-call template sometimes renders as *prose* instead of a real tool_call, e.g.
 # "Called wiki_read_section with object(title=magnetism, section=basics, year=2026)" (observed
 # live 2026-09-23). It is template scaffolding, never a sentence to show or speak.
@@ -460,6 +476,14 @@ _TOOL_CALL_AS_TEXT_RE = re.compile(
 # If stripping leaves nothing, the turn produced no usable answer — say so instead of an empty
 # bubble (an empty bubble reads as a hung UI and hides the failure).
 EMPTY_AFTER_CLEAN_REPLY = "That answer didn't come through — ask me again and I'll retry it."
+# The reasoning protocol's scratch lines ("Ask: … Have: … Next: …") are supposed to live inside a
+# <thought> block, but the model sometimes emits one *bare* (measured 2026-09-24: the speech path
+# received "Ask:howdomagnetswork." while the final reply was clean). A leading label + colon is
+# never prose, so drop the whole line; "Ask me anything" has no colon and survives.
+_PROTOCOL_SCRATCH_LINE_RE = re.compile(
+    r"^[ \t>*\-]*(?:ask|have|next|plan|step|thought|reasoning)\s*:.*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 def _looks_like_meta_preamble(text: str) -> bool:
@@ -500,6 +524,18 @@ def sanitize_assistant_text(text: str) -> str:
         cleaned = _TOOL_CALL_AS_TEXT_RE.sub("", cleaned).strip()
         if not cleaned:
             return EMPTY_AFTER_CLEAN_REPLY
+    # Bare reasoning-protocol scratch lines (no <thought> wrapper) are scratch too.
+    if _PROTOCOL_SCRATCH_LINE_RE.search(cleaned):
+        stripped_lines = _PROTOCOL_SCRATCH_LINE_RE.sub("", cleaned).strip()
+        if not stripped_lines:
+            return EMPTY_AFTER_CLEAN_REPLY
+        cleaned = stripped_lines
+    # A bare call expression ("wiki_read_section(\"magnetism\", section=\"…\")") is not an answer.
+    if _BARE_TOOL_CALL_RE.search(cleaned):
+        stripped_call = _BARE_TOOL_CALL_RE.sub("", cleaned).strip()
+        if not stripped_call:
+            return EMPTY_AFTER_CLEAN_REPLY
+        cleaned = stripped_call
     # Trim leading stage-direction fragments ("<translation into actionable steps>") that the
     # model sometimes emits before the real answer.
     while True:

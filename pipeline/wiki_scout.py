@@ -795,6 +795,7 @@ def _search_via_title_dns(
         )
         from pipeline.wiki_ops_paths import validate_year
         from pipeline.wiki_read_lead import wiki_read_lead, wiki_read_lead_enabled
+        from pipeline.wiki_title_dns import family_candidates as dns_family
         from pipeline.wiki_title_dns import neighbors as dns_neighbors
         from pipeline.wiki_title_dns import resolve as dns_resolve
     except Exception as exc:  # noqa: BLE001
@@ -889,6 +890,71 @@ def _search_via_title_dns(
         "kind_hint": "article",
         "path": str(lead.get("path") or ""),
     }
+    # --- R-02: same-noun-family ambiguity -----------------------------------------------------------------
+    # The bare subject is not a page of its own (asked "magnets", resolved "The Magnets") while its
+    # singular family is ("Magnet", "Magnetism"). Eve gets BOTH readings as cards and must choose by
+    # meaning or ask — instead of grounding a physics question on a band.
+    try:
+        family = dns_family(subject, year_str)
+    except Exception:  # noqa: BLE001
+        family = {"ambiguous": False, "reason": "", "candidates": []}
+    if family.get("ambiguous"):
+        sibling_cards: list[dict[str, Any]] = []
+        sibling_titles: list[str] = []
+        for cand in list(family.get("candidates") or []):
+            title = str(cand.get("title") or "").strip()
+            if not title or title == dns.hit.title or len(sibling_cards) >= 3:
+                continue
+            sibling_lead = wiki_read_lead(
+                title,
+                year_str,
+                corpus_rel_path=str(cand.get("rel_path") or "") or None,
+                max_chars=400,
+            )
+            sibling_snippet = str(sibling_lead.get("lead") or "").strip()[:400]
+            sibling_cards.append(
+                {
+                    "title": title,
+                    "snippet": sibling_snippet or "Related local page — open it to read the lead.",
+                    "kind_hint": str(cand.get("kind") or "related"),
+                    "path": str(sibling_lead.get("path") or ""),
+                }
+            )
+            sibling_titles.append(title)
+        if sibling_cards:
+            candidate_titles = [dns.hit.title, *sibling_titles]
+            return {
+                "ok": True,
+                "query": query,
+                "snapshot_year": year_str,
+                "source": "title_dns",
+                "collection": f"title_dns_{year_str}",
+                "count": 1 + len(sibling_cards),
+                "paths": [],
+                "titles": candidate_titles,
+                "summaries": [f"{title} ({year_str})" for title in candidate_titles],
+                "hit_meta": [
+                    {
+                        "title": dns.hit.title,
+                        "corpus_rel_path": dns.hit.rel_path,
+                        "page_id": dns.hit.page_id,
+                    }
+                ],
+                "cards": [card, *sibling_cards],
+                "ambiguous": True,
+                "candidate_titles": candidate_titles,
+                "chat_reply_rule": (
+                    f"{WIKI_CHAT_REPLY_RULE} This subject is AMBIGUOUS in the local archive: the exact "
+                    f"title you asked about is not a page, but these related pages are — "
+                    f"{', '.join(candidate_titles)}. Choose the one that matches the question's meaning, "
+                    "answer from THAT page, and name the page you used. If the question does not clearly "
+                    "favour one of them, name the candidates and ask the user which they mean. Never "
+                    "present one candidate as if it were the only match. Do NOT mention Weaviate or "
+                    "suggest booting Docker."
+                ),
+                "coverage_note": f"Ambiguous subject: {family.get('reason')}.",
+                "usable": True,
+            }
     return {
         "ok": True,
         "query": query,
@@ -907,6 +973,7 @@ def _search_via_title_dns(
             }
         ],
         "cards": [card],
+        "ambiguous": False,
         "chat_reply_rule": (
             f"{WIKI_CHAT_REPLY_RULE} For a trace question (which song/artist/episode), hop "
             "to the linked person or work page with wiki_read_section or wiki_scout_search. "
