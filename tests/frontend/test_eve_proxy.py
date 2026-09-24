@@ -347,6 +347,39 @@ class EveProxyProjectionTests(unittest.TestCase):
         text = "Ask me anything about the archive."
         self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
 
+    def test_sanitize_assistant_text_drops_marker_to_end_block(self) -> None:
+        """With an explicit END marker, the whole echoed block goes — even if only its body appears."""
+
+        leaked = (
+            "[[EMPIRE_NOW]]\n"
+            "CURRENT facts:\n"
+            "Architect — current facts (living)\n"
+            "These describe the human Architect (not Eve).\n"
+            "[[EMPIRE_NOW_END]]\n"
+            "\n"
+            "Magnets work through magnetism."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Magnets work through magnetism.",
+        )
+
+    def test_sanitize_assistant_text_drops_the_whole_marked_block(self) -> None:
+        """companion_api injects '[[EMPIRE_NOW]]\\nCURRENT facts:\\n<body>'; the body was spoken."""
+
+        leaked = (
+            "[[EMPIRE_NOW]]\n"
+            "CURRENT facts:\n"
+            "Architect — current facts (living)\n"
+            "These describe the human in the loop.\n"
+            "\n"
+            "Magnets work through magnetism."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Magnets work through magnetism.",
+        )
+
     def test_sanitize_assistant_text_strips_internal_marker_lines(self) -> None:
         """Measured live 2026-09-24: the speaker received the chat digest marker and its body."""
 

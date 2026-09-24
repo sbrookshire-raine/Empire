@@ -99,7 +99,9 @@ def _restore_toolbelt(tools: list[str], *, origin: str) -> None:
         pass
 
 
-def run_browser(*, headful: bool, question: str, wait_voice: float) -> list[str]:
+def run_browser(
+    *, headful: bool, question: str, wait_voice: float, expect_choices: int = 0
+) -> list[str]:
     from playwright.sync_api import sync_playwright
 
     errors: list[str] = []
@@ -156,6 +158,23 @@ def run_browser(*, headful: bool, question: str, wait_voice: float) -> list[str]
 
         if wait_voice > 0:
             time.sleep(wait_voice)
+
+        # R-03 follow-up: a tool that reports ambiguity must render clickable choices, so the
+        # Architect never has to type the disambiguation back (measured friction 2026-09-24).
+        if expect_choices:
+            try:
+                choices = page.locator("section[aria-label='Eve offered choices'] button").count()
+                labels = [
+                    page.locator("section[aria-label='Eve offered choices'] button").nth(index).inner_text()
+                    for index in range(choices)
+                ]
+            except Exception:  # noqa: BLE001 — page detaching
+                choices, labels = 0, []
+            print(f"choice buttons:  {choices} {labels}")
+            if choices < expect_choices:
+                errors.append(
+                    f"expected >= {expect_choices} ambiguity choice buttons, found {choices}"
+                )
         browser.close()
 
     # --- Bubble assertions -------------------------------------------------------------
@@ -224,6 +243,12 @@ def main() -> int:
             "Used by the R-02 A/B to grade other questions, e.g. --must-contain magnetism,magnet"
         ),
     )
+    parser.add_argument(
+        "--expect-choices",
+        type=int,
+        default=0,
+        help="Fail unless at least N ambiguity choice buttons rendered (for 'ambiguous: true' turns)",
+    )
     args = parser.parse_args()
 
     global MUST_CONTAIN
@@ -244,6 +269,7 @@ def main() -> int:
             headful=args.headful,
             question=args.question,
             wait_voice=0.0 if args.no_voice else args.wait_voice,
+            expect_choices=args.expect_choices,
         )
     except ImportError:
         print("SKIP: playwright not installed")

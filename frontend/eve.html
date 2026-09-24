@@ -364,6 +364,27 @@
               </div>
             </section>
           </template>
+
+          <!-- Ambiguity choices from a tool (e.g. magnets → Magnet / Magnetism / The Magnets).
+               Clicking sends that title as the next message, so the Architect never types it. -->
+          <section
+            class="input-request"
+            x-show="suggestions.length > 0 && !sending"
+            x-cloak
+            aria-label="Eve offered choices"
+          >
+            <h3>Which did you mean?</h3>
+            <div class="button-row">
+              <template x-for="option in suggestions" :key="option.id">
+                <button
+                  class="button button--quiet"
+                  type="button"
+                  @click="sendSuggestion(option.label)"
+                  x-text="option.label"
+                ></button>
+              </template>
+            </div>
+          </section>
         </div>
 
         <aside class="chat-dock" x-show="rightDockOpen" x-cloak aria-label="Workbench dock">

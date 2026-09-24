@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 COMPANION_MARKER = "[[EMPIRE_COMPANION]]"
 NOW_MARKER = "[[EMPIRE_NOW]]"
+# End markers let the proxy drop the whole injected block regardless of which lines the model echoes
+# (added 2026-09-24 after a block body reached the speaker).
+NOW_END_MARKER = "[[EMPIRE_NOW_END]]"
+HISTORY_END_MARKER = "[[EMPIRE_COMPANION_HISTORY_END]]"
 CARD_PATH = Path(r"C:\Empire_Workbench\00_Core_Profile\architect_companion_card.md")
 NOW_PATH = Path(r"C:\Empire_Workbench\00_Core_Profile\ARCHITECT_NOW.md")
 MAX_NOW_CHARS = 2_000
@@ -108,10 +112,16 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
 
     parts: list[str] = [COMPANION_MARKER]
     if now:
-        parts.append(f"{NOW_MARKER}\nCURRENT facts:\n{now}")
+        # R-03 follow-up (2026-09-24): the block ends with an explicit marker so the proxy can drop
+        # the WHOLE injected block deterministically. The model echoes block *bodies* (measured: it
+        # spoke "These describe the human Architect (not Eve)."), and a start-only marker could not
+        # catch those lines.
+        parts.append(f"{NOW_MARKER}\nCURRENT facts:\n{now}\n{NOW_END_MARKER}")
     if historical:
         parts.append(
-            "Optional historical notes (outdated — never treat as today):\n" + historical
+            "Optional historical notes (outdated — never treat as today):\n"
+            + historical
+            + f"\n{HISTORY_END_MARKER}"
         )
     parts.append(COMPANION_INSTRUCTIONS)
     parts.append(f"User message:\n{raw}")

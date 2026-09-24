@@ -233,6 +233,13 @@
       messages: [],
       activities: [],
       pendingInputs: [],
+      // Ambiguity candidates offered by a tool (wiki "ambiguous: true"): rendered as clickable
+      // choices so the Architect never has to type the disambiguation (measured friction 2026-09-24).
+      suggestions: [],
+      turnStartedAt: 0,
+      turnElapsed: 0,
+      turnTimer: null,
+      turnHadToolStep: false,
       sending: false,
       chatError: "",
       chatStatus: "Ready for a local conversation.",
@@ -667,8 +674,31 @@
         return status;
       },
 
+      /**
+       * Progress text for the WHOLE turn. The old label disappeared as soon as the model streamed
+       * any text (showThinkingIndicator required an empty currentAssistantText), so a turn that
+       * narrated and then stopped looked frozen. This one ticks for as long as `sending` is true,
+       * names the running tool, and says so plainly when a step runs long.
+       */
+      get workingLabel() {
+        var parts = [];
+        parts.push(this.turnElapsed >= 1 ? "Eve is working… " + this.turnElapsed + "s" : "Eve is working…");
+        var live = (this.activities || []).find(function (item) {
+          return item.state === "working";
+        });
+        if (live && live.label) {
+          parts.push(plainText(live.label).replace(/…$/, ""));
+        } else if (this.currentAssistantText()) {
+          parts.push("writing");
+        }
+        if (this.turnElapsed >= 45) {
+          parts.push("long step — still going");
+        }
+        return parts.join(" · ");
+      },
+
       get thinkingLabel() {
-        return this.chatActivityLabel || "Eve is thinking…";
+        return this.sending ? this.workingLabel : "";
       },
 
       get visibleMessages() {
@@ -703,7 +733,9 @@
       },
 
       get showThinkingIndicator() {
-        return this.sending && !this.hasWorkingActivity && !this.currentAssistantText();
+        // Visible for the entire turn, text streaming included — the previous condition hid it as
+        // soon as any assistant text arrived, which is why a stalled turn looked frozen.
+        return Boolean(this.sending);
       },
 
       currentAssistantText: function () {
@@ -1545,6 +1577,9 @@
         this.scrollTranscript();
         this.draft = "";
         this.sending = true;
+        this.suggestions = [];
+        this.turnHadToolStep = false;
+        this.startTurnTimer();
         this.chatStatus = "Eve is working…";
         this.schedulePersistChat();
 
@@ -1680,12 +1715,13 @@
         if (type === "message.appended") {
           this.updateAssistantMessage(data);
           this.chatStatus = "Eve is responding…";
-          this.streamSpeakFromAssistant(false);
+          // Speech is deferred to turn end (see speakFinalReply): progressive speech spoke mid-turn
+          // recitals of injected blocks and per-step narration — measured twice on 2026-09-24, once
+          // before any tool ran, so a tool-only guard could not cover it.
           return;
         }
         if (type === "message.completed") {
           this.updateAssistantMessage(data);
-          this.streamSpeakFromAssistant(true);
           this.schedulePersistChat();
           // Do NOT clear currentAssistantId here: Eve completes a message per *step*, so a
           // tool step + answer step would render as two (or three) separate bubbles for one
@@ -1703,6 +1739,8 @@
         }
         if (type === "action.result") {
           this.completeAction(data);
+          // A tool that reports ambiguity (wiki scout) turns its candidates into clickable choices.
+          this.captureSuggestions(data);
           return;
         }
         if (type === "input.requested") {
@@ -1714,6 +1752,10 @@
           this.continuationToken =
             plainText(data.continuationToken) || this.continuationToken;
           this.sending = false;
+          this.stopTurnTimer();
+          // One speech call per turn, with the final text only (clean by construction).
+          this.speakFinalReply();
+          this.turnHadToolStep = false;
           this.chatStatus = this.pendingInputs.length
             ? "Eve is waiting for your choice."
             : "Ready.";
@@ -1722,6 +1764,7 @@
           return;
         }
         if (type === "turn.cancelled") {
+          this.stopTurnTimer();
           this.chatStatus = "Stopped. You can send another message.";
           return;
         }
@@ -1732,6 +1775,7 @@
         ) {
           this.currentAssistantId = null;
           this.sending = false;
+          this.stopTurnTimer();
           this.chatError = plainText(data.message) || "Eve could not complete this turn.";
           this.chatStatus = "Eve needs attention.";
         }
@@ -1790,8 +1834,10 @@
         // the speaker received "Ask:howdomagnetswork." while the visible reply was clean.
         text = text.replace(/^[ \t>*\-]*(?:ask|have|next|plan|step|thought|reasoning)\s*:.*$/gim, " ");
         // Prompt scaffolding markers that must never be spoken: [[EMPIRE_…]] and the chat digest
-        // "[[EMPIRE CHAT SUMMARY]]" (measured live 2026-09-24 — spaces included); the digest body
-        // rides on the same line, so the whole line goes.
+        // "[[EMPIRE CHAT SUMMARY]]" (measured live 2026-09-24 — spaces included). The injected blocks
+        // are multi-line (companion_api writes "[[EMPIRE_NOW]]\nCURRENT facts:\n<body>"), and the body
+        // was still spoken, so the marker line and the following non-empty lines go together (bounded).
+        text = text.replace(/^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\][^\n]*\n(?:(?![ \t]*\n)[^\n]*\n){0,14}/gim, " ");
         text = text.replace(/^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\].*$/gim, " ");
         text = text.replace(/\[\[EMPIRE[ _][A-Z0-9_ ]+\]\]/g, " ");
         // A bare tool call rendered as text: measured live on empire-fast:7b, whose whole reply was
@@ -1811,61 +1857,6 @@
         return text;
       },
 
-      extractSpeechChunks: function (cleaned, fromOffset, finalize) {
-        var rest = cleaned.slice(fromOffset || 0);
-        var chunks = [];
-        var pos = 0;
-        while (pos < rest.length) {
-          var slice = rest.slice(pos);
-          var match = slice.match(/^([\s\S]*?[.!?])(\s+|$)/);
-          if (!match) break;
-          var sentence = plainText(match[1]).trim();
-          if (sentence) chunks.push(sentence);
-          pos += match[0].length;
-        }
-        // If Eve is still talking and we have a long clause with no period yet, speak early.
-        if (!finalize && pos === 0 && rest.length >= 220) {
-          var cut = rest.lastIndexOf(",", 200);
-          if (cut < 80) cut = rest.lastIndexOf(" ", 200);
-          if (cut < 80) cut = 200;
-          var early = plainText(rest.slice(0, cut)).trim();
-          if (early) {
-            chunks.push(early);
-            pos = cut;
-            while (pos < rest.length && rest.charAt(pos) === " ") pos += 1;
-          }
-        }
-        if (finalize) {
-          var tail = plainText(rest.slice(pos)).trim();
-          if (tail) chunks.push(tail);
-          pos = rest.length;
-        }
-        return { chunks: chunks, newOffset: (fromOffset || 0) + pos };
-      },
-
-      streamSpeakFromAssistant: function (finalize) {
-        if (this.voiceSuppressed) return;
-        if (!this.activeTools || !this.activeTools.voice_presence) return;
-        var cleaned = this.cleanSpeechText(this.currentAssistantText());
-        if (!cleaned) return;
-        // Step N+1 replaces the streamed text (thought block → tool step → final answer), so a
-        // raw character offset into the old text starts the next clause mid-word — that is what
-        // made Eve speak fragments and stop after a few words. Restart the cursor whenever the
-        // text we consumed is no longer the prefix of the current text.
-        var offset = this.voiceSpokenOffset || 0;
-        if (offset > 0 && cleaned.slice(0, offset) !== (this.voiceSpokenText || "")) {
-          offset = 0;
-        }
-        var extracted = this.extractSpeechChunks(cleaned, offset, Boolean(finalize));
-        this.voiceSpokenOffset = extracted.newOffset;
-        this.voiceSpokenText = cleaned.slice(0, extracted.newOffset);
-        var workbench = this;
-        (extracted.chunks || []).forEach(function (chunk) {
-          if (chunk) workbench.voiceSpeakQueue.push(chunk);
-        });
-        this.pumpSpeakQueue();
-      },
-
       dropUnspokenVoice: function () {
         // Mid-turn narration is not the answer: clear queued-but-unspoken chunks and rewind the
         // cursor so the post-tool answer is spoken from its beginning (single-step turns are
@@ -1873,6 +1864,16 @@
         this.voiceSpeakQueue = [];
         this.voiceSpokenOffset = 0;
         this.voiceSpokenText = "";
+      },
+
+      /**
+       * Retired: speech used to stream with the reply. Measured twice on 2026-09-24 (browser harness)
+       * it spoke mid-turn artefacts — a recital of the injected CURRENT-facts block in the very first
+       * step, before any tool ran, and per-step narration after tool calls. Speech is now one call per
+       * turn from speakFinalReply(), which reads the final reply text — clean by construction.
+       */
+      streamSpeakFromAssistant: function () {
+        return;
       },
 
       stopVoicePlayback: function () {
@@ -1988,6 +1989,23 @@
         });
       },
 
+      speakFinalReply: function () {
+        if (!this.activeTools || !this.activeTools.voice_presence) return;
+        var text = "";
+        for (var index = this.messages.length - 1; index >= 0; index -= 1) {
+          var message = this.messages[index];
+          if (message.role === "assistant" && plainText(message.text)) {
+            text = plainText(message.text);
+            break;
+          }
+        }
+        if (!text) return;
+        var workbench = this;
+        Promise.resolve(this.maybeSpeakAssistantReply(text)).catch(function () {
+          workbench.chatError = "Could not play Eve’s voice audio.";
+        });
+      },
+
       maybeSpeakAssistantReply: async function (rawText) {
         if (!this.activeTools || !this.activeTools.voice_presence) return;
         var text = this.textForSpeech(rawText);
@@ -2013,6 +2031,7 @@
           workbench.activities.push(activity);
         });
         if (list.length) {
+          this.turnHadToolStep = true;
           this.chatStatus = "Running local tools…";
         }
         this.scrollTranscript();
@@ -2074,6 +2093,67 @@
         this.scrollTranscript();
       },
 
+      startTurnTimer: function () {
+        this.stopTurnTimer();
+        var workbench = this;
+        this.turnStartedAt = Date.now();
+        this.turnElapsed = 0;
+        this.turnTimer = setInterval(function () {
+          workbench.turnElapsed = Math.round((Date.now() - workbench.turnStartedAt) / 1000);
+        }, 1000);
+      },
+
+      stopTurnTimer: function () {
+        if (this.turnTimer) {
+          clearInterval(this.turnTimer);
+          this.turnTimer = null;
+        }
+        this.turnStartedAt = 0;
+      },
+
+      /**
+       * Turn a tool's ambiguity report into clickable choices. The wiki scout returns
+       * `ambiguous: true` with `candidate_titles` when the bare subject has no page of its own
+       * (magnets → Magnet / Magnetism / The Magnets); previously that arrived as prose and the
+       * Architect had to type the disambiguation back.
+       */
+      captureSuggestions: function (data) {
+        var result = data && data.result && typeof data.result === "object" ? data.result : {};
+        var output = result.output;
+        var payload = null;
+        if (output && typeof output === "object") {
+          payload = output;
+        } else if (typeof output === "string" && output.trim().charAt(0) === "{") {
+          try {
+            payload = JSON.parse(output);
+          } catch (error) {
+            payload = null;
+          }
+        }
+        if (!payload || payload.ambiguous !== true) return;
+        var titles = Array.isArray(payload.candidate_titles) ? payload.candidate_titles : [];
+        var clean = titles
+          .map(function (title) {
+            return plainText(title).trim();
+          })
+          .filter(function (title) {
+            return Boolean(title);
+          });
+        if (clean.length < 2) return;
+        this.suggestions = clean.map(function (title, index) {
+          return { id: "suggestion-" + index, label: title };
+        });
+        this.scrollTranscript();
+      },
+
+      sendSuggestion: function (label) {
+        if (this.sending) return;
+        var text = plainText(label).trim();
+        if (!text) return;
+        this.draft = text;
+        this.sendMessage();
+      },
+
       answerInput: async function (requestId, optionId, label) {
         var pending = this.pendingInputs.find(function (request) {
           return request.requestId === requestId;
@@ -2081,6 +2161,8 @@
         if (!pending || this.sending) return;
         var generation = this.beginChatOperation();
         this.sending = true;
+        this.suggestions = [];
+        this.startTurnTimer();
         this.chatError = "";
         this.chatStatus = "Sending your choice…";
         try {

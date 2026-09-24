@@ -454,6 +454,29 @@ _INTERNAL_MARKER_RE = re.compile(r"\[\[EMPIRE[ _][A-Z0-9_ ]+\]\]")
 # A marker at line start means the whole line is scaffolding (the digest body rides on it); a marker
 # mid-line is just noise to remove, so real text on that line survives.
 _INTERNAL_MARKER_LINE_RE = re.compile(r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\].*$", re.MULTILINE)
+# The injected blocks are multi-line: companion_api writes "[[EMPIRE_NOW]]\nCURRENT facts:\n<body>".
+# Measured 2026-09-24: the marker line was stripped but the body was still *spoken*. Drop the marker
+# line plus the following non-empty lines (bounded), because a marker only appears when the model is
+# echoing injected scaffolding.
+_INTERNAL_BLOCK_RE = re.compile(
+    r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\][^\n]*\n(?:(?![ \t]*\n)[^\n]*\n){0,14}",
+    re.MULTILINE,
+)
+# Explicit end markers (companion_api) let us drop a block deterministically, whatever subset of its
+# lines the model echoes.
+_INTERNAL_MARKER_END_RE = re.compile(r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]*END\]\][^\n]*$", re.MULTILINE)
+
+
+def _drop_scaffolding_blocks(text: str) -> str:
+    """Remove injected prompt blocks: marker..END when present, else marker + bounded tail."""
+
+    end_match = _INTERNAL_MARKER_END_RE.search(text)
+    if end_match:
+        start_match = _INTERNAL_MARKER_LINE_RE.search(text)
+        if start_match and start_match.start() < end_match.start():
+            last_end = list(_INTERNAL_MARKER_END_RE.finditer(text))[-1]
+            return text[: start_match.start()] + text[last_end.end() :]
+    return _INTERNAL_BLOCK_RE.sub("", text)
 # Bare call-expression leaks: the model sometimes renders the call it *wanted* to make as text —
 # measured 2026-09-24 on empire-fast:7b, whose entire reply was
 # `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` (and the speaker read it).
@@ -522,6 +545,7 @@ def sanitize_assistant_text(text: str) -> str:
     cleaned = strip_reasoning_blocks(text).strip()
     cleaned = _LEADING_NONLATIN_RE.sub("", cleaned).strip()
     if _INTERNAL_MARKER_RE.search(cleaned):
+        cleaned = _drop_scaffolding_blocks(cleaned)
         cleaned = _INTERNAL_MARKER_LINE_RE.sub("", cleaned)
         cleaned = _INTERNAL_MARKER_RE.sub("", cleaned).strip()
     # Drop tool-call scaffolding the model wrote as prose ("Called wiki_read_section with

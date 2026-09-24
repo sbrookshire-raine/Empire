@@ -103,7 +103,16 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         ):
             self.assertIn(token, self.html + self.js)
         self.assertIn("setTimeout", self.js)
-        self.assertNotIn("setInterval", self.js)
+        # Polling guard: exactly one setInterval is allowed — the turn-progress ticker, which exists
+        # so a long/silent step cannot look frozen (measured 2026-09-24) and is cleared on turn end by
+        # stopTurnTimer(). No other background loops.
+        self.assertEqual(
+            self.js.count("setInterval"),
+            1,
+            "only the bounded turn-progress timer may use setInterval",
+        )
+        self.assertIn("clearInterval(this.turnTimer)", self.js)
+        self.assertIn("stopTurnTimer: function", self.js)
         self.assertIn("1000", self.js)
         for endpoint in (
             "/api/memory/status",
@@ -170,6 +179,24 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertIn("temperature: 0.2", self.js)
         self.assertIn("temperature: 0.7", self.js)
         self.assertIn("temperature: 0.4", self.js)
+
+    def test_chat_offers_ambiguity_choices(self) -> None:
+        """R-03 follow-up: a tool's ambiguity candidates render as clickable choices."""
+
+        for token in (
+            "suggestions: []",
+            "captureSuggestions: function",
+            "sendSuggestion: function",
+            "this.captureSuggestions(data)",
+            "startTurnTimer: function",
+            "stopTurnTimer: function",
+            "workingLabel",
+        ):
+            self.assertIn(token, self.js)
+        for token in ("Eve offered choices", "sendSuggestion(option.label)", "suggestions.length > 0"):
+            self.assertIn(token, self.html)
+        # The progress indicator must cover the whole turn, not vanish when text streams.
+        self.assertIn("return Boolean(this.sending);", self.js)
 
     def test_chat_history_is_persisted_locally(self) -> None:
         for token in (
