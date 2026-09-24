@@ -33,6 +33,18 @@ class TransferContextTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    def test_question_phrasing_variants_are_recognised(self) -> None:
+        """Measured 2026-09-24: "which primitives does juggling share with drumming" was NOT matched
+        by the first pattern set, so no ledger block reached the prompt and she echoed the card."""
+
+        for message in (
+            "which primitives does juggling share with drumming, and what would falsify the analogy?",
+            "Use my primitive ledger: what overlaps with drumming?",
+            "are there parallels between juggling and drumming?",
+        ):
+            with self.subTest(message=message):
+                self.assertNotEqual(serve._transfer_context(message), "")
+
     def test_plain_question_gets_no_block(self) -> None:
         self.assertEqual(serve._transfer_context("what is the capital of peru?"), "")
 
@@ -46,12 +58,14 @@ class TransferContextTests(unittest.TestCase):
     def test_no_match_returns_the_vocabulary_instead(self) -> None:
         block = serve._transfer_context("can i apply the rules of quantum chromodynamics to my taxes?")
         self.assertIn("AUTHORITATIVE PRIMITIVE LEDGER", block)
-        self.assertIn("do not invent a mechanism", block)
+        self.assertIn("no decoded row matches this ask", block)
+        self.assertIn("never invent a mechanism", block)
 
     def test_an_unreadable_ledger_never_breaks_the_turn(self) -> None:
         with patch.object(primitive_lookup, "DEFAULT_LEDGER", Path(self._tmp.name) / "missing.csv"):
             block = serve._transfer_context("can i apply the rules of juggling to drumming?")
-        self.assertIn("not in the ledger yet", block)
+        self.assertIn("could not be read", block)
+        self.assertIn("Do not answer this from general knowledge", block)
 
 
 if __name__ == "__main__":

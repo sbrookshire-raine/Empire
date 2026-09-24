@@ -43,6 +43,13 @@ _STOPWORDS = frozenset(
         "also", "more", "most", "some", "any", "all", "each", "both", "other", "only", "just",
         "very", "too", "now", "out", "off", "own", "still", "even", "ever", "never", "always",
         "its", "their", "been", "being", "them", "these", "those", "her", "his", "she", "him",
+        # Meta words *about the request itself* rather than about the thing: measured 2026-09-24,
+        # "Use my primitive ledger: which primitives does juggling share with drumming, and what
+        # would falsify the analogy?" matched claude-api/pgroll rows through "share"/"ledger" and
+        # handed her irrelevant mechanisms. This tool searches the ledger, so these are noise.
+        "primitive", "primitives", "ledger", "share", "shared", "shares", "sharing",
+        "falsify", "falsified", "falsification", "analogy", "analogies", "mapping", "mappings",
+        "overlap", "overlaps", "parallel", "parallels", "compare", "comparison", "same",
     }
 )
 _WORD = re.compile(r"[a-z0-9]+")

@@ -181,6 +181,8 @@ _TRANSFER_RE = re.compile(
     r"borrow(?:ing)? (?:from|the)|inspired by|inspiration from|"
     r"take [a-z][a-z ]{2,30} and (?:apply|use|try|map)|"
     r"same (?:way|principle|mechanism|pattern|rules) as|"
+    r"share(?:s|d)? (?:with|between)|overlap(?:s)? with|parallel(?:s)? (?:between|with)|"
+    r"which primitives|what primitives|primitive ledger|my ledger|in my ledger|"
     r"(?:work|apply|transfer)(?:s|ing)? (?:the same|to|for|with)|"
     r"could [a-z][a-z ]{2,30} (?:work|apply|help))",
     re.IGNORECASE,
@@ -199,14 +201,19 @@ def _transfer_context(message: str) -> str:
     except Exception:  # noqa: BLE001 — never let context building break a turn
         return ""
     matches = result.get("matches") or []
+    if result.get("ok") is False:
+        return (
+            "\n\n[AUTHORITATIVE PRIMITIVE LEDGER: the ledger could not be read — tell the Architect "
+            "that plainly. Do not answer this from general knowledge as if the ledger had been checked.]"
+        )
     if not matches:
         vocabulary = ", ".join(
             str(entry.get("primitive")) for entry in (result.get("vocabulary") or [])[:12]
         )
         return (
-            "\n\n[AUTHORITATIVE PRIMITIVE LEDGER: no decoded row matches this ask. The ledger's own "
-            f"vocabulary is: {vocabulary}. Name the closest of these, or say plainly that this "
-            "connection is not in the ledger yet — do not invent a mechanism.]"
+            "\n\n[AUTHORITATIVE PRIMITIVE LEDGER: no decoded row matches this ask — say that plainly, "
+            f"then name the closest of these as your own mapping: {vocabulary}. Label it as your "
+            "inference from the ledger's vocabulary, not as a ledger row, and never invent a mechanism.]"
         )
     lines = [
         f"- {match['thing']} ({match['domain']}): mechanism = {match['mechanism'][:170]}; "
@@ -1007,7 +1014,16 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 except Exception:
                     resource_context = ""
                 try:
-                    transfer_context = _transfer_context(original_message)
+                    # The lookup must see the *user's* question, not the enriched payload: measured
+                    # 2026-09-24, the companion card's own words ("memory", "build", "partner")
+                    # matched ledger rows and handed her claude-api instead of the vocabulary.
+                    from frontend.companion_api import extract_user_message
+
+                    user_question = extract_user_message(original_message) or original_message
+                except Exception:
+                    user_question = original_message
+                try:
+                    transfer_context = _transfer_context(user_question)
                 except Exception:
                     transfer_context = ""
                 # Place next to the ask, not above the companion preamble: the

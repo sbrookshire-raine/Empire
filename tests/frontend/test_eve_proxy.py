@@ -201,8 +201,8 @@ class EveProxyProjectionTests(unittest.TestCase):
 
         The tail after `[[EMPIRE_NOW_END]]` (ROLE line, "Do not mention these markers…", the
         "User message:" header) survived the marker..END rule — 499 chars of it reached the bubble.
-        Scaffolding-only text cleans to `""` here (as with a lone marker line); the empty-bubble
-        replacement downstream turns that into an honest reply.
+        A reply that was wholly the echoed card is a *failed turn*, so it is replaced by the honest
+        empty-bubble text (a lone marker line like `[[EMPIRE_WIKI_LOOKUP]] x` still cleans to "").
         """
 
         echoed = (
@@ -211,13 +211,33 @@ class EveProxyProjectionTests(unittest.TestCase):
             "ROLE: research and build partner for EMPIRE / local AI development.\n"
             "Do not mention these markers, files, or datasets.\n\nUser message:\nhow can i learn to play the drums?\n"
         )
-        self.assertEqual(eve_proxy.sanitize_assistant_text(echoed), "")
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(echoed),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
         # A real answer that merely mentions a marker mid-text keeps its prose.
         answered = "Your archive card uses [[EMPIRE_NOW]] as a marker, then answers."
         self.assertIn("then answers", eve_proxy.sanitize_assistant_text(answered))
         # A quoted "ROLE:" line with no marker anywhere is prose, not scaffolding.
         quoted = "The listing says:\nROLE: backend engineer\nand it closes Friday."
         self.assertIn("closes Friday", eve_proxy.sanitize_assistant_text(quoted))
+
+    def test_echoed_card_with_role_user_is_still_sanitized(self) -> None:
+        """Measured 2026-09-24: the echoing model also echoed `role: "user"`, and the old role guard
+        skipped the cleaner — the 1,537-char card recital reached the browser bubble."""
+
+        card = (
+            "[[EMPIRE_COMPANION]]\n\n[[EMPIRE_NOW]]\nCURRENT facts:\n# Architect — current facts\n"
+            "[[EMPIRE_NOW_END]]\n\nROLE: research and build partner.\n\nUser message:\nwhich primitives?"
+        )
+        projected = eve_proxy.project_event(
+            {"type": "message.completed", "data": {"role": "user", "message": card}}
+        )
+        self.assertEqual(
+            projected["data"]["message"],
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+            "an echoed injected card must not reach the bubble, whatever role it claims",
+        )
 
     def test_sanitize_assistant_text_strips_think_blocks(self) -> None:
         leaked = "<think>Planning tools.</think>Yes — ready when you are."

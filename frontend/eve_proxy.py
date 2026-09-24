@@ -478,6 +478,8 @@ _COMPANION_TAIL_RE = re.compile(
     r"^[ \t]*(?:ROLE:[^\n]*|For greetings:[^\n]*|Do not mention these markers[^\n]*|User message:)[ \t]*$",
     re.MULTILINE,
 )
+# The two markers that only ever appear in an *injected* payload (companion/current-facts card).
+_INJECTED_CARD_RE = re.compile(r"\[\[EMPIRE_(?:NOW|COMPANION)\b")
 
 
 def _drop_scaffolding_blocks(text: str) -> str:
@@ -565,6 +567,10 @@ def sanitize_assistant_text(text: str) -> str:
         cleaned = _drop_scaffolding_blocks(cleaned)
         cleaned = _INTERNAL_MARKER_LINE_RE.sub("", cleaned)
         cleaned = _INTERNAL_MARKER_RE.sub("", cleaned).strip()
+        if not cleaned and _INJECTED_CARD_RE.search(text):
+            # The whole reply was the echoed injected card: a failed turn, not marker noise. Say so
+            # instead of leaving an empty bubble (measured 2026-09-24 on a thought-experiment ask).
+            return EMPTY_AFTER_CLEAN_REPLY
     # Drop tool-call scaffolding the model wrote as prose ("Called wiki_read_section with
     # object(title=...)") — it is never part of the answer and must not be spoken either.
     if _TOOL_CALL_AS_TEXT_RE.search(cleaned):
@@ -631,9 +637,11 @@ def project_event(event: dict) -> dict | None:
     if "reasoning" in tokens or "thinking" in tokens:
         return None
     if event_type in {"message.appended", "message.completed"} and isinstance(data, dict):
-        role = data.get("role")
-        if role is None or (isinstance(role, str) and role.casefold() != "user"):
-            projected = dict(event)
-            projected["data"] = _sanitize_message_data(data)
-            return projected
+        # Sanitize regardless of the claimed role. Measured 2026-09-24: a model that echoed the
+        # injected companion payload also echoed `role: "user"`, and the old role guard skipped the
+        # cleaner — so a 1,537-char recital of the card reached the browser bubble (the UI renders
+        # both of these types as assistant text; `message.received` is the user-side type).
+        projected = dict(event)
+        projected["data"] = _sanitize_message_data(data)
+        return projected
     return event
