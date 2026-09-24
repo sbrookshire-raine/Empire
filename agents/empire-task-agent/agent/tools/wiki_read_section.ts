@@ -16,8 +16,9 @@ export default defineDynamic({
             description:
               "Read a local Wikipedia markdown page by title (Title DNS). " +
               "Optional section: cast, discography, filmography, charts, history, reception, plot, production. " +
-              "Prefer this for Cast/Discography work when LOOKUP evidence is incomplete. " +
-              "If [[EMPIRE_WIKI_LOOKUP]] is already present, do NOT call this. Does NOT write Cognee.",
+              "Use when the landing lead is too thin for the question; pass the self-contained title. " +
+              "If [[EMPIRE_WIKI_LOOKUP]] / [[EMPIRE_WIKI_EXTRACT]] evidence is already in the turn " +
+              "(legacy middleware), answer from that instead of calling this. Does NOT write Cognee.",
             inputSchema: z.object({
               title: z.string().min(1).describe("Exact encyclopedia title."),
               year: z.string().optional().describe("Snapshot year (default 2026)."),

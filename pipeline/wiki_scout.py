@@ -12,6 +12,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,73 @@ from pipeline.wiki_interpreter import (
     expand_queries,
     interpret_hits,
 )
+
+# Per-process record of landing searches already issued recently. A repeated call with
+# the same subject is the signature of premature completion: the model re-runs the landing
+# search and answers the same lead instead of reading deeper. The MCP tool then tells the
+# agent, deterministically, which tool to use instead (docs/WIKI_SCOUT.md).
+#
+# Escalation (measured 2026-09-23, 14B, ~10k-token prompt): a soft "do NOT repeat" hint was
+# ignored six times in one turn — 7 identical searches, 66 s, turn ended in an apology. Strike 3
+# therefore REFUSES the call and returns no cards: repeating yields no new information, so the
+# only useful move left is to answer. The window keeps a *later* legitimate question about the
+# same subject working; only rapid intra-turn repeats escalate.
+_REPEAT_WINDOW_SECONDS = 180.0
+_SEARCH_CALLS: dict[str, tuple[int, float]] = {}
+_SEARCHED_QUERIES: set[str] = set()
+
+REPEAT_CALL_HINT = (
+    "You already ran this exact search in this session — its lead is in the conversation. "
+    "Do NOT repeat it and do NOT restate that lead. Call wiki_read_section for the named "
+    "section that holds the asked fact, or wiki_extract for its fields/tables/lists."
+)
+
+HARD_STOP_REPEAT_HINT = (
+    "STOP. This search is refused: you already ran it and its results are in the conversation, "
+    "and no new results will be returned. Do NOT call any more tools. Answer the user now from "
+    "the cards you already have — or say plainly which part the local wiki does not cover."
+)
+
+# Third identical search inside the repeat window is refused outright.
+HARD_STOP_REPEAT_AT = 3
+
+
+def should_refuse_repeat(strike: int) -> bool:
+    """True when a repeat search must be refused instead of executed."""
+
+    return int(strike) >= HARD_STOP_REPEAT_AT
+
+
+def _search_key(query: str, year: str) -> str:
+    return f"{' '.join((query or '').lower().split())}|{year or ''}"
+
+
+def search_strike(query: str, year: str) -> int:
+    """How many times this exact search was issued inside the recent window (1, 2, 3, ...)."""
+
+    key = _search_key(query, year)
+    now = time.monotonic()
+    count, last = _SEARCH_CALLS.get(key, (0, 0.0))
+    if now - last > _REPEAT_WINDOW_SECONDS:
+        count = 0
+    count += 1
+    _SEARCH_CALLS[key] = (count, now)
+    if count > 1:
+        _SEARCHED_QUERIES.add(key)
+    return count
+
+
+def note_search_call(query: str, year: str) -> bool:
+    """Record a landing search; True when this exact search already happened this session."""
+
+    return search_strike(query, year) > 1
+
+
+def reset_search_calls() -> None:
+    """Forget recorded searches (tests / new session)."""
+
+    _SEARCHED_QUERIES.clear()
+    _SEARCH_CALLS.clear()
 
 
 def _normalize_ollama_url(raw: str | None) -> str:
@@ -772,7 +840,11 @@ def _search_via_title_dns(
                     "summaries": [f"{primary.title} ({year_str}): {snippet[:240]}"],
                     "hit_meta": [{"title": primary.title, "corpus_rel_path": primary.rel_path, "page_id": primary.page_id}],
                     "cards": [{"title": primary.title, "snippet": snippet[:1200], "kind_hint": "article", "path": str(lead.get("path") or "")}],
-                    "chat_reply_rule": f"{WIKI_CHAT_REPLY_RULE} Answer directly from this selected local page. Do not restart disambiguation.",
+                    "chat_reply_rule": (
+                        f"{WIKI_CHAT_REPLY_RULE} Answer directly from this selected local page — "
+                        "hop to a linked page or section if the asked fact is not in the lead. "
+                        "Do not restart disambiguation."
+                    ),
                     "coverage_note": "Resolved via Title DNS (primary local page).",
                     "usable": True,
                 }
@@ -836,7 +908,8 @@ def _search_via_title_dns(
         ],
         "cards": [card],
         "chat_reply_rule": (
-            f"{WIKI_CHAT_REPLY_RULE} Answer from the Title DNS lead and related titles. "
+            f"{WIKI_CHAT_REPLY_RULE} For a trace question (which song/artist/episode), hop "
+            "to the linked person or work page with wiki_read_section or wiki_scout_search. "
             "Do NOT mention Weaviate or suggest booting Docker."
         ),
         "coverage_note": "Resolved via Title DNS (markdown lead). Weaviate not required.",

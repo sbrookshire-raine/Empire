@@ -179,6 +179,52 @@ class WikiScoutCacheTests(unittest.TestCase):
         self.assertNotIn("album", result["chat_reply_rule"].casefold())
         self.assertIn("Answer directly", result["chat_reply_rule"])
 
+    def test_repeat_search_call_is_flagged(self) -> None:
+        """Premature-completion signature: the same landing search twice in one session."""
+        wiki_scout.reset_search_calls()
+        self.addCleanup(wiki_scout.reset_search_calls)
+        self.assertFalse(wiki_scout.note_search_call("Who is Kate Bush?", "2026"))
+        self.assertTrue(wiki_scout.note_search_call("Who is Kate Bush?", "2026"))
+        # Case/whitespace differences are the same search.
+        self.assertTrue(wiki_scout.note_search_call("  who is KATE bush?  ", "2026"))
+        # A different snapshot year is a different search (Truth Drift).
+        self.assertFalse(wiki_scout.note_search_call("Who is Kate Bush?", "2021"))
+
+    def test_repeat_call_hint_names_the_deeper_tools(self) -> None:
+        self.assertIn("wiki_read_section", wiki_scout.REPEAT_CALL_HINT)
+        self.assertIn("wiki_extract", wiki_scout.REPEAT_CALL_HINT)
+
+    def test_search_strike_escalates_then_resets_after_window(self) -> None:
+        """Measured 2026-09-23: the 14B ignored the soft hint 6x (7 searches, 66 s). Strike 3
+        must be distinguishable so the tool can refuse instead of paying another round-trip."""
+
+        wiki_scout.reset_search_calls()
+        self.addCleanup(wiki_scout.reset_search_calls)
+        self.assertEqual(wiki_scout.search_strike("Magnets", "2026"), 1)
+        self.assertEqual(wiki_scout.search_strike("magnets", "2026"), 2)
+        self.assertEqual(wiki_scout.search_strike("MAGNETS ", "2026"), 3)
+        self.assertEqual(wiki_scout.search_strike("Magnets", "2026"), 4)
+
+        # A later legitimate question about the same subject must start over, not be refused.
+        key = wiki_scout._search_key("Magnets", "2026")
+        count, _ = wiki_scout._SEARCH_CALLS[key]
+        wiki_scout._SEARCH_CALLS[key] = (count, 0.0)
+        self.assertEqual(wiki_scout.search_strike("Magnets", "2026"), 1)
+
+    def test_hard_stop_hint_forbids_more_tools(self) -> None:
+        hint = wiki_scout.HARD_STOP_REPEAT_HINT
+        self.assertIn("STOP", hint)
+        self.assertIn("Do NOT call any more tools", hint)
+
+    def test_should_refuse_repeat_starts_at_strike_three(self) -> None:
+        """The MCP tool refuses on strike 3 so a stuck turn cannot buy another round-trip."""
+
+        self.assertFalse(wiki_scout.should_refuse_repeat(1))
+        self.assertFalse(wiki_scout.should_refuse_repeat(2))
+        self.assertTrue(wiki_scout.should_refuse_repeat(3))
+        self.assertTrue(wiki_scout.should_refuse_repeat(7))
+        self.assertEqual(wiki_scout.HARD_STOP_REPEAT_AT, 3)
+
     def test_search_writes_with_mocked_backend(self) -> None:
         row = {
             "title": "Cambrai",

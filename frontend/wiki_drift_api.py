@@ -2,12 +2,32 @@
 
 Lookup uses Title DNS (SQLite) then reads the markdown lead from D:\\wiki_md.
 Weaviate hybrid search is only for explicit Truth Drift / compare_years.
+
+MIGRATION (2026-09-23): Wikipedia retrieval is now an **autonomous MCP tool
+process**. Eve (Qwen) owns intent, conversational context and pronoun resolution,
+and calls the `empire-wiki-scout` MCP tools (`wiki_resolve`, `wiki_extract`,
+`wiki_read_section`, `wiki_scout_search`, `wiki_scratch_*`) herself — the same way
+she calls every other local tool.
+
+The legacy regex middleware in this module (intent regex -> Title DNS -> evidence
+injection + cross-process lookup lock) is therefore **OFF by default**. It also had
+a self-defeating side effect: injecting a `[[EMPIRE_WIKI_*]]` marker made
+`chat_continuity` suppress the prior-turn summary, so the model was starved of the
+conversation history it needed to resolve pronouns ("that page") on its own.
+
+Set `EMPIRE_WIKI_MIDDLEWARE=1` to restore the legacy injection path (escape hatch).
+
+The intent classifiers in this module (`is_wiki_lookup_query`, `is_truth_drift_query`,
+`extract_search_query`) are still used by `frontend/serve.py` as a **catalog routing
+guard** for mixed catalog + encyclopedia asks, and by the injection-mode harnesses.
+Classification never injects evidence on its own.
 """
 
 from __future__ import annotations
 
 import concurrent.futures
 import logging
+import os
 import re
 from typing import Any
 
@@ -19,6 +39,14 @@ logger = logging.getLogger(__name__)
 WIKI_DRIFT_MARKER = "[[EMPIRE_WIKI_DRIFT]]"
 WIKI_LOOKUP_MARKER = "[[EMPIRE_WIKI_LOOKUP]]"
 WIKI_EXTRACT_MARKER = "[[EMPIRE_WIKI_EXTRACT]]"
+
+WIKI_MIDDLEWARE_ENV = "EMPIRE_WIKI_MIDDLEWARE"
+
+
+def wiki_middleware_enabled() -> bool:
+    """True only when the legacy regex injection path is explicitly re-enabled."""
+    raw = os.environ.get(WIKI_MIDDLEWARE_ENV, "").strip().casefold()
+    return raw in {"1", "true", "yes", "on"}
 MAX_SNIPPET = 320
 MAX_CARDS_PER_YEAR = 3
 MAX_LOOKUP_CARDS = 3
@@ -37,6 +65,30 @@ _LAST_DNS_AMBIGUOUS: dict[str, Any] = {
     "year": "2026",
     "candidates": [],
 }
+
+# Single-user Workbench: remember the last successfully resolved wiki page so
+# conversational anaphora ("that page", "more about it", "their discography") in a
+# follow-up turn re-targets the same entity instead of extracting the pronoun "that".
+# 2026-09-23: without this, a follow-up silently dropped the wiki injection (no subject)
+# or — worse — resolved the grammar article "That".
+_LAST_RESOLVED_WIKI_TITLE: dict[str, Any] = {
+    "title": "",
+    "year": "2026",
+    "query": "",
+}
+
+# Follow-up phrasings that refer back to the previously discussed page/entity. Only
+# honored when _LAST_RESOLVED_WIKI_TITLE["title"] is non-empty (see is_anaphoric_followup).
+_ANAPHORIC_FOLLOWUP_RE = re.compile(
+    r"(?:"
+    r"\b(?:that|this|the|same)\s+(?:same\s+)?page\b|"
+    r"\b(?:tell\s+me|what|who|more|details|else)\b.{0,32}\b(?:about|on|in)\s+(?:it|them|him|her|that|this)\b|"
+    r"\b(?:about|on)\s+(?:it|them|him|her|that|this)\b|"
+    r"\b(?:their|its|his|her)\s+(?:albums?|songs?|singles?|discograph\w*|members?\w*|history|legacy|awards?|filmograph\w*)\b|"
+    r"\b(?:what|who)\s+else\b"
+    r")",
+    re.I,
+)
 
 _DISAMBIG_FOLLOWUP_RE = re.compile(
     r"(?:"
@@ -105,10 +157,18 @@ WIKI_LOOKUP_RE = re.compile(
     # "tell me" is also scoped to an encyclopedia object ("tell me about ..."):
     # a bare "tell me" hijacked local tool requests such as
     # "...then tell me how much free disk space is available".
-    r"(?:tell me about|look up|find|trace|draft|extract|compare|research)\b|"
+    r"(?:tell me about|look up)\b|"
+    # Weak single verbs must introduce a real object. "what i asked you to find for
+    # me" fired the lookup gate on the bare "find" and then extracted the pronoun
+    # "that" from "on that page" (2026-09-23 regression).
+    r"\b(?:find|trace|draft|extract|compare|research)\b"
+    r"(?!\s+(?:for|of|to|it|me|us|them|him|her|out)\b)|"
     r"summarize\b.{0,80}\b(?:about|the|who|what|wikipedia|wiki|cast|album|film|show)\b|"
     r"discography\b|"
     r"\balbums?\s+(?:by|from|of)\b|"
+    # "tell me the names of the band 'the white stripes' albums" — band/artist plus
+    # a discography noun is an encyclopedia ask even without "what/albums by".
+    r"\b(?:band|artist|group|singer)\b.{0,40}\b(?:albums?|songs?|singles?|discography)\b|"
     r"\bpopulation\b|"
     r"\breception\b|"
     r"\bfilmography\b|"
@@ -123,6 +183,28 @@ WIKI_LOOKUP_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+
+# Conversational anaphora ("not on that page", "this one") must never be posted
+# to Title DNS as a page title. 2026-09-23 regression: "the album names are not on
+# that page" extracted the pronoun "that", resolved the grammar article "That",
+# and injected its lead as MANDATORY EVIDENCE — so Eve answered from the wrong page.
+_ANAPHORIC_TOPICS = frozenset(
+    {
+        "that", "this", "these", "those", "it", "its", "the", "a", "an",
+        "my", "your", "his", "her", "our", "their", "same", "previous",
+        "last", "next", "other", "another", "which", "what", "who", "one",
+        "the one", "that one", "this one", "the page", "that page", "this page",
+        "previous page", "last page", "same page", "next page", "the same",
+        "same one", "them", "him", "me", "us", "you", "page", "article",
+    }
+)
+
+
+def _is_anaphoric_topic(topic: str) -> bool:
+    """True when a candidate subject is a referring pronoun, not a page title."""
+    cleaned = re.sub(r"\s+", " ", (topic or "").strip().strip(" .?!,\"'")).casefold()
+    return (not cleaned) or cleaned in _ANAPHORIC_TOPICS
+
 
 TOPIC_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"post[-\s]?truth", re.I), "post-truth"),
@@ -188,6 +270,9 @@ def is_wiki_lookup_query(text: str) -> bool:
     # Clarification after Title DNS asked which page to open.
     if _LAST_DNS_AMBIGUOUS.get("candidates") and _DISAMBIG_FOLLOWUP_RE.search(raw):
         return True
+    # Conversational follow-up referring back to the last resolved page.
+    if is_anaphoric_followup(raw):
+        return True
     return False
 
 
@@ -201,6 +286,32 @@ def remember_dns_ambiguous(query: str, year: str, candidates: list[str]) -> None
 def clear_dns_ambiguous() -> None:
     _LAST_DNS_AMBIGUOUS["query"] = ""
     _LAST_DNS_AMBIGUOUS["candidates"] = []
+
+
+def remember_resolved_wiki_title(title: str, year: str = "2026", query: str = "") -> None:
+    """Record the last page that actually resolved (single-user Workbench)."""
+    _LAST_RESOLVED_WIKI_TITLE["title"] = (title or "").strip()
+    _LAST_RESOLVED_WIKI_TITLE["year"] = str(year or "2026")
+    _LAST_RESOLVED_WIKI_TITLE["query"] = (query or "").strip()
+
+
+def clear_resolved_wiki_title() -> None:
+    """Forget the last resolved page (called on a DNS miss / topic shift)."""
+    _LAST_RESOLVED_WIKI_TITLE["title"] = ""
+    _LAST_RESOLVED_WIKI_TITLE["query"] = ""
+
+
+def get_resolved_wiki_title() -> str:
+    """Canonical title of the last successfully resolved wiki page, or ""."""
+    return str(_LAST_RESOLVED_WIKI_TITLE.get("title") or "").strip()
+
+
+def is_anaphoric_followup(text: str) -> bool:
+    """True when text refers back to the last resolved page ('that page', 'more about it')."""
+    raw = (text or "").strip()
+    if not raw or not get_resolved_wiki_title():
+        return False
+    return bool(_ANAPHORIC_FOLLOWUP_RE.search(raw))
 
 
 def pick_disambiguation_followup(text: str) -> str | None:
@@ -372,6 +483,13 @@ def extract_search_query(text: str) -> str:
     if not raw or is_wiki_access_query(raw):
         return ""
 
+    # Anaphoric follow-ups ("what else is on that page", "tell me more about it") carry
+    # no explicit subject. Returning the cleaned sentence here would post garbage to
+    # Title DNS; return "" so enrich_eve_message_payload can substitute the last
+    # resolved title instead.
+    if _ANAPHORIC_FOLLOWUP_RE.search(raw):
+        return ""
+
     explicit_wiki = re.search(
         r"\b(?:look\s+up|find|read|open)\s+(?:the\s+)?(?:local\s+)?wikipedia\s+article\s+for\s+(.+?)(?:(?:\.|\?|!|\s+and\s+tell\s+me\b)|$)",
         raw,
@@ -383,6 +501,15 @@ def extract_search_query(text: str) -> str:
         if cleaned:
             return cleaned
 
+    # Quoted titles first — contractions like I'm must not become the subject, and a
+    # quoted band name must win over the greedy "band ..." tail, which otherwise
+    # swallowed a trailing noun ("the band 'the white stripes' albums").
+    quoted = extract_quoted_title(raw)
+    if quoted:
+        cleaned = _clean_topic(quoted)
+        if cleaned and not _is_anaphoric_topic(cleaned):
+            return cleaned
+
     conversational_entity = re.search(
         r"\b(?:the\s+)?(?:band|artist|group|singer)\s+(?:called|named)\s+(.+?)(?:[?.!]|\s+and\s+|$)",
         raw,
@@ -390,7 +517,7 @@ def extract_search_query(text: str) -> str:
     )
     if conversational_entity:
         cleaned = _clean_topic(conversational_entity.group(1))
-        if cleaned:
+        if cleaned and not _is_anaphoric_topic(cleaned):
             return cleaned
 
     band_tail = re.search(
@@ -400,13 +527,8 @@ def extract_search_query(text: str) -> str:
     )
     if band_tail:
         cleaned = _clean_topic(band_tail.group(1))
-        if cleaned:
+        if cleaned and not _is_anaphoric_topic(cleaned):
             return cleaned
-
-    # Quoted titles first — contractions like I'm must not become the subject.
-    quoted = extract_quoted_title(raw)
-    if quoted:
-        return _clean_topic(quoted)
 
     # Single-letter / short title after "production/plot/cast of …"
     short = re.search(
@@ -418,14 +540,15 @@ def extract_search_query(text: str) -> str:
         return short.group(1).upper() if len(short.group(1)) == 1 else short.group(1)
 
     topic = resolve_lookup_topic(raw)
-    if topic:
+    if topic and not _is_anaphoric_topic(topic):
         return topic
 
     for pattern in (
         re.compile(r"\bwho\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
         re.compile(r"\bwhat\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
+        # "not on that page" must not become the title "that" (guard below rejects it).
         re.compile(
-            r"\b(?:from|on|for)\s+(.+?)\s+page\b",
+            r"\b(?:from|on|for)\s+(?:the\s+)?(.+?)\s+page\b",
             re.I,
         ),
         re.compile(
@@ -447,7 +570,11 @@ def extract_search_query(text: str) -> str:
             r"\bwhat\s+(?:albums?|records?)\s+(?:did|has|have)\s+(.+?)\s+(?:release|make|record|done)[\?.!]*$",
             re.I,
         ),
-        re.compile(r"\b(?:tell me about|look up|search for?|find|pull|extract)\s+(.+?)[\?.!]*$", re.I),
+        re.compile(
+            r"\b(?:tell me about|look up|search for?|find|pull|extract)\s+"
+            r"(?!(?:for|of|to|it|me|us|them|him|her)\b)(.+?)[\?.!]*$",
+            re.I,
+        ),
         re.compile(r"\bpopulation\s+of\s+(.+?)(?:\s+and\b|[?.!]|$)", re.I),
         re.compile(r"\breception\s+of\s+(?:the\s+)?(.+?)(?:\s+to\b|\s+versus\b|[?.!]|$)", re.I),
         re.compile(r"\bplot\s+of\s+(?:the\s+)?(?:movie\s+)?(.+?)(?:\s+and\b|[?.!]|$)", re.I),
@@ -469,7 +596,11 @@ def extract_search_query(text: str) -> str:
             topic = _clean_topic(match.group(1))
         else:
             topic = _clean_topic(match.group(0))
-        if topic and topic.casefold() not in {"wikipedia", "wiki", "encyclopedia", "it"}:
+        if (
+            topic
+            and not _is_anaphoric_topic(topic)
+            and topic.casefold() not in {"wikipedia", "wiki", "encyclopedia", "it"}
+        ):
             return topic
 
     return ""
@@ -606,8 +737,15 @@ def _lookup_from_title_dns(
     *,
     year: str,
     user_question: str,
+    include_hops: bool = True,
 ) -> tuple[str, dict[str, Any] | None]:
-    """Resolve via Title DNS, then read the markdown lead. No Weaviate."""
+    """Resolve via Title DNS, then read the markdown lead. No Weaviate.
+
+    include_hops=False skips the related-page hop leads. Anaphoric follow-ups
+    ("what else is on that page") target the SAME page, so hop leads (e.g. "List of
+    songs recorded by Patti Page" reached via a covered song) are noise and made Eve
+    answer from the wrong page.
+    """
     from pipeline.wiki_title_dns import resolve as dns_resolve
 
     follow = pick_disambiguation_followup(user_question)
@@ -628,6 +766,9 @@ def _lookup_from_title_dns(
         else:
             return _dns_ambiguous_block(query, year, []), None
     if status != "hit" or selected_hit is None:
+        # A failed resolution is a topic shift away from whatever page was last
+        # resolved — drop it so a later "that page" can't grab a stale entity.
+        clear_resolved_wiki_title()
         try:
             from pipeline.wiki_scratchpad import error_book_append
 
@@ -642,6 +783,9 @@ def _lookup_from_title_dns(
         return _lookup_miss_block(query, err=result.reason or "not in title registry"), None
     clear_dns_ambiguous()
     hit = selected_hit
+    # Record the canonical page so follow-up anaphora ("that page", "more about it")
+    # re-targets this entity. Overwrites on every new hit = natural topic-shift reset.
+    remember_resolved_wiki_title(hit.title, year, user_question or query)
     from pipeline.wiki_extract import (
         format_extract_injection,
         is_extract_shaped_question,
@@ -729,6 +873,8 @@ def _lookup_from_title_dns(
         hop_leads: list[dict[str, Any]] = []
         extra_names: list[str] = []
         for hop_title in related.get("hops") or []:
+            if not include_hops:
+                break
             hop_dns = dns_resolve(str(hop_title), year, user_question=user_question)
             if hop_dns.status != "hit" or hop_dns.hit is None:
                 continue
@@ -868,7 +1014,13 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
             if hop_title:
                 lines.append(f"Hop title: {hop_title}")
             if hop_lead:
-                lines.append(f"Hop lead: {hop_lead}")
+                # Never dump raw wikitable markup into a hop lead (mirrors the
+                # cast_section guard) — a hop lead that is mostly a `{|` table
+                # made Eve answer from an unrelated page's song list.
+                if "{|" in hop_lead:
+                    lines.append("Hop lead: (raw wikitable omitted — use wiki_extract)")
+                else:
+                    lines.append(f"Hop lead: {hop_lead}")
             if hop_section:
                 lines.append(f"Hop section: {hop_section}")
     escalate = _escalation_hint(user_question)
@@ -1075,7 +1227,18 @@ def _access_only_block() -> str:
 
 
 def enrich_eve_message_payload(payload: dict[str, object], *, force: bool = False) -> dict[str, object]:
-    """Inject Wikipedia cards so Fast mode cannot skip the archive."""
+    """Legacy Wikipedia evidence injection (regex middleware).
+
+    DISABLED BY DEFAULT as of the 2026-09-23 migration. Wikipedia retrieval is now an
+    autonomous MCP tool process: Eve owns intent, conversation context and pronoun
+    resolution, and calls the `empire-wiki-scout` tools herself. Injecting evidence
+    also made `chat_continuity` suppress the prior-turn summary, starving the model of
+    the very history it needs to resolve "that page". Re-enable with
+    EMPIRE_WIKI_MIDDLEWARE=1 if the legacy path is ever needed.
+    """
+
+    if not wiki_middleware_enabled():
+        return payload
 
     message = payload.get("message")
     if not isinstance(message, str) or not message.strip():
@@ -1117,10 +1280,14 @@ def enrich_eve_message_payload(payload: dict[str, object], *, force: bool = Fals
         else:
             query = extract_search_query(raw)
             follow = pick_disambiguation_followup(raw)
+            used_anaphora = False
             if follow:
                 query = follow
             elif not query and _LAST_DNS_AMBIGUOUS.get("candidates"):
                 query = str(_LAST_DNS_AMBIGUOUS.get("query") or "").strip()
+            elif not query and is_anaphoric_followup(raw):
+                query = get_resolved_wiki_title()
+                used_anaphora = True
             if not query:
                 block = (
                     f"{WIKI_LOOKUP_MARKER}\n"
@@ -1136,11 +1303,15 @@ def enrich_eve_message_payload(payload: dict[str, object], *, force: bool = Fals
                 )
 
                 requested_year = parse_snapshot_year_from_text(raw)
-                year = str(requested_year or default_snapshot_year())
+                if used_anaphora and not requested_year:
+                    year = str(_LAST_RESOLVED_WIKI_TITLE.get("year") or default_snapshot_year())
+                else:
+                    year = str(requested_year or default_snapshot_year())
                 block, lead_evidence = _lookup_from_title_dns(
                     query,
                     year=year,
                     user_question=raw,
+                    include_hops=not used_anaphora,
                 )
                 lookup_cards = None
                 enriched_evidence = lead_evidence
@@ -1180,7 +1351,12 @@ def enrich_eve_message_payload(payload: dict[str, object], *, force: bool = Fals
                 session_id = val.strip()
                 break
         scratch = format_scratchpad_block(session_id)
-        err_hint = format_error_book_hint(raw)
+        # Suppress the "already missed" hint when this turn produced real evidence.
+        # The Error Book is a persistent miss log, so a subject that missed yesterday
+        # (e.g. "white stripes" before the Title DNS fix) would otherwise be told
+        # "say it is not in the archive" in the SAME prompt as its correct EVIDENCE —
+        # contradictory guidance that makes Eve refuse a page it just retrieved.
+        err_hint = "" if enriched_evidence else format_error_book_hint(raw)
         prefix = "\n".join(part for part in (scratch, err_hint) if part).strip()
         if prefix:
             block = f"{prefix}\n\n{block}"

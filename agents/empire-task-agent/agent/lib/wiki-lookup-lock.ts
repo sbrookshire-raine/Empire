@@ -3,8 +3,15 @@ import { join } from "node:path";
 import { EMPIRE_ROOT } from "#lib/empire";
 
 /**
- * When Workbench injects [[EMPIRE_WIKI_LOOKUP]], Python writes this lock so Eve
- * does not register wiki_scout_search / compare_years for the turn.
+ * LEGACY ESCAPE HATCH ONLY (EMPIRE_WIKI_MIDDLEWARE=1).
+ *
+ * Default mode (2026-09-23+) is autonomous retrieval: Eve owns Wikipedia intent and
+ * calls the empire-wiki-scout tools herself, and Python never writes this lock — so
+ * wiki tools stay registered.
+ *
+ * When the legacy regex middleware does inject [[EMPIRE_WIKI_LOOKUP]] /
+ * [[EMPIRE_WIKI_EXTRACT]], Python writes this lock so Eve does not also register
+ * wiki_scout_search / wiki_scout_compare_years for that turn. It expires (TTL) on its own.
  */
 function lockPaths(): string[] {
   const override = process.env.EMPIRE_WIKI_LOOKUP_LOCK?.trim();
@@ -57,8 +64,9 @@ export const WIKI_LOOKUP_LOCK_REPLY = {
   paths: [] as string[],
   titles: [] as string[],
   chat_reply_rule:
-    "[[EMPIRE_WIKI_LOOKUP]] or [[EMPIRE_WIKI_EXTRACT]] evidence was already injected for this turn. " +
-    "Do NOT call wiki tools again. Answer only from that EVIDENCE / EXTRACT / CONTRACT block. " +
-    "Do NOT narrate an empty scratchpad. Do NOT mention Weaviate, Docker, or port 8091.",
-  coverage_note: "Wiki lookup lock active — refuse redundant tool call.",
+    "Legacy middleware (EMPIRE_WIKI_MIDDLEWARE=1) already injected [[EMPIRE_WIKI_LOOKUP]] or " +
+    "[[EMPIRE_WIKI_EXTRACT]] evidence for this turn. Do NOT call wiki tools again. Answer only " +
+    "from that EVIDENCE / EXTRACT / CONTRACT block. Do NOT narrate an empty scratchpad. " +
+    "Do NOT mention Weaviate, Docker, or port 8091.",
+  coverage_note: "Wiki lookup lock active (legacy injection) — refuse redundant tool call.",
 };

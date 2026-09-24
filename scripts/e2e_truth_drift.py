@@ -1,8 +1,14 @@
-"""E2E: Truth Drift via frontend Eve proxy with server-side wiki glasses."""
+"""E2E: Truth Drift via frontend Eve proxy with server-side wiki glasses.
+
+The local injection assertion uses the legacy escape hatch
+(`EMPIRE_WIKI_MIDDLEWARE=1`); the live Eve turn uses the Workbench default
+(autonomous empire-wiki-scout tools, `active_tools: wiki_local`).
+"""
 
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.error
 import urllib.request
@@ -95,6 +101,10 @@ def main() -> int:
     topic = pick_compare_topic(QUERY)
     print("TOPIC", topic)
 
+    # Local assertion only: the legacy drift injection is the escape hatch. The live
+    # turn below goes through the Workbench, whose default is autonomous
+    # empire-wiki-scout tool calls (active_tools wiki_local).
+    os.environ["EMPIRE_WIKI_MIDDLEWARE"] = "1"
     enriched = enrich_eve_message_payload({"message": QUERY})
     msg = str(enriched.get("message") or "")
     print("HAS_CARDS", WIKI_DRIFT_MARKER in msg)

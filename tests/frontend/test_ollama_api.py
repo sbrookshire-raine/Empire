@@ -89,7 +89,7 @@ class OllamaApiTests(unittest.TestCase):
             stored = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(stored["mode"], "librarian")
             self.assertEqual(stored["options"]["temperature"], 0.4)
-            self.assertEqual(stored["options"]["num_ctx"], 8192)
+            self.assertEqual(stored["options"]["num_ctx"], 16_384)
 
     def test_rejects_embedding_models_and_unknown_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -106,11 +106,14 @@ class OllamaApiTests(unittest.TestCase):
 
             self.assertEqual(embed.exception.status, 400)
             self.assertEqual(missing.exception.status, 400)
-            self.assertEqual(saved["active"], "qwen2.5:14b-instruct")
+            # Fast's canonical model is the EMPIRE-owned `empire-fast:14b`; the bare
+            # `qwen2.5:14b-instruct` id stays valid as an alias, so accept either id but pin
+            # the mode (the actual contract).
+            self.assertIn(saved["active"], {"empire-fast:14b", "qwen2.5:14b-instruct"})
             self.assertEqual(saved["activeMode"], "fast")
-            self.assertEqual(
+            self.assertIn(
                 json.loads(path.read_text(encoding="utf-8"))["model"],
-                "qwen2.5:14b-instruct",
+                {"empire-fast:14b", "qwen2.5:14b-instruct"},
             )
 
     def test_unavailable_ollama_keeps_fallback_without_pretending_connected(self) -> None:

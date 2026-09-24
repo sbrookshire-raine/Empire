@@ -34,6 +34,11 @@ Baseline report (optional):
 
 ## Pass / fail rubric
 
+These injection cases cover the **legacy escape hatch** (`EMPIRE_WIKI_MIDDLEWARE=1`); the
+harness sets it locally. In the default autonomous mode there is no injected block, so
+grade the reply against `wiki_scout_search` / `wiki_extract` tool output instead
+(see [WIKI_SCOUT.md § Retrieval ownership](WIKI_SCOUT.md)).
+
 A case **PASS**es injection when:
 
 1. `[[EMPIRE_WIKI_LOOKUP]]` (or clear miss/disambig contract) is present when expected.

@@ -305,7 +305,7 @@ def summarize_tasks(tasks: list[dict], *, model: str | None = None) -> dict:
             "stream": False,
             "temperature": options.get("temperature", 0.2),
             "top_p": options.get("top_p", 0.9),
-            "options": {"num_ctx": options.get("num_ctx", 8_192)},
+            "options": {"num_ctx": options.get("num_ctx", 16_384)},
         }
     ).encode("utf-8")
     connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)
@@ -368,7 +368,7 @@ def chat_completion(
             "stream": False,
             "temperature": temperature if temperature is not None else options.get("temperature", 0.2),
             "top_p": options.get("top_p", 0.9),
-            "options": {"num_ctx": options.get("num_ctx", 8_192)},
+            "options": {"num_ctx": options.get("num_ctx", 16_384)},
         }
     ).encode("utf-8")
     connection = HTTPConnection(OLLAMA_HOST, OLLAMA_PORT, timeout=OLLAMA_CHAT_TIMEOUT_SECONDS)

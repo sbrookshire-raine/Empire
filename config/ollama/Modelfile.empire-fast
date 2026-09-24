@@ -1,0 +1,16 @@
+# EMPIRE Fast chat model — baked parameters for the OpenAI-compat endpoint.
+#
+# Why: Ollama's OpenAI-compatible endpoint ignores per-request `options` (measured: a request
+# with num_predict=24 generated 458 tokens; num_ctx=8192 left the model loaded at 4096). So the
+# only place these limits stick is the model itself. Without a prediction cap one degenerate
+# reply can run for ~90 s; without the context default the ~10k-token Eve prompt gets truncated.
+#
+# Build:  .\scripts\build-empire-ollama-models.ps1
+# Used by: agents/empire-task-agent/agent/lib/ollama-config.ts (CHAT_MODES.fast)
+
+FROM qwen2.5:14b-instruct
+
+PARAMETER num_ctx 16384
+PARAMETER num_predict 512
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9

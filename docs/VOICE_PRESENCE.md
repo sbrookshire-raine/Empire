@@ -58,6 +58,98 @@ Invoke-RestMethod http://127.0.0.1:8080/api/voice/health
 
 If unreachable, chat still works — voice is opt-in.
 
+## Spoken text must never be scratch (2026-09-23)
+
+Reported from the mic: *"it showed some gibberish, then called the tool, then started talking but
+only got a few words out."* Two distinct faults — both fixed, both covered by a browser test:
+
+| Fault | Cause | Fix |
+|---|---|---|
+| Spoke **"Ask: … Have: … Next: …"** and showed `<thought` in the bubble | Reasoning deltas carry no tag once the block is open, so per-event filtering leaked the body; a partial tag (`"<thought"`, no `>`) also slipped through | `eve_proxy.ReasoningStreamFilter` (stateful per step, holds split tags) + `strip_reasoning_blocks` drops trailing partial tags; `cleanSpeechText` strips blocks client-side |
+| Speech started **mid-sentence** and stopped early | `voiceSpokenOffset` was a raw character offset into text that the next step replaces (thought step → tool step → answer), so the cursor landed mid-word | `streamSpeakFromAssistant` resets the cursor when the already-spoken prefix no longer matches the current text |
+
+Also: internal markers (`[[EMPIRE_CHAT_SUMMARY]]` etc.) are stripped from assistant-visible text,
+and a leading run of degenerate non-Latin tokens (seen: Thai, on a long prompt) is dropped.
+
+```powershell
+$env:PYTHONPATH="C:\EMPIRE"
+.\venv\Scripts\python.exe scripts\test-eve-browser-playwright.py            # headless
+.\venv\Scripts\python.exe scripts\test-eve-browser-playwright.py --headful  # watch it
+```
+
+It drives real Chromium against `eve.html`, watches every assistant bubble as it streams,
+captures `/api/voice/speak` bodies, and fails if any scratch text, marker, or non-Latin prefix
+reaches the bubble or the speaker, or if speech starts mid-sentence. It enables
+`wiki_local` + `voice_presence` for the run and restores your Toolbelt afterwards.
+
+## Latency budget (measured 2026-09-23, RTX 5080 16 GB)
+
+Real browser turns, traced end to end (`scripts/trace-eve-browser.py`, multi-turn in one session):
+
+| Measurement | Before | After |
+|---|---|---|
+| `wiki_scout_search` | 10,745 ms | **47–78 ms** |
+| `wiki_read_section` | 12–22 s (rg timeout) | **210–260 ms** |
+| Turn, first (cold model) | ~90–108 s | **16–19 s** |
+| Turn, warm | ~20 s | **6–8 s** |
+| Tool calls on a miss ("how do magnets work?") | **15** (`wiki_read_section` loop) | **2** |
+| Assistant bubbles per question | 2–3 (looked like a loop) | **1** |
+
+Raw model speed: **49 tok/s generate, 1,025 tok/s prefill**. What made it slow, and the fixes:
+
+1. **Title DNS miss → filesystem scan.** `resolve("white stripes")` didn't try "The White Stripes",
+   so it fell into a fuzzy `LIKE '%…%'` join over 7.1M rows (~9.5 s), then `wiki_read_lead` used a
+   ripgrep scan that timed out after 12 s (21.9 s on that path). Fixed: article-prefix variants,
+   two narrow scans ranked in Python, rg capped at 3 s / 4 batches.
+2. **Nothing capped generation.** Ollama's compat endpoint ignores per-request `options` (measured:
+   `num_predict=24` still generated 458 tokens; `num_ctx=8192` left the model at 4096), so one
+   degenerate reply ran ~90 s. Fixed by baking the limits into an EMPIRE-owned model —
+   `scripts/build-empire-ollama-models.ps1` creates **`empire-fast:14b`** (`num_ctx 16384`,
+   `num_predict 512`, temp 0.2, top_p 0.9); Fast mode uses it.
+3. **Missing-section loop.** When a named section didn't exist the tool said only "not available",
+   so the model guessed 15 section names in a row. `wiki_read` now returns
+   `available_sections` (the page's real H2 headings) plus a rule: use at most one of those, never
+   repeat a call, and "the archive does not cover that detail" is a finished answer. The routing
+   prompt also states a 3-call budget per turn.
+4. **Voice router** ran `llama3.1` (a second model in 16 GB) on every completed message and
+   returned `fallback: true`. Off by default now (`EMPIRE_VOICE_ROUTER=1` restores it).
+5. **One bubble per step** (`message.completed` cleared the bubble id) — the "doubling" the
+   Architect saw. The UI now ends the bubble on `session.waiting`/failure only.
+6. **Stale UI.** `eve.html` loaded `eve-workbench.js` with no cache-buster, so fixed UI code kept
+   looking broken in the browser. The server now injects `?v=<mtime>` for local `.js`/`.css` — a
+   normal refresh is enough.
+
+Trace everything with:
+
+```powershell
+$env:EMPIRE_TRACE='1'; .\venv\Scripts\python.exe -m frontend.serve      # turn on tracing
+$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\trace-eve-browser.py --questions "q1|q2|q3"
+```
+
+Logs: `eve-audit/eve-trace.jsonl` (server: turn/step/tool/timing events — now also `model`/`mode` on
+`turn.start`, so an A/B run is attributable) and `eve-audit/browser-trace.jsonl` (every HTTP hop with
+ms). The tracer reports bubbles added per question, so a future regression shows up as
+`bubbles_added=2`.
+
+### Fast model A/B (measured 2026-09-23)
+
+Before promoting a different Fast model, gate it on the two things a "looks fine in chat" check
+cannot tell you — tool calling through the **compat** proxy, and the ~10k-token prompt fitting
+`num_ctx` without truncation:
+
+```powershell
+.\scripts\build-empire-ollama-models.ps1                      # builds empire-fast:14b + empire-fast:7b
+$env:PYTHONPATH='C:\EMPIRE'; .\venv\Scripts\python.exe scripts\ab-fast-toolcalling.py
+```
+
+`empire-fast:7b` (`config/ollama/Modelfile.empire-fast-7b`, built from `qwen2.5:7b-instruct`) passes
+both gates: native `tool_calls=['wiki_scout_search']`, prompt **10,022 tokens** ingested uncut. In the
+browser A/B (same 3 questions, variant switched via `/api/ollama/fast-ab`) it was **3× faster** —
+25.2 s vs 76.9 s total — **but answered "How do magnets work?" from "The Magnets" (a cappella group)**
+with a single search, while the 14B's extra searches corrected to **magnetism** and followed up on
+that page. Grounding beats speed, so Fast stays **`empire-fast:14b`**; the retrieval cause and the
+fix idea are tracked as E-13 in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md).
+
 ## Architect smoke
 
 1. `.\scripts\start-voice.ps1`

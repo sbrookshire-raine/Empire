@@ -4,6 +4,81 @@ Local-first research limb for EMPIRE: query the existing Docker Weaviate Wikiped
 
 Do **not** re-ingest the full Wikipedia corpus into Cognee. Overnight wiki→Cognee ingest remains **halted**.
 
+## Retrieval ownership (2026-09-23 migration)
+
+**Eve owns Wikipedia retrieval.** It is an **autonomous MCP tool process**, not regex middleware:
+
+| | Default (autonomous) | Legacy escape hatch |
+|---|---|---|
+| Who decides a lookup is needed | Eve (Qwen) — intent, conversation context, pronouns | Workbench regex (`frontend/wiki_drift_api.py`) |
+| How the archive is read | `empire-wiki-scout` MCP tools: `wiki_scout_search`, `wiki_resolve`, `wiki_extract`, `wiki_read_section`, `wiki_scout_compare_years`, `wiki_scratch_*` | Server injects `[[EMPIRE_WIKI_LOOKUP]]` / `[[EMPIRE_WIKI_EXTRACT]]` / `[[EMPIRE_WIKI_DRIFT]]` into the turn |
+| Evidence contract | Answer only from tool output; empty EXTRACT → refuse | Answer only from the injected block |
+| Enable with | nothing (default) | `EMPIRE_WIKI_MIDDLEWARE=1` in the Workbench process |
+
+Why the regex middleware was retired:
+
+1. **It fought the model.** Endless regex patching to route natural-language questions ("the band … albums", "that page") was fragile; Qwen resolves pronouns and follow-ups on its own when a tool is available.
+2. **It starved the model.** Injecting a `[[EMPIRE_WIKI_*]]` marker made `chat_continuity` suppress the prior-turn summary, so the model lost exactly the conversation history it needed to resolve anaphora.
+3. **It hid the tools.** The injection set `%LOCALAPPDATA%\EMPIRE\eve-wiki-lookup-lock.json`, which un-registered `wiki_scout_search` / `wiki_scout_compare_years` for the turn, so a bad regex meant no retrieval at all.
+
+The escape hatch is kept for one release cycle: harnesses that must pin the old injection contract turn it on explicitly (`scripts/test-wiki-chat-smoke.py`, `scripts/e2e_full_verify.py`, `scripts/e2e_truth_drift.py`, `scripts/run-wiki-calibrate.py --injection`). `frontend/wiki_drift_api.py` still ships the classifier (`is_wiki_lookup_query`, `is_truth_drift_query`) because `serve.py` uses it as a **catalog routing guard** for mixed asks — that classification never injects evidence.
+
+### Reasoning protocol + prompt budget (2026-09-23)
+
+Eve runs a **MANDATORY EXECUTION PROTOCOL** (`eve_instructions.md`): before every tool call
+and before every final answer she writes `<thought>Ask: … Have: … Next: …</thought>`, and
+`Have:` must state what she actually holds. `wiki_scout_search` reinforces it: a **repeated
+identical search** returns `repeat_call: true` plus a hint to use `wiki_read_section` /
+`wiki_extract` instead of restating the lead.
+
+Two facts make or break this on a 14B model:
+
+1. **The prompt must fit.** Eve's own prompt is ~11k tokens (system instructions + routing
+   ≈ 5.8k, plus ~32 tool schemas ≈ 5.3k). Ollama's OpenAI-compat endpoint **ignores
+   per-request `options.num_ctx`**, so the model runs at the *server* default — measured
+   `prompt_eval_count=4098` on an 8192 window, i.e. more than half the prompt (including the
+   protocol) was silently dropped. Fix:
+   ```powershell
+   .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
+   ```
+   and the agent declares the same window (`SHARED_NUM_CTX` in
+   `agents/empire-task-agent/agent/lib/ollama-config.ts`). Verify with
+   `curl http://127.0.0.1:11434/api/ps` → `context_length: 16384`.
+2. **Continuation turns carry no history.** Eve's own `POST /session/{id}` sends the system
+   prompt + the new user line only. Cross-turn context ("that page") comes from the
+   Workbench's `[[EMPIRE_CHAT_SUMMARY]]` block, which is why the follow-up hop must be
+   tested through `http://127.0.0.1:8080`, not against port 2000 directly.
+3. **Lookups must stay on the index (measured 2026-09-23).** `resolve("white stripes")` used to
+   miss ("The White Stripes" is the indexed title), fall into a fuzzy `LIKE '%…%'` join over the
+   7.1M-row index (~9.5 s) and then a ripgrep scan that timed out at 12 s — the whole wiki tool
+   call took **10.7 s**. Now the article-prefixed variant resolves as an exact hit, the fuzzy
+   branch is two narrow scans ranked in Python, and the rg last resort is capped at 3 s / 4
+   batches: the same call is **0.06 s**. If wiki lookups ever get slow again, check the index
+   first: `I:\EMPIRE_DATA\wiki-reports\{year}\title-index.sqlite` (32 GB for 2026) and rebuild
+   with `.\scripts\build-wiki-title-index.ps1 -Year 2026`.
+
+Verified two-turn behaviour (both routes) with:
+
+```powershell
+$env:PYTHONPATH='C:\EMPIRE'
+.\venv\Scripts\python.exe scripts\test-eve-cot-multihop.py --via-frontend
+```
+
+Turn 1 `Who is Kate Bush?` → `wiki_scout_search` → lead. Turn 2 `What else is on that page?`
+→ **`wiki_read_section`** → discography albums. Reasoning blocks are written by the model and
+**stripped by the proxy** (`frontend/eve_proxy.py::strip_reasoning_blocks`) before the user
+sees them; `--via-frontend` therefore grades behaviour, while the direct route (port 2000)
+shows the raw `<thought>` text.
+
+### Known gap: one-turn multi-hop (tracked E-10)
+Eve lands the right page and, for **trace** questions ("which 80s song got popular again because of *Stranger Things*?"), the fast model answers the article **lead** instead of hopping to the page that holds the fact. Verified 2026-09-23:
+
+- the tools do expose the path (`wiki_scout_search` → `wiki_read_section("Running Up That Hill")` → the archive lead states the revival);
+- the agent loop does support sequential tool calls (the same question phrased as two explicit steps returns the song);
+- the system prompt, the skill, and the tool reply rule all now instruct the hop.
+
+So it is a model-behaviour gap, not a retrieval wiring gap. `scripts/test-wiki-chat-smoke.py` reports these three cases as `WARN known-gap` and everything else must pass. Options to close it are listed as **E-10** in [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md) (follow-up turn, expose the Title DNS link web as a tool, or try Deep).
+
 ## Purpose
 
 - Prefer the **local encyclopedia** (multi-year WikiChunk snapshots) before any web research.
@@ -104,11 +179,19 @@ Needs Docker + `I:\weaviate_v2_archive\weaviate`. Full manual `docker run`: [WEA
 
 Normal who/what/cast questions do **not** use Weaviate. They resolve the title in SQLite, then read the lead (and preferred H2 section) from `D:\wiki_md`. Cast questions pull the **Cast** section and may hop to actor pages.
 
-When Workbench injects `[[EMPIRE_WIKI_LOOKUP]]`, it sets `%LOCALAPPDATA%\EMPIRE\eve-wiki-lookup-lock.json` so Eve **does not register** `wiki_scout_search` / `wiki_scout_compare_years` for that turn (hard gate).
+Eve calls **`wiki_scout_search`** herself for a normal lookup (Title DNS → lead), then escalates to **`wiki_extract`** / **`wiki_read_section`** when the lead is not enough. In the default autonomous mode nothing locks the tools.
+
+Only on the legacy escape hatch (`EMPIRE_WIKI_MIDDLEWARE=1`) does Workbench set `%LOCALAPPDATA%\EMPIRE\eve-wiki-lookup-lock.json`, so Eve **does not register** `wiki_scout_search` / `wiki_scout_compare_years` on a turn that already carries injected evidence (90 s TTL, self-expiring).
 
 Multi-hop work uses the research **scratchpad** + **Error Book** (`pipeline/wiki_scratchpad.py`) — not Cognee.
 
+**Question shapes.** `pipeline/wiki_interpreter.extract_wiki_subject` pulls the subject out of a conversational question. Measured live 2026-09-23: `What is magnetism?` resolved but **`How do magnets work?` missed the wiki entirely** (the question form fell through to a literal title lookup), which is why the 14B looped on a "no page" answer. `how do/does <noun> work|function|operate` and `how <noun> work(s)` now yield the subject noun (`How does magnetism work?` → `Magnetism`). Pronouns are excluded, so `how do I install python?` stays a non-lookup question.
+
+**Repeat refusal (bounded loops).** `wiki_scout_search` counts identical searches per subject/year inside a 180 s window: strike 1 = normal, strike 2 = cards + "do NOT repeat, call `wiki_read_section`/`wiki_extract`", **strike 3 = refused with no cards** (`HARD_STOP_REPEAT_HINT`). Measured: the 14B issued **7 identical searches / 66 s** and ended in an apology (the soft hint alone was ignored 6×); after the guard the same question costs 2 searches / 14–26 s. The window means a later genuine question about the same subject is not refused. Unit tests: `tests/pipeline/test_wiki_scout.py`.
+
 `wiki_scout_search` is Title DNS only by default. Opt in to Weaviate similarity after a miss with `EMPIRE_WIKI_WEAVIATE_FALLBACK=1`.
+
+**Known limitation (tracked E-13):** Title DNS is exact-title, so a bare common noun can land on a same-named entity — `magnets` resolves to **The Magnets** (a group) with `usable: true`. A model that trusts the first card then answers a physics question with a band (measured on the 7B; the 14B recovered by searching more).
 
 **Workbench eval (offline-first):** see [WIKI_WORKBENCH_EVAL.md](WIKI_WORKBENCH_EVAL.md).
 

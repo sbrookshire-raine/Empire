@@ -203,6 +203,228 @@ class EveProxyProjectionTests(unittest.TestCase):
             "Yes — ready when you are.",
         )
 
+    def test_sanitize_assistant_text_strips_thought_blocks(self) -> None:
+        """MANDATORY EXECUTION PROTOCOL scratch must never reach the transcript."""
+        leaked = (
+            "<thought>User asks who Kate Bush is. I have nothing yet. "
+            "Next: wiki_scout_search.</thought>She is an English singer-songwriter."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "She is an English singer-songwriter.",
+        )
+
+    def test_sanitize_assistant_text_strips_multiple_thought_blocks(self) -> None:
+        leaked = (
+            "<thought>Missing the song. Next: wiki_read_section.</thought>"
+            "<thought>The lead states the revival. I can answer.</thought>"
+            "It was **Running Up That Hill**."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "It was **Running Up That Hill**.",
+        )
+
+    def test_sanitize_assistant_text_drops_unterminated_thought_block(self) -> None:
+        """Mid-stream the closing tag has not arrived yet — no partial reasoning flash."""
+        streaming = "<thought>User asks what else is on that page. I only have the lead"
+        self.assertEqual(eve_proxy.sanitize_assistant_text(streaming), "")
+
+    def test_sanitize_assistant_text_keeps_text_before_unterminated_block(self) -> None:
+        streaming = "Kate Bush is an English singer.<thought>Now check her discography"
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(streaming),
+            "Kate Bush is an English singer.",
+        )
+
+    def test_strip_reasoning_blocks_handles_tag_variants(self) -> None:
+        for open_tag, close_tag in (
+            ("<think>", "</think>"),
+            ("<thinking>", "</thinking>"),
+            ("<thought>", "</thought>"),
+            ("<reasoning>", "</reasoning>"),
+        ):
+            with self.subTest(open_tag=open_tag):
+                text = f"{open_tag}scratch{close_tag}Answer."
+                self.assertEqual(eve_proxy.strip_reasoning_blocks(text), "Answer.")
+
+    def test_strip_reasoning_blocks_leaves_plain_text_alone(self) -> None:
+        plain = "No reasoning tags here — just the answer."
+        self.assertEqual(eve_proxy.strip_reasoning_blocks(plain), plain)
+
+    def test_strip_reasoning_blocks_drops_trailing_partial_tag(self) -> None:
+        """Measured leak: `messageSoFar` ended with the literal text "<thought" (no `>`)."""
+        self.assertEqual(eve_proxy.strip_reasoning_blocks("<thought"), "")
+        self.assertEqual(eve_proxy.strip_reasoning_blocks("She is a singer.<thou"), "She is a singer.")
+        self.assertEqual(eve_proxy.strip_reasoning_blocks("Compare a<b values"), "Compare a<b values")
+
+    def test_strips_qwen_tool_call_template_leak(self) -> None:
+        """Measured live: the model emitted its tool-call template as assistant content —
+        `<translation>{"name": "wiki_scout_search", "arguments": {...}}</translation>` — which
+        was both displayed and spoken. It must be treated as scratch."""
+        leaked = (
+            '<translation>{"name": "wiki_scout_search", "arguments": '
+            '{"query": "The White Stripes", "year": "2026"}}</translation>'
+            "The White Stripes were an American rock duo."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "The White Stripes were an American rock duo.",
+        )
+
+    def test_stream_filter_withholds_translation_deltas(self) -> None:
+        stream_filter = eve_proxy.ReasoningStreamFilter()
+        emitted = [
+            stream_filter.feed("<translation>{"),
+            stream_filter.feed('"name":"wiki_scout_search"}'),
+            stream_filter.feed("</translation>"),
+            stream_filter.feed("Real answer."),
+        ]
+        self.assertEqual("".join(emitted), "Real answer.")
+
+    def test_sanitize_assistant_text_drops_leading_stage_direction(self) -> None:
+        """Observed live: "<translation into actionable steps>" before the real answer."""
+        leaked = "<translation into actionable steps>\n\n**Next Steps:**\n- read the page"
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "**Next Steps:**\n- read the page",
+        )
+
+    def test_sanitize_assistant_text_keeps_real_angle_bracket_text(self) -> None:
+        text = "Use <div> and </div> to wrap the block."
+        self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
+
+    def test_sanitize_assistant_text_drops_leading_non_latin_junk(self) -> None:
+        """Observed on a long prompt: Thai tokens streamed before the answer."""
+        leaked = "คณะกรรมการการทำงานนี้ไม่มีการกระทำใด ๆ The White Stripes were a duo."
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "The White Stripes were a duo.",
+        )
+
+    def test_sanitize_assistant_text_keeps_non_latin_mid_answer(self) -> None:
+        text = "The band name is 東京 and they are from Japan."
+        self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
+
+    def test_sanitize_assistant_text_strips_tool_call_written_as_prose(self) -> None:
+        """Observed live 2026-09-23: the model narrated a tool call instead of making one."""
+        leaked = "Called wiki_read_section with object(title=magnetism, section=basics, year=2026)"
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
+
+    def test_sanitize_assistant_text_keeps_answer_around_tool_call_prose(self) -> None:
+        leaked = (
+            "Called wiki_scout_search with object(query=magnetism)\n"
+            "Magnetism comes from moving electric charge."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Magnetism comes from moving electric charge.",
+        )
+
+    def test_sanitize_assistant_text_keeps_sentences_about_tool_use(self) -> None:
+        """A real sentence mentioning a tool must survive — only the template shape is dropped."""
+        text = "I called wiki_read_section to find that section for you."
+        self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
+
+    def test_stream_filter_withholds_deltas_inside_an_open_block(self) -> None:
+        """The bug that made Eve *speak* her reasoning: deltas inside a block carry no tag."""
+        stream_filter = eve_proxy.ReasoningStreamFilter()
+        emitted = [
+            stream_filter.feed("<thought>"),
+            stream_filter.feed("Ask: what is"),
+            stream_filter.feed(" on that page"),
+            stream_filter.feed("</thought>"),
+            stream_filter.feed("The White Stripes were"),
+        ]
+        self.assertEqual("".join(emitted), "The White Stripes were")
+        self.assertFalse(stream_filter.in_block)
+
+    def test_stream_filter_handles_tags_split_across_deltas(self) -> None:
+        """A tag arriving as "<thou" then "ght>Ask: x" must not leak the fragment."""
+        stream_filter = eve_proxy.ReasoningStreamFilter()
+        emitted = [
+            stream_filter.feed("<thou"),
+            stream_filter.feed("ght>Ask: who"),
+            stream_filter.feed("</thou"),
+            stream_filter.feed("ght>She is a singer."),
+        ]
+        self.assertEqual("".join(emitted), "She is a singer.")
+        self.assertFalse(stream_filter.in_block)
+        self.assertEqual(stream_filter.pending, "")
+
+    def test_stream_filter_keeps_text_before_an_open_block(self) -> None:
+        stream_filter = eve_proxy.ReasoningStreamFilter()
+        self.assertEqual(stream_filter.feed("Lead sentence. <thought>scratch"), "Lead sentence. ")
+        self.assertTrue(stream_filter.in_block)
+
+    def test_filter_stream_event_filters_delta_and_cumulative_fields(self) -> None:
+        filters: dict = {}
+        first = eve_proxy.filter_stream_event(
+            {
+                "type": "message.appended",
+                "data": {
+                    "role": "assistant",
+                    "stepIndex": 0,
+                    "messageDelta": "<thought>Ask: who",
+                    "messageSoFar": "<thought>Ask: who",
+                },
+            },
+            filters,
+        )
+        self.assertEqual(first["data"]["messageDelta"], "")
+        self.assertEqual(first["data"]["messageSoFar"], "")
+        second = eve_proxy.filter_stream_event(
+            {
+                "type": "message.appended",
+                "data": {
+                    "role": "assistant",
+                    "stepIndex": 0,
+                    "messageDelta": " is Kate Bush.",
+                    "messageSoFar": "<thought>Ask: who is Kate Bush.",
+                },
+            },
+            filters,
+        )
+        self.assertEqual(second["data"]["messageDelta"], "")
+        self.assertEqual(second["data"]["messageSoFar"], "")
+
+    def test_filter_stream_event_passes_through_after_block_closes(self) -> None:
+        filters: dict = {}
+        eve_proxy.filter_stream_event(
+            {
+                "type": "message.appended",
+                "data": {"role": "assistant", "stepIndex": 0, "messageDelta": "<thought>x"},
+            },
+            filters,
+        )
+        closed = eve_proxy.filter_stream_event(
+            {
+                "type": "message.appended",
+                "data": {
+                    "role": "assistant",
+                    "stepIndex": 0,
+                    "messageDelta": "</thought>She is a singer.",
+                    "messageSoFar": "<thought>x</thought>She is a singer.",
+                },
+            },
+            filters,
+        )
+        self.assertEqual(closed["data"]["messageDelta"], "She is a singer.")
+        self.assertEqual(closed["data"]["messageSoFar"], "She is a singer.")
+
+    def test_filter_stream_event_leaves_user_and_other_events_alone(self) -> None:
+        filters: dict = {}
+        user_event = {
+            "type": "message.appended",
+            "data": {"role": "user", "messageDelta": "<thought>keep me"},
+        }
+        self.assertEqual(eve_proxy.filter_stream_event(user_event, filters), user_event)
+        other = {"type": "actions.requested", "data": {"actions": []}}
+        self.assertEqual(eve_proxy.filter_stream_event(other, filters), other)
+
     def test_project_event_sanitizes_assistant_messages(self) -> None:
         event = {
             "type": "message.completed",

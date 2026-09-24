@@ -1,6 +1,6 @@
 """Rolling chat continuity — short summary injected into Eve messages.
 
-Keeps num_ctx 8192 safe: never dumps full transcripts into KV.
+Keeps num_ctx 16384 safe: never dumps full transcripts into KV.
 """
 
 from __future__ import annotations
@@ -85,7 +85,9 @@ def enrich_eve_message_payload(payload: dict[str, Any]) -> dict[str, Any]:
         return payload
     if SUMMARY_MARKER in message:
         return payload
-    # Wiki glasses / pulse already carry the task + evidence; prior-turn digests cause tool loops.
+    # Legacy wiki injection (EMPIRE_WIKI_MIDDLEWARE=1) and pulse already carry the task +
+    # evidence; prior-turn digests cause tool loops. Autonomous wiki retrieval does NOT
+    # suppress the summary — the model needs that history to resolve pronouns itself.
     if (
         "[[EMPIRE_WIKI_EXTRACT]]" in message
         or "[[EMPIRE_WIKI_LOOKUP]]" in message
@@ -125,7 +127,10 @@ def enrich_eve_message_payload(payload: dict[str, Any]) -> dict[str, Any]:
         f"{SUMMARY_MARKER}\n{summary}\n\n"
         "Prior turns are BACKGROUND only. The User message below is the ONLY task "
         "for this turn — answer THAT question. If the topic changed, ignore the old "
-        "topic completely. Call tools for the new question. Do not mention this digest.\n\n"
+        "topic completely. Call tools for the new question. Do not mention this digest.\n"
+        "If the user asks for MORE detail about a page you just discussed (\"what else is on "
+        "that page\", \"tell me more\", \"their discography\"), call wiki_read_section or "
+        "wiki_extract for that page — never answer those from memory.\n\n"
         f"User message:\n{message.strip()}"
     )
     # Strip chat_id so Eve upstream does not see unknown fields

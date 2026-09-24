@@ -1,6 +1,6 @@
 {
   "mode": "fast",
-  "model": "qwen2.5:14b-instruct",
+  "model": "empire-fast:14b",
   "options": {
     "num_ctx": 8192,
     "temperature": 0.2,

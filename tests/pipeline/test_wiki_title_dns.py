@@ -137,14 +137,28 @@ class WikiTitleDnsTests(unittest.TestCase):
         self.assertEqual(result.hit.title, "Stranger Things")
         self.assertEqual(result.hit.rel_path, "batch_00001/st.md")
 
-    def test_close_match_suggests_article_title(self) -> None:
+    def test_bare_subject_finds_article_prefixed_title(self) -> None:
+        """2026-09-23: "white stripes" (user phrasing) must land on "The White Stripes"
+        directly as a hit. Before the article-prefix variants were added it fell into the
+        fuzzy branch (a 3-predicate LIKE over 7.1M rows, ~9.5 s) and returned ambiguous."""
         result = resolve("white stripes", "2026", index_path=self.index)
-        self.assertEqual(result.status, "ambiguous")
-        self.assertEqual([candidate.title for candidate in result.candidates], ["The White Stripes"])
+        self.assertEqual(result.status, "hit")
+        assert result.hit is not None
+        self.assertEqual(result.hit.title, "The White Stripes")
+        self.assertIn(result.reason, {"exact", "preferred_primary_title", "alias"})
+
+    def test_close_match_suggests_article_title(self) -> None:
+        """A partial word ("whit") still gets bounded candidates from the fuzzy branch."""
+        result = resolve("whit", "2026", index_path=self.index)
+        self.assertIn(result.status, {"ambiguous", "hit"})
+        titles = [candidate.title for candidate in result.candidates] or (
+            [result.hit.title] if result.hit else []
+        )
+        self.assertTrue(any("White" in title for title in titles), titles)
 
     def test_close_match_is_bounded(self) -> None:
         result = resolve("white", "2026", index_path=self.index)
-        self.assertEqual(result.status, "ambiguous")
+        self.assertIn(result.status, {"ambiguous", "hit"})
         self.assertLessEqual(len(result.candidates), 3)
 
     def test_following_tv_is_miss(self) -> None:

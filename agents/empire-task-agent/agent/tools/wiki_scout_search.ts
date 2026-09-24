@@ -14,12 +14,17 @@ export default defineDynamic({
       isCapabilityActive("wiki_local") && !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Local Wikipedia lookup (Title DNS + article lead). " +
-              "Pass the user's question verbatim. After calling: answer in 1–3 plain sentences. " +
+              "Local Wikipedia lookup (Title DNS + article lead) for a subject you name. " +
+              "Returns the article **lead only** — it usually will NOT contain songs, albums, " +
+              "dates, or table rows. Resolve pronouns and follow-ups yourself first — pass a " +
+              "self-contained subject (not \"that page\"). If the asked fact is not in the " +
+              "returned lead, hop to the page that holds it (wiki_resolve + " +
+              "wiki_read_section / wiki_extract) instead of guessing. " +
+              "After calling: answer in 1–3 plain sentences from the result. " +
               "NEVER paste rank, kind_hint, rank_why, or numbered card lists to the user. " +
-              "If [[EMPIRE_WIKI_LOOKUP]] evidence is already in the turn, do NOT call this tool. " +
               "Do NOT tell the user to boot Weaviate/Docker for a normal who/what/cast question. " +
-              "Default year 2026. Does NOT write Cognee.",
+              "If the turn already carries [[EMPIRE_WIKI_LOOKUP]] evidence (legacy middleware), " +
+              "answer from it instead of calling this. Default year 2026. Does NOT write Cognee.",
             inputSchema: z.object({
               query: z.string().min(1).describe("Search query for Wikipedia."),
               year: z

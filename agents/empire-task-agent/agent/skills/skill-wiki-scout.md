@@ -4,19 +4,50 @@ Use when the user asks **factual encyclopedia questions** or **multi-hop Wikiped
 
 Treat local Wikipedia as a **navigable library** (Title DNS + markdown sections + link hops + scratchpad), not trivia Q&A. Default archive: **2026**. Bring in **2017** / **2021** only when they name that year or ask to compare.
 
-## Server glasses first (mandatory)
+## You own retrieval (autonomous contract)
 
-If the turn already contains **`[[EMPIRE_WIKI_LOOKUP]]`** or **`[[EMPIRE_WIKI_EXTRACT]]`** evidence:
+Since 2026-09-23 the Workbench **no longer injects** Wikipedia evidence. **You** decide
+when a lookup is needed and **you** run it with the tools below — the same way you call
+every other local tool.
 
-1. **Answer from that evidence only** (Title + Lead/EXTRACT fields/tables/lists + Related / Hop lines + scratchpad if present).
-2. **Do NOT** call `wiki_scout_search`, `wiki_scout_compare_years`, `wiki_scratch_read`, or any Weaviate tool.
-3. **Do NOT** invent numbers, dates, cast names, or table cells missing from EXTRACT. If EXTRACT state is empty/unsupported, refuse clearly.
-4. **Do NOT** narrate “the scratchpad is empty” — that is normal for a single-page extract. Answer the user’s extract request from EXTRACT.
-5. **Do NOT** mention Weaviate, Docker, port 8091, or docs about booting a container.
-6. For multi-hop work across turns: use **`wiki_scratch_upsert`** to retain bridging facts; only **`wiki_scratch_read`** when synthesizing and no EXTRACT/LOOKUP block is present.
-7. Reply in plain English. Name actors only if they appear in the evidence.
+1. **Read the conversation first, then call a tool.** Resolve pronouns and follow-ups
+   yourself: "that page", "the 1984 one", "more about it", "their discography" all mean
+   the entity you were just discussing. Pass the tool a **self-contained subject** —
+   never the pronoun, never "that".
+2. **A lead is a landing, not an answer.** `wiki_scout_search` returns the article
+   **lead**. If the asked fact (a song, album, date, number, table row) is not literally
+   in what the tool returned, **hop**:
+   - name the page the fact most likely lives on — the work, person, episode, or album
+     the question is really about — then confirm it with **`wiki_resolve`** and read it
+     with **`wiki_read_section`** / **`wiki_extract`** (`need_hint` = the fact);
+   - "which song/music" traces: read the linked artist or work page. Example that works:
+     *Stranger Things* lead has no song → `wiki_read_section("Running Up That Hill")` →
+     the archive lead states the post-season-4 revival.
+   - A hypothesis is allowed, but it must be **verified by a tool result** before you say
+     it. Never answer from training memory. If the hop misses too, say the archive has
+     nothing.
+3. **When a tool returns nothing usable:** say the local archive has no usable page and
+   offer a clearer title. Never invent, never suggest Weaviate.
+4. **Answer only from tool output** (Title + Lead/EXTRACT fields/tables/lists +
+   scratchpad). If an EXTRACT state is empty/unsupported, refuse.
+5. **Never invent** numbers, dates, cast names, or table cells that are absent from the
+   EXTRACT.
+6. Do **not** claim the archive is unavailable before you have called a tool once.
+7. Do **not** narrate routing ("let me check the local archive…") — look it up and answer.
+8. Do **not** mention Weaviate, Docker, port 8091, or docs about booting a container.
+9. For multi-hop work across turns: use **`wiki_scratch_upsert`** to retain bridging
+   facts; **`wiki_scratch_read`** only when synthesizing and no fresh evidence is in hand.
+10. Reply in plain English. Name actors/albums only if they appear in tool output.
 
-Same rule if the turn has **`[[EMPIRE_WIKI_DRIFT]]`** — answer from those cards only; do not re-search.
+### Legacy escape hatch (rare)
+
+If a turn arrives already carrying **`[[EMPIRE_WIKI_LOOKUP]]`**,
+**`[[EMPIRE_WIKI_EXTRACT]]`**, or **`[[EMPIRE_WIKI_DRIFT]]`**, the Workbench is running
+the old regex middleware (`EMPIRE_WIKI_MIDDLEWARE=1`). Then:
+
+1. Answer from that block only (Title + Lead/EXTRACT + Related / Hop lines).
+2. Do **not** call any wiki tool for that turn.
+3. Do **not** narrate an empty scratchpad — normal for a single-page extract.
 
 If **`[[EMPIRE_WIKI_ERROR_BOOK]]`** is present: the archive already missed this subject — do not invent a page.
 
@@ -24,10 +55,10 @@ If a **BOUNDARY** line asks for Web Scout (weather / future devices): answer loc
 
 ## Tools
 
-1. **`wiki_scout_search`** — only when **no** LOOKUP/EXTRACT block is in the turn. Title DNS only (Weaviate fallback is opt-in via env).
-2. **`wiki_extract`** — structured fields/tables/lists for dates, numbers, specs, table rows. Prefer when the user wants data extracts.
-3. **`wiki_resolve`** — phone book only (exact/alias/ambiguous/missing).
-4. **`wiki_read_section`** — Title DNS page + optional section when a named H2 is needed.
+1. **`wiki_scout_search`** — default landing: Title DNS + article lead for a subject (once per subject; hop with the others below when the asked fact is not in the lead).
+2. **`wiki_extract`** — structured fields/tables/lists for dates, numbers, specs, table rows. Prefer when the user wants data extracts or a cast/crew table.
+3. **`wiki_resolve`** — phone book only (exact/alias/ambiguous/missing). Use when unsure whether the title exists before extracting.
+4. **`wiki_read_section`** — Title DNS page + optional named H2 section (cast, discography, filmography, charts, history, reception, plot, production).
 5. **`wiki_scratch_upsert` / `wiki_scratch_read`** — multi-hop bridging facts / Error Book; never Cognee.
 6. **`wiki_scout_compare_years`** — **only** when they ask what changed across years or say Truth Drift (needs Weaviate).
 7. **`promote_wiki_cache`** — only when they explicitly ask to save a cache file to Cognee.
@@ -35,18 +66,20 @@ If a **BOUNDARY** line asks for Web Scout (weather / future devices): answer loc
 
 ## Simple questions
 
-1. Prefer injected Title DNS evidence when present.
-2. If you must call a tool and there is **no** injection: **`wiki_scout_search`** once with default **2026**.
-3. If Title DNS is ambiguous, ask which title — do not invent.
+1. Call **`wiki_scout_search`** once with the subject the user actually means (default year **2026**).
+2. If Title DNS is ambiguous, ask which title — do not invent.
+3. Lead too thin for the question? Escalate to **`wiki_extract`** (or
+   **`wiki_read_section`** for a named section) in the same turn instead of guessing.
 
 ## Multi-hop work
 
 Examples: Casting Hop, Soundtrack Trace, Timeline Brief, Cast Table Merge.
 
-1. Land via Title DNS / LOOKUP injection.
-2. Prefer Cast / Discography / Filmography / Charts sections in evidence.
+1. Land the subject yourself: **`wiki_scout_search`** (lead) or **`wiki_resolve`** (does the title exist?).
+2. Prefer **Cast / Discography / Filmography / Charts** sections — read them with
+   **`wiki_read_section`** or **`wiki_extract`** when the landing lead is not enough.
 3. Upsert bridging facts to the scratchpad between hops.
-4. Synthesize only from evidence + scratchpad.
+4. Synthesize only from tool output + scratchpad.
 
 ## Truth Drift (only when asked)
 

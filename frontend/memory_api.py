@@ -673,15 +673,43 @@ WIKI_OR_DRIFT_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Memory-specific anchors. A bare "what can you tell me about X" / "what do you know about X"
+# must NOT take the memory shortcut when X is an encyclopedia subject — that phrasing exists
+# for memory questions about the Architect's own context, and the wiki classifier decides the
+# rest (see is_memory_chat_query).
+MEMORY_ANCHOR_RE = re.compile(
+    r"\b(?:"
+    r"memory|memories|interests?|interested|recall|recalled|remember|uploaded|"
+    r"my projects?|projects? in (?:your )?memory|memory graph|memory bank|"
+    r"my (?:notes|docs|documents|files|work|workbench|goals|plans)|"
+    r"about me|do you know about me|know about me"
+    r")\b",
+    re.IGNORECASE,
+)
+
 
 def is_memory_chat_query(text: str) -> bool:
-    """True when a chat message should trigger automatic Cognee recall / memory answer."""
+    """True when a chat message should trigger automatic Cognee recall / memory answer.
+
+    Precedence (2026-09-23): an encyclopedia/entity subject belongs to Eve and the wiki
+    tools, even when it is phrased as "what can you tell me about <band>". The shortcut only
+    wins when the message is memory-anchored (about the Architect's own context, memory,
+    interests, projects, uploads) — otherwise the *wiki classifier* decides.
+    """
 
     cleaned = text.strip()
     if not cleaned:
         return False
     if WIKI_OR_DRIFT_RE.search(cleaned):
         return False
+    if not MEMORY_ANCHOR_RE.search(cleaned):
+        try:
+            from frontend.wiki_drift_api import is_wiki_lookup_query
+
+            if is_wiki_lookup_query(cleaned):
+                return False
+        except Exception:  # noqa: BLE001 — never block the memory path on an import error
+            pass
     return bool(MEMORY_CHAT_RE.search(cleaned))
 
 

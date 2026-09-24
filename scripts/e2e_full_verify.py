@@ -1,8 +1,14 @@
-"""Comprehensive Truth Drift / Eve / glasses verification harness."""
+"""Comprehensive Truth Drift / Eve / glasses verification harness.
+
+Injection (glasses) cases exercise the legacy escape hatch
+(`EMPIRE_WIKI_MIDDLEWARE=1`); the live Eve case exercises the default autonomous
+path, where Eve calls the empire-wiki-scout tools herself (active_tools wiki_local).
+"""
 
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.error
 import urllib.request
@@ -196,7 +202,11 @@ def main() -> int:
             )
         )
 
-    # --- Glasses inject ---
+    # --- Glasses inject (legacy escape hatch: EMPIRE_WIKI_MIDDLEWARE=1) ---
+    # Since 2026-09-23 Wikipedia retrieval is an autonomous MCP tool process, so
+    # server-side drift injection only happens on the legacy path. The live Eve case
+    # below still exercises the default autonomous path (active_tools: wiki_local).
+    os.environ["EMPIRE_WIKI_MIDDLEWARE"] = "1"  # required by the inject cases
     for name, text, must_substr in [
         (
             "inject_post_truth",

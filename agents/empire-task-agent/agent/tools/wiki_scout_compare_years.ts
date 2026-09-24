@@ -16,6 +16,7 @@ export default defineDynamic({
             description:
               "Truth Drift compare with Wiki Interpreter across local Wikipedia years (2017/2021/2026). " +
               "Only when the user explicitly asks to compare years / Truth Drift. " +
+              "Resolve the topic yourself, including pronouns (pass a self-contained topic). " +
               "Returns cards_by_year — you MUST answer from those card titles/snippets only. " +
               "Do not invent year-by-year 'key findings' or maturity narratives without card text. " +
               "Archive years are not hypothetical futures. Does NOT write Cognee. Requires Wiki Local Toolbelt.",

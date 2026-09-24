@@ -16,9 +16,11 @@ export default defineDynamic({
             description:
               "Extract structured facts from a local Wikipedia page (Title DNS). " +
               "Returns fields, tables, and lists — not a lead dump. " +
-              "Use for dates, numbers, specs, table rows, lists. " +
+              "Use for dates, numbers, specs, table rows, lists; pass a self-contained subject " +
+              "(resolve pronouns yourself first). " +
               "If EXTRACT is empty, refuse — do not invent. Does NOT write Cognee. " +
-              "If [[EMPIRE_WIKI_EXTRACT]] or [[EMPIRE_WIKI_LOOKUP]] is already present, do NOT call this.",
+              "If [[EMPIRE_WIKI_EXTRACT]] or [[EMPIRE_WIKI_LOOKUP]] is already in the turn " +
+              "(legacy middleware), answer from that instead of calling this.",
             inputSchema: z.object({
               subject: z.string().min(1).describe("Encyclopedia title or subject."),
               year: z.string().optional().describe("Snapshot year (default 2026)."),

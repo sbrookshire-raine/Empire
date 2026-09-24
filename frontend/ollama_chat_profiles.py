@@ -21,7 +21,7 @@ GLOBAL_CHAT_OPTIONS: dict[str, float] = {
 }
 
 # Protect 16 GB VRAM — every mode uses the same context window.
-SHARED_NUM_CTX = 8_192
+SHARED_NUM_CTX = 16_384
 
 CHAT_MODES: dict[str, ChatMode] = {
     "fast": {
@@ -30,8 +30,8 @@ CHAT_MODES: dict[str, ChatMode] = {
         "description": (
             "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls."
         ),
-        "model": "qwen2.5:14b-instruct",
-        "model_aliases": ("qwen2.5:14b",),
+        "model": "empire-fast:14b",
+        "model_aliases": ("empire-fast", "qwen2.5:14b", "qwen2.5:14b-instruct"),
         "num_ctx": SHARED_NUM_CTX,
         "temperature": 0.2,
     },
@@ -114,10 +114,26 @@ def resolve_installed_model(
             tagged = f"{text}:latest"
             if tagged in installed_ids:
                 return tagged
-        base = text.split(":", 1)[0]
-        for installed in installed_ids:
-            if installed == base or installed.startswith(f"{base}:"):
-                return installed
+        # Deterministic family fallback: the old loop iterated an unordered set, so `qwen2.5:14b`
+        # could resolve to `qwen2.5:32b` (a Deep alias!) on some boots. Prefer the same tag, then
+        # the lexicographically smallest candidate.
+        base, _, tag = text.partition(":")
+        family = sorted(
+            candidate
+            for candidate in installed_ids
+            if candidate == base or candidate.startswith(f"{base}:")
+        )
+        if not family:
+            continue
+        if tag:
+            same_tag = [
+                candidate
+                for candidate in family
+                if candidate.partition(":")[2].startswith(tag)
+            ]
+            if same_tag:
+                return same_tag[0]
+        return family[0]
     return None
 
 

@@ -757,6 +757,29 @@ class MemoryRecallTests(unittest.TestCase):
         )
         self.assertFalse(is_memory_chat_query("Create a task called buy milk"))
 
+    def test_encyclopedia_subject_does_not_take_the_memory_shortcut(self) -> None:
+        """Regression 2026-09-23: "what can you tell me about <band>" was answered from
+        memory ("I don't have much in memory that matches that yet") instead of letting Eve
+        call the wiki tools — she never ran."""
+        for query in (
+            "What can you tell me about the band the white stripes?",
+            "what can you tell me about the band Kate Bush",
+            "Who is Kate Bush?",
+            "what can you tell me about the TV show 'The Following'?",
+        ):
+            with self.subTest(query=query):
+                self.assertFalse(is_memory_chat_query(query))
+
+    def test_memory_anchored_questions_still_take_the_shortcut(self) -> None:
+        for query in (
+            "what do you know about me from memory?",
+            "what are my interests?",
+            "what projects do i have in your memory?",
+            "tell me what you can see in my memory graph about my projects",
+        ):
+            with self.subTest(query=query):
+                self.assertTrue(is_memory_chat_query(query))
+
     def test_format_recall_context_builds_snippets(self) -> None:
         block, count = format_recall_context(
             [{"text": "local AI stack", "document_name": "notes.md"}]

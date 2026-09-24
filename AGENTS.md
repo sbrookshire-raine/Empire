@@ -7,6 +7,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 **Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
 **Idea / test queue:** [docs/EMPIRE_IDEA_QUEUE.md](docs/EMPIRE_IDEA_QUEUE.md)  
+**Structural plan (diagnosis, answer-path spine, tool triage, phases):** [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire
 
@@ -118,6 +119,20 @@ Provide a lightweight Tasks CRUD loop (PocketBase + HTMX/Alpine UI), graph memor
 - `agents/` — Isolated Eve agent projects (npm allowed here only)
 
 ## Troubleshooting and command-line operations
+
+> **Eve ignoring her own instructions?** Check the Ollama context first. The OpenAI-compat
+> endpoint ignores per-request `options.num_ctx`, so the model runs at the *server* default —
+> and Eve's prompt (instructions + routing ≈ 5.8k tokens, plus ~32 tool schemas ≈ 5.3k) is
+> ~11k tokens. At 8192 we measured `prompt_eval_count=4098`, i.e. the reasoning protocol and
+> hop rules were silently truncated away.
+>
+> ```powershell
+> .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
+> # verify: curl http://127.0.0.1:11434/api/ps  ->  "context_length": 16384
+> ```
+>
+> `SHARED_NUM_CTX` in `agents/empire-task-agent/agent/lib/ollama-config.ts` must match.
+> See [docs/WIKI_SCOUT.md](docs/WIKI_SCOUT.md) § Reasoning protocol + prompt budget.
 
 Normal task, chat, and upload use belongs in http://127.0.0.1:8080/eve.html. Use the commands below only for troubleshooting, maintenance, or development.
 

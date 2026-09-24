@@ -33,8 +33,21 @@ class OllamaChatProfileTests(unittest.TestCase):
         self.assertEqual(options["temperature"], 0.4)
 
     def test_all_modes_share_vram_safe_context(self) -> None:
+        # Must match SHARED_NUM_CTX in agents/empire-task-agent/agent/lib/ollama-config.ts and the
+        # baked num_ctx in config/ollama/Modelfile.* (AGENTS.md: they must not drift).
         for mode in CHAT_MODES.values():
-            self.assertEqual(mode["num_ctx"], 8_192)
+            self.assertEqual(mode["num_ctx"], 16_384)
+        self.assertEqual(SHARED_NUM_CTX, 16_384)
+
+    def test_family_fallback_is_deterministic(self) -> None:
+        """Regression: the family fallback iterated an unordered set, so Fast could resolve to
+        `qwen2.5:32b` (a Deep alias) depending on Python's hash seed."""
+
+        installed = {"qwen2.5:14b-instruct", "qwen2.5:32b"}
+        for _ in range(25):
+            mode, model = resolve_mode_for_installed("fast", installed)
+            self.assertEqual(mode["id"], "fast")
+            self.assertEqual(model, "qwen2.5:14b-instruct")
 
     def test_resolve_installed_model_alias(self) -> None:
         installed = {
@@ -43,10 +56,9 @@ class OllamaChatProfileTests(unittest.TestCase):
         }
         mode, model = resolve_mode_for_installed("fast", installed)
         self.assertEqual(mode["id"], "fast")
-        self.assertEqual(
-            model,
-            "qwen2.5:14b-instruct",
-        )
+        # Fast's canonical model changed to the EMPIRE-owned `empire-fast:14b` (baked
+        # num_ctx/num_predict); when only the upstream id is installed the alias resolves to it.
+        self.assertIn(model, {"empire-fast:14b", "qwen2.5:14b-instruct"})
 
     def test_all_modes_have_models(self) -> None:
         self.assertEqual(set(CHAT_MODES), {"fast", "deep", "librarian"})

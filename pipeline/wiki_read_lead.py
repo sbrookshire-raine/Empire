@@ -178,6 +178,23 @@ def extract_named_section(
     return ""
 
 
+def list_section_titles(body: str, *, limit: int = 12) -> list[str]:
+    """Return the page's H2 headings, so a miss can tell the model what *does* exist."""
+
+    titles: list[str] = []
+    seen: set[str] = set()
+    for match in re.finditer(r"^##\s+(.+?)\s*$", body or "", re.MULTILINE):
+        title = re.sub(r"\s+", " ", match.group(1)).strip()
+        key = title.casefold()
+        if not title or key in seen:
+            continue
+        seen.add(key)
+        titles.append(title)
+        if len(titles) >= max(1, limit):
+            break
+    return titles
+
+
 def wants_cast_section(user_question: str) -> bool:
     return bool(_CAST_QUESTION_RE.search(user_question or ""))
 
@@ -267,8 +284,10 @@ def resolve_md_path(
     rg = _rg_executable()
     if not rg:
         return None
-    # Last resort: scan a handful of early batches only (full-year rg times out).
-    batch_dirs = sorted(root.glob("batch_*"))[:12]
+    # Last resort: scan a handful of early batches only. A full-year rg times out, and a stall
+    # here blocks the whole tool call, so keep it short and small (Title DNS already had the
+    # chance to answer — it holds the authoritative path for every indexed title).
+    batch_dirs = sorted(root.glob("batch_*"))[:4]
     if not batch_dirs:
         return None
     try:
@@ -289,7 +308,7 @@ def resolve_md_path(
             encoding="utf-8",
             errors="replace",
             check=False,
-            timeout=12,
+            timeout=3,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         logger.warning("wiki_read_lead rg lookup failed for %r: %s", title_clean, exc)
@@ -419,6 +438,21 @@ def wiki_read(
     elif section_key:
         base["section_name"] = section_key
         base["section_missing"] = True
+        # Tell the model what exists and forbid more guessing: observed live, a missing section
+        # with no guidance produced 15 consecutive wiki_read_section calls (107 s turn).
+        available = list_section_titles(raw)
+        base["available_sections"] = available
+        base["chat_reply_rule"] = (
+            "That section does not exist on this page. Do NOT guess another section name. "
+            + (
+                f"Useful sections that DO exist: {', '.join(available)}. You may read ONE of those "
+                "if the user's fact is likely there. "
+                if available
+                else ""
+            )
+            + "Otherwise answer from the lead you already have (or say the local archive does not "
+            "cover that detail). Never call wiki_read_section twice for the same page in one turn."
+        )
     return base
 
 

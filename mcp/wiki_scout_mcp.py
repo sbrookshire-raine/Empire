@@ -14,6 +14,18 @@ from mcp.server.fastmcp import FastMCP
 from pipeline import wiki_scout
 from pipeline.wiki_interpreter import check_reranker
 
+# Per-process record of landing searches already issued in this session. A repeated call
+# with the same subject is the signature of premature completion: the model re-runs the
+# landing search and answers the same lead instead of reading deeper. The tool response then
+# tells the agent, deterministically, which tool to use instead (docs/WIKI_SCOUT.md).
+# Bookkeeping lives in pipeline.wiki_scout so it is unit-testable.
+from pipeline.wiki_scout import (
+    HARD_STOP_REPEAT_HINT,
+    REPEAT_CALL_HINT,
+    search_strike,
+    should_refuse_repeat,
+)
+
 mcp = FastMCP("empire-wiki-scout")
 
 
@@ -39,21 +51,45 @@ async def wiki_scout_search(
             return _json(locked_tool_response(tool="wiki_scout_search"))
     except Exception:  # noqa: BLE001
         pass
+    year_value = year.strip()
+    strike = search_strike(query, year_value)
+    if should_refuse_repeat(strike):
+        # Refuse: no cards means repeating cannot "unlock" anything, and the only remaining
+        # useful move is to answer. Bounds a stuck turn instead of paying a model round-trip
+        # per repeat (measured: 7 repeats / 66 s before this guard).
+        return _json(
+            {
+                "ok": False,
+                "usable": False,
+                "refused": "repeat_call",
+                "query": query,
+                "cards": [],
+                "titles": [],
+                "chat_reply_rule": HARD_STOP_REPEAT_HINT,
+                "coverage_note": (
+                    "Identical search already answered in this turn — refused. "
+                    "Answer from the cards already in the conversation."
+                ),
+            }
+        )
+    repeated = strike == 2
     result = wiki_scout.search(
         query=query,
-        year=year.strip() or None,
+        year=year_value or None,
         limit=int(limit) or 3,
         write_files=False,
         use_rerank=False,
     )
     if isinstance(result, dict) and result.get("ok"):
+        rule = str(result.get("chat_reply_rule") or "").strip()
         slim = {
             "ok": True,
             "query": result.get("query"),
             "snapshot_year": result.get("snapshot_year"),
             "usable": result.get("usable"),
             "cards": result.get("cards") or [],
-            "chat_reply_rule": result.get("chat_reply_rule"),
+            "chat_reply_rule": f"{rule} {REPEAT_CALL_HINT}".strip() if repeated else rule,
+            "repeat_call": repeated,
             "coverage_note": result.get("coverage_note"),
         }
         return _json(slim)

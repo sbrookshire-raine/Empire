@@ -26,7 +26,7 @@ This document is the bounding box for how the space stays clean. It does not rep
 | Product | Open | Eve may |
 |---------|------|---------|
 | **Truth Drift** | [wiki.html](http://127.0.0.1:8080/wiki.html) + Toolbelt Wiki Local for chat compare | `wiki_scout_compare_years` only when you ask to compare years — not everyday lookup |
-| **Wiki glasses** | Same Wiki Local session | Server inject `[[EMPIRE_WIKI_EXTRACT]]` / LOOKUP; fail closed |
+| **Wiki glasses** | Same Wiki Local session | `wiki_scout_search` / `wiki_extract` / `wiki_read_section` — Eve resolves the subject and pronouns herself; empty EXTRACT fails closed |
 | **DAZE** | [daze.html](http://127.0.0.1:8080/daze.html) or chat dock | `daze_*` tools when Time Reclaim enabled |
 | **Stem Factory** | Drop songs in `C:\Empire_Workbench\stem_factory\input` | `stem_list_inbox` / `stem_run` when Stem Factory enabled (GPU) |
 
@@ -81,5 +81,6 @@ Hard rejects unchanged: no mega FastMCP rewrite, no paid cloud LLM in app code, 
 ## Related
 
 - Idea / test queue: [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md)
+- Structural plan (diagnosis, spine contract, tool triage, phases): [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md)
 - Wiki extract fidelity: [`WIKI_EXTRACT_FIDELITY.md`](WIKI_EXTRACT_FIDELITY.md)
 - Usage how-to: [`EMPIRE_USAGE_GUIDE.md`](EMPIRE_USAGE_GUIDE.md)

@@ -100,4 +100,8 @@ def resolve_fast_model(default_model: str) -> str:
     cfg = load_fast_ab()
     if cfg.get("variant") == "b":
         return str(cfg.get("active_model") or default_model)
+    # Variant a must never keep an A/B alternate active just because it was stored earlier.
+    b_model = str(cfg.get("b_model") or "")
+    if b_model and default_model == b_model:
+        return str(cfg.get("a_model") or default_model)
     return default_model

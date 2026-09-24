@@ -1,4 +1,13 @@
 # EMPIRE Progress Report — Eve Tool-Loop & Context Fix
+> **Update (later the same day).** The two defects this report found are fixed: the compat endpoint
+> still ignores per-request `options`, so the limits are **baked into the model**
+> (`empire-fast:14b` / `empire-fast:7b` via `scripts/build-empire-ollama-models.ps1`), and tool
+> calling via that proxy is now verified directly — `scripts/ab-fast-toolcalling.py` measures
+> native `tool_calls=['wiki_scout_search']` for both models, including on a **10,022-token**
+> prompt at `num_ctx 16384`. The prose-form invocation described below still shows up as *extra*
+> content now and then; the proxy sanitizer strips it (`frontend/eve_proxy.py`,
+> `_TOOL_CALL_AS_TEXT_RE`). Live browser traces show `tool.requested` for `wiki_scout_search` /
+> `wiki_read_section`, so it is no longer the only path a call takes.
 
 **Branch:** `cursor/eve-context-and-routing-fix`
 **Date:** 2026-09-23

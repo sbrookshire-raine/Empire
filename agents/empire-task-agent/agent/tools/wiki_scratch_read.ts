@@ -15,8 +15,9 @@ export default defineDynamic({
         ? defineTool({
             description:
               "Read the Wikipedia research scratchpad (bridging facts) and optional Error Book misses. " +
-              "Only for multi-hop briefs after you already have page evidence. " +
-              "If [[EMPIRE_WIKI_EXTRACT]] or [[EMPIRE_WIKI_LOOKUP]] is in the turn, do NOT call this — answer from that evidence. " +
+              "Only for multi-hop briefs after you already have page evidence from a wiki tool. " +
+              "If [[EMPIRE_WIKI_EXTRACT]] or [[EMPIRE_WIKI_LOOKUP]] is already in the turn " +
+              "(legacy middleware), answer from that instead of calling this. " +
               "An empty scratchpad is normal for single-page extracts. Does NOT write Cognee.",
             inputSchema: z.object({
               session_id: z.string().optional().describe("Chat session id if known."),

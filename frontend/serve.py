@@ -95,6 +95,16 @@ AMBIENT_LOG_PATH = ROOT / "eve-audit" / "active_chat.log"
 AMBIENT_LOG_MAX_BYTES = 5 * 1024 * 1024
 AMBIENT_LOG_BACKUPS = 3
 VOICE_ROUTER_MODEL = "llama3.1:latest"
+# The voice router runs a SECOND model (llama3.1 8B) on every completed message. On a 16 GB
+# card that competes with the 14B chat model (14B @16k ≈ 11.9 GB) and forces evictions, and in
+# the measured trace it returned `fallback: true` after ~5 s — i.e. cost with no benefit.
+# Off by default (2026-09-23); set EMPIRE_VOICE_ROUTER=1 to restore the rewrite pass.
+VOICE_ROUTER_ENABLED = os.environ.get("EMPIRE_VOICE_ROUTER", "").strip().casefold() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 VOICE_ROUTER_PROMPT = (
     "You are Eve. Your job is to format the following technical message into a single, "
     "dry sentence. RULES: 1. You MUST preserve all numbers, dates, and proper nouns "
@@ -190,6 +200,9 @@ def _catalog_directive(message: str) -> str:
         from frontend.companion_api import extract_user_message
         from frontend.wiki_drift_api import is_wiki_lookup_query
 
+        # Classification only (a routing guard for mixed catalog + encyclopedia asks).
+        # This is NOT retrieval middleware: it never injects wiki evidence, and it is
+        # independent of EMPIRE_WIKI_MIDDLEWARE. Eve still owns the actual lookup.
         wiki_also = is_wiki_lookup_query(extract_user_message(message))
     except Exception:  # noqa: BLE001
         wiki_also = False
@@ -210,6 +223,21 @@ def _catalog_directive(message: str) -> str:
     )
 
 
+def _router_model() -> str:
+    """Model for the small routing passes (catalog intent, optional voice styling).
+
+    2026-09-23: these used to hard-code `llama3.1:latest`. Loading a second model beside the
+    14B chat model (11 GB) exceeds a 16 GB card, so the chat model gets evicted and the next
+    turn pays a full reload (~30 s). Reuse whatever chat model is already loaded instead.
+    """
+
+    try:
+        model = str(ollama_api.load_active_config().get("model") or "").strip()
+    except Exception:  # noqa: BLE001
+        model = ""
+    return model or VOICE_ROUTER_MODEL
+
+
 async def _extract_catalog_intent(message: str) -> str | None:
     """Use the fast local model to separate catalog intent from Wiki intent."""
     if not CATALOG_INTENT_RE.search(message or ""):
@@ -219,7 +247,7 @@ async def _extract_catalog_intent(message: str) -> str | None:
             ollama_api.chat_completion,
             system_prompt=CATALOG_ROUTER_PROMPT,
             user_prompt=message[:8000],
-            model=VOICE_ROUTER_MODEL,
+            model=_router_model(),
             temperature=0.0,
         )
         raw = str(result.get("content") or "").strip()
@@ -260,6 +288,33 @@ async def _catalog_context_async(message: str) -> str:
 def _ambient_text(value: object, max_chars: int = 4000) -> str:
     text = str(value or "").strip()
     return text[: max_chars - 1].rstrip() + "..." if len(text) > max_chars else text
+
+
+TRACE_ENABLED = os.environ.get("EMPIRE_TRACE", "").strip().casefold() in {"1", "true", "yes", "on"}
+TRACE_LOG_PATH = ROOT / "eve-audit" / "eve-trace.jsonl"
+
+
+def trace_event(kind: str, **fields: object) -> None:
+    """Append one trace record when EMPIRE_TRACE is on.
+
+    Covers the whole path the Architect asked for: browser turn start → each projected Eve
+    event (step boundaries, tool requests, message chunks) → tool latency → voice-router
+    timing. Never let tracing break chat.
+    """
+
+    if not TRACE_ENABLED:
+        return
+    try:
+        TRACE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "ts": round(time.time(), 3),
+            "kind": kind,
+            **fields,
+        }
+        with TRACE_LOG_PATH.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, default=str) + "\n")
+    except OSError:
+        pass
 
 
 def _append_ambient_event(
@@ -312,7 +367,7 @@ async def _voice_router(text: str) -> tuple[str, float, bool]:
             ollama_api.chat_completion,
             system_prompt=VOICE_ROUTER_PROMPT.format(payload=raw),
             user_prompt="Output only the text replacing the Translation line. Do not use quotes or a preamble.",
-            model=VOICE_ROUTER_MODEL,
+            model=_router_model(),
             temperature=0.25,
         )
         rewritten = str(result.get("content") or "").strip()
@@ -729,7 +784,54 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 except json.JSONDecodeError:
                     pass
             return self._send_json(404, {"ok": False, "error": "No verification report yet"})
+        if path.endswith(".html") and self._serve_html_with_cache_busting(path):
+            return None
         return super().do_GET()
+
+    def _serve_html_with_cache_busting(self, path: str) -> bool:
+        """Serve an HTML page with asset query versions taken from file mtimes.
+
+        Without this the Architect's browser keeps the cached `eve-workbench.js` after a fix —
+        which is how an already-fixed UI (bubble doubling, spoken scratch) still looked broken.
+        A normal refresh is then enough; no hard-refresh ritual.
+        """
+
+        if not path.endswith(".html"):
+            return False
+        target = (FRONTEND / path.lstrip("/")).resolve()
+        try:
+            target.relative_to(FRONTEND.resolve())
+        except ValueError:
+            return False
+        if not target.is_file():
+            return False
+        try:
+            html = target.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
+        def versioned(match: "re.Match[str]") -> str:
+            name = match.group(1)
+            asset = (FRONTEND / name.lstrip("/")).resolve()
+            try:
+                stamp = int(asset.stat().st_mtime)
+            except OSError:
+                return match.group(0)
+            return f'{match.group(0)[: -len(name) - 1]}{name}?v={stamp}"'
+
+        html = re.sub(r'"([A-Za-z0-9_./-]+\.(?:js|css))"', versioned, html)
+        body = html.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        return True
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
@@ -741,10 +843,25 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 return None
             payload = eve_toolbelt.apply_active_tools(payload)
             payload = ollama_api.apply_chat_mode_payload(payload)
+            active_config = ollama_api.load_active_config()
+            trace_event(
+                "turn.start",
+                message=str(payload.get("message") or "")[:400],
+                active_tools=payload.get("active_tools"),
+                # Which model the agent was told to use — makes Fast A/B runs attributable
+                # (cross-check with `ollama ps` for what is actually resident).
+                model=str(active_config.get("model") or ""),
+                mode=str(active_config.get("mode") or ""),
+            )
             try:
-                raw_message = payload.get("message")
-                force_wiki = isinstance(raw_message, str) and wiki_drift_api.is_wiki_lookup_query(raw_message)
-                payload = wiki_drift_api.enrich_eve_message_payload(payload, force=force_wiki)
+                # Wikipedia retrieval is an autonomous MCP tool process (2026-09-23):
+                # Eve owns intent/pronouns and calls empire-wiki-scout herself, so the
+                # regex lookup gate must NOT run per turn. Only the explicit legacy
+                # escape hatch (EMPIRE_WIKI_MIDDLEWARE=1) evaluates it.
+                if wiki_drift_api.wiki_middleware_enabled():
+                    raw_message = payload.get("message")
+                    force_wiki = isinstance(raw_message, str) and wiki_drift_api.is_wiki_lookup_query(raw_message)
+                    payload = wiki_drift_api.enrich_eve_message_payload(payload, force=force_wiki)
             except Exception:
                 pass
             try:
@@ -788,7 +905,14 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
-            if self._pending_wiki_evidence and isinstance(payload.get("message"), str):
+            # `_wiki_evidence` only exists on the legacy escape-hatch path
+            # (EMPIRE_WIKI_MIDDLEWARE=1). Keep the re-format inside that boundary so
+            # the autonomous path never rewrites Eve's message.
+            if (
+                self._pending_wiki_evidence
+                and wiki_drift_api.wiki_middleware_enabled()
+                and isinstance(payload.get("message"), str)
+            ):
                 message = str(payload["message"])
                 if "[[EMPIRE_WIKI_LOOKUP]]" not in message and "[[EMPIRE_WIKI_EXTRACT]]" not in message:
                     try:
@@ -1024,6 +1148,11 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         client_connected = True
         assistant_text = ""
         qwen_start = time.perf_counter()
+        # Per-step stateful reasoning filter: a `<thought>` block's deltas carry no tag, so
+        # stateless stripping per event would leak the block body to the browser (and to TTS).
+        reasoning_filters: dict = {}
+        tool_started: float | None = None
+        stream_started = time.perf_counter()
         try:
             if response.stream is None:
                 return
@@ -1038,7 +1167,46 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     projected,
                     session_id=session_id,
                 )
+                projected = eve_proxy.filter_stream_event(projected, reasoning_filters)
                 event_type = str(projected.get("type") or "")
+                data = projected.get("data")
+                if event_type == "actions.requested":
+                    requested = [
+                        str((action or {}).get("toolName") or "")
+                        for action in (data.get("actions") if isinstance(data, dict) else []) or []
+                        if isinstance(action, dict)
+                    ]
+                    trace_event("tool.requested", tools=requested, session=session_id)
+                    tool_started = time.perf_counter()
+                elif event_type == "action.result" and tool_started is not None:
+                    trace_event(
+                        "tool.result",
+                        ms=round((time.perf_counter() - tool_started) * 1000, 1),
+                        session=session_id,
+                    )
+                    tool_started = None
+                elif event_type in {
+                    "step.started",
+                    "step.completed",
+                    "turn.started",
+                    "turn.completed",
+                    "session.waiting",
+                }:
+                    trace_event(
+                        "event",
+                        type=event_type,
+                        step=(data or {}).get("stepIndex") if isinstance(data, dict) else None,
+                        session=session_id,
+                    )
+                elif event_type in {"message.appended", "message.completed"} and isinstance(data, dict):
+                    chunk = data.get("messageSoFar") or data.get("message") or data.get("messageDelta")
+                    trace_event(
+                        "message",
+                        type=event_type,
+                        step=data.get("stepIndex"),
+                        chars=len(chunk) if isinstance(chunk, str) else 0,
+                        session=session_id,
+                    )
                 data = projected.get("data")
                 if isinstance(data, dict):
                     cumulative = data.get("messageSoFar") or data.get("message")
@@ -1046,13 +1214,26 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                         assistant_text = cumulative
                 if event_type == "message.completed" and assistant_text:
                     qwen_time = time.perf_counter() - qwen_start
-                    assistant_text, voice_time, used_fallback = asyncio.run(_voice_router(assistant_text))
+                    if VOICE_ROUTER_ENABLED:
+                        assistant_text, voice_time, used_fallback = asyncio.run(
+                            _voice_router(assistant_text)
+                        )
+                    else:
+                        voice_time, used_fallback = 0.0, False
                     print(
                         f"[TRACER] Qwen Generation: {qwen_time:.2f}s | "
                         f"Llama Voice Styling: {voice_time:.2f}s | "
                         f"Total: {(qwen_time + voice_time):.2f}s | "
                         f"Fallback Used: {used_fallback}",
                         flush=True,
+                    )
+                    trace_event(
+                        "voice_router",
+                        qwen_s=round(qwen_time, 2),
+                        voice_s=round(voice_time, 2),
+                        total_s=round(qwen_time + voice_time, 2),
+                        fallback=used_fallback,
+                        session=session_id,
                     )
                     if isinstance(data, dict):
                         data = dict(data)
@@ -1102,6 +1283,11 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 except (BrokenPipeError, ConnectionResetError, OSError):
                     pass
         finally:
+            trace_event(
+                "stream.end",
+                seconds=round(time.perf_counter() - stream_started, 2),
+                session=session_id,
+            )
             response.close()
 
     def _memory_recall(self) -> None:

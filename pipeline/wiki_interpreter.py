@@ -143,6 +143,19 @@ _SUBJECT_PATTERNS: tuple[re.Pattern[str], ...] = (
     ),
     re.compile(r"\bwho\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
     re.compile(r"\bwhat\s+(?:is|are|was|were)\s+(.+?)[\?.!]*$", re.I),
+    # "How do magnets work?" / "How does magnetism work?" / "how magnets work" — the subject is
+    # the noun before the verb. Without this the question form fell through to a literal title
+    # lookup, so every "how does X work" question missed the wiki entirely (measured live).
+    # Pronouns are excluded so "how do I install python" is not treated as an article subject.
+    re.compile(
+        r"\bhow\s+(?:do|does|did|can)\s+(?!i\b|we\b|you\b|they\b|he\b|she\b|it\b)"
+        r"(?:(?:the|a|an)\s+)?(.+?)\s+(?:work|works|function|functions|operate|operates)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\bhow\s+(?!do\b|does\b|did\b|can\b|to\b|much\b|many\b)(.+?)\s+(?:work|works)\b",
+        re.I,
+    ),
     re.compile(r"\b(?:tell me about|about)\s+[\w][\w\s'-]*\s+in\s+(.+?)[\?.!]*$", re.I),
     re.compile(r"\b(?:tell me about|about)\s+(.+?)[\?.!]*$", re.I),
 )
@@ -1566,8 +1579,13 @@ def cards_for_chat(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 WIKI_CHAT_REPLY_RULE = (
-    "Answer in 1–3 plain sentences using snippet text only. "
-    "Never list rank, kind_hint, rank_why, card numbers, or JSON field names to the user."
+    "Answer in 1–3 plain sentences from the returned archive text only. "
+    "Never list rank, kind_hint, rank_why, card numbers, or JSON field names to the user. "
+    "This is the article LEAD, not the whole page: if the user's specific fact (a track, "
+    "release, date, number, chart row, or table cell) is not in it, say so in your "
+    "<thought> block (Have:/Next:) and call wiki_read_section or wiki_extract for the page "
+    "that holds it before answering — two or three tool calls in one turn is normal. "
+    "Never invent; never answer from training memory."
 )
 
 

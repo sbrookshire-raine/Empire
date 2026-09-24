@@ -1,0 +1,19 @@
+# EMPIRE Fast chat model — 7B A/B variant (smaller/faster sibling of empire-fast:14b).
+#
+# Same baked parameters as Modelfile.empire-fast, only the base weights differ, so an A/B run
+# isolates model size (not prompt, tools, context or decoding settings).
+#
+# Guardrails that MUST hold before this becomes the default (verified by
+# scripts/test-eve-browser-playwright.py / scripts/trace-eve-browser.py):
+#   1. emits OpenAI-style tool_calls through the /v1/chat/completions proxy
+#   2. survives the ~10k-token Eve prompt without context truncation (num_ctx 16384)
+#
+# Build:  .\scripts\build-empire-ollama-models.ps1
+# A/B:    %LOCALAPPDATA%\EMPIRE\ollama-fast-ab.json  { "variant": "b", "b_model": "empire-fast:7b" }
+
+FROM qwen2.5:7b-instruct
+
+PARAMETER num_ctx 16384
+PARAMETER num_predict 512
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9

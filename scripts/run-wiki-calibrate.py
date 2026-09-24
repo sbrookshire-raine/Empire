@@ -1,9 +1,12 @@
 """Run wiki calibration / workbench cases from JSONL.
 
 Modes (stack-dependent):
-  injection  — offline enrich_eve_message_payload (fast, no Weaviate)
+  injection  — offline legacy enrich_eve_message_payload (escape hatch; sets
+               EMPIRE_WIKI_MIDDLEWARE=1 locally, fast, no Weaviate)
   retrieval  — Weaviate search + title expectations (opt-in; workbench defaults off)
-  live_eve   — POST /api/eve/session + stream (needs 8080, 2000, Ollama)
+  live_eve   — POST /api/eve/session + stream (needs 8080, 2000, Ollama). Uses the
+               Workbench's own retrieval mode: default is autonomous empire-wiki-scout
+               tool calls, so the server must have Wiki Local enabled.
 
 Usage:
   $env:PYTHONPATH='C:\\EMPIRE'
@@ -16,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path as _Path
@@ -164,6 +168,9 @@ def run_injection(case: dict[str, Any]) -> CaseResult:
     )
 
     cid = str(case.get("id") or "?")
+    # Injection mode IS the legacy regex path — enable the escape hatch explicitly so
+    # these cases keep pinning it (default is autonomous empire-wiki-scout tool calls).
+    os.environ["EMPIRE_WIKI_MIDDLEWARE"] = "1"
     turns = case.get("turns")
     if isinstance(turns, list) and turns:
         queries = [str(t).strip() for t in turns if str(t).strip()]

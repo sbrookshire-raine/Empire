@@ -1,7 +1,11 @@
 """Cross-process lock: Title DNS evidence was already injected this turn.
 
-When Workbench injects [[EMPIRE_WIKI_LOOKUP]] or [[EMPIRE_WIKI_EXTRACT]], Eve must not register or call
-wiki_scout_search / Weaviate. Prompt text alone is soft; this file is the hard gate.
+**Legacy escape hatch only** (`EMPIRE_WIKI_MIDDLEWARE=1`). Since the 2026-09-23
+migration, Wikipedia retrieval is an autonomous MCP tool process: Eve resolves the
+subject herself and Python never writes this lock, so `wiki_scout_*` tools stay
+registered. Only when the regex middleware injects `[[EMPIRE_WIKI_LOOKUP]]` /
+`[[EMPIRE_WIKI_EXTRACT]]` does this gate stop Eve from registering a redundant call.
+Prompt text alone is soft; this file is the hard gate.
 """
 
 from __future__ import annotations

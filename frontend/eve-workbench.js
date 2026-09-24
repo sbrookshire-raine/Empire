@@ -49,8 +49,8 @@
       label: "Fast Mode (14b)",
       description:
         "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
-      model: "richardyoung/qwen2.5-14b-instruct-abliterated:latest",
-      numCtx: 8192,
+      model: "empire-fast:14b",
+      numCtx: 16384,
       temperature: 0.2,
     },
     {
@@ -59,7 +59,7 @@
       description:
         "Architect — 27B GSQ-RCO (~12 GB). Unloads Fast 14B. Falls back to qwen3:14b if not installed.",
       model: "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
-      numCtx: 8192,
+      numCtx: 16384,
       temperature: 0.7,
     },
     {
@@ -68,7 +68,7 @@
       description:
         "Mass synthesis — cross-reference many flattened files and long memory snippets.",
       model: "command-r:35b",
-      numCtx: 8192,
+      numCtx: 16384,
       temperature: 0.4,
     },
   ];
@@ -262,6 +262,7 @@
       voiceSpeakQueue: [],
       voiceSpeakPumping: false,
       voiceSpokenOffset: 0,
+        voiceSpokenText: "",
       voicePttActive: false,
       voicePttStartedAt: 0,
       voicePttStream: null,
@@ -1460,6 +1461,14 @@
         ) {
           return false;
         }
+        // 2026-09-23: a bare "what can you tell me about X" must not hijack an encyclopedia
+        // subject — Eve owns that intent and calls the wiki tools herself. The shortcut wins
+        // only when the message is memory-anchored; the server applies the same precedence in
+        // frontend/memory_api.py::is_memory_chat_query.
+        var memoryAnchored = /\b(?:memory|memories|interests?|interested|recall|recalled|remember|uploaded|my projects?|projects? in (?:your )?memory|memory graph|memory bank|my (?:notes|docs|documents|files|work|workbench|goals|plans)|about me|know about me)\b/i.test(
+          cleaned
+        );
+        if (!memoryAnchored) return false;
         return /(?:\b(?:memory|memories|interests?|interested|recall|recalled)\b|\bwhat do you know\b|\bwhat can you (?:tell|see)\b|\bwhat am i\b|\bmy projects?\b|\bfrom (?:my )?memory\b|\buploaded\b|\bmemory graph\b|\bprojects? in (?:your )?memory\b)/i.test(
           cleaned
         );
@@ -1677,8 +1686,10 @@
         if (type === "message.completed") {
           this.updateAssistantMessage(data);
           this.streamSpeakFromAssistant(true);
-          this.currentAssistantId = null;
           this.schedulePersistChat();
+          // Do NOT clear currentAssistantId here: Eve completes a message per *step*, so a
+          // tool step + answer step would render as two (or three) separate bubbles for one
+          // question — that is the "looping" the Architect sees. The turn ends below.
           return;
         }
         if (type === "actions.requested") {
@@ -1694,6 +1705,7 @@
           return;
         }
         if (type === "session.waiting") {
+          this.currentAssistantId = null;
           this.continuationToken =
             plainText(data.continuationToken) || this.continuationToken;
           this.sending = false;
@@ -1713,6 +1725,7 @@
           type === "step.failed" ||
           type === "proxy.error"
         ) {
+          this.currentAssistantId = null;
           this.sending = false;
           this.chatError = plainText(data.message) || "Eve could not complete this turn.";
           this.chatStatus = "Eve needs attention.";
@@ -1756,6 +1769,20 @@
       cleanSpeechText: function (raw) {
         var text = plainText(raw);
         if (!text) return "";
+        // Never read reasoning scratch aloud: the MANDATORY EXECUTION PROTOCOL makes the model
+        // write "<thought>Ask: … Have: … Next: …</thought>" before tool calls, and Qwen sometimes
+        // leaks its tool-call template as "<translation>{"name": …}</translation>". Both are
+        // scratch: complete blocks, and a block still streaming (no closing tag yet), are removed.
+        text = text.replace(/<(?:thought|thoughts|thinking|think|reasoning|translation)\b[^>]*>[\s\S]*?<\/(?:thought|thoughts|thinking|think|reasoning|translation)>/gi, " ");
+        text = text.replace(/<(?:thought|thoughts|thinking|think|reasoning|translation)\b[^>]*>[\s\S]*$/i, " ");
+        // A tag still streaming has no ">" yet (measured leak: the literal text "<thought").
+        text = text.replace(/<(?:thought|thoughts|thinking|think|reasoning|translation)?[^>]*$/i, " ");
+        // Qwen sometimes writes its tool-call template as prose instead of calling a tool —
+        // "Called wiki_read_section with object(title=magnetism, section=basics, year=2026)".
+        // Never read that aloud (mirrors frontend/eve_proxy.py _TOOL_CALL_AS_TEXT_RE).
+        text = text.replace(/^\s*(?:[-*>]\s*)?(?:called|invoking|invoke|call|requesting|request)\s+[a-z_][a-z0-9_]{2,}\s+(?:with|using)\s+(?:object\(|\{[^}]*\}|[a-z_]+\s*=).*$/gim, " ");
+        // Degenerate non-Latin prefixes (observed: Thai tokens before the answer) are not speech.
+        text = text.replace(/^[\s\u0e00-\u0e7f\u4e00-\u9fff\u3040-\u30ff\u0400-\u04ff\u0600-\u06ff\u0590-\u05ff]{3,}/, " ");
         // Light cleanup so Kokoro does not read markdown punctuation aloud.
         text = text.replace(/```[\s\S]*?```/g, " ");
         text = text.replace(/`([^`]+)`/g, "$1");
@@ -1804,12 +1831,17 @@
         if (!this.activeTools || !this.activeTools.voice_presence) return;
         var cleaned = this.cleanSpeechText(this.currentAssistantText());
         if (!cleaned) return;
-        var extracted = this.extractSpeechChunks(
-          cleaned,
-          this.voiceSpokenOffset || 0,
-          Boolean(finalize)
-        );
+        // Step N+1 replaces the streamed text (thought block → tool step → final answer), so a
+        // raw character offset into the old text starts the next clause mid-word — that is what
+        // made Eve speak fragments and stop after a few words. Restart the cursor whenever the
+        // text we consumed is no longer the prefix of the current text.
+        var offset = this.voiceSpokenOffset || 0;
+        if (offset > 0 && cleaned.slice(0, offset) !== (this.voiceSpokenText || "")) {
+          offset = 0;
+        }
+        var extracted = this.extractSpeechChunks(cleaned, offset, Boolean(finalize));
         this.voiceSpokenOffset = extracted.newOffset;
+        this.voiceSpokenText = cleaned.slice(0, extracted.newOffset);
         var workbench = this;
         (extracted.chunks || []).forEach(function (chunk) {
           if (chunk) workbench.voiceSpeakQueue.push(chunk);
@@ -1822,6 +1854,7 @@
         this.voiceSpeakQueue = [];
         this.voiceSpeakPumping = false;
         this.voiceSpokenOffset = 0;
+        this.voiceSpokenText = "";
         if (this.voiceAudio) {
           try {
             this.voiceAudio.pause();
@@ -2566,7 +2599,7 @@
               label: plainText(mode && mode.label) || plainText(mode && mode.id),
               description: plainText(mode && mode.description),
               model: plainText(mode && mode.model),
-              numCtx: Number(mode && mode.numCtx) || 8192,
+              numCtx: Number(mode && mode.numCtx) || 16384,
               temperature: Number(mode && mode.temperature) || 0,
             };
           }

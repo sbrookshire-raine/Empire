@@ -7,8 +7,17 @@ export const GLOBAL_CHAT_OPTIONS = {
   topP: 0.9,
 } as const;
 
-/** Protect 16 GB VRAM — every mode shares this context window. */
-export const SHARED_NUM_CTX = 8_192;
+/**
+ * Protect 16 GB VRAM — every mode shares this context window.
+ *
+ * 2026-09-23: raised 8192 → 16384. Measured on the live stack, Eve's own prompt
+ * (system instructions + routing ≈ 5.8k tokens, plus 32 tool schemas ≈ 5.3k tokens)
+ * is ~11k tokens, so an 8k window made Ollama truncate the prompt
+ * (`prompt_eval_count` 4098) and the MANDATORY EXECUTION PROTOCOL never reached the
+ * model. Requires the server default to match:
+ *   .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
+ */
+export const SHARED_NUM_CTX = 16_384;
 
 export type ChatModeId = "fast" | "deep" | "librarian";
 
@@ -28,8 +37,11 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
     label: "Fast Mode (14b)",
     description:
       "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
-    model: "qwen2.5:14b-instruct",
-    modelAliases: ["qwen2.5:14b"],
+    // EMPIRE-owned model: same weights, with num_ctx 16384 / num_predict 512 baked in, because
+    // Ollama's OpenAI-compat endpoint ignores per-request options (an uncapped degenerate reply
+    // once ran ~90 s). Rebuild with .\scripts\build-empire-ollama-models.ps1
+    model: "empire-fast:14b",
+    modelAliases: ["empire-fast", "qwen2.5:14b", "qwen2.5:14b-instruct"],
     numCtx: SHARED_NUM_CTX,
     temperature: 0.2,
   },
@@ -98,8 +110,15 @@ function resolveFastAbModel(defaultModel: string): string {
         b_model?: unknown;
       };
       const variant = String(parsed.variant || "a").toLowerCase();
-      if (variant === "b" && typeof parsed.b_model === "string" && parsed.b_model.trim()) {
-        return parsed.b_model.trim();
+      const bModel =
+        typeof parsed.b_model === "string" && parsed.b_model.trim() ? parsed.b_model.trim() : "";
+      if (variant === "b" && bModel) {
+        return bModel;
+      }
+      // Variant a: never keep an A/B alternate active just because it was stored earlier
+      // (otherwise switching back to a after a b run silently stays on the alternate).
+      if (bModel && defaultModel === bModel) {
+        return CHAT_MODES.fast.model;
       }
       break;
     } catch {
