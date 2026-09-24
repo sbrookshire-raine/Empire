@@ -8,14 +8,14 @@ import { runPythonModule } from "#lib/python-pipeline";
  */
 export default defineTool({
   description:
-    "Admit a light session skill for the current goal when resource_pulse headroom is OK (GitHub/Web/Container scout, etc.). Does not require Research Partner. If need_architect is true, ask the Architect — do not force GPU/Vision/Stem. Never writes Cognee.",
+              "Admit a light session skill for the current goal when resource_pulse headroom is OK (GitHub/Web/Container scout, etc.",
   inputSchema: z.object({
     category: z
       .string()
       .min(1)
       .describe("Toolbelt category to admit (e.g. github_scout, web_scout, container_scout)."),
-    reason: z.string().optional().describe("Why this skill is needed for the goal."),
-    ttl_min: z.number().int().min(5).max(120).optional().describe("Session TTL minutes."),
+    reason: z.string().optional(),
+    ttl_min: z.number().int().min(5).max(120).optional(),
   }),
   async execute({ category, reason, ttl_min }) {
     const args = ["admit", category];

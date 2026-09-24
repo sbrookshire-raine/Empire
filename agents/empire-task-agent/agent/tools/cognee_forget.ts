@@ -5,7 +5,7 @@ import { cogneeForget } from "#lib/cognee";
 
 export default defineTool({
   description:
-    "Remove a Cognee dataset from local graph memory. Destructive — requires approval.",
+              "Remove a Cognee dataset from local graph memory.",
   inputSchema: z.object({
     dataset: z
       .string()

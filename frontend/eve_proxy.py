@@ -447,8 +447,13 @@ _LEADING_NONLATIN_RE = re.compile(
     r"^[\s\u0e00-\u0e7f\u4e00-\u9fff\u3040-\u30ff\u0400-\u04ff\u0600-\u06ff\u0590-\u05ff]{3,}"
 )
 # Internal markers (chat digest, wiki evidence, pulse, NOW) are prompt scaffolding, not prose.
-# A model that echoes them into its reply must not expose them to the user.
-_INTERNAL_MARKER_RE = re.compile(r"\[\[EMPIRE_[A-Z0-9_]+\]\]")
+# A model that echoes them into its reply must not expose them to the user. The digest marker
+# contains spaces ("[[EMPIRE CHAT SUMMARY]]") — measured 2026-09-24, it reached the speaker — and the
+# digest body rides on the same line, so whole marker lines are dropped.
+_INTERNAL_MARKER_RE = re.compile(r"\[\[EMPIRE[ _][A-Z0-9_ ]+\]\]")
+# A marker at line start means the whole line is scaffolding (the digest body rides on it); a marker
+# mid-line is just noise to remove, so real text on that line survives.
+_INTERNAL_MARKER_LINE_RE = re.compile(r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\].*$", re.MULTILINE)
 # Bare call-expression leaks: the model sometimes renders the call it *wanted* to make as text —
 # measured 2026-09-24 on empire-fast:7b, whose entire reply was
 # `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` (and the speaker read it).
@@ -517,6 +522,7 @@ def sanitize_assistant_text(text: str) -> str:
     cleaned = strip_reasoning_blocks(text).strip()
     cleaned = _LEADING_NONLATIN_RE.sub("", cleaned).strip()
     if _INTERNAL_MARKER_RE.search(cleaned):
+        cleaned = _INTERNAL_MARKER_LINE_RE.sub("", cleaned)
         cleaned = _INTERNAL_MARKER_RE.sub("", cleaned).strip()
     # Drop tool-call scaffolding the model wrote as prose ("Called wiki_read_section with
     # object(title=...)") — it is never part of the answer and must not be spoken either.

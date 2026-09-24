@@ -1,85 +1,100 @@
-"""Prompt-budget ceiling (refactor plan R-01).
+r"""Prompt-budget ceiling (refactor plan R-01) + the R-03 reduction it enforces.
 
-The measured floor before the user speaks is **~11.1k of a 16,384 window**: always-on instructions
-(`eve_instructions.md` + `empire-routing.md`, composed by `agent/instructions.ts`) plus the enabled
-tool schemas. That leaves ~5k for the conversation and tool results — which is why a repeat-search
-loop or a fat evidence card used to break turns.
+The measured floor before the user speaks used to be **~5,677 tokens** on the chars/3.8 basis
+(instructions 3,897 + default-enabled tool schema prose 1,780). R-03 moved tool *detail* out of the
+hot prompt into `config/eve-capabilities/tool-docs/` (fetched with the `tool_docs` tool), taking it to
+**~4,486 tokens** (−21%). These ceilings encode that reduction, so growing the prompt back is a build
+failure rather than a silent slowdown.
 
-This test turns that measurement into an invariant: instruction growth and tool-surface growth now
-fail the build instead of showing up later as "the model ignores its rules".
-
-Numbers are deliberately explicit constants. When a change legitimately raises the floor, update
-them here in the same commit and record the new measurement (see docs/VOICE_PRESENCE.md).
+Run `.\scripts\measure-prompt-budget.py` for the full breakdown and `--baseline HEAD` for the delta.
 """
 
 from __future__ import annotations
 
-import re
 import unittest
-from pathlib import Path
 
 from frontend.ollama_chat_profiles import SHARED_NUM_CTX
+from pipeline import prompt_budget, tool_registry
+from pipeline.prompt_budget import tokens
 
-ROOT = Path(__file__).resolve().parents[1]
-# Exactly what instructions.ts loadSystemPrompt() always includes.
-INSTRUCTION_FILES = (
-    ROOT / "eve_instructions.md",
-    ROOT / "agents" / "empire-task-agent" / "agent" / "empire-routing.md",
-)
-# chars -> tokens heuristic used for the estimates in AGENTS.md / VOICE_PRESENCE.md.
-CHARS_PER_TOKEN = 3.8
-# Measured 2026-09-24 (AGENTS.md troubleshooting section), for the ~32 enabled tools.
-SCHEMA_BUDGET_TOKENS = 5_300
-SCHEMA_CEILING_TOKENS = 6_000
-INSTRUCTION_CEILING_TOKENS = 6_500
-# num_ctx minus the floor must leave real room for the conversation + tool results.
+# Measured 2026-09-24 after R-03 (see docs/REFACTOR_PLAN.md section 3).
+INSTRUCTION_CEILING_TOKENS = 3_700  # measured 3,435; was 3,897 before R-03
+DEFAULT_SCHEMA_CEILING_TOKENS = 850  # measured 695; was 1,780 before R-03
+FLOOR_CEILING_TOKENS = 4_400  # measured 4,130; was 5,677 before R-03
 MIN_CONVERSATION_HEADROOM = 4_096
-
-
-def _estimate_tokens(path: Path) -> int:
-    return int(len(path.read_text(encoding="utf-8")) / CHARS_PER_TOKEN)
+TOOLBELT_CATEGORY_CEILING = 30
 
 
 class PromptBudgetTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.data = prompt_budget.measure()
+
     def test_instruction_files_exist_and_are_sized_sanely(self) -> None:
-        total = 0
-        for path in INSTRUCTION_FILES:
+        for path in prompt_budget.INSTRUCTIONS:
             self.assertTrue(path.is_file(), f"instruction file missing: {path}")
-            tokens = _estimate_tokens(path)
-            self.assertGreater(tokens, 200, f"{path.name} looks truncated ({tokens} tokens)")
-            total += tokens
+            self.assertGreater(
+                tokens(len(path.read_text(encoding="utf-8"))), 200, f"{path.name} looks truncated"
+            )
+
+    def test_instruction_weight_under_ceiling(self) -> None:
         self.assertLessEqual(
-            total,
+            self.data["instruction_tokens"],
             INSTRUCTION_CEILING_TOKENS,
-            f"always-on instructions are ~{total} tokens (ceiling {INSTRUCTION_CEILING_TOKENS}); "
-            "move detail into a skill or a subsystem doc instead of growing the system prompt",
+            f"always-on instructions are ~{self.data['instruction_tokens']} tokens "
+            f"(ceiling {INSTRUCTION_CEILING_TOKENS}); move detail into a skill or a tool doc",
         )
 
-    def test_schema_budget_constant_is_honest(self) -> None:
-        self.assertLessEqual(SCHEMA_BUDGET_TOKENS, SCHEMA_CEILING_TOKENS)
+    def test_default_schema_weight_under_ceiling(self) -> None:
+        """R-03's measured reduction: the schemas of tools enabled by default carry cues, not prose."""
+
+        self.assertLessEqual(
+            self.data["default_schema_tokens"],
+            DEFAULT_SCHEMA_CEILING_TOKENS,
+            f"default-enabled schema prose is ~{self.data['default_schema_tokens']} tokens "
+            f"(ceiling {DEFAULT_SCHEMA_CEILING_TOKENS}); put detail in the tool doc, keep the cue",
+        )
 
     def test_floor_leaves_conversation_headroom(self) -> None:
-        instructions = sum(_estimate_tokens(path) for path in INSTRUCTION_FILES)
-        floor = instructions + SCHEMA_BUDGET_TOKENS
+        floor = self.data["floor_tokens"]
+        self.assertLessEqual(floor, FLOOR_CEILING_TOKENS)
         headroom = SHARED_NUM_CTX - floor
         self.assertGreaterEqual(
             headroom,
             MIN_CONVERSATION_HEADROOM,
             f"prompt floor ~{floor} of {SHARED_NUM_CTX} leaves only {headroom} tokens for the "
-            "conversation; retire tools or trim instructions (refactor plan R-03/R-01)",
+            "conversation; retire tools or trim instructions (refactor plan R-03)",
         )
 
     def test_enabled_tool_count_is_bounded(self) -> None:
-        """Toolbelt categories stay a curated list; the prompt cost scales with this number."""
-
-        toolbelt = ROOT / "agents" / "empire-task-agent" / "agent" / "lib" / "toolbelt.ts"
-        text = toolbelt.read_text(encoding="utf-8")
-        categories = re.findall(r'^\s*"([a-z_]+)",\s*$', text, flags=re.MULTILINE)
+        toolbelt = prompt_budget.ROOT / "agents" / "empire-task-agent" / "agent" / "lib" / "toolbelt.ts"
+        categories = [
+            line.strip().strip(',').strip('"')
+            for line in toolbelt.read_text(encoding="utf-8").splitlines()
+            if line.strip().startswith('"') and line.strip().endswith('",')
+        ]
         self.assertGreaterEqual(len(categories), 2, "toolbelt categories not parsed")
         self.assertLessEqual(
             len(categories),
-            30,
-            f"{len(categories)} Toolbelt categories — above 30 the surface needs triage (R-03)",
+            TOOLBELT_CATEGORY_CEILING,
+            f"{len(categories)} Toolbelt categories — above {TOOLBELT_CATEGORY_CEILING} the surface "
+            "needs triage (R-03)",
+        )
+
+    def test_every_default_enabled_tool_has_a_registry_doc(self) -> None:
+        """The R-03 trade: prose leaves the prompt only if the registry actually holds it."""
+
+        names = []
+        for path in prompt_budget.TOOLS.glob("*.ts"):
+            text = path.read_text(encoding="utf-8")
+            gated = "isCapabilityActive" in text or "isCategoryEnabled" in text
+            if not gated or '"wiki_local"' in text:
+                names.append(path.stem)
+        self.assertGreater(len(names), 30, "expected the default-enabled set to be substantial")
+        undocumented = tool_registry.missing(names)
+        self.assertEqual(
+            undocumented,
+            [],
+            f"these enabled tools have no documentation in {tool_registry.docs_dir()}: {undocumented}",
         )
 
 

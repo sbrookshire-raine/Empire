@@ -14,14 +14,10 @@ export default defineDynamic({
       isCapabilityActive("wiki_local") && !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Read a local Wikipedia markdown page by title (Title DNS). " +
-              "Optional section: cast, discography, filmography, charts, history, reception, plot, production. " +
-              "Use when the landing lead is too thin for the question; pass the self-contained title. " +
-              "If [[EMPIRE_WIKI_LOOKUP]] / [[EMPIRE_WIKI_EXTRACT]] evidence is already in the turn " +
-              "(legacy middleware), answer from that instead of calling this. Does NOT write Cognee.",
+              "Read a local Wikipedia markdown page by title (Title DNS).",
             inputSchema: z.object({
-              title: z.string().min(1).describe("Exact encyclopedia title."),
-              year: z.string().optional().describe("Snapshot year (default 2026)."),
+              title: z.string().min(1),
+              year: z.string().optional(),
               section: z
                 .string()
                 .optional()
@@ -31,7 +27,7 @@ export default defineDynamic({
               question: z
                 .string()
                 .optional()
-                .describe("User question for section preference when section omitted."),
+                ,
             }),
             async execute({ title, year, section, question }) {
               if (isWikiLookupLocked()) {

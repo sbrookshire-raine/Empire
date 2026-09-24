@@ -14,22 +14,16 @@ export default defineDynamic({
       isCapabilityActive("wiki_local") && !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Extract structured facts from a local Wikipedia page (Title DNS). " +
-              "Returns fields, tables, and lists — not a lead dump. " +
-              "Use for dates, numbers, specs, table rows, lists; pass a self-contained subject " +
-              "(resolve pronouns yourself first). " +
-              "If EXTRACT is empty, refuse — do not invent. Does NOT write Cognee. " +
-              "If [[EMPIRE_WIKI_EXTRACT]] or [[EMPIRE_WIKI_LOOKUP]] is already in the turn " +
-              "(legacy middleware), answer from that instead of calling this.",
+              "Extract structured facts from a local Wikipedia page (Title DNS).",
             inputSchema: z.object({
-              subject: z.string().min(1).describe("Encyclopedia title or subject."),
-              year: z.string().optional().describe("Snapshot year (default 2026)."),
+              subject: z.string().min(1),
+              year: z.string().optional(),
               need_hint: z
                 .string()
                 .optional()
                 .describe("Optional hint to rank fields/tables (e.g. release date, population)."),
-              section: z.string().optional().describe("Optional H2 section name."),
-              question: z.string().optional().describe("Full user question for ranking."),
+              section: z.string().optional(),
+              question: z.string().optional(),
             }),
             async execute({ subject, year, need_hint, section, question }) {
               if (isWikiLookupLocked()) {

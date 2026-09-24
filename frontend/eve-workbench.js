@@ -1789,6 +1789,11 @@
         // Bare reasoning-protocol scratch lines (no <thought> wrapper): measured live —
         // the speaker received "Ask:howdomagnetswork." while the visible reply was clean.
         text = text.replace(/^[ \t>*\-]*(?:ask|have|next|plan|step|thought|reasoning)\s*:.*$/gim, " ");
+        // Prompt scaffolding markers that must never be spoken: [[EMPIRE_…]] and the chat digest
+        // "[[EMPIRE CHAT SUMMARY]]" (measured live 2026-09-24 — spaces included); the digest body
+        // rides on the same line, so the whole line goes.
+        text = text.replace(/^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]+\]\].*$/gim, " ");
+        text = text.replace(/\[\[EMPIRE[ _][A-Z0-9_ ]+\]\]/g, " ");
         // A bare tool call rendered as text: measured live on empire-fast:7b, whose whole reply was
         // `wiki_read_section("magnetism", section="magnetic_fields_and_theory")` — and it was spoken.
         // Namespace-restricted so code the user discusses (`print("hi")`) is untouched.

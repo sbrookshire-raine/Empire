@@ -4,10 +4,10 @@ import { runPythonModule } from "#lib/python-pipeline";
 
 export default defineTool({
   description:
-    "Search the local EMPIRE capability catalog for tools by capability, description, category, or name. Read-only; use before claiming a local tool is unavailable.",
+              "Search the local EMPIRE capability catalog for tools by capability, description, category, or name.",
   inputSchema: z.object({
-    query: z.string().min(1).describe("Capability or tool search, for example minimax or decision making."),
-    limit: z.number().int().min(1).max(20).optional().describe("Maximum catalog results."),
+    query: z.string().min(1),
+    limit: z.number().int().min(1).max(20).optional(),
   }),
   async execute({ query, limit }) {
     const args = [query];

@@ -10,7 +10,7 @@ export default defineTool({
       .string()
       .optional()
       .default("eve_memory")
-      .describe("Dataset to improve, usually eve_memory or primitives_test"),
+      ,
   }),
   async execute({ dataset }) {
     const result = await cogneeImprove(dataset);

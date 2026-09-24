@@ -10,12 +10,11 @@ export default defineDynamic({
       isCapabilityActive("wiki_local")
         ? defineTool({
             description:
-              "Save a short bridging fact to the Wikipedia research scratchpad for multi-hop work. " +
-              "Use between hops (retain facts, drop raw markdown). Does NOT write Cognee.",
+              "Save a short bridging fact to the Wikipedia research scratchpad for multi-hop work.",
             inputSchema: z.object({
-              text: z.string().min(1).describe("Bridging fact to retain."),
-              title: z.string().optional().describe("Source page title."),
-              session_id: z.string().optional().describe("Chat session id if known."),
+              text: z.string().min(1),
+              title: z.string().optional(),
+              session_id: z.string().optional(),
             }),
             async execute({ text, title, session_id }) {
               const args = ["upsert", text];

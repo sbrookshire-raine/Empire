@@ -14,16 +14,11 @@ export default defineDynamic({
       isCapabilityActive("wiki_local") && !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Resolve whether a Wikipedia title exists in the local Title DNS phone book. " +
-              "Pass a self-contained title — resolve pronouns/context from the conversation first. " +
-              "Returns exact/alias/ambiguous/missing. Does NOT extract page content. " +
-              "If the turn already carries [[EMPIRE_WIKI_LOOKUP]] / [[EMPIRE_WIKI_EXTRACT]] " +
-              "evidence (legacy middleware), answer from it instead of calling this. " +
-              "Does NOT write Cognee.",
+              "Resolve whether a Wikipedia title exists in the local Title DNS phone book.",
             inputSchema: z.object({
-              subject: z.string().min(1).describe("Title or subject to resolve."),
-              year: z.string().optional().describe("Snapshot year (default 2026)."),
-              question: z.string().optional().describe("User question for disambiguation hints."),
+              subject: z.string().min(1),
+              year: z.string().optional(),
+              question: z.string().optional(),
             }),
             async execute({ subject, year, question }) {
               if (isWikiLookupLocked()) {

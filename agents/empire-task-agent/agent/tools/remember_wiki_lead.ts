@@ -9,13 +9,11 @@ export default defineDynamic({
       !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Explicitly remember one Wikipedia page lead into Cognee (eve_memory). " +
-              "Only when the Architect asks to save/keep/remember a lookup. " +
-              "Title DNS + lead only — never the full article, never automatic, never bulk.",
+              "Explicitly remember one Wikipedia page lead into Cognee (eve_memory).",
             inputSchema: z.object({
-              subject: z.string().min(1).describe("Encyclopedia title or the subject just looked up."),
-              year: z.string().optional().describe("Snapshot year (default 2026)."),
-              dataset: z.string().optional().describe("Cognee dataset (default eve_memory)."),
+              subject: z.string().min(1),
+              year: z.string().optional(),
+              dataset: z.string().optional(),
             }),
             async execute({ subject, year, dataset }) {
               const args = ["remember", subject];

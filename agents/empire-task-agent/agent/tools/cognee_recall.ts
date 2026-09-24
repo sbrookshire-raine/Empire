@@ -10,7 +10,7 @@ export default defineTool({
     dataset: z
       .string()
       .optional()
-      .describe("eve_core (fast recall), eve_memory (archive), primitives_test (curated)"),
+      ,
   }),
   async execute({ query, dataset }) {
     const result = await cogneeRecall(query, dataset);

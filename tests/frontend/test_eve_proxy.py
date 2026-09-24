@@ -347,6 +347,19 @@ class EveProxyProjectionTests(unittest.TestCase):
         text = "Ask me anything about the archive."
         self.assertEqual(eve_proxy.sanitize_assistant_text(text), text)
 
+    def test_sanitize_assistant_text_strips_internal_marker_lines(self) -> None:
+        """Measured live 2026-09-24: the speaker received the chat digest marker and its body."""
+
+        leaked = "[[EMPIRE CHAT SUMMARY]] Prior conversation (rolling): User: hi\nReal answer."
+        self.assertEqual(eve_proxy.sanitize_assistant_text(leaked), "Real answer.")
+        # A marker at line start means the whole line is scaffolding (the digest body rides on it).
+        self.assertEqual(eve_proxy.sanitize_assistant_text("[[EMPIRE_WIKI_LOOKUP]] x"), "")
+        # A marker mid-line is just noise: real text on that line survives.
+        cleaned = eve_proxy.sanitize_assistant_text("Answer [[EMPIRE_WIKI_LOOKUP]] here")
+        self.assertNotIn("EMPIRE", cleaned)
+        self.assertIn("Answer", cleaned)
+        self.assertIn("here", cleaned)
+
     def test_sanitize_assistant_text_strips_bare_tool_call_expression(self) -> None:
         """Measured live on empire-fast:7b: the whole reply was the call it never made."""
 

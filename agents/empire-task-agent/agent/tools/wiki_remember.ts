@@ -10,18 +10,16 @@ export default defineDynamic({
       !isWikiLookupLocked()
         ? defineTool({
             description:
-              "Remember a successful Wikipedia EXTRACT (fields/tables/lists) into Cognee. " +
-              "Only when the Architect explicitly asks to save/keep/remember. " +
-              "Rejects empty extracts. Never bulk-ingests wiki_md.",
+              "Remember a successful Wikipedia EXTRACT (fields/tables/lists) into Cognee.",
             inputSchema: z.object({
-              subject: z.string().min(1).describe("Encyclopedia title just extracted."),
-              year: z.string().optional().describe("Snapshot year (default 2026)."),
-              dataset: z.string().optional().describe("Cognee dataset (default eve_memory)."),
-              need_hint: z.string().optional().describe("Same hint used for the extract."),
+              subject: z.string().min(1),
+              year: z.string().optional(),
+              dataset: z.string().optional(),
+              need_hint: z.string().optional(),
               extract_id: z
                 .string()
                 .optional()
-                .describe("Optional extract_id from a prior wiki_extract ok result."),
+                ,
             }),
             async execute({ subject, year, dataset, need_hint, extract_id }) {
               const args = ["remember", subject];

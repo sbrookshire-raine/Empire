@@ -29,11 +29,15 @@ The **answer path** is the refactor target, not the whole repo:
   `pipeline/`/`frontend/`/`mcp/`; scripts verified one by one; resource map for PocketBase, Cognee, the
   GUI, MCP, wiki, Ollama, Speaches, capability arms; housekeeping rules.
 
-Numbers that matter: **~11.1k of 16,384 prompt tokens are spent before you speak** (always-on
-instructions ~5.8k + enabled tool schemas ~5.3k), leaving ~5k for the conversation — asserted by
-`tests/test_prompt_budget.py`. **86 agent tools (29 always on) + 84 MCP tools**. Fast mode is the
-owned model **`empire-fast:14b`**; the A/B alternate is `empire-fast:7b` (3× faster, wrong grounding —
-see the A/B verdict in [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md)).
+Numbers that matter: the prompt floor before the user speaks is **~4,130 tokens** on the chars/3.8
+basis (always-on instructions ~3,435 + default-enabled tool schema prose ~695) — down from 5,677 after
+R-03 moved tool documentation into `config/eve-capabilities/tool-docs/` (fetched by the `tool_docs`
+tool; reproduce with `.\\scripts\\measure-prompt-budget.py --baseline HEAD`). Ollama's `prompt_tokens`
+on a real turn also carries framework scaffolding + the JSON Schema envelope, so it reads higher; the
+*delta* is the same text removed. **87 agent tools** (30 always registered) + 84 MCP tools; ceilings
+are asserted by `tests/test_prompt_budget.py`. Fast mode is the owned model **`empire-fast:14b`**
+(locked; `empire-fast:7b` is not suitable for multi-card tool reasoning — see E-16 and the A/B verdict
+in [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md)).
 
 Commands that prove the stack is healthy: `.\scripts\mechanic-green.ps1` (gate) ·
 `.\scripts\audit-orphans.py` (junk audit) · `scripts/ab-fast-toolcalling.py` (model gate).

@@ -139,6 +139,34 @@ a calibrated prompt; reuse it rather than inventing a second tool.
 enabled/disabled in one place (`toolbelt.ts`) and tests prove a disabled group's tools are not
 registered.
 
+### R-03 shipped 2026-09-24 — documentation moved out of the hot prompt
+
+**The rule that made it safe:** the schema keeps what the model needs to *choose* (name, one-line cue,
+parameter **names**), and everything needed to *execute* (parameter semantics, gotchas) lives in
+`config/eve-capabilities/tool-docs/<tool>.md`, fetched by the always-registered **`tool_docs`** tool.
+Nothing was retyped: `scripts/build-tool-docs.py` harvested the docs from the schemas *before* the trim,
+and `tests/test_prompt_budget.py` fails if any enabled tool lacks a doc.
+
+| Component (chars ÷ 3.8 basis) | Before | After | Δ |
+|---|---|---|---|
+| Always-on instructions (`eve_instructions.md` + `empire-routing.md`) | 3,897 | 3,435 | −462 |
+| Default-enabled tool schema prose (30 always-on + 8 `wiki_local`) | 1,780 | 695 | −1,085 |
+| **Floor before the user speaks** | **5,677** | **4,130** | **−1,547 (−27%)** |
+
+Reproduce with `.\scripts\measure-prompt-budget.py` (add `--baseline HEAD` for the delta); the logic
+is shared with the test via `pipeline/prompt_budget.py`. The chars/3.8 basis is a *consistent* proxy —
+Ollama's `prompt_tokens` on a real turn also includes framework scaffolding and the JSON Schema
+envelope, so its absolute value sits higher while the delta is the same text removed.
+
+**Verified live** (fresh sessions, `empire-fast:14b`): the canonical White Stripes question still
+answers from the wiki lead and passes the browser hygiene gate; *"what tools do you have for searching
+my files?"* still routes to `workspace_search`/`query_data`; and *"what parameters does wiki_extract
+take?"* now shows **`tool.requested ['tool_docs']` (62 ms)** in the trace — the registry is consulted
+exactly when the schema no longer carries the syntax, which is requirement 2 of R-03.
+
+**Revised exit criteria (met):** always-on *count* stays 30 (the registry lookup tool is one of them);
+default schema prose ≤ 850 tokens (measured 695); floor ≤ 4,400 (measured 4,130); every tool has a doc.
+
 ---
 
 ## 4. Model contract (make "a better brain" safe)
