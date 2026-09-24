@@ -556,12 +556,54 @@ _LEADING_STAGE_DIRECTION_RE = re.compile(
 )
 
 
+# Reasoning wrapped in a JSON envelope. Measured 2026-09-24: the model replied
+# `{"thought": "Ask: … Have: … Next: …"}` followed by the real answer, and the envelope reached the
+# bubble — the sanitizer only knew `<thought>` tags and bare scratch lines. Only a reply that
+# *begins* with such an object is treated this way, and only when the object carries a reasoning key
+# and no content key, so JSON the user is actually discussing is untouched.
+_REASONING_KEYS = frozenset(
+    {"thought", "thoughts", "thinking", "reasoning", "scratch", "analysis", "chain_of_thought"}
+)
+_CONTENT_KEYS = ("answer", "message", "response", "reply", "text", "final", "output")
+
+
+def _strip_reasoning_json_envelope(text: str) -> str:
+    """Drop a leading reasoning-only JSON object, keeping the prose after it."""
+
+    stripped = text.lstrip()
+    if not stripped.startswith("{"):
+        return text
+    try:
+        parsed, end = json.JSONDecoder().raw_decode(stripped)
+    except ValueError:
+        return text
+    if not isinstance(parsed, dict) or not parsed:
+        return text
+    keys = {str(key).casefold() for key in parsed}
+    if not (keys & _REASONING_KEYS):
+        return text
+    for key in _CONTENT_KEYS:
+        value = parsed.get(key)
+        if isinstance(value, str) and value.strip():
+            rest = stripped[end:].strip()
+            return f"{value.strip()}\n\n{rest}".strip() if rest else value.strip()
+    if keys - _REASONING_KEYS:
+        return text  # mixed object: not a pure protocol envelope
+    return stripped[end:].lstrip()
+
+
 def sanitize_assistant_text(text: str) -> str:
     """Strip leaked reasoning / meta-commentary from assistant-visible text."""
 
     if not text:
         return text
     cleaned = strip_reasoning_blocks(text).strip()
+    envelope_free = _strip_reasoning_json_envelope(cleaned)
+    if envelope_free != cleaned:
+        cleaned = envelope_free.strip()
+        if not cleaned:
+            # The whole reply was the protocol in a JSON envelope — a failed turn, not an answer.
+            return EMPTY_AFTER_CLEAN_REPLY
     cleaned = _LEADING_NONLATIN_RE.sub("", cleaned).strip()
     if _INTERNAL_MARKER_RE.search(cleaned):
         cleaned = _drop_scaffolding_blocks(cleaned)

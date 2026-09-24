@@ -239,6 +239,41 @@ class EveProxyProjectionTests(unittest.TestCase):
             "an echoed injected card must not reach the bubble, whatever role it claims",
         )
 
+    def test_reasoning_json_envelope_is_stripped_but_the_answer_kept(self) -> None:
+        """Measured 2026-09-24: the model replied with `{"thought": "Ask: … Next: …"}` and the real
+        answer after it — the envelope rendered in the bubble because only `<thought>` tags and bare
+        scratch lines were known."""
+
+        leaked = (
+            '{\n  "thought": "Ask: does the pencil eraser idea apply to code review. '
+            'Have: the ledger mentions signal-to-noise filtering. Next: infer the connection."\n}\n\n\n'
+            "Yes — an eraser is iterative reversibility: remove what you deposited, keep the surface."
+        )
+        cleaned = eve_proxy.sanitize_assistant_text(leaked)
+        self.assertNotIn('"thought"', cleaned)
+        self.assertIn("iterative reversibility", cleaned)
+
+    def test_a_reply_that_is_only_the_envelope_fails_honestly(self) -> None:
+        only = '{"thought": "Ask: x. Have: nothing. Next: answer anyway."}'
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(only),
+            eve_proxy.EMPTY_AFTER_CLEAN_REPLY,
+        )
+
+    def test_an_envelope_carrying_the_answer_returns_that_answer(self) -> None:
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text('{"thought": "plan", "answer": "Four."}'),
+            "Four.",
+        )
+
+    def test_ordinary_json_the_user_discusses_is_untouched(self) -> None:
+        for message in (
+            '{"name": "value", "count": 3} is the payload shape you want.',
+            'Here the tool returns {"thought": "x"} inside a larger document.',
+        ):
+            with self.subTest(message=message):
+                self.assertEqual(eve_proxy.sanitize_assistant_text(message), message)
+
     def test_sanitize_assistant_text_strips_think_blocks(self) -> None:
         leaked = "<think>Planning tools.</think>Yes — ready when you are."
         self.assertEqual(
