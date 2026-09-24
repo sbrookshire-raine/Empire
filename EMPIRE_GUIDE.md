@@ -19,6 +19,27 @@
 
 ---
 
+## Current state (2026-09-24, branch `revision-refactor`)
+
+The **answer path** is the refactor target, not the whole repo:
+
+- [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) — diagnosis, the `intent → resolution → evidence →
+  answer` contract, tool triage, model-promotion gates, phases **R-01..R-05**.
+- [`docs/REFACTOR_EVAL.md`](docs/REFACTOR_EVAL.md) — what is actually here: zero orphan modules in
+  `pipeline/`/`frontend/`/`mcp/`; scripts verified one by one; resource map for PocketBase, Cognee, the
+  GUI, MCP, wiki, Ollama, Speaches, capability arms; housekeeping rules.
+
+Numbers that matter: **~11.1k of 16,384 prompt tokens are spent before you speak** (always-on
+instructions ~5.8k + enabled tool schemas ~5.3k), leaving ~5k for the conversation — asserted by
+`tests/test_prompt_budget.py`. **86 agent tools (29 always on) + 84 MCP tools**. Fast mode is the
+owned model **`empire-fast:14b`**; the A/B alternate is `empire-fast:7b` (3× faster, wrong grounding —
+see the A/B verdict in [`docs/VOICE_PRESENCE.md`](docs/VOICE_PRESENCE.md)).
+
+Commands that prove the stack is healthy: `.\scripts\mechanic-green.ps1` (gate) ·
+`.\scripts\audit-orphans.py` (junk audit) · `scripts/ab-fast-toolcalling.py` (model gate).
+
+---
+
 ## 1. What this project is
 
 EMPIRE is a **meter-free, zero-cloud, local AI workbench** on Windows 11. It is not a SaaS product and not a React app.

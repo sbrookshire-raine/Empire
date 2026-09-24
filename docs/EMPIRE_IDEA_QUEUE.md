@@ -59,11 +59,15 @@ Do **not** forge: mega FastMCP gateway rewrite, Postgres-as-memory-authority, de
 
 The structural plan lives in [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md) — diagnosis (measured), the
 answer-path spine contract, tool-surface triage, model-promotion gates, non-goals, phased order.
-Rows here are the actionable phases; keep their status honest the same way the `E-*` rows are kept.
+The **evaluation** that backs it (what is actually here, what was leftover junk, the resource map for
+PocketBase / Cognee / GUI / MCP / wiki / Ollama / Speaches / capability arms, and the housekeeping
+rules) lives in [`REFACTOR_EVAL.md`](REFACTOR_EVAL.md). Re-run `.\scripts\audit-orphans.py` before
+adding more scripts. Rows here are the actionable phases; keep their status honest the same way the
+`E-*` rows are kept.
 
 | # | Phase | Status | Notes |
 |---|-------|--------|-------|
-| R-01 | **Phase 0 — Freeze and measure** | `ready` | Add the prompt-floor **ceiling test** (reuse `scripts/ab-fast-toolcalling.py`'s `prompt_tokens` measurement). Measured floor: **~11.1k of 16,384** — always-on instructions (`eve_instructions.md` + `empire-routing.md`, per `instructions.ts`) ≈5.8k + enabled tool schemas ≈5.3k; skills (33) are loaded on demand, which is *why* the floor holds. Assert the floor plus a budget for tool results. Record the spine invariants in the subsystem pages. Exit: the real number is asserted by a test |
+| R-01 | **Phase 0 — Freeze and measure** | `done` | Shipped 2026-09-24: `tests/test_prompt_budget.py` asserts the measured floor (**~11.1k of 16,384** — always-on instructions ~5.8k + enabled schemas ~5.3k), requires **≥4,096 tokens of conversation headroom**, and caps Toolbelt categories at 30; `tests/frontend/test_config_parity.py` kills the Python↔TS↔Modelfile drift class; `scripts/audit-orphans.py` is the re-runnable junk audit. | Evidence and cleanup record: [`REFACTOR_EVAL.md`](REFACTOR_EVAL.md) |
 | R-02 | **Phase 1 — Resolution semantics (load-bearing)** | `ready` | Make **ambiguity a first-class resolver outcome** with candidates instead of silently returning the article-prefixed entity. This is the fix for **E-13** and the first test of whether the spine removes the need for a bigger brain. Exit: `How do magnets work?` / `magnets` resolve correctly *or* return `ambiguous`; the browser A/B shows a **small model** handling the disambiguation case |
 | R-03 | **Phase 2 — Tool surface triage** | `idea` | 86 agent tools (57 Toolbelt-gated, **29 always on**) + 84 MCP tools + 25 categories → Core ≤ 15 / intent groups (≤ 3 active) / archive (90-day no-call). Use CLARITY's buckets; no new taxonomy. Exit: schemas ≤ ~3k tokens, floor ≤ ~9k, test proves a disabled group is unregistered |
 | R-04 | **Phase 3 — Docs consolidation** | `idea` | Subsystem page = guarantee + verifying command; archive narrative. Extend [`EMPIRE_CLARITY.md`](EMPIRE_CLARITY.md) with the per-subsystem sandbox-vs-product boundary. Exit: L4's three drifts cannot recur undetected |
