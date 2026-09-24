@@ -133,6 +133,21 @@ DEFAULT_COMPARE_TOP_K = int(os.environ.get("EMPIRE_WIKI_COMPARE_TOP_K", "4"))
 DEFAULT_COMPARE_YEARS = ("2017", "2021", "2026")
 ALLOWED_SNAPSHOT_YEARS = frozenset(DEFAULT_COMPARE_YEARS)
 
+# The miss payload is the one place the retry rule always reaches the model: a skill only applies
+# when it is loaded, but this text rides back with every failed lookup. Measured 2026-09-24: the old
+# wording ("Tell the user that clearly") produced exactly that — Eve reported "the local archive
+# doesn't have a page on the rules of juggling", then answered from training memory, while
+# `Juggling` and `Drum kit` were in the index all along. Title DNS is a phone book, so a
+# question-shaped query always misses; ask for the retry before the miss is announced.
+TITLE_DNS_MISS_HINT = (
+    "Title DNS found no page for this query in the local Wikipedia archive. "
+    "It is a phone book of exact titles, so a question-shaped query always misses: "
+    "retry ONCE with the bare subject (e.g. \"Drum kit\", not \"how to play the drums\"; "
+    "\"Juggling\", not \"the rules of juggling\") before you tell the user the archive has "
+    "nothing. Do NOT invent cast or plot. Do NOT suggest web search unless Web Scout is "
+    "enabled. Do NOT suggest comparing archive years unless they asked."
+)
+
 
 def default_snapshot_year() -> str:
     """Primary archive for everyday lookup (override: EMPIRE_WIKI_DEFAULT_YEAR)."""
@@ -1025,12 +1040,7 @@ def search(
     if not weaviate_fallback:
         return {
             "ok": False,
-            "error": (
-                "Title DNS found no page for this query in the local Wikipedia archive. "
-                "Tell the user that clearly. Do NOT invent cast or plot. "
-                "Do NOT suggest web search unless Web Scout is enabled. "
-                "Do NOT suggest comparing archive years unless they asked."
-            ),
+            "error": TITLE_DNS_MISS_HINT,
             "paths": [],
             "titles": [],
             "source": "title_dns",
@@ -1040,12 +1050,7 @@ def search(
     if not ready:
         return {
             "ok": False,
-            "error": (
-                "Title DNS found no page for this query in the local Wikipedia archive. "
-                "Tell the user that clearly. Do NOT invent cast or plot. "
-                "Do NOT suggest web search unless Web Scout is enabled. "
-                "Do NOT suggest comparing archive years unless they asked."
-            ),
+            "error": TITLE_DNS_MISS_HINT,
             "paths": [],
             "titles": [],
         }

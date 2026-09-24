@@ -467,9 +467,26 @@ _INTERNAL_BLOCK_RE = re.compile(
 _INTERNAL_MARKER_END_RE = re.compile(r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]*END\]\][^\n]*$", re.MULTILINE)
 
 
+# The companion payload continues *after* `[[EMPIRE_NOW_END]]` with its instruction tail — the ROLE
+# line, "For greetings: …", "Do not mention these markers…" — and then the "User message:" header.
+# Measured 2026-09-24: on a how-to question the model echoed the payload, and 499 chars of that tail
+# survived the marker..END rule and reached the bubble. Those lines are never prose, and in an echoed
+# reply everything after them is the user's own message, so the reply is truncated from the first tail
+# line. Only applied when an internal marker is present, so an answer that legitimately quotes a line
+# like "ROLE: backend engineer" is untouched.
+_COMPANION_TAIL_RE = re.compile(
+    r"^[ \t]*(?:ROLE:[^\n]*|For greetings:[^\n]*|Do not mention these markers[^\n]*|User message:)[ \t]*$",
+    re.MULTILINE,
+)
+
+
 def _drop_scaffolding_blocks(text: str) -> str:
     """Remove injected prompt blocks: marker..END when present, else marker + bounded tail."""
 
+    if _INTERNAL_MARKER_RE.search(text):
+        tail_match = _COMPANION_TAIL_RE.search(text)
+        if tail_match:
+            text = text[: tail_match.start()]
     end_match = _INTERNAL_MARKER_END_RE.search(text)
     if end_match:
         start_match = _INTERNAL_MARKER_LINE_RE.search(text)

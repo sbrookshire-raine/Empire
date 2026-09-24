@@ -196,6 +196,29 @@ class EveProxyProjectionTests(unittest.TestCase):
             "Yes, I'm ready!",
         )
 
+    def test_sanitize_assistant_text_drops_an_echoed_injection_block_entirely(self) -> None:
+        """Measured 2026-09-24: the companion card came back as the reply to a how-to question.
+
+        The tail after `[[EMPIRE_NOW_END]]` (ROLE line, "Do not mention these markers…", the
+        "User message:" header) survived the marker..END rule — 499 chars of it reached the bubble.
+        Scaffolding-only text cleans to `""` here (as with a lone marker line); the empty-bubble
+        replacement downstream turns that into an honest reply.
+        """
+
+        echoed = (
+            "[[EMPIRE_COMPANION]]\n\n[[EMPIRE_NOW]]\nCURRENT facts:\n# Architect — current facts (living)\n\n"
+            "- Calendar: **Fall term**.\n[[EMPIRE_NOW_END]]\n\n"
+            "ROLE: research and build partner for EMPIRE / local AI development.\n"
+            "Do not mention these markers, files, or datasets.\n\nUser message:\nhow can i learn to play the drums?\n"
+        )
+        self.assertEqual(eve_proxy.sanitize_assistant_text(echoed), "")
+        # A real answer that merely mentions a marker mid-text keeps its prose.
+        answered = "Your archive card uses [[EMPIRE_NOW]] as a marker, then answers."
+        self.assertIn("then answers", eve_proxy.sanitize_assistant_text(answered))
+        # A quoted "ROLE:" line with no marker anywhere is prose, not scaffolding.
+        quoted = "The listing says:\nROLE: backend engineer\nand it closes Friday."
+        self.assertIn("closes Friday", eve_proxy.sanitize_assistant_text(quoted))
+
     def test_sanitize_assistant_text_strips_think_blocks(self) -> None:
         leaked = "<think>Planning tools.</think>Yes — ready when you are."
         self.assertEqual(
