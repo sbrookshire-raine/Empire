@@ -36,8 +36,8 @@ class OllamaChatProfileTests(unittest.TestCase):
         # Must match SHARED_NUM_CTX in agents/empire-task-agent/agent/lib/ollama-config.ts and the
         # baked num_ctx in config/ollama/Modelfile.* (AGENTS.md: they must not drift).
         for mode in CHAT_MODES.values():
-            self.assertEqual(mode["num_ctx"], 16_384)
-        self.assertEqual(SHARED_NUM_CTX, 16_384)
+            self.assertEqual(mode["num_ctx"], 24_576)
+        self.assertEqual(SHARED_NUM_CTX, 24_576)
 
     def test_family_fallback_is_deterministic(self) -> None:
         """Regression: the family fallback iterated an unordered set, so Fast could resolve to

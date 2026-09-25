@@ -32,7 +32,7 @@ per-request `options` (E-02). That is why the probe posts to `/api/chat`.
 
 Read that last row twice: **a 1.5× larger context now costs 0.6 GB *less* VRAM than the current 16k
 window with stock KV**, at the same speed. Applied via
-`.\\scripts\\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384 -KvCacheType q8_0 -FlashAttention`
+`.\\scripts\\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576 -KvCacheType q8_0 -FlashAttention`
 (one slot keeps the full context per request). **Revert is the same script without the two flags.**
 
 Quality gate: `scripts/ab-fast-toolcalling.py --models empire-fast:14b` passes **before and after**

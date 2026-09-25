@@ -118,10 +118,11 @@ $servePid = Get-OllamaServePid
 if ($servePid -gt 0 -and (Test-OllamaReady)) {
     $live = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_NUM_PARALLEL"
     $liveKv = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_KV_CACHE_TYPE"
+    $liveCtx = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_CONTEXT_LENGTH"
     $liveFa = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_FLASH_ATTENTION"
     $wantKv = if ($KvCacheType) { $KvCacheType } else { "" }
     $wantFa = if ($FlashAttention) { "1" } else { "" }
-    if ($live -eq "$NumParallel" -and "$liveKv" -eq "$wantKv" -and "$liveFa" -eq "$wantFa") {
+    if ($live -eq "$NumParallel" -and "$liveCtx" -eq "$ContextLength" -and "$liveKv" -eq "$wantKv" -and "$liveFa" -eq "$wantFa") {
         Write-Host ("ollama serve PID {0} already has OLLAMA_NUM_PARALLEL={1} KV={2} FA={3} - skip restart" -f $servePid, $live, $liveKv, $liveFa)
         Keep-NomicWarm
         Write-Host ("Ollama ready on :11434 (OLLAMA_NUM_PARALLEL={0}; unchanged)" -f $NumParallel)

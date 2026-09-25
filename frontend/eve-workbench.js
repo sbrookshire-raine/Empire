@@ -50,7 +50,7 @@
       description:
         "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
       model: "empire-fast:14b",
-      numCtx: 16384,
+      numCtx: 24576,
       temperature: 0.2,
     },
     {
@@ -59,7 +59,7 @@
       description:
         "Architect — 27B GSQ-RCO (~12 GB). Unloads Fast 14B. Falls back to qwen3:14b if not installed.",
       model: "logicbeat/qwen3.8-27B_GSQ_RCO:latest",
-      numCtx: 16384,
+      numCtx: 24576,
       temperature: 0.7,
     },
     {
@@ -68,7 +68,7 @@
       description:
         "Mass synthesis — cross-reference many flattened files and long memory snippets.",
       model: "command-r:35b",
-      numCtx: 16384,
+      numCtx: 24576,
       temperature: 0.4,
     },
   ];
@@ -2707,7 +2707,7 @@
               label: plainText(mode && mode.label) || plainText(mode && mode.id),
               description: plainText(mode && mode.description),
               model: plainText(mode && mode.model),
-              numCtx: Number(mode && mode.numCtx) || 16384,
+              numCtx: Number(mode && mode.numCtx) || 24576,
               temperature: Number(mode && mode.temperature) || 0,
             };
           }

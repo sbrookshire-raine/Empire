@@ -39,11 +39,11 @@ Two facts make or break this on a 14B model:
    `prompt_eval_count=4098` on an 8192 window, i.e. more than half the prompt (including the
    protocol) was silently dropped. Fix:
    ```powershell
-   .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
+   .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576
    ```
    and the agent declares the same window (`SHARED_NUM_CTX` in
    `agents/empire-task-agent/agent/lib/ollama-config.ts`). Verify with
-   `curl http://127.0.0.1:11434/api/ps` → `context_length: 16384`.
+   `curl http://127.0.0.1:11434/api/ps` → `context_length: 24576`.
 2. **Continuation turns carry no history.** Eve's own `POST /session/{id}` sends the system
    prompt + the new user line only. Cross-turn context ("that page") comes from the
    Workbench's `[[EMPIRE_CHAT_SUMMARY]]` block, which is why the follow-up hop must be

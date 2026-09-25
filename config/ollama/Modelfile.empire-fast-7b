@@ -13,7 +13,8 @@
 
 FROM qwen2.5:7b-instruct
 
-PARAMETER num_ctx 16384
+# 24576 (was 16384) — same baked parameters as Modelfile.empire-fast so an A/B isolates model size.
+PARAMETER num_ctx 24576
 PARAMETER num_predict 1024
 PARAMETER temperature 0.2
 PARAMETER top_p 0.9

@@ -21,7 +21,7 @@ GLOBAL_CHAT_OPTIONS: dict[str, float] = {
 }
 
 # Protect 16 GB VRAM — every mode uses the same context window.
-SHARED_NUM_CTX = 16_384
+SHARED_NUM_CTX = 24_576
 
 CHAT_MODES: dict[str, ChatMode] = {
     "fast": {

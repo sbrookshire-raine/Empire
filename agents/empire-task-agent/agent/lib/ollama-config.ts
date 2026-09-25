@@ -17,7 +17,7 @@ export const GLOBAL_CHAT_OPTIONS = {
  * model. Requires the server default to match:
  *   .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
  */
-export const SHARED_NUM_CTX = 16_384;
+export const SHARED_NUM_CTX = 24_576;
 
 export type ChatModeId = "fast" | "deep" | "librarian";
 
@@ -37,7 +37,7 @@ export const CHAT_MODES: Record<ChatModeId, ChatModeDefinition> = {
     label: "Fast Mode (14b)",
     description:
       "Daily driver — brainstorming, quick file reads, standard scripts, and tool calls.",
-    // EMPIRE-owned model: same weights, with num_ctx 16384 / num_predict 512 baked in, because
+    // EMPIRE-owned model: same weights, with num_ctx 24576 / num_predict 1024 baked in, because
     // Ollama's OpenAI-compat endpoint ignores per-request options (an uncapped degenerate reply
     // once ran ~90 s). Rebuild with .\scripts\build-empire-ollama-models.ps1
     model: "empire-fast:14b",

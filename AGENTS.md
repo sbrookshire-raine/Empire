@@ -131,8 +131,8 @@ Provide a lightweight Tasks CRUD loop (PocketBase + HTMX/Alpine UI), graph memor
 > hop rules were silently truncated away.
 >
 > ```powershell
-> .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 16384
-> # verify: curl http://127.0.0.1:11434/api/ps  ->  "context_length": 16384
+> .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576
+> # verify: curl http://127.0.0.1:11434/api/ps  ->  "context_length": 24576
 > ```
 >
 > `SHARED_NUM_CTX` in `agents/empire-task-agent/agent/lib/ollama-config.ts` must match.

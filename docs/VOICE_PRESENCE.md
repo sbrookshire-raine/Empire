@@ -104,7 +104,7 @@ Raw model speed: **49 tok/s generate, 1,025 tok/s prefill**. What made it slow, 
 2. **Nothing capped generation.** Ollama's compat endpoint ignores per-request `options` (measured:
    `num_predict=24` still generated 458 tokens; `num_ctx=8192` left the model at 4096), so one
    degenerate reply ran ~90 s. Fixed by baking the limits into an EMPIRE-owned model —
-   `scripts/build-empire-ollama-models.ps1` creates **`empire-fast:14b`** (`num_ctx 16384`,
+   `scripts/build-empire-ollama-models.ps1` creates **`empire-fast:14b`** (`num_ctx 24576`,
    `num_predict 512`, temp 0.2, top_p 0.9); Fast mode uses it.
 3. **Missing-section loop.** When a named section didn't exist the tool said only "not available",
    so the model guessed 15 section names in a row. `wiki_read` now returns

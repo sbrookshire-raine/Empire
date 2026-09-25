@@ -10,7 +10,9 @@
 
 FROM qwen2.5:14b-instruct
 
-PARAMETER num_ctx 16384
+# 24576 (was 16384) — measured 2026-09-24: with q8_0 KV + flash attention this window costs 11.3 GB
+# of VRAM, i.e. 0.6 GB LESS than 16384 cost with stock f16 KV. See docs/PLACEMENT.md (E-41).
+PARAMETER num_ctx 24576
 # 512 was too small (measured 2026-09-24): on a reasoning-heavy ask the model spends the whole budget
 # inside its `<thought>` block, generation stops mid-thought, the sanitizer strips the block and the
 # visible answer is EMPTY — the harness reports "empty model response", retries once, and the turn ends
