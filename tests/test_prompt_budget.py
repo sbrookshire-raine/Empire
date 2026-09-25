@@ -84,12 +84,15 @@ class PromptBudgetTests(unittest.TestCase):
         """The R-03 trade: prose leaves the prompt only if the registry actually holds it."""
 
         names = []
-        for path in prompt_budget.TOOLS.glob("*.ts"):
+        for path in tool_registry.tool_sources():
             text = path.read_text(encoding="utf-8")
             gated = "isCapabilityActive" in text or "isCategoryEnabled" in text
             if not gated or '"wiki_local"' in text:
                 names.append(path.stem)
-        self.assertGreater(len(names), 30, "expected the default-enabled set to be substantial")
+        # 30 is the measured always-registered set once the nine `disableTool()` files
+        # (`agent`, `bash`, `ask_question`, `glob`, `grep`, `read_file`, `write_file`,
+        # `web_search`, `web_fetch`) stopped counting as part of her surface (2026-09-24).
+        self.assertGreaterEqual(len(names), 30, "expected the default-enabled set to be substantial")
         undocumented = tool_registry.missing(names)
         self.assertEqual(
             undocumented,

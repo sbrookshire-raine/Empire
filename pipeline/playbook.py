@@ -39,6 +39,12 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PLAYBOOK_DIR = ROOT / "config" / "eve-capabilities" / "playbook"
+# The R-03 tool registry: one doc per callable tool. Coverage is measured against this, because
+# it is the same list the prompt-budget test uses to prove enabled tools stay documented.
+DEFAULT_TOOL_DOCS_DIR = ROOT / "config" / "eve-capabilities" / "tool-docs"
+# The authored skill files (E-29: they never enter context). The playbook is their runtime home,
+# so every one of them has to be claimed by an area's `skills:` front matter.
+DEFAULT_SKILLS_DIR = ROOT / "agents" / "empire-task-agent" / "agent" / "skills"
 FRONT_MATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 MAX_AREA_CHARS = 9_000
@@ -50,6 +56,20 @@ def playbook_dir() -> Path:
 
     override = os.environ.get("EMPIRE_PLAYBOOK", "").strip()
     return Path(override) if override else DEFAULT_PLAYBOOK_DIR
+
+
+def tool_docs_dir() -> Path:
+    """The tool registry behind `tool_docs` — the list every claimed tool must exist in."""
+
+    override = os.environ.get("EMPIRE_TOOL_DOCS", "").strip()
+    return Path(override) if override else DEFAULT_TOOL_DOCS_DIR
+
+
+def skills_dir() -> Path:
+    """Where the authored `agent/skills/*.md` files live (overridable for tests)."""
+
+    override = os.environ.get("EMPIRE_SKILLS", "").strip()
+    return Path(override) if override else DEFAULT_SKILLS_DIR
 
 
 def _front_matter(text: str) -> dict[str, str]:
@@ -102,6 +122,7 @@ def index() -> list[dict[str, Any]]:
                 "area": fields.get("area") or path.stem,
                 "one_line": fields.get("one_line", ""),
                 "tools": fields.get("tools", ""),
+                "skills": fields.get("skills", ""),
                 "sections": [section["title"] for section in sections],
                 "examples": sum(section["examples"] for section in sections),
             }
@@ -122,6 +143,7 @@ def _payload(text: str, area: str, max_chars: int) -> dict[str, Any]:
         "area": area,
         "one_line": fields.get("one_line", ""),
         "tools": fields.get("tools", ""),
+        "skills": fields.get("skills", ""),
         "examples": len(re.findall(r"^\s*[-*]\s+\*\*Ask", body, re.MULTILINE)),
         "sections": [section["title"] for section in _sections(body)],
         "playbook": body[:max_chars] + ("\n\n[truncated — ask for a narrower topic]" if truncated else ""),
@@ -187,15 +209,87 @@ def thin_sections() -> list[dict[str, Any]]:
     return thin
 
 
+def coverage() -> dict[str, Any]:
+    """Does she have a worked example for every skill she can reach? Both directions, checked.
+
+    The Architect's ask (2026-09-24): her playbook must be tried and true for **every** skill she
+    has — so this measures instead of asserting:
+
+    - `missing_tools` — a tool in the R-03 registry that no area claims (no worked example)
+    - `ghost_tools`  — an area promising a tool that is not in the registry (a pointer into
+      nothing, which is how `load_skill_manifest` fooled the routing lines: it was a Python
+      helper, never a tool)
+    - `unused_tools` — claimed by an area, but appearing in no example body anywhere
+    - `missing_skills` — an `agent/skills/*.md` file no area claims (the E-29 blind spot)
+    - `ghost_skills`  — a claimed `skills:` entry with no file behind it
+    """
+
+    doc_dir = tool_docs_dir()
+    skill_dir = skills_dir()
+    doc_names = {path.stem for path in doc_dir.glob("*.md")} if doc_dir.is_dir() else set()
+
+    claimed: dict[str, str] = {}
+    declared_skills: dict[str, str] = {}
+    bodies: list[str] = []
+    directory = playbook_dir()
+    for path in sorted(directory.glob("*.md")) if directory.is_dir() else []:
+        text = path.read_text(encoding="utf-8")
+        fields = _front_matter(text)
+        area = fields.get("area") or path.stem
+        body = FRONT_MATTER_RE.sub("", text)
+        bodies.append(body)
+        for name in (fields.get("tools") or "").split(","):
+            name = name.strip()
+            if name:
+                claimed.setdefault(name, area)
+        for name in (fields.get("skills") or "").split(","):
+            name = name.strip()
+            if name:
+                declared_skills.setdefault(name, area)
+
+    examples = "\n".join(bodies)
+    skill_names = {path.stem for path in skill_dir.glob("*.md")} if skill_dir.is_dir() else set()
+
+    missing_tools = sorted(name for name in doc_names if name not in claimed)
+    ghost_tools = sorted(name for name in claimed if name not in doc_names)
+    unused_tools = sorted(
+        name
+        for name in claimed
+        if name not in ghost_tools and not re.search(rf"`{re.escape(name)}\b", examples)
+    )
+    missing_skills = sorted(name for name in skill_names if name not in declared_skills)
+    ghost_skills = sorted(name for name in declared_skills if name not in skill_names)
+
+    return {
+        "ok": not (missing_tools or ghost_tools or unused_tools or missing_skills or ghost_skills),
+        "tool_docs": len(doc_names),
+        "claimed_tools": len(claimed),
+        "missing_tools": missing_tools,
+        "ghost_tools": ghost_tools,
+        "unused_tools": unused_tools,
+        "skill_files": len(skill_names),
+        "declared_skills": len(declared_skills),
+        "missing_skills": missing_skills,
+        "ghost_skills": ghost_skills,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Capability playbook: worked examples per area")
     parser.add_argument("topic", nargs="?", default="", help="Area id, section title, or tool name")
     parser.add_argument("--list", action="store_true", help="List areas with their sections")
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Check that every registry tool and every agent/skills file has worked examples",
+    )
     parser.add_argument("--max-chars", type=int, default=MAX_AREA_CHARS)
     args = parser.parse_args(argv)
 
-    if args.list or not args.topic:
-        payload: dict[str, Any] = {"ok": True, "areas": index()}
+    if args.coverage:
+        payload: dict[str, Any] = coverage()
+    elif args.list or not args.topic:
+        payload = {"ok": True, "areas": index()}
     else:
         payload = topic(args.topic, max_chars=max(500, min(args.max_chars, MAX_AREA_CHARS)))
     print(json.dumps(payload, indent=2, default=str))

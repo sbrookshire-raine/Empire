@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from frontend.ollama_chat_profiles import SHARED_NUM_CTX
+from pipeline import tool_registry
 
 ROOT = Path(__file__).resolve().parents[1]
 CHARS_PER_TOKEN = 3.8
@@ -46,7 +47,15 @@ def schema_chars(text: str) -> tuple[int, int]:
 
 
 def _tool_files() -> list[Path]:
-    return sorted(TOOLS.glob("*.ts"))
+    """The tool sources that cost prompt budget — disabled tools are not registered at all.
+
+    `agent`, `bash`, `ask_question`, the sandbox filesystem tools (`glob` / `grep` / `read_file` /
+    `write_file`) and provider search (`web_search` / `web_fetch`) are `export default
+    disableTool()`: they never reach the schema, so counting them made the always-tool count read
+    31 instead of 30 (found 2026-09-24). `pipeline.tool_registry` owns that definition.
+    """
+
+    return tool_registry.tool_sources()
 
 
 def _classify(text: str) -> str:

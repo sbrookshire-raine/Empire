@@ -40,6 +40,48 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DOCS_DIR = ROOT / "config" / "eve-capabilities" / "tool-docs"
 FRONT_MATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 MAX_DOC_CHARS = 2_400
+TOOLS_DIR = ROOT / "agents" / "empire-task-agent" / "agent" / "tools"
+DISABLED_RE = re.compile(r"export\s+default\s+disableTool\s*\(")
+
+
+def tools_dir() -> Path:
+    """Directory holding the agent's tool sources (overridable for tests)."""
+
+    import os
+
+    override = os.environ.get("EMPIRE_TOOLS_DIR", "").strip()
+    return Path(override) if override else TOOLS_DIR
+
+
+def tool_sources() -> list[Path]:
+    """Sources of tools that actually exist for her — `disableTool()` files excluded.
+
+    `export default disableTool()` switches a tool OFF on purpose: root self-delegation (`agent`),
+    the Eve sandbox filesystem (`read_file` / `glob` / `grep` / `write_file`), provider-managed
+    search (`web_search` / `web_fetch`), `bash`, and `ask_question` (malformed calls on local
+    Ollama — she clarifies in prose instead).
+
+    A doc for one of those is a **phantom**: it makes the registry — and anything quoting it, like
+    the playbook or the routing lines — promise a tool she cannot call. Measured 2026-09-24: nine
+    such docs existed, and two routing lines plus a playbook example pointed at
+    `load_skill_manifest`, which was a Python helper, never a tool at all. This is the single place
+    that decides what counts as a tool, so the three checks that used to each glob `*.ts` agree.
+    """
+
+    directory = tools_dir()
+    if not directory.is_dir():
+        return []
+    return [
+        path
+        for path in sorted(directory.glob("*.ts"))
+        if not DISABLED_RE.search(path.read_text(encoding="utf-8"))
+    ]
+
+
+def tool_names() -> list[str]:
+    """Names of the tools in her surface, sorted."""
+
+    return [path.stem for path in tool_sources()]
 
 
 def docs_dir() -> Path:

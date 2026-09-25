@@ -2,6 +2,7 @@
 area: machine-and-services
 one_line: Headroom, capability admission, service switchboard, GPU lease, model inventory.
 tools: resource_pulse, admit_for_goal, capability_status, request_capability, release_capabilities, switchboard_status, switchboard_ensure, switchboard_release, switchboard_tenant, gpu_lease_status, ollama_health, list_models, get_model_suite, pb_health, check_workbench_health
+skills: route-local-models, skill-resource-pulse, skill-switchboard
 ---
 
 # This machine and its services — worked pathways

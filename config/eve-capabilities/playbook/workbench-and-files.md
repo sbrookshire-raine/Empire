@@ -1,7 +1,8 @@
 ---
 area: workbench-and-files
 one_line: The Workbench folders, local file search, staging, health, triage, active tools.
-tools: workbench_list_dir, workbench_read_file, workspace_search, read_active_tool, check_workbench_health, list_staging, drop_staging, skill_triage_manifest, glob, grep, read_file, write_file
+tools: workbench_list_dir, workbench_read_file, workspace_search, read_active_tool, check_workbench_health, list_staging, drop_staging, skill_triage_manifest
+skills: skill-tool-forge, skill-triage-officer, skill-workbench-health, skill-workspace-search, workbench-awakening
 ---
 
 # Workbench and files — worked pathways
@@ -24,16 +25,16 @@ Use when: "what's in my queue?", "show me that file", "where did that note go?".
 Use when: the answer is somewhere in his notes and you don't know where.
 
 - **Ask:** "find every mention of yt-dlp in my notes" → **Do:** `workspace_search("yt-dlp")` → **Get:** file hits with line context (read-only, no network).
-- **Ask:** "which script writes the ledger?" → **Do:** `grep("primitive_ledger", "<dir>")` → **Get:** the exact file and line.
-- **Ask:** "where is that constant defined?" → **Do:** `grep("SHARED_NUM_CTX")` → **Get:** the definition site.
-- **Ask:** "read lines 40-60 of config X" → **Do:** `read_file(path, start_line=40, end_line=60)` → **Get:** just that window instead of the whole file.
-- **Ask:** "list the python files in the pipeline" → **Do:** `glob("pipeline/*.py")` → **Get:** the file list.
+- **Ask:** "which script writes the ledger?" → **Do:** `workspace_search("primitive_ledger")` → **Get:** hits with line context (allowlisted roots: `C:/Empire_Workbench` and `C:/EMPIRE/docs`).
+- **Ask:** "where is that constant defined?" → **Do:** `workspace_search("SHARED_NUM_CTX")` → **Get:** the definition site when it is in an allowlisted root, otherwise an honest miss (code under `C:/EMPIRE` outside `docs/` belongs to the Mechanic, not to you).
+- **Ask:** "read me the file I just dropped" → **Do:** `workbench_read_file("<relative path>")` → **Get:** the file text. The Workbench tools are hard-rooted at `C:/Empire_Workbench` and take **relative** paths only.
+- **Ask:** "what's in this folder?" → **Do:** `workbench_list_dir("<relative dir>")` → **Get:** the listing, one level at a time. (`glob` and `grep` are switched off — these two are the supported path.)
 
 ## Active tools (flattened codebases)
 Use when: a flattened harvest, a `*_flattened.txt`, or anything under `03_Active_Tools`.
 
-- **Ask:** "what's in the yt-dlp harvest?" → **Do:** `read_active_tool("03_Active_Tools/<name>")` → **Get:** the tool's code/docs (mandatory for this folder — never `read_file` it).
-- **Ask:** "does the harvested tool have a CLI entry?" → **Do:** `read_active_tool` the package → `grep("__main__|argparse")` → **Get:** the entry point.
+- **Ask:** "what's in the yt-dlp harvest?" → **Do:** `read_active_tool("03_Active_Tools/<name>")` → **Get:** the tool's code/docs (required for this folder — do not treat it as an ordinary file).
+- **Ask:** "does the harvested tool have a CLI entry?" → **Do:** `read_active_tool` the package, then `workspace_search("__main__")` → **Get:** the entry point.
 - **Ask:** "which harvested scripts could become a limb?" → **Do:** `workbench_list_dir("03_Active_Tools")` → `read_active_tool` one → `draft_work_order` → **Get:** a scoped limb proposal.
 - **Ask:** "does this flattened file contain its licence?" → **Do:** `read_active_tool(...)` then search within → **Get:** licence text or an honest absence.
 

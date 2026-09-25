@@ -72,7 +72,7 @@ class RepoDocsCoverageTests(unittest.TestCase):
 
     def hot_set(self) -> list[str]:
         names: list[str] = []
-        for path in prompt_budget.TOOLS.glob("*.ts"):
+        for path in tool_registry.tool_sources():
             text = path.read_text(encoding="utf-8")
             gated = "isCapabilityActive" in text or "isCategoryEnabled" in text
             if not gated or '"wiki_local"' in text:
@@ -81,7 +81,9 @@ class RepoDocsCoverageTests(unittest.TestCase):
 
     def test_repo_docs_cover_the_hot_set(self) -> None:
         names = self.hot_set()
-        self.assertGreater(len(names), 30, "expected a substantial default-enabled set")
+        # 30 = the measured always-registered set after the nine `disableTool()` files stopped
+        # counting as part of her surface (2026-09-24).
+        self.assertGreaterEqual(len(names), 30, "expected a substantial default-enabled set")
         self.assertEqual(tool_registry.missing(names), [], "hot-set tools missing documentation")
         documented = {entry["name"] for entry in tool_registry.index()}
         self.assertGreaterEqual(len(documented), 80, "expected docs for essentially every tool")
@@ -89,8 +91,28 @@ class RepoDocsCoverageTests(unittest.TestCase):
     def test_every_tool_has_a_doc(self) -> None:
         """Coverage beyond the hot set, so moving a tool into the default set is safe."""
 
-        all_tools = sorted(path.stem for path in prompt_budget.TOOLS.glob("*.ts"))
+        all_tools = tool_registry.tool_names()
         self.assertEqual(tool_registry.missing(all_tools), [], "tools missing documentation")
+
+    def test_disabled_tools_have_no_phantom_doc(self) -> None:
+        """A switched-off tool must not be promised by the registry (found 2026-09-24).
+
+        Nine docs described tools disabled with `export default disableTool()` — so the registry,
+        the playbook and the routing lines all offered paths she could not take.
+        """
+
+        disabled = sorted(
+            path.stem
+            for path in tool_registry.tools_dir().glob("*.ts")
+            if "disableTool(" in path.read_text(encoding="utf-8")
+        )
+        self.assertTrue(disabled, "expected deliberately disabled tools (`agent`, `bash`, …)")
+        documented = {entry["name"] for entry in tool_registry.index()}
+        self.assertEqual(
+            sorted(set(disabled) & documented),
+            [],
+            "phantom docs for disabled tools",
+        )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 area: media-and-time
 one_line: Audio stems, vision, voice, documents to media, and the DAZE schedule.
 tools: stem_list_inbox, stem_run, stem_status, vision_describe, vision_ui_observe, voice_speak, voice_transcribe, daze_list_day, daze_free_windows, daze_compare_phases, daze_upsert_block, docling_convert
+skills: skill-daze-time, skill-stem-factory, skill-vision-local, skill-voice-presence
 ---
 
 # Media and time — worked pathways

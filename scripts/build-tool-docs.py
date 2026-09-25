@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pipeline.tool_registry import docs_dir  # noqa: E402
+from pipeline.tool_registry import docs_dir, tool_sources  # noqa: E402
 
 TOOLS = ROOT / "agents" / "empire-task-agent" / "agent" / "tools"
 DESC_RE = re.compile(r'description:\s*\n?\s*((?:"[^"]*"(?:\s*\+\s*)?)+)', re.DOTALL)
@@ -131,7 +131,7 @@ def main() -> int:
     target.mkdir(parents=True, exist_ok=True)
     missing: list[str] = []
     written = 0
-    for path in sorted(TOOLS.glob("*.ts")):
+    for path in tool_sources():
         tool = parse_tool(path)
         doc_path = target / f"{tool['name']}.md"
         if not doc_path.is_file():

@@ -2,6 +2,7 @@
 area: build-and-verify
 one_line: Write and verify code, query local data, make spreadsheets, draft work orders.
 tools: author_code, python_verify, query_data, create_spreadsheet, structured_extract, retrieval_rerank, draft_work_order, read_document
+skills: skill-author-code, skill-create-spreadsheet, skill-python-verify, skill-query-data, skill-retrieval-rerank
 ---
 
 # Build and verify — worked pathways
@@ -29,7 +30,7 @@ Use when: they ask for a script, a fix, a small tool, or "make X do Y".
 
 - **Ask:** "write a script that renames my screenshots by date" → **Do:** `admit_for_goal("author_code")` → `author_code(goal, files=[...])` → `python_verify` → **Get:** a diff in a disposable worktree plus test output; you never merge.
 - **Ask:** "this JSON parser keeps dying — fix it" → **Do:** `author_code("make the parser tolerate trailing commas")` → `python_verify` → **Get:** the patch + the failing→passing test.
-- **Ask:** "add a retry to the ingest call" → **Do:** `glob`/`read_file` to find the call → `author_code` → `python_verify` → **Get:** a reviewable diff with the reason.
+- **Ask:** "add a retry to the ingest call" → **Do:** `workspace_search("ingest")` to find the call site → `author_code` → `python_verify` → **Get:** a reviewable diff with the reason.
 - **Ask:** "is this change safe?" → **Do:** `python_verify` alone (syntax + lint + tests in the worktree) → **Get:** a verdict with the test list.
 - **Ask:** "turn this snippet into a reusable script" → **Do:** `author_code` → `python_verify` → **Get:** the file path in the worktree for review.
 

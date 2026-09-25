@@ -2,6 +2,7 @@
 area: wiki-archive
 one_line: Local Wikipedia work — lookup, title hops, sections, extracts, truth drift, lead memory.
 tools: wiki_scout_search, wiki_resolve, wiki_read_section, wiki_extract, wiki_scout_compare_years, remember_wiki_lead, wiki_remember, promote_wiki_cache, wiki_scratch_upsert, wiki_scratch_read
+skills: skill-wiki-scout
 ---
 
 # Local Wikipedia archive — worked pathways
@@ -50,4 +51,5 @@ Use when: a lead should survive the turn (bridging fact, or fuel for later recal
 - **Ask:** "keep this in memory" → **Do:** `propose_remember(...)` then `confirm_remember(...)` **only after the Architect agrees** → **Get:** a Cognee entry (never auto-promote).
 - **Ask:** "save this for the next hop" → **Do:** `wiki_scratch_upsert(text, session_id=...)` → **Get:** a scratchpad note; `wiki_scratch_read(include_errors=True)` reads it back with the Error Book.
 - **Ask:** "what did we already try?" → **Do:** `wiki_scratch_read(session_id, include_errors=True)` → **Get:** prior bridging facts + logged misses (do not re-search a logged dead end blind).
+- **Ask:** "keep that album table for later" → **Do:** `wiki_extract("Elephant", need_hint="studio albums")`, then `wiki_remember("Elephant", need_hint="studio albums")` → **Get:** the extract itself in Cognee — an extract is only stored when he explicitly asks (empty extracts are refused; `wiki_md` is never bulk-ingested).
 - **Ask:** "promote this page to memory" → **Do:** `promote_wiki_cache(path, dataset="eve_memory")` → **Get:** the cached markdown ingested for recall.

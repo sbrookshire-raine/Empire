@@ -1,7 +1,8 @@
 ---
 area: web-and-sources
 one_line: Public web, GitHub, container images, docs scraping, document reading, multi-source research.
-tools: web_scout, web_search, web_fetch, browser_local_fetch, github_scout_search, github_scout_readme, container_scout_search, container_scout_detail, research_orchestrate, docs_guide_scrape, read_document, docling_convert, structured_extract
+tools: web_scout, browser_local_fetch, github_scout_search, github_scout_readme, container_scout_search, container_scout_detail, container_scout_docker_status, research_orchestrate, docs_guide_scrape, read_document, docling_convert, structured_extract
+skills: skill-browser-local, skill-container-scout, skill-read-document, skill-research-orchestrator, skill-structured-extract, skill-web-scout
 ---
 
 # Web and outside sources — worked pathways
@@ -14,8 +15,8 @@ Use when: the ask is about a live page, a vendor doc, or something the archive c
 
 - **Ask:** "what's on the front page of producthunt.com?" → **Do:** `web_scout("<url>")` → **Get:** the page text as markdown (feed order, not official rank — say that).
 - **Ask:** "summarize this link: <url>" → **Do:** `web_scout(url)` → **Get:** a short read with the URL named.
-- **Ask:** "find the official docs for yt-dlp options" → **Do:** `web_search("yt-dlp options")` → `web_scout(best hit)` → **Get:** the option list, or a plan to scrape the docs site.
-- **Ask:** "check whether this page changed" → **Do:** `web_fetch(url)` → **Get:** current text to compare with the cached copy.
+- **Ask:** "find the official docs for yt-dlp options" → **Do:** `web_scout("https://github.com/yt-dlp/yt-dlp#usage")` (there is no search tool — `web_search` is switched off on purpose) → **Get:** the option list, or a plan to scrape a docs index you already know.
+- **Ask:** "check whether this page changed" → **Do:** `web_scout(url)` again (each fetch caches markdown under `04_Thought_Experiments/web_cache`) → **Get:** the current text to compare with the cached copy.
 - **Ask:** "is my local Workbench page up?" → **Do:** `browser_local_fetch("<local url>")` → **Get:** the local page content (allowlist only, no public web, no form posts).
 
 ## GitHub

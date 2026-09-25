@@ -2,6 +2,7 @@
 area: memory-and-ideas
 one_line: Recall and store memory, curated primitives, thought experiments, the decoded ledger, ideas.
 tools: cognee_recall, cognee_remember, propose_remember, confirm_remember, cognee_improve, cognee_forget, primitive_lookup, thought_experiment_capture, thought_experiment_read, loom_status, loom_process_shell, architect_now_update
+skills: recall-ingested-context, skill-companion, skill-loom-intake, skill-thought-experiments
 ---
 
 # Memory, ideas and the ledger — worked pathways
@@ -26,6 +27,7 @@ Use when: something is worth keeping for future turns.
 - **Ask:** "keep this whole report in memory" → **Do:** `propose_remember(summary)` → **Get:** a proposal he can accept or drop.
 - **Ask:** "that ingest made recall worse" → **Do:** `cognee_improve()` → **Get:** a re-index/repair pass, then re-query.
 - **Ask:** "forget the stale boot notes" → **Do:** `cognee_forget(scope)` **only when he says so** → **Get:** the removal confirmed by name.
+- **Ask:** "remember that the Cognee graph lives on the VHDX" → **Do:** `cognee_remember("Cognee graph storage: VHDX at I:\\EMPIRE_VHDX\\empire_cognee.vhdx")` → **Get:** it stored straight away, because his instruction *is* the consent (when he did not ask, use `propose_remember` first).
 - **Ask:** "update my current facts card" → **Do:** `architect_now_update(text)` → **Get:** the living card refreshed (facts about him only — never instructions).
 
 ## Thought experiments (his practice, formalized)

@@ -1,7 +1,8 @@
 ---
 area: tasks-and-routing
 one_line: Tasks CRUD, catalog discovery, environment reference (routing detail, operations, awakening).
-tools: list_tasks, search_tasks, create_task, update_task, delete_task, search_catalog, load_skill_manifest, tool_docs, playbook, ask_question, list_models, get_model_suite
+tools: list_tasks, search_tasks, create_task, update_task, delete_task, search_catalog, tool_docs, playbook, list_models, get_model_suite
+skills: empire-operations, empire-routing-detail, manage-tasks, memory-recall, skill-capability-routing
 ---
 
 # Tasks, discovery and the reference layer — worked pathways
@@ -24,7 +25,7 @@ Use when: "do you have a tool for X?", "what can you do about Y?", or before cla
 
 - **Ask:** "is there a local tool for reranking?" → **Do:** `search_catalog("rerank")` → **Get:** the capability entry with its Toolbelt limb.
 - **Ask:** "what's in the catalog about audio?" → **Do:** `search_catalog("audio stems")` → **Get:** the stem limb and its tools.
-- **Ask:** "run one of the eve-skills" → **Do:** `search_catalog("<name>")` → `load_skill_manifest("<name>")` → **Get:** the skill package's SKILL.md (five exist: bayes-update, forecast-baseline, scenario-regret, thought-map, topology-audit).
+- **Ask:** "run one of the eve-skills" → **Do:** `search_catalog("<name>")` → **Get:** the capability entry and the limb it belongs to; the `eve-skills/<name>/SKILL.md` packages are the Mechanic's reference (nothing loads them, and no tool of hers reads `C:\EMPIRE`) — use the playbook area for the worked route.
 - **Ask:** "which capabilities are prerequisite for that?" → **Do:** `search_catalog` → `capability_status` → **Get:** the gate you must ask the Architect to open.
 - **Ask:** "is X available to me right now?" → **Do:** `search_catalog` **before** refusing → **Get:** an honest answer instead of "I don't have access".
 
@@ -40,15 +41,19 @@ Use when: you know the tool but not its syntax, or you know the goal but not the
 ## Asking instead of guessing (the cheap hinge)
 Use when: one fact from him unlocks the whole task.
 
-- **Ask:** "which of these two albums do you mean?" → **Do:** `ask_question(...)` with the two options → **Get:** a decision instead of a coin flip.
-- **Ask:** "should I spend the GPU on this?" → **Do:** `ask_question` with the cost, or `resource_pulse` + `admit_for_goal` → **Get:** a yes/no grounded in headroom.
-- **Ask:** "do you want the note in Cognee?" → **Do:** `ask_question` → then `propose_remember`/`confirm_remember` → **Get:** consent before storage.
-- **Ask:** "ambiguous subject: series, magnet, DRUMS?" → **Do:** `wiki_resolve` for the readings, then `ask_question` only if two remain → **Get:** the right page, no invention.
+**There is no ask tool.** `ask_question` is switched off on purpose (it produced malformed tool
+calls on local Ollama). Ask **in prose**, finish the turn, and act on his reply — that is the
+supported hinge.
+
+- **Ask:** "which of these two albums do you mean?" → **Do:** name both readings in plain text and stop → **Get:** a decision instead of a coin flip (his reply continues the chat).
+- **Ask:** "should I spend the GPU on this?" → **Do:** `resource_pulse()` then `admit_for_goal(...)` first, and ask in prose only for the judgement call → **Get:** a yes/no grounded in headroom.
+- **Ask:** "do you want the note in Cognee?" → **Do:** `propose_remember(text)` → say what is proposed, in prose → `confirm_remember(id)` once he agrees → **Get:** consent before storage.
+- **Ask:** "ambiguous subject: series, magnet, DRUMS?" → **Do:** `wiki_resolve("magnets")` for the readings, then name the candidates in prose if two remain → **Get:** the right page on his reply, no invention.
 
 ## Environment reference (documents, not actions)
 Use when: you need the map rather than a tool.
 
-- **Ask:** "how is this repo laid out?" → **Do:** read `empire-operations`/`empire-routing-detail` references in the repo (`agents/empire-task-agent/agent/skills/`) → **Get:** the module map and the annotated routing table (these are reference docs — nothing auto-loads them, so read them with `read_file` if needed).
-- **Ask:** "what does the session-start ritual say?" → **Do:** read `workbench-awakening` → **Get:** the awakening checklist (reference only).
-- **Ask:** "which model should this run on?" → **Do:** `route-local-models` reference + `get_model_suite()` → **Get:** the Fast/Deep/Librarian choice with the context caveat.
-- **Ask:** "what's the routing table for wiki vs catalog?" → **Do:** `read_file("agents/empire-task-agent/agent/skills/empire-routing-detail.md")` → **Get:** the intent→tool map (and prefer `playbook` for worked examples).
+- **Ask:** "how is this repo laid out?" → **Do:** `playbook("tasks-and-routing")` → **Get:** the map as worked pathways. The `agents/empire-task-agent/agent/skills/*.md` files (`empire-operations`, `empire-routing-detail`) are the Mechanic's reference: they never enter context and no tool of hers reads `C:\EMPIRE` (E-29).
+- **Ask:** "what does the session-start ritual say?" → **Do:** `playbook("workbench-and-files")` → **Get:** the awakening steps as examples (the `workbench-awakening` file is reference, not runtime).
+- **Ask:** "which model should this run on?" → **Do:** `get_model_suite()` + `playbook("machine-and-services")` → **Get:** the Fast/Deep/Librarian choice with the context caveat.
+- **Ask:** "what's the routing table for wiki vs catalog?" → **Do:** `playbook("wiki-archive")` for archive asks, `playbook("web-and-sources")` for outside sources → **Get:** the intent→tool map as examples (the `empire-routing-detail.md` file itself is not readable at runtime).
