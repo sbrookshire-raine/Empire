@@ -79,6 +79,24 @@ class AutonmousMissLoggingTests(unittest.TestCase):
         self.assertEqual(self._entries()[0]["query"], "learning to play the drums")
         self.assertTrue(second["known_miss"])
 
+    def test_the_third_identical_section_read_is_refused(self) -> None:
+        """Measured in the browser 2026-09-24: 14 identical `wiki_read_section("albums")` calls in one
+        turn; the payload already listed `available_sections` and the model ignored it. The guard is in
+        the tool, not the prompt (E-27)."""
+
+        read = _tool(self.module, "wiki_read_section")
+        missing = {"ok": True, "title": "The White Stripes", "section_missing": True, "available_sections": ["Discography"]}
+        with patch("pipeline.wiki_read_lead.wiki_read", return_value=dict(missing)) as reader:
+            first = json.loads(asyncio.run(read("The White Stripes", section="albums")))
+            second = json.loads(asyncio.run(read("The White Stripes", section="albums")))
+            third = json.loads(asyncio.run(read("The White Stripes", section="albums")))
+
+        self.assertTrue(first.get("ok"))
+        self.assertTrue(second.get("ok"))
+        self.assertEqual(third.get("refused"), "repeat_section")
+        self.assertIn("do not repeat a section name", third["chat_reply_rule"])
+        self.assertEqual(reader.call_count, 2, "the refused call never reaches the reader")
+
     def test_a_hit_is_not_logged(self) -> None:
         hit = {"ok": True, "query": "Drum kit", "cards": [{"title": "Drum kit"}], "usable": True}
         with patch("pipeline.wiki_scout.search", return_value=hit):

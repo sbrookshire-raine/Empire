@@ -11,6 +11,10 @@
 FROM qwen2.5:14b-instruct
 
 PARAMETER num_ctx 16384
-PARAMETER num_predict 512
+# 512 was too small (measured 2026-09-24): on a reasoning-heavy ask the model spends the whole budget
+# inside its `<thought>` block, generation stops mid-thought, the sanitizer strips the block and the
+# visible answer is EMPTY — the harness reports "empty model response", retries once, and the turn ends
+# in an apology after ~300 s. 1024 leaves room for the protocol *and* an answer.
+PARAMETER num_predict 1024
 PARAMETER temperature 0.2
 PARAMETER top_p 0.9

@@ -7,6 +7,7 @@ Does not auto-promote to Cognee. Full overnight wiki ingest remains halted.
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -20,6 +21,7 @@ from pipeline.wiki_interpreter import check_reranker
 # tells the agent, deterministically, which tool to use instead (docs/WIKI_SCOUT.md).
 # Bookkeeping lives in pipeline.wiki_scout so it is unit-testable.
 from pipeline.wiki_scout import (
+    HARD_STOP_REPEAT_AT,
     HARD_STOP_REPEAT_HINT,
     REPEAT_CALL_HINT,
     search_strike,
@@ -31,6 +33,11 @@ mcp = FastMCP("empire-wiki-scout")
 
 def _json(data: Any) -> str:
     return json.dumps(data, indent=2, default=str)
+
+
+# Section-read repeat guard state (mirrors wiki_scout's search strikes; see wiki_read_section).
+_SECTION_READS: dict[str, tuple[int, float]] = {}
+_REPEAT_WINDOW_SECONDS = 180.0
 
 
 @mcp.tool()
@@ -238,6 +245,36 @@ async def wiki_read_section(
 ) -> str:
     """Read a Title DNS page lead and optional H2 section from local markdown."""
     from pipeline.wiki_read_lead import wiki_read
+
+    # Repeat guard (2026-09-24). Search has had one since E-14; sections did not, and the Architect's
+    # browser run showed the cost: 14 identical `wiki_read_section("albums")` calls in one turn whose
+    # whole answer was an apology, even though the payload already listed `available_sections` and said
+    # "do NOT guess another section name". The model ignores that guidance (E-27), so the third
+    # identical read of the same missing section is refused here — the tool stops the loop, not the
+    # prompt. Mirrors `search_strike`/`HARD_STOP_REPEAT_AT`.
+    key = f"{' '.join((title or '').lower().split())}|{' '.join((section or '').lower().split())}|{year}"
+    now = time.monotonic()
+    count, last = _SECTION_READS.get(key, (0, 0.0))
+    if now - last > _REPEAT_WINDOW_SECONDS:
+        count = 0
+    count += 1
+    _SECTION_READS[key] = (count, now)
+    if count >= HARD_STOP_REPEAT_AT:
+        return _json(
+            {
+                "ok": False,
+                "usable": False,
+                "refused": "repeat_section",
+                "title": title,
+                "section": section,
+                "chat_reply_rule": (
+                    "You already tried this exact section and it is not on the page. Stop. "
+                    "Answer from the lead and any section you did read, or pick ONE section from "
+                    "available_sections — do not repeat a section name."
+                ),
+                "coverage_note": "Identical section read refused to stop a loop.",
+            }
+        )
 
     return _json(
         wiki_read(

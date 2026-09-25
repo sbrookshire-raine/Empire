@@ -102,6 +102,53 @@ class WikiScoutCacheTests(unittest.TestCase):
             self.assertIn("## 2026", text)
             self.assertIn("new text", text)
 
+    def test_phrase_query_retries_the_bare_title(self) -> None:
+        """Measured in the browser 2026-09-24: "The White Stripes studio albums" missed, and the model
+        then told the Architect the *page* did not exist. The tool now retries the bare title itself."""
+
+        dns_payload = {
+            "ok": True,
+            "query": "The White Stripes",
+            "source": "title_dns",
+            "titles": ["The White Stripes"],
+            "cards": [{"title": "The White Stripes", "snippet": "American rock duo"}],
+            "usable": True,
+        }
+
+        def fake_dns(query, **kwargs):
+            return dict(dns_payload) if str(query).strip() == "The White Stripes" else None
+
+        with patch.object(wiki_scout, "_search_via_title_dns", side_effect=fake_dns):
+            result = wiki_scout.search("The White Stripes studio albums", write_files=False)
+
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["retried_from"], "The White Stripes studio albums")
+        self.assertEqual(result["resolved_title"], "The White Stripes")
+        self.assertIn("exact titles", result["coverage_note"])
+
+    def test_bare_title_helper_strips_only_trailing_modifiers(self) -> None:
+        cases = {
+            "The White Stripes studio albums": "The White Stripes",
+            "The White Stripes discography": "The White Stripes",
+            "Drum kit components": "Drum kit",
+            "The Following cast": "The Following",
+            "The Following ratings table": "The Following",
+            "Magnet": "",  # already bare: never retry
+            "": "",
+        }
+        for query, expected in cases.items():
+            with self.subTest(query=query):
+                self.assertEqual(wiki_scout.bare_title_from_phrase(query), expected)
+
+    def test_retry_can_be_disabled_by_env(self) -> None:
+        with (
+            patch.object(wiki_scout, "_search_via_title_dns", return_value=None) as dns,
+            patch.dict("os.environ", {"EMPIRE_WIKI_BARE_RETRY": "0"}, clear=False),
+        ):
+            result = wiki_scout.search("Drum kit components", write_files=False)
+        self.assertFalse(result["ok"])
+        self.assertEqual(dns.call_count, 1, "with the retry off, only the original query runs")
+
     def test_search_graceful_when_weaviate_down(self) -> None:
         with (
             patch.object(wiki_scout, "_search_via_title_dns", return_value=None),

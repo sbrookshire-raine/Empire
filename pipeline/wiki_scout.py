@@ -999,6 +999,50 @@ def _search_via_title_dns(
     }
 
 
+# Deterministic bare-title retry (2026-09-24).
+#
+# Measured in the browser: `wiki_scout_search("The White Stripes studio albums")` missed, because Title
+# DNS is a phone book of **exact titles** — and the model then told the Architect "the local Wikipedia
+# archive does not have a page for The White Stripes", which is false (`The White Stripes` resolves in
+# ~20 ms). Prompt-level "search the bare title first" rules did not stick on empire-fast:14b (three
+# separate measurements), so the retrieval layer retries itself: strip a trailing modifier phrase and
+# try the bare title once, reporting `retried_from` + `resolved_title` so nothing is hidden.
+BARE_TITLE_MODIFIERS = (
+    "studio albums", "studio album", "discography", "albums", "album",
+    "track listing", "tracklist", "songs", "singles", "soundtrack",
+    "cast list", "cast members", "cast", "characters",
+    "episode list", "episodes", "episode", "seasons", "season",
+    "ratings table", "ratings", "chart performance", "reception",
+    "specifications table", "specifications", "specs", "components",
+    "filmography", "bibliography", "awards", "members", "history", "biography",
+    "in order", "list", "overview", "summary", "details",
+)
+
+
+def bare_title_from_phrase(query: str) -> str:
+    """`"The White Stripes studio albums"` -> `"The White Stripes"`. Empty when nothing is stripped."""
+
+    text = (query or "").strip().rstrip("?！!。.").strip()
+    if not text:
+        return ""
+    lowered = text.casefold()
+    for phrase in BARE_TITLE_MODIFIERS:
+        for suffix in (f" {phrase}", f"'s {phrase}", f"’s {phrase}"):
+            if lowered.endswith(suffix) and len(lowered) > len(suffix):
+                text = text[: len(text) - len(suffix)].rstrip(" ,-–—'\u2019")
+                lowered = text.casefold()
+                break
+    if not text or len(text) < 2 or text.casefold() == (query or "").strip().casefold():
+        return ""
+    # A bare title with no letters left (e.g. "list") is not worth a retry.
+    return text if any(char.isalpha() for char in text) else ""
+
+
+def _bare_retry_enabled() -> bool:
+    raw = os.environ.get("EMPIRE_WIKI_BARE_RETRY", "1").strip().casefold()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def search(
     query: str,
     *,
@@ -1013,6 +1057,7 @@ def search(
     write_files: bool = True,
     interpret: bool = True,
     use_rerank: bool | None = None,
+    _retry_depth: int = 0,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
@@ -1030,6 +1075,37 @@ def search(
     dns_result = _search_via_title_dns(query, year=year, limit=limit)
     if dns_result is not None:
         return dns_result
+
+    # The phrase missed — retry once with the bare title before declaring a miss (see
+    # BARE_TITLE_MODIFIERS). Measured in the browser: without this the model reports "the archive does
+    # not have a page for <thing>" for a page that resolves in ~20 ms.
+    if _bare_retry_enabled() and not _retry_depth:
+        bare = bare_title_from_phrase(query)
+        if bare:
+            retry = search(
+                bare,
+                year=year,
+                collection=collection,
+                limit=limit,
+                base_url=base_url,
+                api_key=api_key,
+                cache_dir=cache_dir,
+                ollama_url=ollama_url,
+                embed_model=embed_model,
+                write_files=write_files,
+                interpret=interpret,
+                use_rerank=use_rerank,
+                _retry_depth=1,
+            )
+            if isinstance(retry, dict) and retry.get("ok"):
+                retried = dict(retry)
+                retried["retried_from"] = query
+                retried["resolved_title"] = bare
+                retried["coverage_note"] = (
+                    f"Your query was a phrase; the archive answers exact titles. Retried as {bare!r} "
+                    "and found it — use this page."
+                )
+                return retried
 
     weaviate_fallback = os.environ.get("EMPIRE_WIKI_WEAVIATE_FALLBACK", "0").strip().lower() in {
         "1",

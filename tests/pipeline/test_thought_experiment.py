@@ -38,8 +38,14 @@ class ThoughtExperimentTests(unittest.TestCase):
         self.assertFalse(result["ok"])
 
     def test_list_is_newest_first_and_reads_the_topic(self) -> None:
+        import os
+        import time
+
         thought_experiment.capture("First idea", out_dir=self.dir)
         second = thought_experiment.capture("Second idea", out_dir=self.dir)
+        # Two captures in the same second share an mtime, so the order would be a coin flip.
+        now = time.time()
+        os.utime(Path(second["path"]), (now + 10, now + 10))
         listing = thought_experiment.list_experiments(out_dir=self.dir)
         self.assertTrue(listing["ok"])
         self.assertEqual(listing["count"], 2)
