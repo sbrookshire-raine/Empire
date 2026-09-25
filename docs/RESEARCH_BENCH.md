@@ -39,6 +39,38 @@ given only a query searched, took the top 3 results, fetched them and wrote a di
 `rb_01` / `rb_02` now resolve through `searxng_search`; the tool states its own failure modes (instance
 down → names `start-searxng.ps1`; JSON disabled → names the settings key) rather than fabricating.
 
+## Live mode — measured 2026-09-25 (1/8), and why
+
+The baseline mode measures *capability existence*. Live mode asks the harder question — do real turns
+through the Workbench actually use the limb? First full run, stack up (8080 / 2000 / 8090, SearXNG up):
+
+```
+  rb_01..rb_07  FAIL  tools=none      rb_08  pass  tools=none
+  passed=1/8   per_need={'search': {'pass': 0, 'fail': 2}, 'github': ..., 'archive': {'pass':0,'fail':2}, ...}
+```
+
+`rb_05` detail: `{"tools": [], "cited_url": false, "chars": 321}` — **she answered in 321 characters of
+prose with no tool calls at all.** Not an empty response (so not E-30), and not a search-specific
+failure: `rb_05`/`rb_06` expect `wiki_local` / `github_scout` tools. Two findings, in order of weight:
+
+1. **Live turns are not using tools — including enabled ones.** `wiki_local` *is* in the local Toolbelt
+   (`%LOCALAPPDATA%\EMPIRE\eve-toolbelt.json` → `active_tools: ["wiki_local"]`) and `wiki_scout_search`
+   is gated on it, yet no tool ran. So the Workbench path is either not offering tool schemas, not
+   surfacing the results, or she is choosing parametric answers. This affects *every* capability in the
+   UI, so it outranks the bench's own verdict and needs its own investigation.
+2. **`web_research` is Architect-only, so E-35's and E-37's tools are dark by default.**
+   `config/capability-manifest.json` has `web_research: {auto_enable: false, session_ttl_min: 0,
+   gpu_tenant: "none"}` — and `pipeline/resource_pulse admit web_research` refuses with *"ask the
+   Architect before enabling. Do not force the Toolbelt."* The manifest itself says `gpu_tenant: "none"`,
+   i.e. search costs no GPU, yet the refusal text calls it "GPU/heavy". Consequence: `searxng_search`,
+   `research_start`, `research_status` and `research_read` are **unreachable in a default stack** — the
+   playbook's "admit Web Research first" is not something she can do on her own. Two clean remedies, both
+   the Architect's call: add `web_research` to `active_tools` (manual Toolbelt), or give it the light-hand
+   treatment (`auto_enable: true`, `session_ttl_min: 30`) to match its measured `gpu_tenant: "none"`.
+
+Re-run live mode with `.\venv\Scripts\python.exe scripts\run-research-bench.py --live --case rb_05 --json`.
+
+
 ## The contract
 
 | Rule | Where |
