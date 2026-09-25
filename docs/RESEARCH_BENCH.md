@@ -63,3 +63,6 @@ provider-managed path hung local Ollama) — so the absence is structural, not a
 - [`RESEARCH_CLOSURE.md`](RESEARCH_CLOSURE.md) — the discovery gate this bench is the ticket for
 - [`EMPIRE_IDEA_QUEUE.md`](EMPIRE_IDEA_QUEUE.md) — E-34 (this bench), E-35 (the search limb it unblocks)
 - [`PLAYBOOK.md`](PLAYBOOK.md) — what she reads to *use* a capability once it exists
+- The **research desk** (`pipeline/research_desk.py`, E-37) is the pickup half: a job returns a id
+  immediately, a detached worker fetches on CPU, and `research_read` returns a bounded digest — the
+  long-pass answer to a window that only holds about one long article.
