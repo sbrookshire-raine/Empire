@@ -11,6 +11,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 **Structural plan (diagnosis, answer-path spine, tool triage, phases):** [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md)  
 **Refactor evaluation (what is here, what is junk, resource map):** [docs/REFACTOR_EVAL.md](docs/REFACTOR_EVAL.md)  
 **Capability playbook (what Eve reads for how to use a limb — coverage contract):** [docs/PLAYBOOK.md](docs/PLAYBOOK.md)  
+**Placement (what belongs in VRAM vs RAM — measured):** [docs/PLACEMENT.md](docs/PLACEMENT.md)  
 **Full project manifest (architecture, APIs, Eve tools, GitHub backup):** [docs/manifest/README.md](docs/manifest/README.md)  
 **Canonical repo:** https://github.com/sbrookshire-raine/Empire
 

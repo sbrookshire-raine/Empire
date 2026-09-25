@@ -11,7 +11,15 @@
 #>
 param(
     [int]$NumParallel = 8,
-    [int]$ContextLength = 8192
+    [int]$ContextLength = 8192,
+    # KV-cache precision and flash attention: Ollama reads both at serve start, so they can only be
+    # set here. `q8_0` roughly halves the KV cache, which is the variable part of VRAM at a given
+    # context — it requires flash attention. The honest check before keeping either is
+    # `scripts/ab-fast-toolcalling.py` (tool calls through the compat proxy) plus
+    # `scripts/measure-placement.py` (what Ollama actually holds). Omitting both params is the
+    # revert: it restarts serve back at stock settings.
+    [string]$KvCacheType = "",
+    [switch]$FlashAttention
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,8 +28,12 @@ if ($ContextLength -lt 1024) { throw "ContextLength must be >= 1024" }
 
 $env:OLLAMA_NUM_PARALLEL = "$NumParallel"
 $env:OLLAMA_CONTEXT_LENGTH = "$ContextLength"
+if ($KvCacheType) { $env:OLLAMA_KV_CACHE_TYPE = $KvCacheType } else { Remove-Item Env:OLLAMA_KV_CACHE_TYPE -ErrorAction SilentlyContinue }
+if ($FlashAttention) { $env:OLLAMA_FLASH_ATTENTION = "1" } else { Remove-Item Env:OLLAMA_FLASH_ATTENTION -ErrorAction SilentlyContinue }
 Write-Host "Desired OLLAMA_NUM_PARALLEL=$($env:OLLAMA_NUM_PARALLEL)"
 Write-Host "Desired OLLAMA_CONTEXT_LENGTH=$($env:OLLAMA_CONTEXT_LENGTH)"
+Write-Host ("Desired OLLAMA_KV_CACHE_TYPE={0}" -f $(if ($env:OLLAMA_KV_CACHE_TYPE) { $env:OLLAMA_KV_CACHE_TYPE } else { "(stock f16)" }))
+Write-Host ("Desired OLLAMA_FLASH_ATTENTION={0}" -f $(if ($env:OLLAMA_FLASH_ATTENTION) { $env:OLLAMA_FLASH_ATTENTION } else { "(off)" }))
 
 function Get-OllamaServePid {
     $procs = Get-CimInstance Win32_Process -Filter "Name='ollama.exe'" -ErrorAction SilentlyContinue
@@ -105,8 +117,12 @@ function Keep-NomicWarm {
 $servePid = Get-OllamaServePid
 if ($servePid -gt 0 -and (Test-OllamaReady)) {
     $live = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_NUM_PARALLEL"
-    if ($live -eq "$NumParallel") {
-        Write-Host ("ollama serve PID {0} already has OLLAMA_NUM_PARALLEL={1} - skip restart" -f $servePid, $live)
+    $liveKv = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_KV_CACHE_TYPE"
+    $liveFa = Get-ProcessEnvVar -ProcessId $servePid -Name "OLLAMA_FLASH_ATTENTION"
+    $wantKv = if ($KvCacheType) { $KvCacheType } else { "" }
+    $wantFa = if ($FlashAttention) { "1" } else { "" }
+    if ($live -eq "$NumParallel" -and "$liveKv" -eq "$wantKv" -and "$liveFa" -eq "$wantFa") {
+        Write-Host ("ollama serve PID {0} already has OLLAMA_NUM_PARALLEL={1} KV={2} FA={3} - skip restart" -f $servePid, $live, $liveKv, $liveFa)
         Keep-NomicWarm
         Write-Host ("Ollama ready on :11434 (OLLAMA_NUM_PARALLEL={0}; unchanged)" -f $NumParallel)
         exit 0
@@ -135,8 +151,14 @@ if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
 # cmd.exe so Windows PowerShell 5.1 and PS7 both pass the env into the serve process.
 # OLLAMA_CONTEXT_LENGTH sets the server-wide default context (Ollama's OpenAI-compat
 # endpoint ignores per-request options.num_ctx, so the default must be raised here).
-$cmdLine = "set OLLAMA_NUM_PARALLEL=$NumParallel&& set OLLAMA_CONTEXT_LENGTH=$ContextLength&& ollama serve"
-Write-Host ("Starting ollama serve with OLLAMA_NUM_PARALLEL={0} OLLAMA_CONTEXT_LENGTH={1}..." -f $NumParallel, $ContextLength)
+$parts = @(
+    "set OLLAMA_NUM_PARALLEL=$NumParallel",
+    "set OLLAMA_CONTEXT_LENGTH=$ContextLength"
+)
+if ($KvCacheType) { $parts += "set OLLAMA_KV_CACHE_TYPE=$KvCacheType" }
+if ($FlashAttention) { $parts += "set OLLAMA_FLASH_ATTENTION=1" }
+$cmdLine = ($parts -join "&& ") + "&& ollama serve"
+Write-Host ("Starting ollama serve with {0}..." -f ($parts -join ' '))
 Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $cmdLine) -WindowStyle Hidden | Out-Null
 
 $ready = $false
