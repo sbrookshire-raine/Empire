@@ -49,8 +49,8 @@
     },
     "web_research": {
       "label": "Web Research",
-      "auto_enable": false,
-      "session_ttl_min": 0,
+      "auto_enable": true,
+      "session_ttl_min": 30,
       "gpu_tenant": "none",
       "network": true,
       "requires_services": []

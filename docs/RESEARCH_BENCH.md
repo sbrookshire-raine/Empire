@@ -58,17 +58,36 @@ failure: `rb_05`/`rb_06` expect `wiki_local` / `github_scout` tools. Two finding
    is gated on it, yet no tool ran. So the Workbench path is either not offering tool schemas, not
    surfacing the results, or she is choosing parametric answers. This affects *every* capability in the
    UI, so it outranks the bench's own verdict and needs its own investigation.
-2. **`web_research` is Architect-only, so E-35's and E-37's tools are dark by default.**
-   `config/capability-manifest.json` has `web_research: {auto_enable: false, session_ttl_min: 0,
-   gpu_tenant: "none"}` — and `pipeline/resource_pulse admit web_research` refuses with *"ask the
-   Architect before enabling. Do not force the Toolbelt."* The manifest itself says `gpu_tenant: "none"`,
-   i.e. search costs no GPU, yet the refusal text calls it "GPU/heavy". Consequence: `searxng_search`,
-   `research_start`, `research_status` and `research_read` are **unreachable in a default stack** — the
-   playbook's "admit Web Research first" is not something she can do on her own. Two clean remedies, both
-   the Architect's call: add `web_research` to `active_tools` (manual Toolbelt), or give it the light-hand
-   treatment (`auto_enable: true`, `session_ttl_min: 30`) to match its measured `gpu_tenant: "none"`.
+2. **`web_research` was Architect-only — fixed 2026-09-25 by the Architect's call.** The manifest had
+   `web_research: {auto_enable: false, session_ttl_min: 0, gpu_tenant: "none"}`, so
+   `pipeline/resource_pulse admit web_research` refused with *"ask the Architect before enabling. Do not
+   force the Toolbelt."* — while its own `gpu_tenant: "none"` recorded that search costs no GPU. A
+   CPU-only HTTP call was being gated like a Demucs run, which left `searxng_search`, `research_start`,
+   `research_status` and `research_read` **unreachable in a default stack**, and made the playbook's
+   "admit Web Research first" something she could not do unaided. Now `auto_enable: true` with a
+   30-minute session TTL, i.e. the ordinary **light-hand** route (`resource_pulse` → `admit_for_goal`),
+   matching the manifest's own `gpu_tenant: "none"`. Gate: `is_light = auto_enable and gpu_tenant in
+   {"", "none", "idle"}` (`pipeline/resource_pulse.py:236`). The Architect still flips the *Toolbelt*
+   when he wants it always-on; this only restores her ability to admit it for a bounded session.
 
 Re-run live mode with `.\venv\Scripts\python.exe scripts\run-research-bench.py --live --case rb_05 --json`.
+
+**Corroborated on the browser path, 2026-09-25, with the gate open.** After `admit web_research`
+(light hand — session grant active, 30 min, `searxng_search` enabled): `scripts/trace-eve-browser.py
+--question "search the web for the latest yt-dlp release notes and tell me what version it is"` produced
+**one bubble in 25.1 s** (healthy) whose answer was prose — and **no query ever reached SearXNG**
+(`docker logs empire-searxng`, 10-minute window). So the chain is now fully isolated:
+
+| Link | State |
+|---|---|
+| Search service | ✅ live (`empire-searxng`, 36 results for a probe query) |
+| Tool invoked directly | ✅ works (`pipeline.search_scout` + a live query-only desk job → 9,298-char digest) |
+| Capability gate | ✅ open (`admit web_research` → `ok: true`, listed under "Can admit now") |
+| **Her turn calling the tool** | ❌ **no tool call — E-43** |
+
+That makes E-43 the single blocker between "the capability exists" and "she uses it". To see the
+per-turn tool list, start the Workbench under `EMPIRE_TRACE=1` (the trace above reports
+*"(no records after the mark — start the Workbench with EMPIRE_TRACE=1)"*).
 
 
 ## The contract
