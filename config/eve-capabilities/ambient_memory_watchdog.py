@@ -20,7 +20,12 @@ ROOT = Path(__file__).resolve().parents[2]
 LOG_PATH = Path(os.environ.get("EMPIRE_AUDIT_LOG", ROOT / "eve-audit" / "active_chat.log"))
 STATUS_PATH = LOG_PATH.with_name("ambient-memory-status.json")
 OLLAMA_URL = os.environ.get("EMPIRE_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
-OLLAMA_MODEL = os.environ.get("EMPIRE_AMBIENT_MODEL", "qwen2.5:14b")
+# The old default (`qwen2.5:14b`) is not an installed tag, so every extraction failed with "model
+# not found" and this worker never wrote its status file (found 2026-09-24 while chasing two broken
+# logon windows). Point at an installed model, and pin the pass to the CPU so an ambient extraction
+# can never evict the interactive chat model — see docs/PLACEMENT.md ("if a clock is waiting -> CPU").
+OLLAMA_MODEL = os.environ.get("EMPIRE_AMBIENT_MODEL", "qwen2.5:7b-instruct")
+OLLAMA_OPTIONS = {"num_gpu": int(os.environ.get("EMPIRE_AMBIENT_NUM_GPU", "0"))}
 DATASET = "eve_ambient"
 MAX_FACTS_PER_TURN = 1
 MAX_FACTS_PER_HOUR = 10
@@ -39,7 +44,15 @@ def extract_fact(text: str, event_id: str, opener=urllib.request.urlopen) -> dic
         "Return JSON only with keys fact and reason. Return {\"fact\":\"\",\"reason\":\"\"} if none.\n\n"
         f"TURN:\n{text[:MAX_TEXT_CHARS]}"
     )
-    payload = json.dumps({"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "format": "json"}).encode("utf-8")
+    payload = json.dumps(
+        {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": OLLAMA_OPTIONS,
+        }
+    ).encode("utf-8")
     request = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     with opener(request, timeout=90) as response:
         result = json.loads(response.read().decode("utf-8"))

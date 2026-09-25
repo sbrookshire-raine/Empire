@@ -24,7 +24,10 @@ ROOT = Path(__file__).resolve().parents[2]
 LOG_PATH = Path(os.environ.get("EMPIRE_AUDIT_LOG", ROOT / "eve-audit" / "active_chat.log"))
 CATALOG_DB = Path(os.environ.get("EMPIRE_CATALOG_DB", ROOT / "config" / "eve-capabilities" / "catalog.db"))
 OLLAMA_URL = os.environ.get("EMPIRE_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
-OLLAMA_MODEL = os.environ.get("EMPIRE_RESEARCH_MODEL", "llama3:8b")
+# `llama3:8b` is not an installed tag, so this worker never completed a cycle either (found
+# 2026-09-24). Installed default + CPU pin, so a scavenge pass never evicts the chat model.
+OLLAMA_MODEL = os.environ.get("EMPIRE_RESEARCH_MODEL", "qwen2.5:7b-instruct")
+OLLAMA_OPTIONS = {"num_gpu": int(os.environ.get("EMPIRE_RESEARCH_NUM_GPU", "0"))}
 MAX_REQUESTS_PER_HOUR = 15
 ARXIV_URL = "https://export.arxiv.org/api/query"
 REQUEST_TIMES: deque[float] = deque()
@@ -33,7 +36,9 @@ REQUEST_TIMES: deque[float] = deque()
 def extract_query(events: list[dict[str, Any]]) -> str:
     context = "\n".join(event_text(event)[:1500] for event in events[-5:])
     prompt = f"Return only a short arXiv search query, maximum 4 words.\n{context}"
-    payload = json.dumps({"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}).encode("utf-8")
+    payload = json.dumps(
+        {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "options": OLLAMA_OPTIONS}
+    ).encode("utf-8")
     request = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(request, timeout=90) as response:
         result = json.loads(response.read().decode("utf-8"))
