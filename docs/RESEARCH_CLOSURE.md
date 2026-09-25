@@ -84,6 +84,21 @@ Legend: ✅ done · 🔧 in progress / scaffold · ⏸ measured-failure only · 
 - llama.cpp release notes — structured output / grammar
 - **EMPIRE DriftBench failures** — primary signal (`data/eval/wiki_calibrate.jsonl`)
 
+**Re-opened narrowly, ticket-gated (2026-09-24).** The Architect named one capability he wants and
+does not have — *"let her search the internet if I need her to"* — and it is now **measured**, not
+argued: `scripts/run-research-bench.py --baseline` reports **2 of 8 cases blocked, both `search`**
+(`data/eval/research_bench.jsonl`, evidence in `eve-audit/research-bench-baseline.json`). Open for
+that ticket only:
+
+- a **self-hosted search service** (SearXNG-class, JSON API, no keys) behind a gated tool — E-35
+- **main-content extraction** for the fetch path (trafilatura-class, CPU), to cut tokens per page
+- a **research → document** pattern (STORM-style questions → outline → cited sections), stolen as a
+  contract rather than adopted as a framework — consistent with "steal contracts only" above
+
+Everything else in the closed list stays closed. When the bench reports 8/8 ready with
+`--require-ready` exiting 0, this paragraph comes out.
+
+
 ---
 
 ## Offline mirror checklist
@@ -114,6 +129,7 @@ Minimum Ollama pulls (from gap analysis + current stack):
 |---------|---------|---------------|
 | Wiki smoke | `scripts/test-wiki-chat-smoke.py` | 4/4 injection + live |
 | Wiki calibrate | `scripts/run-wiki-calibrate.py --tier smoke` | 8/8 smoke tier |
+| Research bench | `scripts/run-research-bench.py --baseline` (capability, no model) · `--live` (real turns) | all cases `ready` and `--require-ready` exits 0 (2026-09-24: 6/8, `search` blocked) |
 | Playwright UI | `scripts/test-wiki-eve-playwright.py` | Stranger Things Q in browser |
 | Full calibrate | `run-wiki-calibrate.py` (no tier filter) | Track routing_gap count ↓ over time |
 
@@ -128,6 +144,7 @@ Future architecture changes require a **measured DriftBench regression**, not a 
 | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md) | Living backlog + smoke IDs |
 | [EMPIRE_RESEARCH_SNAPSHOT.md](EMPIRE_RESEARCH_SNAPSHOT.md) | As-built system truth |
 | [WIKI_SCOUT.md](WIKI_SCOUT.md) | Wiki Local ops |
+| [RESEARCH_BENCH.md](RESEARCH_BENCH.md) | The eval that re-opened this file (E-34) |
 | [VOICE_PRESENCE.md](VOICE_PRESENCE.md) | Speaches STT/TTS |
 | [OPERATIONAL_HANDOFF.md](OPERATIONAL_HANDOFF.md) | Ollama operational phase |
 
