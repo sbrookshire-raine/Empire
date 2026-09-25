@@ -106,6 +106,15 @@ class SearchScoutTests(unittest.TestCase):
         payload = search_scout.urls_for("x", opener=opener_raising(urllib.error.URLError("nope")))
         self.assertFalse(payload["ok"])
 
+    def test_results_carry_a_citation_rule(self) -> None:
+        """rb_02's failure mode: the tool ran and the answer cited nothing."""
+
+        found = search_scout.search("local first llm", opener=opener_returning(SAMPLE))
+        rule = str(found.get("chat_reply_rule") or "")
+        self.assertIn("URL", rule)
+        self.assertIn("web_scout", rule)
+        self.assertIn("lead", str(found.get("note") or ""))
+
     def test_base_url_env_override_is_honoured(self) -> None:
         with patch.dict(os.environ, {"EMPIRE_SEARXNG_URL": "http://127.0.0.1:9999/"}):
             self.assertEqual(search_scout.base_url(), "http://127.0.0.1:9999")

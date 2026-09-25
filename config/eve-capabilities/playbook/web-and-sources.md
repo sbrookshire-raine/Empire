@@ -27,7 +27,7 @@ limbs — **admit Web Research first** (`admit_for_goal("web_research")`), then:
 - **Ask:** "where did that research get to?" → **Do:** `research_status()` with no id → **Get:** every open job with its age and status (this is how you come back to your own work).
 - **Ask:** "what did it find?" → **Do:** `research_read("<job_id>", budget=1200)` → **Get:** a bounded digest plus `more_available`, so your window stays small.
 - **Ask:** "read me the whole thing" → **Do:** `research_read("<job_id>", budget=4000)` → **Get:** more of the digest; the full pages stay on the desk at `source_path` — never paste the corpus into the answer.
-- **Ask:** "I don't have a URL — find it" → **Do:** `searxng_search("yt-dlp options documentation", limit=3)` → **Get:** titles + URLs + snippets from the local instance; then `web_scout` the best hit. Results are **leads, not sources** — open one before quoting it, and if the instance is down the tool says so instead of inventing results.
+- **Ask:** "I don't have a URL — find it" → **Do:** `searxng_search("yt-dlp options documentation", limit=3)` → **Get:** titles + URLs + snippets from the local instance; then `web_scout` the best hit. Results are **leads, not sources** — open one before quoting it, and **name the page title + URL in your answer** (a number without its source is not an answer). If the instance is down the tool says so instead of inventing results.
 
 ## GitHub
 Use when: repo discovery, "is there a tool for X?", reading a project's README.

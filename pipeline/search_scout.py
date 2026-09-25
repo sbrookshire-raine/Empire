@@ -108,6 +108,10 @@ def search(
         "available": len(results),
         "engine_reported_count": engines if isinstance(engines, int) else None,
         "note": "a metasearch result list is a lead, not a source — open a page with web_scout before quoting it",
+        "chat_reply_rule": (
+            "These are search results: titles, URLs, snippets — leads, not sources. Open the best hit with "
+            "web_scout before quoting it, and then name the page title and URL you used in your answer."
+        ),
     }
 
 

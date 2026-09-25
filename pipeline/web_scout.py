@@ -411,6 +411,12 @@ def fetch_url(url: str, *, timeout: float = 45.0) -> dict[str, Any]:
         "text": body,
         "chars": len(body),
         "extractor": extractor,
+        # Same hook the wiki limbs use: tells her how to reply from this evidence. rb_02 failed on
+        # exactly this — the fetch ran and the answer cited nothing.
+        "chat_reply_rule": (
+            "This is live page content from the web, not your own knowledge: answer from it and name the "
+            "page title plus this URL so the user can check it. Never present its contents as unsourced."
+        ),
     }
     # Prompt-injection isolation: a turn consuming public-web content is
     # untrusted; write/shell/memory tools must not auto-acquire this turn.
