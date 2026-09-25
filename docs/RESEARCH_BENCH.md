@@ -97,13 +97,32 @@ and a stale trace file no longer hides it (the check is per-turn records, not fi
 Run live mode with the Workbench tracing:
 `.\venv\Scripts\python.exe scripts\run-research-bench.py --live --case rb_01 --json`.
 
-**The browser-trace observation, read correctly.** `trace-eve-browser.py` on *"search the web for the
-latest yt-dlp release notes…"* gave one healthy bubble (25.1 s) in prose, and **no query reached
-SearXNG** (`docker logs empire-searxng`, 10-minute window). Taken at the time as "she does not search",
-and read beside the blind bench, it looked systemic. With `rb_01` passing on the same capability — and
-the frontend's own trace showing `tool.requested: searxng_search` — the honest reading is much narrower:
-**that phrasing did not trigger a search in that turn.** One no-tool turn is a data point about a
-question, not a verdict about a limb; re-run it with tracing on before concluding anything.
+**The browser-trace observation, corrected twice.** The first run (that phrasing, 25.1 s, prose) was read
+as "she does not search" — and I backed it with *"no query reached SearXNG"* from
+`docker logs empire-searxng`. **That evidence was worthless: the container logs no per-request lines at
+all** (only boot/granian lines), so its absence proved nothing in either direction. Second instrument
+error in one investigation, after the blind bench.
+
+**What a real browser turn actually shows** (2026-09-25, Playwright driving :8080, `EMPIRE_TRACE=1`):
+
+```
+  > 'search the web for the latest yt-dlp release version and tel':  13.0s  bubbles_added=1
+    turn 005bd59ee47d  model=empire-fast:14b mode=fast
+      tool.requested  ['searxng_search']
+      tool.result     1223.4 ms
+      event           turn.completed
+  answer: 'The latest yt-dlp release version is **2026.08.19**. You can find the release de…'
+```
+
+The Toolbelt was pinned to `["wiki_local","voice_presence"]` for that run, so **the session grant alone**
+enabled search — the light-hand route, not a manual flip. Her answer checks out against the web: an
+independent `pipeline.search_scout "yt-dlp latest release version"` returns *"yt-dlp 2026.08.19 Download
+Free - VideoHelp"*. The limb works end to end — she calls it, it returns in ~1.2 s, and she reports its
+content with the source.
+
+**Observability gap worth closing:** SearXNG runs without request logging, so "did a query arrive?" has
+no cheap answer — which is how one bad inference became possible. An access log (or a counter on
+`pipeline/search_scout` calls) would make the next investigation cheap.
 
 | Link | State |
 |---|---|
