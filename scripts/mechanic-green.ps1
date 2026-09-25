@@ -68,6 +68,20 @@ Invoke-Step "wiki extract battery (CLI)" {
     & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
 }
 
+# The browser-logic harness stubs the workbench JS in node. It is the only gate on
+# eve-workbench.js behaviour (transcript, stream events, mode switch, chat history), and it had
+# rotted unnoticed while nothing ran it — found 2026-09-24 (missing browser stubs, a stale
+# fetch-count assertion, and a model-picker test left behind by the mode-picker rewrite).
+$nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
+if ($nodeExe) {
+    Invoke-Step "workbench UI harness (node)" {
+        & $nodeExe (Join-Path $Root "tests\frontend\eve_workbench_harness.js")
+    }
+} else {
+    Write-Host ""
+    Write-Host "SKIP workbench UI harness (node not on PATH)" -ForegroundColor Yellow
+}
+
 if (-not $SkipStack) {
     Invoke-Step "verify-stack" {
         & $py (Join-Path $Root "scripts\verify-stack.py")

@@ -18,7 +18,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 After forge or fix, run from repo root:
 
 ```powershell
-.\scripts\mechanic-green.ps1          # units + wiki battery + verify-stack
+.\scripts\mechanic-green.ps1          # units + capability governance + wiki battery + UI harness + verify-stack
 .\scripts\mechanic-green.ps1 -Full    # also live Eve workbench verify
 .\venv\Scripts\python.exe scripts\smoke-eve-hands.py --eve-chat   # pulse/admit/GitHub hands
 ```

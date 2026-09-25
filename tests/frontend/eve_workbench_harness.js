@@ -12,6 +12,14 @@ function loadWorkbench(fetchImpl) {
     TextDecoder,
     Uint8Array,
     clearTimeout,
+    // `unref()`: the turn timer's interval must not hold node's event loop open, or the harness
+    // never exits (measured 2026-09-24 — the process hung after the last test).
+    setInterval: (callback, ms) => {
+      const handle = setInterval(callback, ms);
+      if (handle && typeof handle.unref === "function") handle.unref();
+      return handle;
+    },
+    clearInterval,
     console,
     document: {
       createElement() {
@@ -22,7 +30,15 @@ function loadWorkbench(fetchImpl) {
       throw new Error("Unexpected fetch");
     }),
     setTimeout,
-    window: {},
+    window: {
+      // The UI scrolls the transcript inside `requestAnimationFrame` (eve-workbench.js
+      // `scrollTranscript`). Without this stub the whole harness aborts on the first
+      // `setPendingInput`/message render — it rotted silently because nothing ran it in a gate
+      // (found 2026-09-24; now a mechanic-green step).
+      requestAnimationFrame: (callback) => setTimeout(callback, 0),
+      matchMedia: () => ({ matches: false }),
+      setTimeout,
+    },
   };
   vm.runInNewContext(
     fs.readFileSync("frontend/eve-workbench.js", "utf8"),
@@ -157,10 +173,20 @@ async function testInputRequestsQueueAndFailedApprovalPersists() {
 
 async function testNewChatRejectsStaleSessionResponse() {
   let resolvePost;
-  let calls = 0;
-  const { context, workbench } = loadWorkbench((_, options) => {
-    calls += 1;
-    if (calls > 1) throw new Error("stale response opened a stream");
+  let sessionPosts = 0;
+  const { workbench } = loadWorkbench((url, options) => {
+    // Only the *session* POST matters here: a second one would mean the stale response opened a
+    // stream. `newChat()` also persists and clears chat history now, so counting every fetch made
+    // this assertion stale (found 2026-09-24, the first time this harness ran inside a gate).
+    if (!String(url).includes("/api/eve/session")) {
+      return Promise.resolve({
+        headers: { get: () => null },
+        json: async () => ({}),
+        ok: true,
+      });
+    }
+    sessionPosts += 1;
+    if (sessionPosts > 1) throw new Error("stale response opened a stream");
     return new Promise((resolve) => {
       resolvePost = () => resolve({
         headers: { get: () => null },
@@ -182,7 +208,7 @@ async function testNewChatRejectsStaleSessionResponse() {
   assert.equal(workbench.sessionId, null);
   assert.equal(workbench.continuationToken, null);
   assert.equal(workbench.messages.length, 0);
-  assert.equal(calls, 1);
+  assert.equal(sessionPosts, 1);
 }
 
 async function testStopAbortsInitialPost() {
@@ -278,25 +304,26 @@ async function testInboundUserEventDoesNotBecomeEveReply() {
   assert.equal(workbench.currentAssistantId, null);
 }
 
-async function testApplyOllamaModelSavesSelectionAndStartsNewChat() {
+async function testSelectModeSwitchesChatModeAndStartsNewChat() {
+  // The model picker became the *mode* picker (chat modes pin model + params), so this drives
+  // `applyChatMode` — the old `applyOllamaModel` is now a one-line alias for it (2026-09-24).
   const calls = [];
   const { workbench } = loadWorkbench(async (url, options) => {
     calls.push({ url, method: options && options.method, body: options && options.body });
-    return { ok: true, json: async () => ({ ok: true, active: "qwen3.8:latest" }) };
+    return { ok: true, json: async () => ({ ok: true, active: "think" }) };
   });
   workbench.sessionId = "ses_old";
   workbench.messages = [{ id: "message-1", role: "user", text: "hi eve" }];
-  workbench.selectedModel = "qwen3.8:latest";
-  workbench.activeOllamaModel = "llama3.1:8b";
+  workbench.activeMode = "fast";
+  workbench.selectedMode = "think";
 
-  await workbench.applyOllamaModel();
+  await workbench.applyChatMode();
 
   assert.equal(calls[0].url, "/api/ollama/model");
   assert.equal(calls[0].method, "PUT");
-  assert.equal(JSON.parse(calls[0].body).model, "qwen3.8:latest");
+  assert.equal(JSON.parse(calls[0].body).mode, "think");
   assert.equal(workbench.sessionId, null);
   assert.equal(workbench.messages.length, 0);
-  assert.equal(workbench.activeOllamaModel, "qwen3.8:latest");
 }
 
 async function testTaskCrudAndEveActionsUseButtons() {
@@ -494,7 +521,7 @@ async function run() {
   await testReselectionClearsUploadedAssociation();
   await testCursorJumpsAcrossDroppedOversizedRecord();
   await testInboundUserEventDoesNotBecomeEveReply();
-  await testApplyOllamaModelSavesSelectionAndStartsNewChat();
+  await testSelectModeSwitchesChatModeAndStartsNewChat();
   await testTaskCrudAndEveActionsUseButtons();
   await testComposerEnterSendsAndShiftEnterDoesNot();
   await testToolActivityInterleavesInTranscript();
