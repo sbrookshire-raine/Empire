@@ -43,7 +43,7 @@ This document is the capstone for five research packs (Product Hunt, CLI, missed
 | Speech out | Piper / Speaches | ✅ Speaches CPU | T-08 | Piper optional compare F-37 |
 | Vision | Qwen VL swap | ✅ qwen3-vl:8b | T-09 | GPU lease + swap mode |
 | Document ingest | Docling | ✅ MCP forged | T-06 | Architect smoke |
-| Constrained output | Ollama `format` | 🔧 not wired | F-38 | JSON schema for title pick |
+| Constrained output | Ollama `format` | ✅ **measured** (F-38) | [`CONSTRAINED_OUTPUT.md`](CONSTRAINED_OUTPUT.md) — enum picks enforced & fast (0.39–1.11 s); **`format` + `tools` cannot combine**, so malformed *tool calls* still need harness validation |
 | Personal file search | FTS5 + Weaviate | ⏸ | I-06 | After Docling personal corpus |
 | **Offline mirror** | **critical gap** | 🔧 script | **F-35, T-25** | **`build-offline-mirror.ps1`** |
 | Image gen | deprioritize | ❌ rejected | — | — |
