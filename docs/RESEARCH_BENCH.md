@@ -39,25 +39,49 @@ given only a query searched, took the top 3 results, fetched them and wrote a di
 `rb_01` / `rb_02` now resolve through `searxng_search`; the tool states its own failure modes (instance
 down → names `start-searxng.ps1`; JSON disabled → names the settings key) rather than fabricating.
 
-## Live mode — measured 2026-09-25 (1/8), and why
+## Live mode — measured 2026-09-25, and a false alarm worth keeping
 
 The baseline mode measures *capability existence*. Live mode asks the harder question — do real turns
-through the Workbench actually use the limb? First full run, stack up (8080 / 2000 / 8090, SearXNG up):
+through the Workbench actually use the limb? **It is only meaningful when the Workbench runs with
+`EMPIRE_TRACE=1`**, because `serve.py` writes `eve-audit/eve-trace.jsonl` only then, and that file is the
+only honest source of "which tool ran".
+
+**The first run read 1/8 with `tools=none` on every case — and it was wrong.** The frontend had been
+started by `start-stack.ps1` *without* tracing, so no `tool.requested` records were written. The bench's
+only guard was "does the trace file exist?", and a **stale** file from earlier sessions did exist
+(24,340 records, 136 of them `tool.requested`) — so blindness went **silent** and every case was graded
+as a missing tool call. That was recorded as E-43, *"live turns make no tool calls"*, which was **not
+true**: it was the instrument, not Eve.
+
+Same stack, same cases, tracing on:
 
 ```
-  rb_01..rb_07  FAIL  tools=none      rb_08  pass  tools=none
-  passed=1/8   per_need={'search': {'pass': 0, 'fail': 2}, 'github': ..., 'archive': {'pass':0,'fail':2}, ...}
+  rb_01  pass  tools=['searxng_search']
+  rb_02  FAIL  tools=['searxng_search']  ['no source URL in the answer']
+  rb_03  FAIL  tools=['research_orchestrate', 'admit_for_goal', 'request_capability', ...]
+  rb_04  FAIL  tools=none                ['no expected tool ran', 'empty reply']
+  rb_05  pass  tools=['wiki_scout_search', 'wiki_read_section']
+  rb_06  pass  tools=['wiki_scout_compare_years']
+  rb_07  FAIL  tools=['wiki_scout_compare_years', 'wiki_read_section', ...]
+  rb_08  pass  tools=none
+  passed=4/8
 ```
 
-`rb_05` detail: `{"tools": [], "cited_url": false, "chars": 321}` — **she answered in 321 characters of
-prose with no tool calls at all.** Not an empty response (so not E-30), and not a search-specific
-failure: `rb_05`/`rb_06` expect `wiki_local` / `github_scout` tools. Two findings, in order of weight:
+So **tool calling works**, including the capability this bench was built to gate: `rb_01` called
+`searxng_search` and passed. The live score is behavioural, not structural:
 
-1. **Live turns are not using tools — including enabled ones.** `wiki_local` *is* in the local Toolbelt
-   (`%LOCALAPPDATA%\EMPIRE\eve-toolbelt.json` → `active_tools: ["wiki_local"]`) and `wiki_scout_search`
-   is gated on it, yet no tool ran. So the Workbench path is either not offering tool schemas, not
-   surfacing the results, or she is choosing parametric answers. This affects *every* capability in the
-   UI, so it outranks the bench's own verdict and needs its own investigation.
+1. `rb_02` / `rb_07` — the right *class* of tool ran (search; wiki reads) but the answer carried neither
+   the source URL nor the artefact the case asks for: follow-through, not capability.
+2. `rb_03` — she reached for `research_orchestrate` + `admit_for_goal` + `request_capability` instead of
+   the github tool. Defensible route; the case's expectation is narrower than what she did.
+3. `rb_04` — **`empty reply` with no tool call**: the E-30 class, now caught in a repeatable harness.
+4. `rb_08` — pass with no tools, exactly as designed.
+
+**The instrument is now honest by construction.** `run-research-bench.py` treats "no trace records for
+this turn" as **unverifiable**: it prints `???? no trace records (WORKBENCH NOT TRACING — not a verdict)`,
+counts `unverified`, and exits non-zero. A blind run can no longer masquerade as a capability failure,
+and a stale trace file no longer hides it (the check is per-turn records, not file existence).
+
 2. **`web_research` was Architect-only — fixed 2026-09-25 by the Architect's call.** The manifest had
    `web_research: {auto_enable: false, session_ttl_min: 0, gpu_tenant: "none"}`, so
    `pipeline/resource_pulse admit web_research` refused with *"ask the Architect before enabling. Do not
@@ -70,24 +94,23 @@ failure: `rb_05`/`rb_06` expect `wiki_local` / `github_scout` tools. Two finding
    {"", "none", "idle"}` (`pipeline/resource_pulse.py:236`). The Architect still flips the *Toolbelt*
    when he wants it always-on; this only restores her ability to admit it for a bounded session.
 
-Re-run live mode with `.\venv\Scripts\python.exe scripts\run-research-bench.py --live --case rb_05 --json`.
+Run live mode with the Workbench tracing:
+`.\venv\Scripts\python.exe scripts\run-research-bench.py --live --case rb_01 --json`.
 
-**Corroborated on the browser path, 2026-09-25, with the gate open.** After `admit web_research`
-(light hand — session grant active, 30 min, `searxng_search` enabled): `scripts/trace-eve-browser.py
---question "search the web for the latest yt-dlp release notes and tell me what version it is"` produced
-**one bubble in 25.1 s** (healthy) whose answer was prose — and **no query ever reached SearXNG**
-(`docker logs empire-searxng`, 10-minute window). So the chain is now fully isolated:
+**The browser-trace observation, read correctly.** `trace-eve-browser.py` on *"search the web for the
+latest yt-dlp release notes…"* gave one healthy bubble (25.1 s) in prose, and **no query reached
+SearXNG** (`docker logs empire-searxng`, 10-minute window). Taken at the time as "she does not search",
+and read beside the blind bench, it looked systemic. With `rb_01` passing on the same capability — and
+the frontend's own trace showing `tool.requested: searxng_search` — the honest reading is much narrower:
+**that phrasing did not trigger a search in that turn.** One no-tool turn is a data point about a
+question, not a verdict about a limb; re-run it with tracing on before concluding anything.
 
 | Link | State |
 |---|---|
 | Search service | ✅ live (`empire-searxng`, 36 results for a probe query) |
-| Tool invoked directly | ✅ works (`pipeline.search_scout` + a live query-only desk job → 9,298-char digest) |
-| Capability gate | ✅ open (`admit web_research` → `ok: true`, listed under "Can admit now") |
-| **Her turn calling the tool** | ❌ **no tool call — E-43** |
-
-That makes E-43 the single blocker between "the capability exists" and "she uses it". To see the
-per-turn tool list, start the Workbench under `EMPIRE_TRACE=1` (the trace above reports
-*"(no records after the mark — start the Workbench with EMPIRE_TRACE=1)"*).
+| Tool invoked directly | ✅ works (`pipeline.search_scout`; live query-only desk job → 9,298-char digest) |
+| Capability gate | ✅ open (`admit web_research` → `ok: true`, now the light-hand route) |
+| **Her turn calling the tool** | ✅ **works** — live `rb_01`: `tools=['searxng_search']`, case passed |
 
 
 ## The contract

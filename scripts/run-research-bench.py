@@ -92,21 +92,29 @@ def _trace_offset() -> int:
     return TRACE_PATH.stat().st_size if TRACE_PATH.exists() else 0
 
 
-def _tools_since(offset: int) -> list[str]:
-    """Tool names requested since `offset` — the trace is the only honest source of this."""
+def _records_since(offset: int) -> list[dict[str, Any]]:
+    """Every trace record written since `offset` (empty also means "tracing is off")."""
 
-    names: list[str] = []
     if not TRACE_PATH.exists():
-        return names
+        return []
+    records: list[dict[str, Any]] = []
     with TRACE_PATH.open(encoding="utf-8") as handle:
         handle.seek(offset)
         for line in handle:
             try:
-                record = json.loads(line)
+                records.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
-            if record.get("kind") == "tool.requested":
-                names.extend(str(name) for name in (record.get("tools") or []))
+    return records
+
+
+def _tools_since(offset: int) -> list[str]:
+    """Tool names requested since `offset` — the trace is the only honest source of this."""
+
+    names: list[str] = []
+    for record in _records_since(offset):
+        if record.get("kind") == "tool.requested":
+            names.extend(str(name) for name in (record.get("tools") or []))
     return names
 
 
@@ -160,6 +168,7 @@ def main() -> int:
         print("  WARNING: no trace file — tool evidence is invisible, so grades read pessimistic.")
         print("  Start the Workbench with EMPIRE_TRACE=1 for an honest run.")
     results: list[dict[str, Any]] = []
+    unverified = 0
     for case in cases:
         query = str(case.get("query") or "")
         offset = _trace_offset()
@@ -182,6 +191,28 @@ def main() -> int:
             print(f"  {case.get('id'):6s} FAIL  session failed ({status})")
             continue
         answer = stream_final_text(str(payload["sessionId"]))
+        turned = _records_since(offset)
+        if not turned:
+            # Instrument blindness must never be reported as a capability failure: with
+            # EMPIRE_TRACE off, serve.py writes nothing, so every case would read "tools=none".
+            # A *stale* trace file used to hide this (present file, no new records) — hence the
+            # check is "no records for THIS turn", not "no trace file".
+            unverified += 1
+            results.append(
+                {
+                    "id": case.get("id"),
+                    "needs": case.get("needs"),
+                    "passed": False,
+                    "verified": False,
+                    "issues": [
+                        "unverifiable: no trace records for this turn - "
+                        "start the Workbench with EMPIRE_TRACE=1"
+                    ],
+                    "evidence": {"tools": [], "cited_url": False, "chars": len(answer)},
+                }
+            )
+            print(f"  {case.get('id'):6s} ????  no trace records (WORKBENCH NOT TRACING - not a verdict)")
+            continue
         tools = _tools_since(offset)
         result = bench.grade(case, answer=answer, tools=tools)
         results.append(result)
@@ -189,7 +220,11 @@ def main() -> int:
         print(f"  {result['id']:6s} {flag}  tools={tools or 'none'}  {result['issues'] or ''}")
 
     summary = bench.summarise(results)
+    if unverified:
+        summary["unverified"] = unverified
     print(f"\n  passed={summary['passed']}/{summary['cases']}  per_need={summary['per_need']}")
+    if unverified:
+        print(f"  unverified={unverified} (blind run - enable EMPIRE_TRACE=1 and repeat)")
     if args.json:
         print(json.dumps({"results": results, "summary": summary}, indent=2, default=str))
     if args.out:
@@ -198,7 +233,7 @@ def main() -> int:
             json.dumps({"results": results, "summary": summary}, indent=2, default=str),
             encoding="utf-8",
         )
-    return 0 if summary["failed"] == 0 else 1
+    return 0 if summary["failed"] == 0 and unverified == 0 else 1
 
 
 if __name__ == "__main__":
