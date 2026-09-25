@@ -86,14 +86,38 @@ class DeskContractTests(DeskTestCase):
         self.assertIn("digest truncated", payload["digest"])
         self.assertLessEqual(len(payload["digest"]), 600)
 
-    def test_no_url_without_a_search_limb_is_honest(self) -> None:
-        """E-34 measured the hole: no web search exists, so the desk says so instead of inventing."""
+    def test_a_query_without_urls_searches_then_fetches(self) -> None:
+        """E-35: the desk finds its own URLs now, and records which results it chose."""
 
         job = research_desk.start("what is new in searxng", spawn=False)["job_id"]
-        collected = research_desk.collect(job, fetcher=stub_fetcher())
+        collected = research_desk.collect(
+            job,
+            fetcher=stub_fetcher("Found page", "Short page body."),
+            searcher=lambda query, limit: {"ok": True, "urls": ["https://example.org/found"]},
+        )
+        self.assertEqual(collected["status"], "done", collected)
+        state = research_desk.status(job)
+        self.assertIn("searched and took the top 1", state["note"])
+        self.assertTrue(state["has_digest"])
+        self.assertIn("https://example.org/found", research_desk.read(job)["digest"])
+
+    def test_search_unavailable_is_honest_about_it(self) -> None:
+        """A down instance must never turn into an invented answer."""
+
+        job = research_desk.start("no instance running", spawn=False)["job_id"]
+        collected = research_desk.collect(
+            job,
+            fetcher=stub_fetcher(),
+            searcher=lambda query, limit: {
+                "ok": False,
+                "error": "SearXNG is not reachable",
+                "hint": "start it with scripts/start-searxng.ps1",
+            },
+        )
         self.assertEqual(collected["status"], "needs_sources")
         state = research_desk.status(job)
-        self.assertIn("E-35", state["note"])
+        self.assertIn("not reachable", state["note"])
+        self.assertIn("start-searxng.ps1", state["note"])
         self.assertFalse(state["has_digest"])
         payload = research_desk.read(job)
         self.assertFalse(payload["ok"])

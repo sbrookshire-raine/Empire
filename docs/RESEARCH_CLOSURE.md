@@ -84,19 +84,24 @@ Legend: ✅ done · 🔧 in progress / scaffold · ⏸ measured-failure only · 
 - llama.cpp release notes — structured output / grammar
 - **EMPIRE DriftBench failures** — primary signal (`data/eval/wiki_calibrate.jsonl`)
 
-**Re-opened narrowly, ticket-gated (2026-09-24).** The Architect named one capability he wants and
-does not have — *"let her search the internet if I need her to"* — and it is now **measured**, not
-argued: `scripts/run-research-bench.py --baseline` reports **2 of 8 cases blocked, both `search`**
-(`data/eval/research_bench.jsonl`, evidence in `eve-audit/research-bench-baseline.json`). Open for
-that ticket only:
+**Re-opened for E-35 — and now closed (2026-09-24 → 2026-09-25).** The Architect named one capability
+he wants and does not have — *"let her search the internet if I need her to"* — so it was **measured**,
+not argued: `scripts/run-research-bench.py --baseline` reported **2 of 8 cases blocked, both `search`**
+(`data/eval/research_bench.jsonl`, evidence `eve-audit/research-bench-baseline.json`). Built for that
+ticket only, and only that ticket:
 
-- a **self-hosted search service** (SearXNG-class, JSON API, no keys) behind a gated tool — E-35
-- **main-content extraction** for the fetch path (trafilatura-class, CPU), to cut tokens per page
-- a **research → document** pattern (STORM-style questions → outline → cited sections), stolen as a
-  contract rather than adopted as a framework — consistent with "steal contracts only" above
+- a **self-hosted search service** (SearXNG, JSON API, no keys) behind the gated `searxng_search` tool
+  — E-35, started by `scripts/start-searxng.ps1`, config in `config/searxng/settings.yml`
+- **main-content extraction** for the fetch path — already present (`web_scout` tries trafilatura)
+- a **research → document** pattern stolen as a contract rather than adopted as a framework — E-37's
+  research desk (`research_start` / `research_status` / `research_read`)
 
-Everything else in the closed list stays closed. When the bench reports 8/8 ready with
-`--require-ready` exiting 0, this paragraph comes out.
+**Exit condition met:** the bench now reports **8/8 ready, `blocked_needs: none`, and
+`--require-ready` exits 0.** A live desk job with only a query searched, took the top 3 results, and
+fetched them into a digest with no URL given. Everything else in the closed list above stays closed;
+this paragraph stays as the record of the one exception, with E-34's bench as the standing gate for
+any future claim of this kind.
+
 
 
 ---

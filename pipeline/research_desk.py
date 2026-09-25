@@ -19,7 +19,8 @@ Desk layout
     <desk>/<job_id>/web_cache/    where `web_scout` caches each page
 
 Statuses: `queued` -> `running` -> `done` | `partial` | `failed`, plus `needs_sources` when there is
-no URL to fetch and no search limb yet (E-35 is that missing capability; E-34 measures the hole).
+neither a URL to fetch nor a working search instance (E-35 supplies the search; if SearXNG is down the
+job says so and names the fix instead of inventing sources).
 
     python -m pipeline.research_desk start "what changed in yt-dlp" --url https://example.org/notes
     python -m pipeline.research_desk status 20260924-153012-ab12cd
@@ -47,6 +48,7 @@ DEFAULT_DESK = WORKBENCH / "04_Thought_Experiments" / "research"
 MAX_DIGEST_CHARS = 2_400
 MAX_SOURCE_CHARS = 20_000
 MAX_PER_SOURCE_CHARS = 3_000
+DISCOVER_LIMIT = 3
 TTL_DAYS = 14
 ACTIVE = ("queued", "running", "partial", "needs_sources", "failed")
 JOB_ID_RE = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$")
@@ -242,6 +244,14 @@ def _default_fetcher(url: str, cache_dir: Path, note: str) -> dict[str, Any]:
     return web_scout.scout(url, cache_dir=cache_dir, write_files=True, note=note)
 
 
+def _default_searcher(query: str, limit: int) -> dict[str, Any]:
+    """Find URLs for a query when the job was given none (E-35's `searxng_search`)."""
+
+    from pipeline import search_scout
+
+    return search_scout.urls_for(query, limit=limit)
+
+
 def _source_text(result: dict[str, Any], path_hint: Path) -> str:
     """`web_scout` returns the body under a few names depending on the extractor; be tolerant."""
 
@@ -261,8 +271,9 @@ def collect(
     job_id: str,
     *,
     fetcher: Callable[[str, Path, str], dict[str, Any]] | None = None,
+    searcher: Callable[[str, int], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """The worker: fetch each URL, write the desk, leave a bounded digest. No model involved."""
+    """The worker: find URLs if none were given, fetch them, leave a bounded digest. No model."""
 
     directory = _job_dir(job_id)
     if directory is None:
@@ -278,15 +289,26 @@ def collect(
 
     links = [str(url) for url in (meta.get("urls") or [])]
     if not links:
-        # Honest: with no URL and no search limb there is nothing to fetch. E-35 is that capability.
-        meta["status"] = "needs_sources"
-        meta["note"] = (
-            "no URL given, and no web-search tool exists yet (E-34 measures the hole, E-35 builds "
-            "it) — ask the Architect for a URL, or read a local document instead"
-        )
-        meta["updated"] = _now()
-        _write_json(directory / "meta.json", meta)
-        return {"ok": True, "job_id": job_id, "status": "needs_sources", "sources": []}
+        # No URL given: search first (E-35). If the instance is down we say so — never invent sources.
+        find = searcher or _default_searcher
+        found = find(str(meta.get("query") or ""), DISCOVER_LIMIT)
+        links = [str(url) for url in (found.get("urls") or [])]
+        if links:
+            meta["discovered"] = found.get("results") or []
+            meta["note"] = f"no URLs given - searched and took the top {len(links)} result(s)"
+        else:
+            meta["status"] = "needs_sources"
+            reason = str(found.get("error") or "no results")
+            meta["note"] = f"{reason}; {found.get('hint') or 'give me a URL to fetch'}"
+            meta["updated"] = _now()
+            _write_json(directory / "meta.json", meta)
+            return {
+                "ok": True,
+                "job_id": job_id,
+                "status": "needs_sources",
+                "sources": [],
+                "error": reason,
+            }
 
     cache_dir = directory / "web_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -333,7 +355,8 @@ def collect(
 
     meta["sources"] = sources
     meta["status"] = "done" if sources and not failed else ("partial" if sources else "failed")
-    meta["note"] = "; ".join(failed)[:600]
+    if failed:
+        meta["note"] = "; ".join(failed)[:600]
     meta["updated"] = _now()
     _write_json(directory / "meta.json", meta)
     return {

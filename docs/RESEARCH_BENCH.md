@@ -32,6 +32,13 @@ close the gap: it orchestrates archive + GitHub + the Product Hunt feed + **one 
 query-based web search. `web_search` / `web_fetch` are `export default disableTool()` (the
 provider-managed path hung local Ollama) — so the absence is structural, not an oversight.
 
+**Update 2026-09-25 — the hole is closed (E-35).** A self-hosted SearXNG instance with its JSON API
+enabled (`scripts/start-searxng.ps1`, `config/searxng/settings.yml`) plus the gated `searxng_search`
+tool took the bench to **8/8 ready, `blocked_needs: none`, `--require-ready` exit 0**. A live desk job
+given only a query searched, took the top 3 results, fetched them and wrote a digest — no URL supplied.
+`rb_01` / `rb_02` now resolve through `searxng_search`; the tool states its own failure modes (instance
+down → names `start-searxng.ps1`; JSON disabled → names the settings key) rather than fabricating.
+
 ## The contract
 
 | Rule | Where |

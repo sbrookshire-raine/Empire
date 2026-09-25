@@ -1,7 +1,7 @@
 ---
 area: web-and-sources
 one_line: Public web, GitHub, container images, docs scraping, document reading, multi-source research.
-tools: web_scout, browser_local_fetch, github_scout_search, github_scout_readme, container_scout_search, container_scout_detail, container_scout_docker_status, research_orchestrate, research_start, research_status, research_read, docs_guide_scrape, read_document, docling_convert, structured_extract
+tools: web_scout, searxng_search, browser_local_fetch, github_scout_search, github_scout_readme, container_scout_search, container_scout_detail, container_scout_docker_status, research_orchestrate, research_start, research_status, research_read, docs_guide_scrape, read_document, docling_convert, structured_extract
 skills: skill-browser-local, skill-container-scout, skill-read-document, skill-research-orchestrator, skill-structured-extract, skill-web-scout
 ---
 
@@ -23,11 +23,11 @@ Use when: the ask is about a live page, a vendor doc, or something the archive c
 Use when: the pass needs several pages, or it would hold the turn open for minutes. These are session
 limbs — **admit Web Research first** (`admit_for_goal("web_research")`), then:
 
-- **Ask:** "dig into what changed in yt-dlp and give me the short version" → **Do:** `research_start("yt-dlp changes", urls=[...])` → **Get:** a job id in about a second, and the turn *ends* — the fetching happens while the model is idle, so nothing evicts you and nothing blocks.
+- **Ask:** "dig into what changed in yt-dlp and give me the short version" → **Do:** `research_start("yt-dlp changes")` — **no URLs needed**, the worker searches first → **Get:** a job id in about a second, and the turn *ends*; the fetching happens while the model is idle, so nothing evicts you and nothing blocks.
 - **Ask:** "where did that research get to?" → **Do:** `research_status()` with no id → **Get:** every open job with its age and status (this is how you come back to your own work).
 - **Ask:** "what did it find?" → **Do:** `research_read("<job_id>", budget=1200)` → **Get:** a bounded digest plus `more_available`, so your window stays small.
 - **Ask:** "read me the whole thing" → **Do:** `research_read("<job_id>", budget=4000)` → **Get:** more of the digest; the full pages stay on the desk at `source_path` — never paste the corpus into the answer.
-- **Ask:** "and if I have no URL?" → **Do:** `research_start("...")` with no urls → **Get:** `status: needs_sources` — there is no web-search tool yet (E-34 measures the hole, E-35 builds it), so ask the Architect for a link instead of pretending.
+- **Ask:** "I don't have a URL — find it" → **Do:** `searxng_search("yt-dlp options documentation", limit=3)` → **Get:** titles + URLs + snippets from the local instance; then `web_scout` the best hit. Results are **leads, not sources** — open one before quoting it, and if the instance is down the tool says so instead of inventing results.
 
 ## GitHub
 Use when: repo discovery, "is there a tool for X?", reading a project's README.

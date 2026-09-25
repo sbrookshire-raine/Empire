@@ -1,0 +1,25 @@
+# SearXNG for EMPIRE — local-only metasearch behind the `searxng_search` tool (E-35).
+#
+# `use_default_settings: true` merges this onto the image's own defaults, so the only thing this file
+# really does is switch on the **JSON output format** — without it the API returns 403 (documented in
+# SearXNG's own search-API page). No API key exists or is needed; the instance never leaves localhost.
+#
+# Started by: scripts/start-searxng.ps1   (docker, port 8888 on the host)
+use_default_settings: true
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  formats:
+    - html
+    - json
+
+server:
+  # Local-only instance: the key is not a secret anyone can reach, and it must be non-empty.
+  secret_key: "empire-local-searxng-not-a-remote-secret"
+  # The limiter blocks scripted querying (it expects a browser); this box is single-user.
+  limiter: false
+  image_proxy: false
+
+ui:
+  static_use_hash: true
