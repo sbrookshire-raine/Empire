@@ -1,0 +1,20 @@
+# Lens A wiring: makes the adopted instruments run on every commit instead of depending on memory.
+#
+# One hook, deliberately: it calls scripts/infra-checks.ps1, which is also what mechanic-green runs.
+# That keeps a single source of truth for how each tool is invoked (binary resolution, report paths,
+# advisory-vs-blocking) instead of duplicating invocations in two places.
+#
+# Rationale: docs/LENS_A_LANDSCAPE.md section 8. Findings: docs/audits/2026-09-26-infra-adoption.md.
+# Reports land in eve-audit/ (gitignored), so a hook run leaves evidence behind.
+#
+# The hook is advisory today: it reports and exit 0 unless scripts/infra-checks.ps1 -Strict is used.
+# Bypass for a WIP commit with: git commit --no-verify
+repos:
+  - repo: local
+    hooks:
+      - id: empire-infra
+        name: EMPIRE infra checks (deptry, ruff, gitleaks - advisory)
+        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/infra-checks.ps1
+        language: system
+        pass_filenames: false
+        always_run: true

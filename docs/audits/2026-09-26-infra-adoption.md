@@ -90,3 +90,49 @@ gitleaks triage from "probably benign" into a real exposure:
   somewhere physical.
 - Runner: `scripts/backup-empire.ps1` (with `-VerifyRestore`), first snapshot of `C:\Empire_Workbench`.
 - Acceptance rule recorded: a backup that has never been restored from is not a backup.
+
+## Tranche 2 (2026-09-26 late) — pre-commit, image pinning, vuln scan, coverage
+
+**pre-commit (the wiring).** `pre-commit 4.6.2` installed. `.pre-commit-config.yaml` holds **one** local
+hook that calls `scripts/infra-checks.ps1` — the same script `mechanic-green` runs, so there is a single
+source of truth for how each tool is invoked (binary resolution, report paths, advisory semantics).
+Hook installed at `.git/hooks/pre-commit` and verified: `pre-commit run --all-files` → *"EMPIRE infra
+checks (deptry, ruff, gitleaks - advisory) ... Passed"*. Advisory, so it reports without blocking;
+`git commit --no-verify` for WIP.
+
+**Images pinned by digest (the real fix for `:latest`).**
+
+| Image | Digest | File |
+|---|---|---|
+| `searxng/searxng` | `sha256:5286edb3…a6dfb6` | `scripts/start-searxng.ps1` |
+| `ghcr.io/speaches-ai/speaches` | `sha256:21e3df06…53ef8` | `scripts/start-voice.ps1` |
+| `pgvector/pgvector` | `sha256:1d533553…79f0fb` | `docker-compose.yml` |
+
+Trade-off stated rather than hidden: **a pin freezes known CVEs too.** It must be paired with a periodic
+comparison of the pinned digest against current upstream, or we trade "silent change" for "silent rot".
+
+**First vulnerability scan ever (trivy).**
+
+| Image | HIGH + CRITICAL | Detail |
+|---|---|---|
+| `searxng/searxng` | **0** | clean at those severities |
+| `speaches` (voice, :8000) | **47 — 2 CRITICAL, 45 HIGH** | pillow ×13, cryptography ×4, urllib3 ×4, starlette ×3 |
+
+Risk framing, not alarm: Speaches binds `127.0.0.1` only, so this is **not remote-exploitable today**. It
+matters if :8000 is ever exposed, and it matters for hostile *input* (media parsed by pillow/starlette).
+Recommendation: try a newer upstream image before deciding anything — and note that the digest pin now
+freezes this vulnerable build in place until someone updates it deliberately. SBOMs captured with syft
+(`eve-audit/sbom-*.json`) so the inventory exists when that happens.
+
+**First coverage map ever.** `598 passed` in 43.61 s, **TOTAL 32%** (18,603 statements, 12,615 never
+executed in-process). The caveat matters more than the number: scripts the gate runs as *subprocesses*
+(verify-stack, the wiki battery, vault-manifest) report **0% by construction** — coverage cannot see into
+a child process. So 32% understates real execution and overstates the gap in `pipeline/` and `mcp/`.
+Report: `eve-audit/coverage.txt`.
+
+**Correction to a Lens B recommendation.** `pipeline/retrieval_rerank.py` **already exists** and is a
+reranking A/B harness: lexical token-overlap scorer always available, `sentence_transformers.CrossEncoder`
+optional behind `EMPIRE_RERANK_MODEL`, cached, fixtures in `data/eval/retrieval`, and explicitly *"eval
+only — never swaps production Cognee embeds (nomic)"*. My FlashRank recommendation was therefore wrong in
+an important way: this is not a missing capability, it is an **existing harness that was never run**. The
+next step is to run the A/B we already own, not to adopt a new library.

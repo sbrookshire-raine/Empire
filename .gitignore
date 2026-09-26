@@ -73,3 +73,5 @@ frontend/verify-stack.json
 # Same class as mcp.json / mcp.full.json - found by a follow-up grep, not by the first pass.
 /.cursor/mcp.lean.json
 /.cursor/mcp.remote.json
+# coverage data from pytest-cov (report lives in eve-audit/, this is the raw database)
+/.coverage

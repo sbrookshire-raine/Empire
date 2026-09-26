@@ -15,7 +15,7 @@
 #>
 param(
     [int]$Port = 8888,
-    [string]$Image = "searxng/searxng:latest",
+    [string]$Image = "searxng/searxng@sha256:5286edb35782454ab8a102c5eff6b54bff745853191b46aeead95f225aa6dfb6",
     [switch]$Recreate
 )
 

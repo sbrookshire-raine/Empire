@@ -27,7 +27,7 @@ if (-not $docker) {
     exit 0
 }
 
-$image = if ($env:EMPIRE_SPEACHES_IMAGE) { $env:EMPIRE_SPEACHES_IMAGE } else { "ghcr.io/speaches-ai/speaches:latest-cpu" }
+$image = if ($env:EMPIRE_SPEACHES_IMAGE) { $env:EMPIRE_SPEACHES_IMAGE } else { "ghcr.io/speaches-ai/speaches@sha256:21e3df06d842fb7802ab470dd77c25f0e8c0d22950e8d8c6ae886e851af53ef8" }
 $name = "empire-speaches"
 
 Write-Host "Speaches image: $image"
