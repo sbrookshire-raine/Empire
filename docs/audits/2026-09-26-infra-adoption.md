@@ -62,3 +62,31 @@ No secret values are reproduced anywhere in this record — the scan was run wit
   has never been restored from is not a backup either; the restore test is part of the acceptance.
 - `trivy`/`syft` (two `:latest` images), `pre-commit` (wiring the above into habits), coverage run,
   `hyperfine`/`py-spy`/`memray`, `jscpd` — next tranche, in that order.
+
+## ADDENDUM 2026-09-26 — public-repo credential exposure (found by gitleaks, then by `gh repo view`)
+
+The canonical repo `sbrookshire-raine/Empire` is **PUBLIC** (`isPrivate: false`). That turns the
+gitleaks triage from "probably benign" into a real exposure:
+
+- `.cursor/mcp.json` and `.cursor/mcp.full.json` carried `empire-wiki-scout.WEAVIATE_API_KEY` (36 chars,
+  high-entropy — the classifier could not call it a placeholder) and `empire-pocketbase.POCKETBASE_ADMIN_*`
+  credentials, committed across ~190 commits of history. Anyone who scraped the repo has them.
+- **Action taken:** both files untracked (`git rm --cached`), added to `.gitignore` with the reason, and
+  replaced by sanitized `.cursor/mcp.example.json` / `.cursor/mcp.full.example.json` with every
+  key/token/secret/password value set to `REPLACE_ME` — verified programmatically: **0 high-entropy
+  values remain** in the examples.
+- **Action still required (Architect):** *rotate* the Weaviate key and the PocketBase admin password.
+  The history is already public, so untracking does not undo it — rotation is the only effective remedy.
+  Purging history (`git-filter-repo`) is possible but rewrites a public repo; rotate first, then decide.
+
+## Addendum — backups exist now (restic)
+
+- Repository: `I:\EMPIRE_BACKUP\restic` on the **T7 Shield (I:)**, chosen by evidence rather than
+  assumption: `Get-Volume` shows I: as a separate physical device from C:, 3725.7 GB with 2327.6 GB free.
+  Caveat stated, not hidden: I: is **exFAT** (no journaling), which is exactly why the restore test is
+  mandatory rather than optional.
+- Password: `%LOCALAPPDATA%\EMPIRE\restic-pass.txt` — outside the repo, never committed. Losing it means
+  losing every backup: that file is now the system's real single point of failure and should be escrowed
+  somewhere physical.
+- Runner: `scripts/backup-empire.ps1` (with `-VerifyRestore`), first snapshot of `C:\Empire_Workbench`.
+- Acceptance rule recorded: a backup that has never been restored from is not a backup.

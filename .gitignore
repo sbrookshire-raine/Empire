@@ -63,3 +63,10 @@ data/eval/*_stderr.txt
 # Regenerated integration report
 frontend/verify-stack.json
 
+
+# Cursor MCP configs carry LOCAL SERVICE CREDENTIALS (WEAVIATE_API_KEY, PocketBase admin).
+# The canonical repo is PUBLIC, so these must not be tracked. Sanitized structure lives in
+# .cursor/mcp.example.json and .cursor/mcp.full.example.json (credentials -> REPLACE_ME).
+# Exposure found by gitleaks 2026-09-26: docs/audits/2026-09-26-infra-adoption.md
+/.cursor/mcp.json
+/.cursor/mcp.full.json
