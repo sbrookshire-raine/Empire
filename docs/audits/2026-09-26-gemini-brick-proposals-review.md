@@ -14,13 +14,24 @@ It read a real version of our contract: the four required components per brick (
 adapter, playbook documentation, integrity/error handling) and the GPU tenancy taxonomy
 (`none / chat / extract / vision / ops`) both match `docs/LEGO_CONTRACT.md`. It correctly identifies our
 transport (stdio, newline-delimited JSON-RPC), our framework (FastMCP), and our error contract
-(`{ok: false, error}`, no stack traces into the prompt).
+(`{ok: false, error}`, no stack traces into the prompt). Its per-brick JSON fields
+(`id`/`label`/`toolbelt`/`default_on`/`gpu_tenant`/`ports`/`tools`/`note`) are exactly the shape
+`docs/LEGO_PROMPT.md` §2 requires.
+
+**Diagnosis (why 3 of 4 proposals duplicate work we already do):** the brief it was given carried the
+*contract* — how a brick must be shaped — but no *inventory*. Told what a conforming brick looks like and
+nothing about the installed base, a capable model will propose conforming bricks for capabilities that
+already exist. It obeyed the standard it was given; the standard just did not include "check what is here
+first". That is a brief defect, not a reasoning defect, and it is fixable in §2 of the brief — see
+`docs/GEMINI_RESEARCH_BRIEF.md`.
 
 ## What it got wrong, or is behind us
 
 | Claim / premise | Reality in our stack |
 |---|---|
-| Cites `EMPIRE_LEGO_BLUEPRINT.MD` | We have `docs/LEGO_CONTRACT.md` + `docs/LEGO_PROMPT.md`. No such file — provenance is partial, so treat its contract details as inferred |
+| Cites `EMPIRE_LEGO_BLUEPRINT.MD` | **Not an error — corrected.** That is the Architect's renamed copy of our own contract/token docs, so the citation is sound and the contract details it reproduces are trustworthy. (Earlier note in this file claimed the file did not exist; that was my misreading, 2026-09-26.) |
+| Proposals assume a capability vacuum | The brief it received had no inventory section. Three of four bricks describe subsystems we already run, each with measurements recorded here |
+
 | "Zero ports" as an architectural law for MCP | True for MCP servers (all stdio). False as a system claim: Postgres 5432, PocketBase 8090, frontend 8080, Ollama 11434, Speaches 8000 are **declared services** with documented ports (AGENTS.md) |
 | Proposes semantic memory as something we lack | We run Cognee + Postgres + pgvector with Ollama `nomic-embed-text` (768d, batch 512), plus `eve_core`/`eve_memory` tiering |
 | Proposes container execution as something we lack | We run Eve sandbox containers already, with `scripts/prune-sandbox-containers.ps1` (578 exited containers reaped 2026-09-26) and declared `ops` tenancy |
