@@ -98,14 +98,22 @@ TEXT_ENCODINGS = ("utf-8", "utf-8-sig", "cp1252", "latin-1")
 
 
 def read_text_any(path: Path) -> str:
-    """Decode a text file without ever raising on encoding."""
+    """Decode a text file without ever raising on encoding.
+
+    Newlines are normalised to LF, matching the universal-newline behaviour of
+    the text-mode reads this replaced. That keeps content hashes stable, so the
+    content index does not see every CRLF file as brand new and re-embed it.
+    """
     raw = path.read_bytes()
     for encoding in TEXT_ENCODINGS:
         try:
-            return raw.decode(encoding)
+            text = raw.decode(encoding)
+            break
         except UnicodeDecodeError:
             continue
-    return raw.decode("latin-1", errors="replace")
+    else:
+        text = raw.decode("latin-1", errors="replace")
+    return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def prepare_document(path: Path, dataset: str, job_id: str) -> PreparedDocument:

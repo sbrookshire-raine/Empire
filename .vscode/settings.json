@@ -1,0 +1,25 @@
+{
+  "_comment": "Generated/regenerated trees are excluded from search and watching so results show the source, not its copies (see docs/DOC_MAP.md section 5). Nothing here is authored content; edit only under agent/, docs/, frontend/, pipeline/, mcp/, scripts/, tests/.",
+  "search.exclude": {
+    "**/agents/**/.eve/**": true,
+    "**/agents/**/.output/**": true,
+    "**/data/eve_memory/uploads/**": true,
+    "**/backend/pocketbase/pb_public/dashboard/**": true,
+    "**/__pycache__": true,
+    "**/node_modules": true,
+    "**/venv": true
+  },
+  "files.watcherExclude": {
+    "**/agents/**/.eve/**": true,
+    "**/agents/**/.output/**": true,
+    "**/data/eve_memory/uploads/**": true,
+    "**/venv/**": true,
+    "**/node_modules/**": true,
+    "**/__pycache__/**": true
+  },
+  "python.analysis.exclude": [
+    "**/agents/**",
+    "**/venv/**",
+    "**/node_modules/**"
+  ]
+}
