@@ -16,8 +16,33 @@ load_dotenv(ROOT / ".env.local")
 load_dotenv(ROOT / ".env")
 
 POCKETBASE_URL = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8090").rstrip("/")
-ADMIN_EMAIL = os.getenv("POCKETBASE_ADMIN_EMAIL", "admin@empire.local")
-ADMIN_PASSWORD = os.getenv("POCKETBASE_ADMIN_PASSWORD", "empire-admin-change-me")
+def _require_env(name: str, hint: str) -> str:
+    """Read a required credential from the environment — never a default.
+
+    This module used to default to admin@empire.local / empire-admin-change-me, the same constants as
+    scripts/setup.ps1. Because the canonical repo is PUBLIC, that made a known superuser credential
+    silently usable on any machine that ran setup (found by gitleaks, 2026-09-26). A missing credential
+    must be a loud, actionable failure - not a working default.
+    """
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"{name} is not set. EMPIRE no longer supplies a default credential. {hint} "
+            "(background: docs/audits/2026-09-26-infra-adoption.md)"
+        )
+    return value
+
+
+ADMIN_EMAIL = _require_env(
+    "POCKETBASE_ADMIN_EMAIL",
+    "Set it in the MCP server env block; the local superuser login is stored in "
+    r"%LOCALAPPDATA%\EMPIRE\pocketbase-admin.txt",
+)
+ADMIN_PASSWORD = _require_env(
+    "POCKETBASE_ADMIN_PASSWORD",
+    "Set it in the MCP server env block; the local superuser login is stored in "
+    r"%LOCALAPPDATA%\EMPIRE\pocketbase-admin.txt",
+)
 
 mcp = FastMCP("empire-pocketbase")
 
