@@ -28,6 +28,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Cognee storage on the T7 VHDX | [COGNEE_VHDX.md](COGNEE_VHDX.md) |
 | Architecture, APIs, Eve tools, backup | [manifest/README.md](manifest/README.md) |
 | Structural plan / evaluation | [REFACTOR_PLAN.md](REFACTOR_PLAN.md), [REFACTOR_EVAL.md](REFACTOR_EVAL.md) |
+| Audit record (dated, measured running state) | [audits/2026-09-26.md](audits/2026-09-26.md) |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
 
