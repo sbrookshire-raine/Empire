@@ -69,6 +69,13 @@ Invoke-Step "LEGO contract (check-legos)" {
     & $py (Join-Path $Root "scripts\check-legos.py")
 }
 
+# Foundation registry: measures how far dataset eve_core (the set chat recall prefers) is from the
+# deliberate allowlist. ADVISORY until the curated rebuild lands - see docs/MEMORY_GOVERNANCE.md
+# section 7 step 5. Drop --advisory after the rebuild to make violations fatal.
+Invoke-Step "foundation registry (check-foundation, advisory)" {
+    & $py (Join-Path $Root "scripts\check-foundation.py") --advisory
+}
+
 Invoke-Step "wiki extract battery (CLI)" {
     & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
 }

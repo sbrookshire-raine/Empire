@@ -78,7 +78,7 @@ on; a silent write cannot be reviewed.
 | 2 | `chat_reply_rule` on the `cognee_*` tool payloads: "this is a candidate — say so, do not persist silently" | zero prompt cost |
 | 3 | A skill for capture-from-conversation | loaded only when retrieved |
 | 4 | Create the `eve_candidates` staging dataset and add it to the promote flow (not to recall) | none |
-| 5 | `check-legos` rule: `eve_core` may only contain registered Foundation sources; candidates may not appear in `chatRecallDatasets` | gate step |
+| 5 | **Built 2026-09-26**: `config/foundation.json` (registry) + `scripts/check-foundation.py` (checker), wired into `mechanic-green` as an **advisory** step. First measurement of `eve_core`: **8 registered, 37 reference, 21 forbidden, 9 unregistered** of 75 — drop `--advisory` after the rebuild to make violations fatal | gate step |
 
 Until steps 1–5 exist, this document is the policy — and the policy is what the wiring has to match,
 not the other way round.
