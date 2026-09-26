@@ -9,7 +9,7 @@ with no checkpoint and no test — which is exactly what the cognee floor pin wa
 | Tool | Ours | Upstream latest | Gap | Action |
 |---|---|---|---|---|
 | **cognee** | **1.4.0** | **1.6.1** (24 Sep) | 2 minor | **Pinned to `==1.4.0` today.** Upgrade is worth planning: 1.5.0.dev4 "Dataset Indexing & Search Relevance", 1.5.3 "search relevance + interrupted uploads resume", 1.6.0 "keyless workflows" |
-| **docling** | 2.115.0 | **2.130.0** (22 Sep) | 15 minor | Worth updating — it converts our PDFs; the gap is mostly PDF/Markdown/docx correctness fixes |
+| **docling** | **2.130.0** (upgraded 2026-09-26) | 2.130.0 | current | **Done** — updated on branch `pre-upgrade-20260926`, verified by full unit suite; now declared in `requirements.txt` (it had been installed but undeclared) |
 | **PocketBase** | 0.28.4 | **0.40.4** (12 Sep) | 0.28 → 0.40 | **Treat as a migration, not an update**: major-version jump with schema/API changes. Plan + test on a branch |
 | **Ollama** | 0.34.3 | 0.34.4 stable (0.40.0-rc0 is Apple-Silicon MLX) | 1 patch | Low urgency; rc is irrelevant to us |
 | **MCP Python SDK** | 1.28.1 | (not checked) | — | Check before adding a limb that uses newer transport features |
