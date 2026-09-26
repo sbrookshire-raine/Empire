@@ -189,6 +189,11 @@ def read_document(
         "chars": len(excerpt),
         "truncated": truncated,
         "content": stamped,
+        "chat_reply_rule": (
+            "This is a local document, not your own knowledge: answer from it and name the file "
+            f"({src.name}) in your answer so the user can open it themselves. If `truncated` is true, "
+            "say the file was longer than you read rather than implying you saw all of it."
+        ),
     }
 
 
