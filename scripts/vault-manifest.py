@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(r"C:\Empire_Workbench")
 OUT_DIR = ROOT / "_manifests"
-OUT = OUT_DIR / "vault-manifest-2026-09-26.json"
+OUT = OUT_DIR / f"vault-manifest-{datetime.now().date().isoformat()}.json"
 
 entries = []
 errors = []
