@@ -1,0 +1,64 @@
+{
+  "_comment": "Library access points: reference material Eve reaches BY NAME and never embeds. Format and tier rules: docs/OPERATING_CONTRACT.md section 7. Paths point at where files already live (the vault is not reorganised); resolve them with read_document, read_active_tool, or the wiki lead path. Keep entries to what actually exists - a wrong path is worse than a missing one.",
+  "version": 1,
+  "updated": "2026-09-26",
+  "access_points": [
+    {
+      "id": "vendor-guides",
+      "title": "Vendor product guides (Gumloop, Dify, AnythingLLM, Cursor, FlutterFlow, Ollama, Magic Patterns)",
+      "path": "C:\\EMPIRE\\docs\\reference",
+      "covers": "third-party documentation dumps, 47 files / ~10 MB",
+      "when": "an upstream product detail is needed",
+      "reached_by": "read_document",
+      "embed": false
+    },
+    {
+      "id": "active-tools-codebases",
+      "title": "Harvested flattened codebases (Tool Forge outputs)",
+      "path": "C:\\Empire_Workbench\\03_Active_Tools",
+      "covers": "flattened repos incl. RAINE_ABACUS_PROJ_FOLDER (220 MB), diegosouzapw-OmniRoute (114 MB), sbrookshire-raine_Empire (12.7 MB), plus LEGO_INDEX.md",
+      "when": "mining a harvested codebase for patterns or code",
+      "reached_by": "read_active_tool",
+      "embed": false,
+      "notes": "LOAD-BEARING: strict 03_Active_Tools protocol in agent/skills/empire-routing-detail.md; read_active_tool resolves only inside this folder. Never relocate."
+    },
+    {
+      "id": "wiki-corpus",
+      "title": "Wikipedia corpus, one snapshot year",
+      "path": "D:\\wiki_md\\2017",
+      "covers": "5,347,264 article files; Eve reads ~1800-char lead plus one 1400-char section",
+      "when": "a factual lookup that should carry a citation",
+      "reached_by": "wiki lead path (wiki_scout_* / wiki_read_lead)",
+      "embed": false
+    },
+    {
+      "id": "bank-manuals-and-guides",
+      "title": "Application manuals and how-to guides held in the memory bank",
+      "path": "C:\\Empire_Workbench\\01_Memory_Bank",
+      "covers": "~449 guide-like markdown files, e.g. 'Assembly Line Operating Guide', 'How to Create AI Movies with LTX-2 on WAN2GP', 'A Beginner's Guide to LLM Fine-Tuning', 'HOW TO READ THIS BOARD'",
+      "when": "an app or workflow how-to is needed",
+      "reached_by": "read_document (by filename)",
+      "embed": false,
+      "notes": "These sit inside the auto-ingested bank, which is why they were embedded. Under the tier rule they are reference, not knowledge - reached by name."
+    },
+    {
+      "id": "project-docs",
+      "title": "EMPIRE project documentation",
+      "path": "C:\\EMPIRE\\docs",
+      "covers": "operating contract, audits, playbook, placement, wiki audit, manifest",
+      "when": "a question about how EMPIRE itself works",
+      "reached_by": "read_document",
+      "embed": false
+    },
+    {
+      "id": "prompt-library",
+      "title": "Skills, prompts and reference audio",
+      "path": "C:\\Empire_Workbench\\02_Skills_and_Prompts",
+      "covers": "506 markdown prompts/skills plus 88 audio files (~900 MB) and .gdoc/.pce pointers",
+      "when": "a prompt pattern or a re-usable skill is needed",
+      "reached_by": "read_document",
+      "embed": false,
+      "notes": "Selected items may be promoted to Foundation deliberately; audio is a transcription job, not a read."
+    }
+  ]
+}

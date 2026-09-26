@@ -87,7 +87,32 @@ are applied last** (the host carries `OLLAMA_HOST=0.0.0.0`, a bind address); tra
 | `I:\EMPIRE_DATA` | wiki reports and logs | — |
 | `agents/**/.eve`, `**/.output`, `data/eve_memory/uploads`, dashboard snapshots | generated | git-ignored, excluded from search, never ingested |
 
-## 7. Gates, and what they do not cover
+## 7. Vault tiers — knowledge vs reference vs archive
+
+The vault is not one pile. Each folder has a **role**, and the role decides whether Eve *knows* it or
+merely can *reach* it. This rule was implicit until 2026-09-26, which is exactly why `eve_memory`
+filled with harvest bulk while `eve_core` did the real work.
+
+| Tier | Role | Where | In Cognee? | How Eve reaches it |
+|---|---|---|---|---|
+| **Foundation** | what she should know *unprompted*: universal primitives, core profile, house rules, vocabulary, principles, current goals | `00_Core_Profile` + `Foundation/` | **Yes — `eve_core` is the primary dataset** | ambient recall |
+| **Reference (Library)** | material she reaches for *on request*: app manuals, subscription guides, transcripts, exports, harvested codebases | `Library/` registry, plus existing holders (`03_Active_Tools`, `docs/reference`, bank guide files, `D:\wiki_md`) | **No** | named **access points** — `read_document` / `read_active_tool` / wiki lead path, chosen from `config/library.json` |
+| **Archive / Working** | harvest noise, byte-identical duplicates, code, zips, WIP experiments | `04_Thought_Experiments`, `_archive/` | **No — excluded by policy** | nothing |
+
+**Rules**
+
+1. **A manual is an access point, never an embedding.** Reference material is reached by name; it is
+   not dissolved into recall where it dilutes signal.
+2. **Foundation is small on purpose** (tens of files, not thousands). Growing it is a deliberate act.
+3. **`eve_memory` is not a bucket.** Bulk harvest does not belong in it (see the rebuild proposal in
+   `docs/audits/2026-09-26.md` §11).
+4. **Every reference addition gets a registry line** — title, path, what it covers, when to reach for
+   it. Without that line the file is invisible even in a perfect folder.
+5. **`03_Active_Tools` is load-bearing and must not be relocated**: it holds harvested flattened
+   codebases and is governed by a strict protocol (`empire-routing-detail.md`); `read_active_tool`
+   resolves only within it. Library entries point *at* it.
+
+## 8. Gates, and what they do not cover
 
 `mechanic-green` (units, capability governance, wiki battery, UI harness, verify-stack, workbench
 verify, prompt budget; `-Full` adds live Eve verify) plus `smoke-eve-hands.py` and now
@@ -96,13 +121,13 @@ verify, prompt budget; `-Full` adds live Eve verify) plus `smoke-eve-hands.py` a
 **Not covered:** MCP wrapper *runtime* calls (nothing calls them but Eve's live turns — build and gate
 prove wiring only); vault ingest completeness; port collisions beyond the start scripts' checks.
 
-## 8. Definition of healthy
+## 9. Definition of healthy
 
 A stack is healthy when `audit-empire.py` exits 0: all four HTTP probes 200, Ollama reachable, any
 resident model at **ctx 24576**, both always-on prompt files present. Everything beyond that (bench
 pass rates, VRAM numbers, doc counts) is recorded, not enforced.
 
-## 9. Change discipline
+## 10. Change discipline
 
 1. **One fact, one home.** Commands live in `AGENTS.md`, running state here, per-subject detail in its
    specialist doc, "where is it" in `DOC_MAP.md`.

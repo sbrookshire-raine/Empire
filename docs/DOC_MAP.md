@@ -30,6 +30,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Structural plan / evaluation | [REFACTOR_PLAN.md](REFACTOR_PLAN.md), [REFACTOR_EVAL.md](REFACTOR_EVAL.md) |
 | Audit record (dated, measured running state) | [audits/2026-09-26.md](audits/2026-09-26.md) |
 | **Operating contract** (single source of truth; measured by `scripts/audit-empire.py`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) |
+| **Library access points** (reference material Eve reaches by name; registry `config/library.json`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) §7 |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
 
