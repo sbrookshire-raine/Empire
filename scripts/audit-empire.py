@@ -24,6 +24,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_CTX = 24576
+# Embedding models are pinned resident on purpose (ensure-ollama-parallel.ps1 sets
+# keep_alive=-1 for nomic-embed-text) and have their own small context, so the chat
+# window rule must not be applied to them. They are reported, never enforced.
+EMBEDDER_HINTS = ("embed", "nomic", "bge", "e5-")
 SERVICES = (
     ("PocketBase", "http://127.0.0.1:8090/api/health"),
     ("Eve Workbench", "http://127.0.0.1:8080/api/memory/status"),
@@ -149,6 +153,9 @@ def evaluate(report: dict[str, object]) -> list[str]:
         problems.append("Ollama /api/ps unreachable")
     else:
         for model in placement["models"]:
+            name = str(model["name"] or "")
+            if any(hint in name.casefold() for hint in EMBEDDER_HINTS):
+                continue
             if model["context"] != EXPECTED_CTX:
                 problems.append(
                     f"{model['name']} loaded at ctx {model['context']}, contract says "
