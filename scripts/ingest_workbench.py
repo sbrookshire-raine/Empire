@@ -13,7 +13,7 @@ import time
 import uuid
 from pathlib import Path
 
-from pipeline.ingest_files import MAX_BATCH_FILES, _load_content_index
+from pipeline.ingest_files import MAX_BATCH_FILES, _load_content_index, read_text_any
 
 WORKBENCH_ROOT = Path(r"C:\Empire_Workbench")
 EMPIRE_ROOT = Path(__file__).resolve().parent.parent
@@ -37,7 +37,7 @@ def content_index_path() -> Path:
 
 
 def file_content_hash(path: Path) -> str:
-    body = path.read_text(encoding="utf-8")
+    body = read_text_any(path)
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
@@ -46,13 +46,16 @@ def is_ingestible_text(path: Path) -> bool:
     try:
         if path.stat().st_size == 0:
             return False
-        body = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
+        body = read_text_any(path)
+    except OSError:
         return False
-    return bool(body.strip())
+    return bool(body.strip()) and "\x00" not in body
 
 
 def log_skipped(path: Path, reason: str) -> None:
+    # Reasons can carry multi-line subprocess output (e.g. Cognee's banner), which
+    # used to split one skip across many lines and make this log unparseable.
+    reason = " ".join(str(reason).split())[:200]
     SKIP_LOG.parent.mkdir(parents=True, exist_ok=True)
     with SKIP_LOG.open("a", encoding="utf-8") as handle:
         handle.write(f"{path}\t{reason}\n")

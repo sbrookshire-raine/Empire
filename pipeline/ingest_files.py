@@ -90,6 +90,24 @@ def convert_pdf(source: Path, output_dir: Path) -> Path:
     return destination
 
 
+# One tolerant decoder for every vault read. Strict UTF-8 turned Windows
+# cp1252/latin-1 notes into UnicodeDecodeError, which the ingest reported as a
+# skip - real content never reached memory. latin-1 accepts any byte sequence, so
+# this path is total; whitespace and binary rejection stays with the callers.
+TEXT_ENCODINGS = ("utf-8", "utf-8-sig", "cp1252", "latin-1")
+
+
+def read_text_any(path: Path) -> str:
+    """Decode a text file without ever raising on encoding."""
+    raw = path.read_bytes()
+    for encoding in TEXT_ENCODINGS:
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1", errors="replace")
+
+
 def prepare_document(path: Path, dataset: str, job_id: str) -> PreparedDocument:
     """Read or convert one validated file and stamp traceability metadata."""
     safe_dataset = validate_dataset(dataset)
@@ -98,9 +116,9 @@ def prepare_document(path: Path, dataset: str, job_id: str) -> PreparedDocument:
     if source.suffix.casefold() == ".pdf":
         with tempfile.TemporaryDirectory(prefix="empire-docling-") as temporary_dir:
             converted = convert_pdf(source, Path(temporary_dir))
-            body = converted.read_text(encoding="utf-8")
+            body = read_text_any(converted)
     else:
-        body = source.read_text(encoding="utf-8")
+        body = read_text_any(source)
 
     if not body.strip():
         raise ValueError(f"Memory file contains no text: {source.name}")
