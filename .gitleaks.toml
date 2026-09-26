@@ -1,0 +1,19 @@
+# gitleaks configuration — the mechanism behind a policy we already had in writing.
+#
+# First run 2026-09-26: 79 findings across 190 commits. Triage (docs/audits/2026-09-26-infra-adoption.md)
+# showed the largest block is vendor documentation reproducing upstream curl examples and sample API
+# keys — noise that hides signal. Two areas remain IN SCOPE and unresolved: .cursor/mcp.full.json
+# (tracked, values reoccur in many commits) and the history of tmp/diag_*.py (files now gitignored).
+#
+# Rule: allowlist only what is demonstrably not ours. Never allowlist a path to make the gate green.
+title = "EMPIRE"
+
+[extend]
+# Start from gitleaks' built-in rules, then narrow.
+useDefault = true
+
+[allowlist]
+description = "Third-party vendor guides quote upstream example credentials and curl auth headers. They are reference material (Library access points), not our secrets."
+paths = [
+  '''docs/reference/.*''',
+]

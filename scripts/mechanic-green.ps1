@@ -76,6 +76,13 @@ Invoke-Step "foundation registry (check-foundation, advisory)" {
     & $py (Join-Path $Root "scripts\check-foundation.py") --advisory
 }
 
+# Lens A infrastructure checks: dependency hygiene, lint baseline, secret scan. Dev-time only - none of
+# these tools are reachable by Eve and none cost prompt tokens. Advisory until the findings are triaged
+# (docs/audits/2026-09-26-infra-adoption.md); pass -Strict to make deptry/gitleaks block.
+Invoke-Step "infra checks (deptry/ruff/gitleaks, advisory)" {
+    & (Join-Path $Root "scripts\infra-checks.ps1")
+}
+
 Invoke-Step "wiki extract battery (CLI)" {
     & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
 }

@@ -1,0 +1,12 @@
+# Lens A developer tooling — installed into the venv but NEVER imported by runtime code.
+# Eve cannot reach any of these: no limb, no port, no prompt tokens (docs/LENS_A_LANDSCAPE.md).
+#
+# Pinned deliberately: the cognee floor taught us that an unpinned tool can change behaviour under us
+# (requirements.txt, 2026-09-26). These are dev instruments, so exact pins cost nothing.
+deptry==0.25.1        # dependency hygiene: found 51 issues on first run, incl. undeclared 'gliner'
+ruff==0.16.9          # lint/format baseline: the Python surface had none
+pytest-cov==7.1.0     # coverage map: 598 tests, no record of which code never runs
+
+# Not pip-installed (binaries via winget, resolved by scripts/infra-checks.ps1):
+#   gitleaks 8.x — secret scan (policy existed; mechanism did not)
+#   restic 0.19.1 — backups (we hold a manifest, not a copy)

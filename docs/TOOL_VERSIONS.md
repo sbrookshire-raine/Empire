@@ -66,3 +66,19 @@ only, to start) through our limb, or calling it from a script. `validate()` is a
 2. Read the release notes for breaking changes; name them in the commit.
 3. Update on the branch, run `mechanic-green` (which now includes the audit and contract validators).
 4. Record the new version here — a version without a date is folklore.
+
+## Developer tooling (Lens A - dev-time only, never reachable by Eve)
+
+Installed 2026-09-26, pinned in `requirements-dev.txt`. Rationale: `docs/LENS_A_LANDSCAPE.md`; findings:
+`docs/audits/2026-09-26-infra-adoption.md`. These are instruments, not runtime dependencies - updating one
+changes nothing Eve can reach (no prompt tokens, no VRAM, no limb).
+
+| Tool | Version | Source | First-run result |
+|---|---|---|---|
+| deptry | 0.25.1 | pip | 51 dependency issues (incl. undeclared `gliner`) |
+| ruff | 0.16.9 | pip | findings across ~30 rules (blind-except 67, try/except-pass 49, subprocess-no-check 22) |
+| pytest-cov | 7.1.0 | pip | coverage map not yet produced |
+| gitleaks | 8.x | winget | 79 findings, triaged; vendor-doc false positives allowlisted |
+| restic | 0.19.1 | winget | installed; repository NOT initialised (target decision pending) |
+
+Runner: `scripts/infra-checks.ps1` (advisory in `mechanic-green`; `-Strict` to block).
