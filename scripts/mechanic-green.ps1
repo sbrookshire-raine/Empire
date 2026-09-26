@@ -64,6 +64,11 @@ raise SystemExit(0 if not missing else 1)
 "@
 }
 
+# LEGO contract conformance: bricks, adapters, library paths, prompt budget.
+Invoke-Step "LEGO contract (check-legos)" {
+    & $py (Join-Path $Root "scripts\check-legos.py")
+}
+
 Invoke-Step "wiki extract battery (CLI)" {
     & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
 }
