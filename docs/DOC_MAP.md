@@ -23,6 +23,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Web/wiki research behaviour + bench | [RESEARCH_BENCH.md](RESEARCH_BENCH.md), [RESEARCH_CLOSURE.md](RESEARCH_CLOSURE.md) |
 | Voice (Speaches, push-to-talk) | [VOICE_PRESENCE.md](VOICE_PRESENCE.md) |
 | Wiki / scout reasoning + prompt budget | [WIKI_SCOUT.md](WIKI_SCOUT.md) |
+| Wiki layer audit: 20 GB corpus, one-shot converter, Eve read path, retired Weaviate | [WIKI_LAYER_AUDIT.md](WIKI_LAYER_AUDIT.md) |
 | Switching to the operational (local) phase | [OPERATIONAL_HANDOFF.md](OPERATIONAL_HANDOFF.md) |
 | Cognee storage on the T7 VHDX | [COGNEE_VHDX.md](COGNEE_VHDX.md) |
 | Architecture, APIs, Eve tools, backup | [manifest/README.md](manifest/README.md) |
