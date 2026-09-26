@@ -32,6 +32,8 @@ the index. Nothing here replaces content; it says where things live and what is 
 | **Operating contract** (single source of truth; measured by `scripts/audit-empire.py`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) |
 | **Memory governance** (what Eve may remember, and where — her tier rules, wired into the `memory-and-ideas` limb) | [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md) |
 | **LEGO contract** (what fits: brick footprint, invariants, reject list, acceptance checklist) | [LEGO_CONTRACT.md](LEGO_CONTRACT.md) |
+| **LEGO prompt** (hand this to an outside model: rules, output format, self-check, rejections) | [LEGO_PROMPT.md](LEGO_PROMPT.md) |
+| **Attribution** (credits by origin, not a licence gate) | [ATTRIBUTION.md](ATTRIBUTION.md) |
 | **Library access points** (reference material Eve reaches by name; registry `config/library.json`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) §7 |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
