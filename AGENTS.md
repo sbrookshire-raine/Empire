@@ -3,6 +3,7 @@
 Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; runtime code hardwires local tools for the Operational Phase.
 
 **Gemini / fresh-chat context brief:** [EMPIRE_GUIDE.md](EMPIRE_GUIDE.md)  
+**Document map (find any doc; what is history vs vendor vs generated):** [docs/DOC_MAP.md](docs/DOC_MAP.md)  
 **Clarity (Core vs LEGO vs staging):** [docs/EMPIRE_CLARITY.md](docs/EMPIRE_CLARITY.md)  
 **Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  

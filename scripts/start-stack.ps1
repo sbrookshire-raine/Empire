@@ -34,6 +34,10 @@ function Wait-Url {
 Write-Host "EMPIRE start"
 Write-Host "============"
 
+# Startup should cost the longest leg, not the sum of every leg - services that
+# do not depend on each other are launched together and awaited in a second pass.
+$StartupClock = [System.Diagnostics.Stopwatch]::StartNew()
+
 if (-not (Test-Path "V:\Cognee")) {
     Write-Host "Requesting the scheduled V: mount..."
     schtasks /Run /TN "EMPIRE Mount Cognee VHDX" | Out-Null
@@ -53,24 +57,46 @@ if (-not $SkipOllamaCheck -and -not (Test-Url "http://127.0.0.1:11434/api/tags")
 }
 Write-Host "  Ollama healthy"
 
+# --- launch phase: independent services start together ---
 if (-not (Test-Url "http://127.0.0.1:8090/api/health")) {
     Start-Process -FilePath (Join-Path $Root "backend\pocketbase\pocketbase.exe") `
         -ArgumentList "serve","--http=127.0.0.1:8090" `
         -WorkingDirectory (Join-Path $Root "backend\pocketbase")
 }
-Wait-Url "PocketBase" "http://127.0.0.1:8090/api/health"
 
 if (-not (Test-Url "http://127.0.0.1:8080/api/memory/status")) {
     Start-Process -FilePath (Join-Path $Root "venv\Scripts\python.exe") `
         -ArgumentList "-m","frontend.serve" `
         -WorkingDirectory $Root
 }
+
+# Eve's build check and the voice container depend on nothing the two above
+# provide, so they start now and are awaited below.
+$EveDown = -not (Test-Url "http://127.0.0.1:2000/eve/v1/info")
+$EveBuild = $null
+if ($EveDown) {
+    $EveBuild = Start-Process -FilePath (Join-Path $Root "venv\Scripts\python.exe") `
+        -ArgumentList (Join-Path $Root "scripts\ensure-eve-build.py") `
+        -WorkingDirectory $Root -PassThru
+}
+
+$VoiceProc = $null
+if (-not $NoVoice) {
+    $VoiceProc = Start-Process -FilePath "powershell.exe" `
+        -ArgumentList "-NoProfile","-ExecutionPolicy","Bypass","-File",(Join-Path $PSScriptRoot "start-voice.ps1") `
+        -WindowStyle Hidden -PassThru
+}
+
+# --- wait phase ---
+Wait-Url "PocketBase" "http://127.0.0.1:8090/api/health"
 Wait-Url "Eve Workbench" "http://127.0.0.1:8080/api/memory/status"
 
-if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
-    & (Join-Path $Root "venv\Scripts\python.exe") (Join-Path $Root "scripts\ensure-eve-build.py")
-    if ($LASTEXITCODE -ne 0) {
-        throw "Eve production build preparation failed."
+if ($EveDown) {
+    if ($EveBuild) {
+        $EveBuild.WaitForExit()
+        if ($EveBuild.ExitCode -ne 0) {
+            throw "Eve production build preparation failed."
+        }
     }
     $env:EMPIRE_ROOT = $Root
     $env:POCKETBASE_URL = "http://127.0.0.1:8090"
@@ -88,10 +114,15 @@ if (-not (Test-Url "http://127.0.0.1:2000/eve/v1/info")) {
 }
 Wait-Url "Eve" "http://127.0.0.1:2000/eve/v1/info"
 
-if (-not $NoVoice) {
+if ($VoiceProc) {
     Write-Host ""
-    & (Join-Path $PSScriptRoot "start-voice.ps1")
-    if ($LASTEXITCODE -ne 0) {
+    try {
+        Wait-Url "Voice (Speaches)" "http://127.0.0.1:8000/health"
+    }
+    catch {
+        Write-Warning "Voice (Speaches) not confirmed healthy on :8000. Eve text chat still works."
+    }
+    if ($VoiceProc.HasExited -and $VoiceProc.ExitCode -ne 0) {
         Write-Warning "Voice (Speaches) did not start cleanly. Eve text chat still works; push-to-talk needs port 8000."
     }
 }
@@ -102,6 +133,9 @@ if ($Weaviate) {
 }
 
 & (Join-Path $PSScriptRoot "refresh-dashboard.ps1")
+
+$StartupClock.Stop()
+Write-Host ("  Startup: {0:N1}s" -f $StartupClock.Elapsed.TotalSeconds)
 
 Write-Host ""
 Write-Host "Ready: http://127.0.0.1:8080/eve.html"
