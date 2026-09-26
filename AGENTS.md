@@ -202,6 +202,10 @@ Tools wrap PocketBase REST and Cognee (Python subprocess), matching Cursor MCP b
 # Close ingestion_jobs stuck in "running" (e.g. after interrupted ingests)
 .\scripts\cleanup-stale-ingestion-jobs.ps1
 
+# Reap dead Eve sandbox containers/volumes (dry run by default; -Apply to delete)
+.\scripts\prune-sandbox-containers.ps1
+.\scripts\prune-sandbox-containers.ps1 -Apply
+
 # Prune old Eve workflow-data chunks (dry run by default; -Apply to delete, -OlderThanDays N)
 .\scripts\prune-workflow-data.ps1
 .\scripts\prune-workflow-data.ps1 -OlderThanDays 14 -Apply
