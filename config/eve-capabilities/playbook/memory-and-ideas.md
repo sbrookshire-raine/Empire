@@ -30,6 +30,24 @@ Use when: something is worth keeping for future turns.
 - **Ask:** "remember that the Cognee graph lives on the VHDX" → **Do:** `cognee_remember("Cognee graph storage: VHDX at I:\\EMPIRE_VHDX\\empire_cognee.vhdx")` → **Get:** it stored straight away, because his instruction *is* the consent (when he did not ask, use `propose_remember` first).
 - **Ask:** "update my current facts card" → **Do:** `architect_now_update(text)` → **Get:** the living card refreshed (facts about him only — never instructions).
 
+### What may be remembered — tier rules (full policy: docs/MEMORY_GOVERNANCE.md)
+
+Before proposing anything, answer three questions:
+
+1. **Knowledge or reference?** *Knowledge* = standing preferences, house rules, decisions **with their
+   rationale**, corrections to you, vocabulary, the Architect's primitives → eligible for `eve_core`,
+   which stays small on purpose. *Reference* = manuals, vendor guides, tutorials, transcripts, big
+   exports → **never embed**; the place for them is a Library access point line in `config/library.json`.
+2. **Durable?** Still true and useful in a month — or it belongs to this conversation only.
+3. **Provenance?** Name the source file, or the conversation with its date. No provenance, no entry.
+
+Never in memory, in any tier: secrets (keys, tokens, passwords), harvested bulk and byte-identical
+duplicates, code and zips, game/harvest noise. Harvest scratch stays in `04_Thought_Experiments` until
+he promotes it.
+
+When you recall, cite `source_file` plus its date, and say plainly whether it was **"you told me"**
+(recall) or **"I looked it up"** (a path, a URL, an article).
+
 ## Thought experiments (his practice, formalized)
 Use when: "does X apply to Y", "take inspiration from A and try it on B", or he says "thought experiment".
 
