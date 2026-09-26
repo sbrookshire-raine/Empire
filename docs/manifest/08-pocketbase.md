@@ -8,7 +8,7 @@ EMPIRE uses [PocketBase](https://pocketbase.io/) as a **local SQLite-backed API*
 |------|-------|
 | API | http://127.0.0.1:8090 |
 | Admin UI | http://127.0.0.1:8090/_/ |
-| Default admin | `admin@empire.local` / `empire-admin-change-me` |
+| Admin login | `admin@empire.local` + generated password in `%LOCALAPPDATA%\EMPIRE\pocketbase-admin.txt` (no default exists) |
 | Data dir | `backend/pocketbase/pb_data/` (gitignored) |
 | Binary | `backend/pocketbase/pocketbase.exe` (gitignored, setup downloads) |
 

@@ -48,7 +48,7 @@ curl http://localhost:11434/api/tags
 
 | Service | URL | Login |
 |---------|-----|-------|
-| PocketBase Admin | http://127.0.0.1:8090/_/ | `admin@empire.local` / `empire-admin-change-me` |
+| PocketBase Admin | http://127.0.0.1:8090/_/ | `admin@empire.local` + generated password in `%LOCALAPPDATA%\EMPIRE\pocketbase-admin.txt` (no default exists; rotated 2026-09-26) |
 | Tasks UI | http://127.0.0.1:8080 | No login (public dev rules) |
 | Eve production server | http://127.0.0.1:2000 | Built local API, explicitly bound to loopback |
 

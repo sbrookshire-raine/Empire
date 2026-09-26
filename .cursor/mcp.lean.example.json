@@ -18,7 +18,7 @@
         "PYTHONPATH": "C:/EMPIRE",
         "POCKETBASE_URL": "http://127.0.0.1:8090",
         "POCKETBASE_ADMIN_EMAIL": "admin@empire.local",
-        "POCKETBASE_ADMIN_PASSWORD": "empire-admin-change-me"
+        "POCKETBASE_ADMIN_PASSWORD": "REPLACE_ME"
       }
     },
     "empire-workbench": {
@@ -65,6 +65,14 @@
         "EMPIRE_LOOM_ROOT": "C:/Empire_Workbench/04_Thought_Experiments/loom",
         "EMPIRE_RESOURCE_QUEUE_DIR": "C:/Empire_Workbench/00_Resource_Queue"
       }
+    },
+    "graft": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@nanonets/graft",
+        "mcp"
+      ]
     }
   }
 }

@@ -70,3 +70,6 @@ frontend/verify-stack.json
 # Exposure found by gitleaks 2026-09-26: docs/audits/2026-09-26-infra-adoption.md
 /.cursor/mcp.json
 /.cursor/mcp.full.json
+# Same class as mcp.json / mcp.full.json - found by a follow-up grep, not by the first pass.
+/.cursor/mcp.lean.json
+/.cursor/mcp.remote.json
