@@ -22,6 +22,15 @@ per-request `options` (E-02). That is why the probe posts to `/api/chat`.
 
 ## KV-cache quantization (E-39) — more room for less VRAM
 
+**Authoritative KV spec, uniform as of 2026-09-26.** The switches are not optional — the script
+defaults to stock f16 KV with flash-attention off, which at 24,576 context measured **12.6 GB**
+instead of the 11.3 GB below:
+
+    .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576 -KvCacheType q8_0 -FlashAttention
+
+If the record and the mechanism ever disagree again, this document is the record and the script is the
+mechanism.
+
 `q8_0` KV + flash attention, same prompts (`eve-audit/placement-q8.json`):
 
 | Context | KV | VRAM | Prefill | Generation | Floor |

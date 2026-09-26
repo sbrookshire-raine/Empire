@@ -132,8 +132,10 @@ Provide a lightweight Tasks CRUD loop (PocketBase + HTMX/Alpine UI), graph memor
 > hop rules were silently truncated away.
 >
 > ```powershell
-> .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576
+> .\scripts\ensure-ollama-parallel.ps1 -NumParallel 1 -ContextLength 24576 -KvCacheType q8_0 -FlashAttention
 > # verify: curl http://127.0.0.1:11434/api/ps  ->  "context_length": 24576
+> # The KV/FA switches are NOT optional: the script defaults to stock (f16 KV, flash-attn off),
+> # which at 24k measures 12.6 GB instead of the documented 11.3 GB (docs/PLACEMENT.md, E-39).
 > ```
 >
 > `SHARED_NUM_CTX` in `agents/empire-task-agent/agent/lib/ollama-config.ts` must match.
