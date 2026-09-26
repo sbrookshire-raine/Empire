@@ -1,9 +1,6 @@
-import path from "node:path";
-import { EMPIRE_ROOT, PYTHON_BIN } from "#lib/empire";
+import { createEmpireMcpClient } from "#lib/mcp-client";
 
-const DAZE_MCP_SCRIPT = path.join(EMPIRE_ROOT, "mcp", "daze_mcp.py");
 const POCKETBASE_URL = process.env.POCKETBASE_URL ?? "http://127.0.0.1:8090";
-
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Omit invalid / natural-language dates so MCP defaults to today. */
@@ -24,141 +21,21 @@ export function sanitizeOptionalDate(value?: string): string | undefined {
   return undefined;
 }
 
-async function loadSdk() {
-  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
-  const { StdioClientTransport } = await import(
-    "@modelcontextprotocol/sdk/client/stdio.js"
-  );
-  return { Client, StdioClientTransport };
-}
+const mcp = createEmpireMcpClient({
+  label: "empire-daze",
+  clientName: "eve-empire-daze",
+  script: "daze_mcp.py",
+  env: () => ({ POCKETBASE_URL }),
+});
 
-let client: InstanceType<Awaited<ReturnType<typeof loadSdk>>["Client"]> | null =
-  null;
-let transport: InstanceType<
-  Awaited<ReturnType<typeof loadSdk>>["StdioClientTransport"]
-> | null = null;
-let connectPromise: Promise<void> | null = null;
-let sessionRefs = 0;
-
-function dazeMcpEnv(): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (typeof value === "string") {
-      env[key] = value;
-    }
-  }
-  env.PYTHONPATH = EMPIRE_ROOT;
-  env.POCKETBASE_URL = POCKETBASE_URL;
-  return env;
-}
-
-function parseMcpToolJson(result: unknown): unknown {
-  if (!result || typeof result !== "object") {
-    return { ok: false, error: "Invalid empire-daze MCP response." };
-  }
-  const payload = result as {
-    isError?: boolean;
-    content?: Array<{ text?: string }>;
-  };
-  if (payload.isError) {
-    const message = (payload.content ?? [])
-      .map((part) => (part.text ?? ""))
-      .join("\n")
-      .trim();
-    return {
-      ok: false,
-      error: message || "empire-daze MCP tool returned an error.",
-    };
-  }
-  const raw = (payload.content ?? [])
-    .map((part) => (part.text ?? ""))
-    .join("\n")
-    .trim();
-  if (!raw) {
-    return { ok: false, error: "Empty response from empire-daze MCP." };
-  }
-  try {
-    return JSON.parse(raw) as unknown;
-  } catch {
-    return { ok: false, error: "Invalid JSON from empire-daze MCP.", raw };
-  }
-}
-
-export async function connectEmpireDazeMcp(): Promise<void> {
-  sessionRefs += 1;
-  if (client) return;
-  if (!connectPromise) {
-    connectPromise = (async () => {
-      const { Client, StdioClientTransport } = await loadSdk();
-      transport = new StdioClientTransport({
-        command: PYTHON_BIN,
-        args: [DAZE_MCP_SCRIPT],
-        env: dazeMcpEnv(),
-        cwd: EMPIRE_ROOT,
-        stderr: "pipe",
-      });
-      client = new Client({ name: "eve-empire-daze", version: "1.0.0" });
-      await client.connect(transport);
-    })().catch((error) => {
-      client = null;
-      transport = null;
-      connectPromise = null;
-      sessionRefs = Math.max(0, sessionRefs - 1);
-      throw error;
-    });
-  }
-  await connectPromise;
-}
-
-export async function disconnectEmpireDazeMcp(): Promise<void> {
-  sessionRefs = Math.max(0, sessionRefs - 1);
-  if (sessionRefs > 0 || !client) return;
-  const activeClient = client;
-  const activeTransport = transport;
-  client = null;
-  transport = null;
-  connectPromise = null;
-  try {
-    await activeClient.close();
-  } catch {
-    /* ignore */
-  }
-  if (activeTransport) {
-    try {
-      await activeTransport.close();
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-async function callDazeTool(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<unknown> {
-  try {
-    await connectEmpireDazeMcp();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: `Could not start empire-daze MCP: ${message}` };
-  }
-  if (!client) {
-    return { ok: false, error: "empire-daze MCP client is not connected." };
-  }
-  try {
-    const result = await client.callTool({ name, arguments: args });
-    return parseMcpToolJson(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: `${name} failed: ${message}` };
-  }
-}
+export const connectEmpireDazeMcp = (): Promise<void> => mcp.connect();
+export const disconnectEmpireDazeMcp = (): Promise<void> => mcp.disconnect();
 
 export async function dazeListDayViaMcp(input: {
   date?: string;
   phase?: string;
 }): Promise<unknown> {
-  return callDazeTool("daze_list_day", {
+  return mcp.callTool("daze_list_day", {
     date: sanitizeOptionalDate(input.date) ?? "",
     phase: input.phase ?? "",
   });
@@ -175,7 +52,7 @@ export async function dazeUpsertBlockViaMcp(input: {
   color?: string;
   record_id?: string;
 }): Promise<unknown> {
-  return callDazeTool("daze_upsert_block", {
+  return mcp.callTool("daze_upsert_block", {
     title: input.title,
     start_minute: input.start_minute,
     end_minute: input.end_minute,
@@ -193,7 +70,7 @@ export async function dazeFreeWindowsViaMcp(input: {
   phase?: string;
   min_minutes?: number;
 }): Promise<unknown> {
-  return callDazeTool("daze_free_windows", {
+  return mcp.callTool("daze_free_windows", {
     date: sanitizeOptionalDate(input.date) ?? "",
     phase: input.phase ?? "planned",
     min_minutes: input.min_minutes ?? 30,
@@ -203,7 +80,7 @@ export async function dazeFreeWindowsViaMcp(input: {
 export async function dazeComparePhasesViaMcp(input: {
   date?: string;
 }): Promise<unknown> {
-  return callDazeTool("daze_compare_phases", {
+  return mcp.callTool("daze_compare_phases", {
     date: sanitizeOptionalDate(input.date) ?? "",
   });
 }

@@ -51,15 +51,17 @@ export function createEmpireMcpClient(config: McpClientConfig): EmpireMcpClient 
   let sessionRefs = 0;
 
   function buildEnv(): Record<string, string> {
-    const env: Record<string, string> = {
-      PYTHONPATH: EMPIRE_ROOT,
-      ...(config.env?.() ?? {}),
-    };
+    // Inherited environment first, then our overrides last. Order matters: the
+    // host often carries OLLAMA_HOST="0.0.0.0" (a bind address, not a client
+    // endpoint), so a wrapper's forced values must win over anything inherited.
+    const env: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (typeof value === "string") {
         env[key] = value;
       }
     }
+    env.PYTHONPATH = EMPIRE_ROOT;
+    Object.assign(env, config.env?.() ?? {});
     return env;
   }
 
