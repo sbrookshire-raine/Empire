@@ -32,5 +32,53 @@
       {"id": "e2", "text": "DAZE radial day planner uses PocketBase day_blocks."},
       {"id": "e3", "text": "Web Scout fetches public URLs into web_cache markdown."}
     ]
+  },
+  {
+    "id": "paraphrase_storage",
+    "query": "where does my long-term knowledge actually live",
+    "top_k": 1,
+    "expected_top_ids": ["p1"],
+    "candidates": [
+      {"id": "p1", "text": "Cognee persists graph and vector memory inside the NTFS virtual disk mounted as V:."},
+      {"id": "p2", "text": "Chat transcripts are written as JSON under the local app data folder."},
+      {"id": "p3", "text": "Fetched wiki pages are cached as markdown in a scratch directory."},
+      {"id": "p4", "text": "Container metadata is cached under the workbench thought experiments folder."}
+    ]
+  },
+  {
+    "id": "paraphrase_voice",
+    "query": "how do I talk to her out loud",
+    "top_k": 1,
+    "expected_top_ids": ["v1"],
+    "candidates": [
+      {"id": "v2", "text": "Ollama serves the chat model over its OpenAI-compatible endpoint."},
+      {"id": "v3", "text": "SearXNG answers web queries from a self-hosted container."},
+      {"id": "v4", "text": "PocketBase stores tasks and day blocks in SQLite."},
+      {"id": "v1", "text": "Speaches provides speech-to-text and text-to-speech on loopback port 8000."}
+    ]
+  },
+  {
+    "id": "paraphrase_truncation",
+    "query": "why did her answers start getting cut off",
+    "top_k": 1,
+    "expected_top_ids": ["t1"],
+    "candidates": [
+      {"id": "t1", "text": "The model window was smaller than the instruction and tool schema budget, so the routing rules were silently dropped."},
+      {"id": "t2", "text": "The graph store ran out of space on the virtual disk."},
+      {"id": "t3", "text": "The voice service returned an empty transcript."},
+      {"id": "t4", "text": "The MCP server exited before returning a result."}
+    ]
+  },
+  {
+    "id": "paraphrase_unpromoted_fact",
+    "query": "what happens to something she was never told to keep",
+    "top_k": 1,
+    "expected_top_ids": ["u1"],
+    "candidates": [
+      {"id": "u1", "text": "Nothing is written: a candidate waits in a staging step until the Architect confirms it."},
+      {"id": "u2", "text": "It is embedded into the core dataset immediately."},
+      {"id": "u3", "text": "It is written to the conversation log only."},
+      {"id": "u4", "text": "It is discarded silently without any trace."}
+    ]
   }
 ]

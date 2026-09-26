@@ -136,3 +136,44 @@ optional behind `EMPIRE_RERANK_MODEL`, cached, fixtures in `data/eval/retrieval`
 only — never swaps production Cognee embeds (nomic)"*. My FlashRank recommendation was therefore wrong in
 an important way: this is not a missing capability, it is an **existing harness that was never run**. The
 next step is to run the A/B we already own, not to adopt a new library.
+
+## Tranche 3 — the rerank A/B was run, and the instrument is the finding
+
+Ran `pipeline.retrieval_rerank.py eval` for the first time in this session (it had actually been run seven
+times on 2026-09-07/09 — every result left `status: pending_architect` and never reviewed).
+
+**What happened, in order, including my own mistakes:**
+
+1. Original 3 cases: **3/3**, lexical backend — matching what the seven September runs reported. But those
+   cases are lexical-trivial: each query contains the exact term that appears only in the winning candidate
+   ("weaviate" → *"Weaviate runs…"*). A smoke test, not a measurement.
+2. I added 4 paraphrase cases (query and answer share no content words) to create discriminating power.
+   First run: lexical 6/7, cross-encoder 6/7 — **identical**. The cross-encoder path *did* engage
+   (`backend: cross_encoder`, model `cross-encoder/ms-marco-MiniLM-L-6-v2` downloaded and ran).
+3. **My first design error:** `top_k: 2` with four candidates, so a correct answer in the top two is a
+   50% coin flip, not a result. Tightened to `top_k: 1`.
+4. **My second design error:** the expected candidate was listed *first*. With a stable sort, ties resolve
+   to list order, so "hits" could be an artefact of where I typed the answer.
+5. Moved the expected answer **last** in `paraphrase_voice` — and lexical *still* returned it first. That
+   exposed the real defect, in the harness rather than in my cases:
+
+**`_tokens()` keeps every token of length > 1, so function words survive.** `to`, `and`, `the`, `my`, `how`
+all count. The query *"how do I talk to her out loud"* matched *"…text-to-speech on loopback port 8000"*
+chiefly through **"to"** (from `text-to-speech`) and **"and"**. The lexical scorer is therefore ranking on
+function words, which is why it cannot lose to anything — and why seven September runs all reported the same
+3/3 and were quietly parked.
+
+**Conclusion, stated carefully:** this harness as written cannot demonstrate whether reranking helps,
+because its baseline scorer has no discriminating power. That is a defect in the instrument, **not** evidence
+against reranking, and **not** evidence for FlashRank either. No adoption decision is justified by it.
+
+**Fix required before the question can be answered** (deliberately not done — it changes scorer semantics
+and deserves a decision, not a drive-by edit):
+(a) stopword filter or a length threshold that keeps content words only; (b) shuffle candidate order per run
+(or reverse it) so tie-order can never masquerade as ranking; (c) a control case where the lexical scorer
+*must* fail, to prove the set can fail at all.
+
+Reusable rule this produced — and it is the third instrument fault of the day, all mine, in this area:
+**a test that cannot fail is a test that cannot measure.** Every harness needs a demonstrated failure mode
+before its pass rate means anything.
+
