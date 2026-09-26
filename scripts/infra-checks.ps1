@@ -59,16 +59,21 @@ Write-Host ''
 Write-Host '=== infra: lint baseline (ruff) ===' -ForegroundColor Cyan
 if (Test-Path $Py) {
     $log = Join-Path $Out 'ruff.txt'
+    # Three instrument faults in a row lived here (2026-09-26): regexes against a colourised, wrapped text
+    # table reported "1 rule" and "162 findings" while the tool was right every time. Text parsing of a
+    # human-facing table was the mistake. Count from ruff's JSON instead and keep the table for triage.
+    $json = Join-Path $Out 'ruff.json'
+    $env:NO_COLOR = '1'
+    & $Py -m ruff check $Root --exit-zero --output-format json > $json 2>$null
     & $Py -m ruff check $Root --exit-zero --statistics *> $log
-    # Parse the --statistics table ('162<TAB>FURB167<TAB>[*] regex-flag-alias'): the first column summed
-    # is the finding total. First version matched '^\d+\s+\S' and reported "1 rule" against a real
-    # ~30-rule table - the counter was wrong, not the tool (fixed 2026-09-26).
-    $stat = @(Get-Content $log -ErrorAction SilentlyContinue | Where-Object { $_ -match '^\d+' })
-    $total = ($stat | ForEach-Object { [int](($_ -split '\s+')[0]) } | Measure-Object -Sum).Sum
-    if ($stat.Count -eq 0) {
+    Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
+    $findings = @()
+    try { $findings = @(Get-Content $json -Raw -ErrorAction Stop | ConvertFrom-Json) } catch { $findings = @() }
+    if ($findings.Count -eq 0) {
         Write-Host '  clean' -ForegroundColor Green
     } else {
-        Write-Host "  $total finding(s) across $($stat.Count) rule(s) -> eve-audit\ruff.txt" -ForegroundColor Yellow
+        $rules = ($findings | Group-Object code | Measure-Object).Count
+        Write-Host "  $($findings.Count) finding(s) across $rules rule(s) -> eve-audit\ruff.json (table: ruff.txt)" -ForegroundColor Yellow
     }
 } else {
     Write-Host 'SKIP ruff (no venv python)' -ForegroundColor Yellow
