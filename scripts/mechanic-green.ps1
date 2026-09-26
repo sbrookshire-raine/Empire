@@ -86,6 +86,11 @@ if (-not $SkipStack) {
     Invoke-Step "verify-stack" {
         & $py (Join-Path $Root "scripts\verify-stack.py")
     }
+    # The operating contract's own measurement: services, model window, prompt layer.
+    # Fails when the running stack drifts from docs/OPERATING_CONTRACT.md.
+    Invoke-Step "operating contract (audit-empire)" {
+        & $py (Join-Path $Root "scripts\audit-empire.py")
+    }
 }
 
 if ($Full) {
