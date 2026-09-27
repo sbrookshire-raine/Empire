@@ -145,12 +145,12 @@ Proposals aimed here are worth writing. Everything else needs a much stronger ju
 8. **Version debt.** cognee 1.4.0 → 1.6.1 (runbook written, unexecuted), PocketBase 0.28.4 → 0.40.4 (a
    migration, not a bump), and 2.6 GB of a dormant legacy store on `V:\Cognee` awaiting a keep-or-reclaim call.
 9. **Document formats are four doors, not one supported set** (measured 2026-09-27: `docs/audits/2026-09-27-document-format-census.md`).
-   `.md .txt .pdf` are storable · `.json .md` cognee-ingestable · `.md .txt .csv .tsv .json .jsonl .pdf .docx .pptx
-   .xlsx .html .htm` readable · `.csv .tsv` queryable. The real gaps are **routing, not missing bricks**:
-   `.docx/.pptx/.xlsx` are readable and docling already converts them, yet `ingest_files.py` routes **only** `.pdf`
-   through it; `.mdx` and `.eml` are plain text that no door claims. **Do not propose markitdown / marker / OCR for
-   the local corpus:** its previously "unclassified" files are overwhelmingly emulator ROMs, source code and cloud
-   pointers, identified from magic bytes rather than guessed from extensions.
+   `.md .txt .mdx .eml .pdf .docx .pptx .xlsx` are now storable · `.json .md` cognee-ingestable · a 14-suffix read
+   set · `.csv .tsv` queryable. The routing gaps the census found are **closed** (P13): `ingest_files` routes all
+   four Docling suffixes rather than only `.pdf`, and `.mdx`/`.eml` are no longer unclaimed text.
+   **Do not propose markitdown / marker / OCR for the local corpus:** its previously "unclassified" files are
+   overwhelmingly emulator ROMs, source code and cloud pointers, identified from magic bytes rather than guessed
+   from extensions — only 6 files / 19.8 MB remain genuinely unclassified.
 
 ## 5. Required output format
 

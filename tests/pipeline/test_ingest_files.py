@@ -12,7 +12,7 @@ from pipeline.ingest_files import (
     MAX_FILE_BYTES,
     MemoryConversionError,
     _merge_content_index,
-    convert_pdf,
+    convert_with_docling,
     ingest_files,
     ingest_files_async,
     prepare_document,
@@ -59,11 +59,22 @@ class IngestFilesValidationTests(unittest.TestCase):
                     self.assertEqual(validate_memory_file(path), path)
 
     def test_unsupported_file_type_is_rejected(self) -> None:
+        # P13 (2026-09-27): this case used `notes.docx`, which silently encoded the bug — a .docx was rejected even
+        # though Docling converts it and only the routing to it was missing. The example is now a genuinely
+        # unsupported type, and the accepted case is asserted immediately below so the change stays deliberate.
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "notes.docx"
-            path.write_bytes(b"content")
+            path = Path(tmp) / "notes.zip"
+            path.write_bytes(b"PK\x03\x04")
             with self.assertRaises(ValueError):
                 validate_memory_file(path)
+
+    def test_office_documents_are_accepted(self) -> None:
+        """The other half of P13: readable-by-Eve documents are now storable too."""
+        with tempfile.TemporaryDirectory() as tmp:
+            for suffix in (".docx", ".pptx", ".xlsx", ".mdx", ".eml"):
+                path = Path(tmp) / f"notes{suffix}"
+                path.write_bytes(b"content")
+                self.assertEqual(validate_memory_file(path), path)
 
     def test_empty_file_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -119,7 +130,7 @@ class PreparedDocumentTests(unittest.TestCase):
             path.write_bytes(b"%PDF-local")
             converted = Path(tmp) / "converted.md"
             converted.write_text("# Extracted\n\nPDF fact", encoding="utf-8")
-            with patch("pipeline.ingest_files.convert_pdf", return_value=converted) as converter:
+            with patch("pipeline.ingest_files.convert_with_docling", return_value=converted) as converter:
                 doc = prepare_document(path, "eve_memory", "job-2")
 
         converter.assert_called_once()
@@ -127,7 +138,7 @@ class PreparedDocumentTests(unittest.TestCase):
 
 
 class PdfConversionTests(unittest.TestCase):
-    def test_convert_pdf_writes_local_docling_markdown(self) -> None:
+    def test_convert_with_docling_writes_local_docling_markdown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "paper.pdf"
@@ -140,13 +151,13 @@ class PdfConversionTests(unittest.TestCase):
             converter.convert.return_value = conversion
 
             with patch("pipeline.ingest_files.DocumentConverter", return_value=converter):
-                result = convert_pdf(source, output)
+                result = convert_with_docling(source, output)
 
             self.assertEqual(result, output / "paper.md")
             self.assertEqual(result.read_text(encoding="utf-8"), "# Local result")
             converter.convert.assert_called_once_with(source)
 
-    def test_convert_pdf_rejects_empty_conversion(self) -> None:
+    def test_convert_with_docling_rejects_empty_conversion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "paper.pdf"
@@ -158,9 +169,9 @@ class PdfConversionTests(unittest.TestCase):
 
             with patch("pipeline.ingest_files.DocumentConverter", return_value=converter):
                 with self.assertRaisesRegex(MemoryConversionError, "no text"):
-                    convert_pdf(source, root / "out")
+                    convert_with_docling(source, root / "out")
 
-    def test_convert_pdf_wraps_docling_errors(self) -> None:
+    def test_convert_with_docling_wraps_docling_errors(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "paper.pdf"
@@ -170,7 +181,7 @@ class PdfConversionTests(unittest.TestCase):
 
             with patch("pipeline.ingest_files.DocumentConverter", return_value=converter):
                 with self.assertRaisesRegex(MemoryConversionError, "paper.pdf"):
-                    convert_pdf(source, root / "out")
+                    convert_with_docling(source, root / "out")
 
 
 class BatchIngestionTests(unittest.IsolatedAsyncioTestCase):

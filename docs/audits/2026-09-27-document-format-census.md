@@ -8,9 +8,9 @@ Roots scanned: `C:\Empire_Workbench`, `C:\EMPIRE\data`, `C:\EMPIRE\mock_data_ing
 
 | Door | Accepts | Decided at |
 |------|---------|------------|
-| Workbench upload -> memory | .md .pdf .txt | `pipeline/ingest_files.py:21` |
+| Workbench upload -> memory | .docx .eml .md .mdx .pdf .pptx .txt .xlsx | `pipeline/ingest_files.py:21` |
 | Cognee mock ingest (MCP) | .json .md | `pipeline/normalizer.py:28-40` (raises otherwise) |
-| read_document (Eve reads) | .csv .docx .htm .html .json .jsonl .md .pdf .pptx .tsv .txt .xlsx | `pipeline/read_document.py:34-39` |
+| read_document (Eve reads) | .csv .docx .eml .htm .html .json .jsonl .md .mdx .pdf .pptx .tsv .txt .xlsx | `pipeline/read_document.py:34-39` |
 | query_data | .csv .tsv | `pipeline/query_data.py:113` |
 
 A format's fate therefore depends on the *door*, not the extension: `.txt` is storable but not
@@ -34,14 +34,14 @@ cognee-ingestable, `.json` is the reverse, and `.docx` can be read but not remem
 | `.json` | 52 | 3.4 | cognee-only | MCP cognee ingest only; NOT uploadable to memory |
 | `.png` | 14 | 1.2 | image | needs OCR (P11 gate) |
 | `.nes` | 3 | 1.0 | non-document | emulator ROM / MIDI - identified from magic bytes, not knowledge |
-| `.docx` | 3 | 0.7 | office-gap | Eve can read it, cannot store it (docling could convert it) |
+| `.docx` | 3 | 0.7 | storable | workbench upload -> memory |
 | `.html` | 4 | 0.7 | read-only | Eve can read it; not storable |
-| `.eml` | 3 | 0.4 | mail | text-encoded mail export; no door claims it yet (cheap win) |
+| `.eml` | 3 | 0.4 | storable | workbench upload -> memory |
 | `.gb` | 1 | 0.3 | non-document | emulator ROM / MIDI - identified from magic bytes, not knowledge |
 | `.pdf` | 2 | 0.1 | storable | workbench upload -> memory |
 | `.mid` | 4 | 0.1 | non-document | emulator ROM / MIDI - identified from magic bytes, not knowledge |
 | `.pyc` | 6 | 0.1 | code | source code; belongs to structural reach (P9), not document ingest |
-| `.mdx` | 12 | 0.1 | md-variant | markdown in all but extension; trivial to store |
+| `.mdx` | 12 | 0.1 | storable | workbench upload -> memory |
 | `.jsonl` | 7 | 0.0 | read-only | Eve can read it; not storable |
 | `(none)` | 175 | 0.0 | internal | tool state, not content |
 | `.db` | 1 | 0.0 | unknown | no door claims this extension |
@@ -59,7 +59,7 @@ cognee-ingestable, `.json` is the reverse, and `.docx` can be read but not remem
 
 | bucket | files | MB |
 |--------|------:|---:|
-| storable | 13,739 | 1,689.5 |
+| storable | 13,757 | 1,690.6 |
 | audio | 92 | 976.5 |
 | video | 1 | 74.8 |
 | non-document | 44 | 21.5 |
@@ -70,9 +70,6 @@ cognee-ingestable, `.json` is the reverse, and `.docx` can be read but not remem
 | cognee-only | 52 | 3.4 |
 | image | 14 | 1.2 |
 | read-only | 11 | 0.7 |
-| office-gap | 3 | 0.7 |
-| mail | 3 | 0.4 |
-| md-variant | 12 | 0.1 |
 | internal | 175 | 0.0 |
 | config | 25 | 0.0 |
 | cloud-stub | 16 | 0.0 |

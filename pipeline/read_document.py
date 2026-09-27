@@ -35,6 +35,8 @@ _SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
     {
         ".md", ".txt", ".csv", ".tsv", ".json", ".jsonl",
         ".pdf", ".docx", ".pptx", ".xlsx", ".html", ".htm",
+        # P13 (2026-09-27): text formats the census found no door claiming.
+        ".mdx", ".eml",
     }
 )
 

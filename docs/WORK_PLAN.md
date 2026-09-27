@@ -119,18 +119,16 @@ restic snapshot 2026-09-26 — the Postgres dump is still its own step) · Pocke
 Which formats actually fail today? That measurement gates OCR (`surya`), `marker` and `markitdown`. Without it, a
 document brick is a guess.
 
-## P13 — Routing fixes from the census  → **NEXT**
+## P13 — Routing fixes from the census  → **DONE** (2026-09-27)
 
-Zero new dependencies: three small changes to code that already exists, which is exactly what the census argued for.
-
-- **`.docx/.pptx/.xlsx`** — route through the docling call that already exists (`pipeline/ingest_files.py:124`
-  funnels **only** `.pdf` today). A capability fix rather than a volume win: the local corpus holds only a handful
-  of Office files, so it must not be sold as more than it is.
-- **`.mdx`** — treat as markdown. A text reader already exists; only the extension differs.
-- **`.eml`** — text-encoded mail that no door claims, and the local samples are genuinely knowledge-bearing.
-- **Acceptance:** an Office document becomes storable end-to-end, and the census's `office-gap`, `md-variant` and
-  `mail` buckets shrink accordingly. Re-run `scripts/document-format-census.py` to prove it (the census is the
-  instrument, so it decides).
+- **Shipped:** `TEXT_SUFFIXES` / `DOCLING_SUFFIXES` / `ALLOWED_SUFFIXES` and a named `needs_docling()` predicate in
+  `pipeline/ingest_files.py` (22 tests in `tests/test_ingest_routing.py`); `.mdx` + `.eml` added to
+  `read_document`'s set; `convert_pdf` renamed to `convert_with_docling` — the misleading name is *why* the routing
+  bug hid, since it read as "the PDF path" rather than "the conversion path".
+- **Verified by the census itself,** which is the stated acceptance: `storable` went 13,739 → **13,757** and the
+  `office-gap`, `md-variant` and `mail` buckets disappeared from the report. Zero new dependencies.
+- **Not oversold:** the local corpus held only a handful of Office files, so this is a capability fix, not a volume
+  win — recorded as such in both the census report and the blueprint.
 
 ## P12 — Carries and remaining Lens A
 

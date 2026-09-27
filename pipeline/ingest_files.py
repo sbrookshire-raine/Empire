@@ -18,7 +18,23 @@ from filelock import FileLock, Timeout
 from pipeline.cognee_client import cognify_dataset, embed_dataset, remember_many
 
 DATASET_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-ALLOWED_SUFFIXES = {".md", ".txt", ".pdf"}
+# Two ways in, measured by scripts/document-format-census.py (P13, 2026-09-27):
+#   text    - read_text_any decodes it directly. `.mdx` is markdown with a different extension and `.eml` is a
+#             text-encoded mail export; both were plain text that no door claimed.
+#   docling - converted to Markdown first. Docling already handled all four of these, but only `.pdf` was ever
+#             routed to it, so a `.docx` could be read by Eve and never remembered.
+TEXT_SUFFIXES = {".md", ".txt", ".mdx", ".eml"}
+DOCLING_SUFFIXES = {".pdf", ".docx", ".pptx", ".xlsx"}
+ALLOWED_SUFFIXES = TEXT_SUFFIXES | DOCLING_SUFFIXES
+
+
+def needs_docling(path: Path) -> bool:
+    """True when a file must be converted before it can be read as text.
+
+    A named predicate rather than an inline `== ".pdf"` comparison: the inline form is what let the routing bug
+    hide, and it is now the single place tests can point at.
+    """
+    return path.suffix.casefold() in DOCLING_SUFFIXES
 MAX_FILE_BYTES = 50 * 1024 * 1024
 MAX_BATCH_FILES = 20
 DIRECTIVE_FILENAME = "system.md"
@@ -56,7 +72,9 @@ def validate_memory_file(path: Path) -> Path:
     if filename == DIRECTIVE_FILENAME or filename.startswith(DIRECTIVE_PREFIX):
         raise ValueError(f"Directive file {candidate.name!r} cannot be ingested.")
     if candidate.suffix.casefold() not in ALLOWED_SUFFIXES:
-        raise ValueError("Memory files must be Markdown, text, or PDF files.")
+        raise ValueError(
+            "Memory files must be one of: " + ", ".join(sorted(ALLOWED_SUFFIXES)) + "."
+        )
     if not candidate.is_file():
         raise ValueError(f"Memory file does not exist or is not a file: {candidate}")
 
@@ -68,8 +86,13 @@ def validate_memory_file(path: Path) -> Path:
     return candidate
 
 
-def convert_pdf(source: Path, output_dir: Path) -> Path:
-    """Convert a PDF to UTF-8 Markdown using the installed local Docling API."""
+def convert_with_docling(source: Path, output_dir: Path) -> Path:
+    """Convert a document to UTF-8 Markdown using the installed local Docling API.
+
+    Renamed from `convert_pdf` (P13, 2026-09-27): the body was always a generic `DocumentConverter().convert()`,
+    and the old name is precisely what let the routing bug hide — it read as "the PDF path" rather than "the
+    conversion path", so nobody noticed Office documents were excluded from a converter that already handled them.
+    """
     destination_dir = Path(output_dir)
     destination = destination_dir / f"{source.stem}.md"
     try:
@@ -121,9 +144,9 @@ def prepare_document(path: Path, dataset: str, job_id: str) -> PreparedDocument:
     safe_dataset = validate_dataset(dataset)
     source = validate_memory_file(path)
 
-    if source.suffix.casefold() == ".pdf":
+    if needs_docling(source):
         with tempfile.TemporaryDirectory(prefix="empire-docling-") as temporary_dir:
-            converted = convert_pdf(source, Path(temporary_dir))
+            converted = convert_with_docling(source, Path(temporary_dir))
             body = read_text_any(converted)
     else:
         body = read_text_any(source)
