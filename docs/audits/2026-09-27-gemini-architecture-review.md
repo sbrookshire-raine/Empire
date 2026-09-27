@@ -180,8 +180,58 @@ Its `task-runner` would make job state live in a *fifth* place, while the four e
 inconsistent path handling. That is the same shape as the last round (a second vector store, a second ASR
 engine): the mechanism is right and the technology duplicates something we already run.
 
-**Therefore the plan is unchanged in priority, and Phase 3 is now specified.** Phase 1 (path jailing across the
-servers that already exist) remains first: it is the only item here that fixes code we have rather than
-creating code we would then have to maintain.
+## Third round (2026-09-27): the response to the updated blueprint
+
+**Priority unchanged by anything below: Phase 1 (path jailing across the servers that already exist) still comes
+first** — it is the only item that fixes code we ship rather than adding code we then maintain.
+
+After receiving `docs/LEGO_BLUEPRINT.md`, the model **rejected its own four earlier proposals using our reasons**
+— the second vector store (§7 names it), the SQLite task queue (a second home for job state), the AST brick (the
+flattened-corpus precondition), and LangGraph/PostgresSaver (an architecture rewrite where §8.4 asks for the
+smallest measurable change). It then proposed **one** brick and deferred every other gap to an edit of existing
+code. That is the behaviour the blueprint was written to produce, and it worked.
+
+## Verified here
+
+- **Audio bank measured:** **89 files, 923.6 MB** in `02_Skills_and_Prompts` (the blueprint said ~88 / ~900 MB from
+  `library.json`; now checked directly). **The smallest file is 0 KB** — a batch job must skip empty/corrupt audio,
+  exactly as the ingest decoder learned to refuse NUL junk.
+- **Speaches was not running** at review time (connection refused on `:8000`), so the file-transcription endpoint
+  could **not** be verified. Its centrality to the brick is therefore still an assumption, not a measurement.
+
+## Its one brick (`batch-transcriber`) — assessment
+
+Aligned with the contract: `from mcp.server.fastmcp import FastMCP`, path canonicalisation with `is_relative_to`,
+`gpu_tenant: none`, no inbound ports, imports from `./mcp-client`, and all six required fields with a genuine
+`falsification_test`. Two things to fix before it is submittable:
+
+1. **`requires_services` is missing** from its brick JSON — the brick depends on Speaches `:8000`, and our
+   admission pattern expects that declared (`config/capability-manifest.json` style), not implied in prose.
+2. **Sequencing insight:** a 923 MB batch over 89 files **will** hit partial failures. So this brick *depends on*
+   the retry/quarantine work (gap §4.6) that the model itself says must be an edit to PocketBase. Order:
+   **Phase 1 (path jailing) → Phase 3 (retry/quarantine) → then this brick.** Proposing it first would mean a brick
+   with no way to survive file 60 of 89.
+
+## Corrections its advice needs
+
+1. **Reuse ranking (§4.5): do not `ALTER` the memory tables.** "Run a SQL migration on the existing Postgres
+   memory store to add `hit_count`/`last_applied_at`" would modify **Cognee's own schema** — a third-party library
+   we are about to upgrade (1.4.0 → 1.6.1). Its migrations own those tables; our columns could be dropped or
+   conflict. The counter belongs in a **sidecar table we own** (same Postgres or PocketBase), keyed by document id.
+2. **De-flattening (§4.7) is two different jobs.** Changing the harvest so *future* codebases keep their directory
+   trees is one edit; making the *existing* flattened corpora parseable is not possible from what is on disk — it
+   needs a re-clone from the recorded source URLs. Also note `read_active_tool` and `LEGO_INDEX.md` are built
+   around the flattened form, so this is not a one-liner.
+3. **Rerank expansion (§4.2) is the best idea in the response** — grow the case set from 8 to ~50 using **real
+   queries**. Source: `eve-audit/eve-trace.jsonl` (requires `EMPIRE_TRACE=1`) plus the workbench chat history. This
+   turns a synthetic harness into a behavioural one.
+
+## One convergence worth stating
+
+Its §4.8 advice ("execute the version runbooks; do not build new capabilities until the data stores are current")
+was **blocked yesterday and is unblocked today**: the cognee upgrade runbook's precondition is a backup of the
+memory store, and the first verified restic backup (14,653 files restored, 2026-09-26) now exists. The upgrade is
+therefore executable — with the Postgres dump from `docs/UPGRADE_COGNEE.md` still to be taken as its own step.
+
 
 
