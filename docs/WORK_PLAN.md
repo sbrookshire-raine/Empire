@@ -80,7 +80,7 @@ propose→confirm path. Explicitly **not** sqlite-vec/FastEmbed (second store, d
 `hit_count` + `last_applied_at` as a tie-break *after* similarity. Stored in a **sidecar table we own** — never by
 altering Cognee's tables, which its own migrations own and which the 1.6.1 upgrade will rewrite.
 
-## P8 — Batch transcriber brick  → TODO (after P3)
+## P8 — Batch transcriber brick  → NEXT (P3 done; census measured the target; endpoint unverified)
 
 89 files / 923.6 MB measured; **one file is 0 KB**, so skip-invalid is mandatory. First step is to verify the
 Speaches `:8000` transcription endpoint (down at review time — the premise is unmeasured). The brick must declare
@@ -98,10 +98,39 @@ cognee 1.4.0 → 1.6.1 (runbook `docs/UPGRADE_COGNEE.md`; its backup preconditio
 restic snapshot 2026-09-26 — the Postgres dump is still its own step) · PocketBase 0.28.4 → 0.40.4 (a migration)
 · **2.6 GB dormant legacy store on `V:\Cognee`: keep or reclaim — owner call.**
 
-## P11 — Lens B measurement: document format census  → TODO
+## P11 — Lens B measurement: document format census  → **DONE** (2026-09-27)
+
+- **Shipped:** `scripts/document-format-census.py` + `docs/audits/2026-09-27-document-format-census.md`. The
+  accept-lists are **imported from the modules**, so the census fails loudly instead of drifting, and unclaimed
+  formats are identified by reading their bytes.
+- **Finding 1 — there are four doors, not one format set:** `.md .txt .pdf` storable · `.json .md`
+  cognee-ingestable · `.md .txt .csv .tsv .json .jsonl .pdf .docx .pptx .xlsx .html .htm` readable · `.csv .tsv`
+  queryable. A file's fate depends on the door, not the extension — `.txt` is storable but not cognee-ingestable,
+  `.json` is the reverse, `.docx` can be read but not remembered.
+- **Finding 2 — the biggest result is negative:** the "501 unclassified files" are mostly **emulator ROMs** (NES
+  magic `NES\x1a`, PC Engine, SFC), source code, and cloud pointers — so no document brick is justified for them.
+  After classification, genuinely unclaimed content is **6 files / 19.8 MB**.
+- **Finding 3 — the actionable gaps are routing, not components:** `.docx/.pptx/.xlsx` are readable and docling
+  (already installed) converts them, but `ingest_files.py:124` routes only `.pdf` through it; `.mdx` and `.eml` are
+  text no door claims. See P13.
+- **Finding 4 — audio is the only large measure:** **92 files / 976.5 MB** (the blueprint had said ~88 / ~900 MB;
+  corrected). That is P8, now unblocked by P3.
 
 Which formats actually fail today? That measurement gates OCR (`surya`), `marker` and `markitdown`. Without it, a
 document brick is a guess.
+
+## P13 — Routing fixes from the census  → **NEXT**
+
+Zero new dependencies: three small changes to code that already exists, which is exactly what the census argued for.
+
+- **`.docx/.pptx/.xlsx`** — route through the docling call that already exists (`pipeline/ingest_files.py:124`
+  funnels **only** `.pdf` today). A capability fix rather than a volume win: the local corpus holds only a handful
+  of Office files, so it must not be sold as more than it is.
+- **`.mdx`** — treat as markdown. A text reader already exists; only the extension differs.
+- **`.eml`** — text-encoded mail that no door claims, and the local samples are genuinely knowledge-bearing.
+- **Acceptance:** an Office document becomes storable end-to-end, and the census's `office-gap`, `md-variant` and
+  `mail` buckets shrink accordingly. Re-run `scripts/document-format-census.py` to prove it (the census is the
+  instrument, so it decides).
 
 ## P12 — Carries and remaining Lens A
 

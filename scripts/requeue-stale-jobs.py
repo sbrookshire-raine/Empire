@@ -29,7 +29,6 @@ from pipeline.job_schedule import (
     DEFAULT_MAX_RETRIES,
     INTERRUPTED,
     STATUS_DEAD_LETTER,
-    STATUS_PENDING,
     plan_after_failure,
     to_pb_date,
     utc_now,

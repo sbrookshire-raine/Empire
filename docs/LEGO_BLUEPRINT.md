@@ -126,20 +126,31 @@ Proposals aimed here are worth writing. Everything else needs a much stronger ju
    eight cases**, failing the same two. The harness is honest now (stopwords filtered, candidate order hashed,
    control case present), so the question is real and unanswered: better cases, a bigger model, or a different
    answer.
-3. **Batch transcription** of ~900 MB of audio (~88 files) in `02_Skills_and_Prompts`. Realtime works (Speaches);
-   file-level batch was never built, and the route should use the service already running.
-4. **Canonical path jailing is inconsistent.** Some servers call `.resolve()`; others do not, and **nothing
-   enforces `is_relative_to(root)`** across the tool surface — including on any Docker mount path. This is the
-   highest-value open item and it needs no new dependency.
+3. **Batch transcription** of **92 files / 976.5 MB** of audio (89 `.mp3` + 3 `.wav`, measured 2026-09-27 by the
+   format census; an earlier note said ~88 files / ~900 MB). Realtime works (Speaches); file-level batch was never
+   built, and the route should use the service already running — but **the Speaches file endpoint is unverified**,
+   which is why this is a measurement first and a brick second.
+4. ~~**Canonical path jailing is inconsistent.**~~ **CLOSED 2026-09-27 — do not propose.** `pipeline/paths.py`
+   (`resolve_within`) now backs every path-taking tool (cognee mock ingest, work orders, workbench Active Tools,
+   docling output), with 28 tests. Closing it removed two live holes: `cognee_ingest_mock_file` had **no**
+   containment at all, and `docling_convert` would write Markdown to any path the caller named.
 5. **No reuse ranking signal.** Nothing records `hit_count` / `last_applied_at`, so recall cannot prefer a fix
    that has worked five times over one that worked once.
-6. **No terminal failure state or retry schedule.** Retries are ad-hoc in-process sleeps (fixed 15 s in
-   `ingest_workbench.py`); no `next_run_at`, no quarantine record. We do use exponential jitter for LLM calls,
-   so the technique exists — the durable schedule does not.
+6. ~~**No terminal failure state or retry schedule.**~~ **CLOSED 2026-09-27 — do not propose.** `ingestion_jobs` now
+   carries `retry_count` / `max_retries` / `next_run_at` / `failure_reason` and a `dead_letter` status (migration
+   `1700000003`), scheduled by `pipeline/job_schedule.py` and reaped by `scripts/requeue-stale-jobs.py`. The 14 rows
+   stuck in `running` were requeued. This was the prerequisite the batch transcriber needed for partial failures.
 7. **Structural code navigation.** Absent (text-level reach only). Precondition that currently fails: our
    harvested codebases are *flattened*; an AST parser needs real source trees.
 8. **Version debt.** cognee 1.4.0 → 1.6.1 (runbook written, unexecuted), PocketBase 0.28.4 → 0.40.4 (a
    migration, not a bump), and 2.6 GB of a dormant legacy store on `V:\Cognee` awaiting a keep-or-reclaim call.
+9. **Document formats are four doors, not one supported set** (measured 2026-09-27: `docs/audits/2026-09-27-document-format-census.md`).
+   `.md .txt .pdf` are storable · `.json .md` cognee-ingestable · `.md .txt .csv .tsv .json .jsonl .pdf .docx .pptx
+   .xlsx .html .htm` readable · `.csv .tsv` queryable. The real gaps are **routing, not missing bricks**:
+   `.docx/.pptx/.xlsx` are readable and docling already converts them, yet `ingest_files.py` routes **only** `.pdf`
+   through it; `.mdx` and `.eml` are plain text that no door claims. **Do not propose markitdown / marker / OCR for
+   the local corpus:** its previously "unclassified" files are overwhelmingly emulator ROMs, source code and cloud
+   pointers, identified from magic bytes rather than guessed from extensions.
 
 ## 5. Required output format
 
