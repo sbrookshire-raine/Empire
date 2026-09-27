@@ -167,11 +167,25 @@ function words, which is why it cannot lose to anything — and why seven Septem
 because its baseline scorer has no discriminating power. That is a defect in the instrument, **not** evidence
 against reranking, and **not** evidence for FlashRank either. No adoption decision is justified by it.
 
-**Fix required before the question can be answered** (deliberately not done — it changes scorer semantics
-and deserves a decision, not a drive-by edit):
-(a) stopword filter or a length threshold that keeps content words only; (b) shuffle candidate order per run
-(or reverse it) so tie-order can never masquerade as ranking; (c) a control case where the lexical scorer
-*must* fail, to prove the set can fail at all.
+**Fix applied 2026-09-27** (all three parts) and the A/B re-run:
+
+- (a) stopword filter + `len > 2` in `_tokens()` — content words only;
+- (b) candidates are ordered by `sha256(query|id|text)` before scoring, so fixture order can never masquerade
+  as ranking (deterministic and reproducible, independent of who typed the file);
+- (c) a **control case** (`control_lexical_trap`) whose distractor deliberately reuses the query's own words
+  while the correct answer shares none — a lexical scorer *must* rank the distractor first.
+
+**Result: LEXICAL 6/8, CROSS-ENCODER 6/8** (ms-marco-MiniLM-L-6-v2), failing the *same two* cases:
+`control_lexical_trap` (lexical returns `w2`, the bait — so the control behaves exactly as designed and the
+harness now has a demonstrated failure mode) and `paraphrase_unpromoted_fact` (both return `u4`).
+
+**Conclusion, stated carefully:** on this eight-case set there is **no measurable lift from reranking** — the
+optimised baseline and the cross-encoder tie. That is not evidence that reranking cannot help: the set is small,
+the model is the 6-layer mini variant, and both backends fail a case whose answer is semantically adjacent to a
+distractor. It *is* enough to say no adoption decision is justified, and that the previous "3/3 for everything"
+number meant nothing. The harness is now useful; the question it was built to answer is still open, and honestly
+open rather than quietly parked.
+
 
 Reusable rule this produced — and it is the third instrument fault of the day, all mine, in this area:
 **a test that cannot fail is a test that cannot measure.** Every harness needs a demonstrated failure mode
