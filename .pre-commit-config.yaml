@@ -18,3 +18,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # Keeps the Desktop copy of the LEGO blueprint in step with the canonical document, with rolling
+      # backups, and warns when a structural inventory has changed since the document was last written.
+      # Scoped: only fires when the blueprint or an inventory it summarises actually changes.
+      - id: blueprint-sync
+        name: LEGO blueprint -> Desktop (rolling backups)
+        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/sync-lego-blueprint.ps1
+        language: system
+        pass_filenames: false
+        files: ^(docs/(LEGO_BLUEPRINT|LEGO_PROMPT|LEGO_CONTRACT|GEMINI_RESEARCH_BRIEF)\.md|config/(lego-bricks|capability-manifest|library|foundation)\.json)$
