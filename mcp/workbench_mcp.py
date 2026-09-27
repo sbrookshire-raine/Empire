@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import shutil
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
+from pipeline.paths import PathOutsideRoot, resolve_within
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WORKBENCH_DIR = Path(r"C:\Empire_Workbench")
@@ -59,21 +60,18 @@ def _count_entries(directory: Path) -> int:
 def _resolve_active_tool_path(filename: str) -> tuple[Path | None, str | None]:
     """Resolve a filename under 03_Active_Tools; return (path, error)."""
 
-    cleaned = filename.strip().replace("\\", "/")
+    cleaned = filename.strip()
     if not cleaned:
         return None, "filename is required."
-    if cleaned.startswith("/") or re.match(r"^[A-Za-z]:", cleaned):
+    if Path(cleaned).is_absolute():
         return None, "filename must be relative to 03_Active_Tools (basename or subpath only)."
-    parts = Path(cleaned).parts
-    if ".." in parts:
-        return None, "path traversal is not allowed."
 
-    root = _active_tools_root()
-    candidate = (root / Path(*parts)).resolve()
+    # Containment from pipeline.paths.resolve_within — one implementation for every path-taking tool, replacing
+    # the local `..` check + relative_to pair that used to live here. (P1, 2026-09-27.)
     try:
-        candidate.relative_to(root)
-    except ValueError:
-        return None, "filename must stay under 03_Active_Tools."
+        candidate = resolve_within(cleaned, _active_tools_root(), label="filename")
+    except PathOutsideRoot as exc:
+        return None, f"{exc} — filename must stay under 03_Active_Tools."
 
     return candidate, None
 

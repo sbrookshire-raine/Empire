@@ -11,6 +11,8 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from pipeline.paths import PathOutsideRoot, resolve_within
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WORK_ORDERS_DIR = Path(r"C:\Empire_Workbench\05_Work_Orders")
 DEFAULT_RESOURCE_QUEUE_DIR = Path(r"C:\Empire_Workbench\00_Resource_Queue")
@@ -44,24 +46,21 @@ def _slug(text: str, *, max_len: int = 48) -> str:
 
 
 def _resolve_queue_reference(source_file: str) -> tuple[str | None, str | None]:
-    """Return (display path, error). Optional source under 00_Resource_Queue."""
+    """Return (display path, error). Optional source under 00_Resource_Queue.
 
-    cleaned = source_file.strip().replace("\\", "/")
+    Containment now comes from `pipeline.paths.resolve_within` — one implementation shared with every other
+    path-taking tool, instead of the hand-rolled `..` check plus `relative_to` that used to live here. Relative
+    references are read against the queue root, which is what a caller means by `notes/raw.md`; an absolute path
+    is accepted only when it already sits under the queue root. (P1, 2026-09-27.)
+    """
+    cleaned = source_file.strip()
     if not cleaned:
         return None, None
-    if cleaned.startswith("/") or re.match(r"^[A-Za-z]:", cleaned):
-        # Absolute path allowed only if under the queue root.
-        candidate = Path(cleaned).expanduser().resolve()
-    else:
-        if ".." in Path(cleaned).parts:
-            return None, "path traversal is not allowed in source_file."
-        candidate = (_resource_queue_root() / Path(*Path(cleaned).parts)).resolve()
 
-    root = _resource_queue_root()
     try:
-        candidate.relative_to(root)
-    except ValueError:
-        return None, "source_file must stay under 00_Resource_Queue."
+        candidate = resolve_within(cleaned, _resource_queue_root(), label="source_file")
+    except PathOutsideRoot as exc:
+        return None, f"{exc} — source_file must stay under 00_Resource_Queue."
 
     return str(candidate), None
 

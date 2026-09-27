@@ -31,6 +31,38 @@ def check_install() -> dict[str, Any]:
         }
 
 
+def resolve_output_path(
+    src: Path,
+    output_path: str | Path | None,
+    out_dir: Path | None = None,
+) -> tuple[Path | None, str | None]:
+    """Return (markdown output path, error) — the path is always inside the staging root.
+
+    P1, 2026-09-27: `output_path` used to be written verbatim, so a caller could name any path on the machine and
+    the tool would `mkdir(parents=True)` and write Markdown there — an arbitrary-write capability reachable from
+    a model-supplied argument. A named output must now sit under the staging root (Resource Queue, or
+    `EMPIRE_DOCLING_OUT_DIR` / `--out-dir`); the default derived name never leaves it. `src` is only *read*, and
+    stays wherever the operator pointed it — converting a PDF from the Desktop is legitimate, writing to one is
+    not. The import is function-level, matching this module's existing style for `pipeline.provenance`.
+    """
+    from pipeline.paths import PathOutsideRoot, resolve_within
+
+    dest_root = Path(out_dir) if out_dir else DEFAULT_OUT_DIR
+    try:
+        dest_root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return None, f"could not create output root {dest_root}: {exc}"
+
+    if output_path:
+        try:
+            return resolve_within(output_path, dest_root, label="output_path"), None
+        except PathOutsideRoot as exc:
+            return None, f"{exc} — converted Markdown must be written under {dest_root}."
+
+    stem = _SAFE.sub("_", src.stem).strip("_") or "document"
+    return dest_root / f"{stem}.md", None
+
+
 def convert_file(
     input_path: str | Path,
     *,
@@ -40,6 +72,11 @@ def convert_file(
     src = Path(input_path)
     if not src.is_file():
         return {"ok": False, "error": f"not a file: {src}"}
+
+    # Resolve and jail the destination up front: fail on an unwritable target before spending minutes converting.
+    out, out_error = resolve_output_path(src, output_path, out_dir)
+    if out_error or out is None:
+        return {"ok": False, "error": out_error, "input": str(src)}
 
     install = check_install()
     if not install.get("ok"):
@@ -58,14 +95,6 @@ def convert_file(
         return {"ok": False, "error": str(exc), "input": str(src)}
 
     from pipeline.provenance import provenance_fields, provenance_markdown_footer
-
-    if output_path:
-        out = Path(output_path)
-    else:
-        dest_dir = Path(out_dir) if out_dir else DEFAULT_OUT_DIR
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        stem = _SAFE.sub("_", src.stem).strip("_") or "document"
-        out = dest_dir / f"{stem}.md"
 
     header = "\n".join(
         [
