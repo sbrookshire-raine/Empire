@@ -70,6 +70,18 @@
     ]
   },
   {
+    "id": "control_lexical_trap",
+    "query": "how do I talk to her out loud",
+    "top_k": 1,
+    "_note": "CONTROL CASE. The distractor shares the query's own words while the correct answer shares none, so a lexical scorer must rank the distractor first. If this case ever passes with backend=lexical, the scorer has regressed to matching function/overlapping words rather than meaning, and every other hit in this file is suspect.",
+    "expected_top_ids": ["w1"],
+    "candidates": [
+      {"id": "w2", "text": "Talk out loud and the page shows what you said as text on screen."},
+      {"id": "w1", "text": "A loopback speech service provides transcription and synthesis for push-to-talk."},
+      {"id": "w3", "text": "Chat messages stream into the transcript panel as they arrive."}
+    ]
+  },
+  {
     "id": "paraphrase_unpromoted_fact",
     "query": "what happens to something she was never told to keep",
     "top_k": 1,

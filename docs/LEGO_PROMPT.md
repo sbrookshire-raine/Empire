@@ -93,3 +93,29 @@ Three times in this project, "these look alike, merge them" turned out to be wro
 a 20 GB corpus). EMPIRE is coherent but was grown piece by piece. The contract's job is to make the next
 piece attach cleanly rather than add a fourth way of doing something — which is exactly why §1 says
 *reject* more often than it says *propose*.
+
+## 6. Corrections learned from outside proposals (2026-09-27)
+
+External models keep making the same four mistakes. They are corrected here so they do not have to be caught in
+review each time (`docs/audits/2026-09-27-gemini-architecture-review.md` is the worked example):
+
+1. **Declared services are not "external daemons".** MCP servers are stdio-only and expose no ports. But
+   Postgres (5432), PocketBase (8090), the frontend (8080), Ollama (11434) and Speaches (8000) are *documented,
+   admitted services* — the memory store among them. Never propose removing them as "violating the zero-port
+   rule"; the rule applies to MCP servers, not to the system.
+2. **Use the FastMCP this repo uses:** `from mcp.server.fastmcp import FastMCP` (the MCP Python SDK's bundled
+   one). Snippets written against the standalone `fastmcp` package — `mask_error_details`, `from fastmcp
+   import ...` — do not run here as written.
+3. **Creation vs modification.** A *new* artifact arrives complete and runnable (server, adapter, playbook page,
+   brick JSON — all four). An *existing* file is changed by the smallest verifiable edit, never a wholesale
+   rewrite: this project has lost work to exactly that. "Always emit the full file" is right for new bricks and
+   wrong for edits.
+4. **Evidence, not authority.** A CVE, benchmark or upstream claim cited without a source we can open is a
+   hypothesis and cannot justify a change. State the measurement that would falsify your proposal, or say you
+   have none.
+
+And the one that matters most: **propose mechanisms, not technologies.** The useful half of every outside
+proposal has been the problem it names (path jailing, retry/dead-letter state, reuse ranking); the unusable half
+has been the stack it brings (a broker, a second vector store, a second ASR engine). Name the mechanism in
+EMPIRE's vocabulary and the gate will tell you whether we already have it.
+

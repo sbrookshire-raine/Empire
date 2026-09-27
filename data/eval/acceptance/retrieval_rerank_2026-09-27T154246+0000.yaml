@@ -1,0 +1,34 @@
+candidate: retrieval_rerank
+status: pending_architect
+evaluated_at: "2026-09-27T15:42:46+00:00"
+case_count: 8
+hit_count: 4
+memory_promoted: false
+production_embed_unchanged: true
+production_embed: nomic-embed-text
+notes: "Eval only. Optional CrossEncoder via EMPIRE_RERANK_MODEL."
+results:
+  - id: wiki_weaviate
+    hit: true
+    backend: lexical
+  - id: cognee_memory
+    hit: true
+    backend: lexical
+  - id: structured_extract
+    hit: true
+    backend: lexical
+  - id: paraphrase_storage
+    hit: true
+    backend: lexical
+  - id: paraphrase_voice
+    hit: false
+    backend: lexical
+  - id: paraphrase_truncation
+    hit: false
+    backend: lexical
+  - id: control_lexical_trap
+    hit: false
+    backend: lexical
+  - id: paraphrase_unpromoted_fact
+    hit: false
+    backend: lexical

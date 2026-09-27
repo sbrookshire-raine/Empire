@@ -7,6 +7,7 @@ Optional: sentence-transformers CrossEncoder when EMPIRE_RERANK_MODEL is install
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -29,9 +30,28 @@ DEFAULT_CACHE = Path(
 )
 _TOKEN = re.compile(r"[a-z0-9]+", re.I)
 
+# Function words carried the entire score in the first version: the query "how do I talk to her out loud"
+# matched "...text-to-speech on loopback port 8000" through "to" and "and". The lexical baseline therefore
+# could not lose, and seven parked runs all reported the same 3/3 (found 2026-09-26). Content words only.
+_STOPWORDS = frozenset(
+    """
+    a about above after again against all am an and any are as at be because been before being below
+    between both but by can cannot could did do does doing down during each few for from further had has
+    have having he her here hers herself him himself his how i if in into is it its itself just me more
+    most my myself no nor not now of off on once only or other our ours ourselves out over own same she
+    should so some such than that the their theirs them themselves then there these they this those
+    through to too under until up very was we were what when where which while who whom why will with you
+    your yours yourself yourselves
+    """.split()
+)
+
 
 def _tokens(text: str) -> set[str]:
-    return {t.lower() for t in _TOKEN.findall(text or "") if len(t) > 1}
+    return {
+        token
+        for token in (tok.lower() for tok in _TOKEN.findall(text or ""))
+        if len(token) > 2 and token not in _STOPWORDS
+    }
 
 
 def lexical_score(query: str, document: str) -> float:
@@ -83,6 +103,13 @@ def rerank(
     if not docs:
         return {"ok": False, "error": "candidates required"}
 
+    # Candidate order in the fixture must never influence the result: with a stable sort, ties resolved to
+    # list order, so a first-listed answer looked like a "hit" (found 2026-09-26). Hashing query+id gives a
+    # deterministic, author-independent order that is identical on every run.
+    docs = sorted(
+        docs,
+        key=lambda d: hashlib.sha256(f"{cleaned}|{d['id']}|{d['text']}".encode("utf-8")).hexdigest(),
+    )
     texts = [d["text"] for d in docs]
     ce = cross_encoder_scores(cleaned, texts)
     backend = "cross_encoder" if ce is not None else "lexical"
