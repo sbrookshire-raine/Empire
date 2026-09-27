@@ -86,6 +86,20 @@ altering Cognee's tables, which its own migrations own and which the 1.6.1 upgra
 Speaches `:8000` transcription endpoint (down at review time — the premise is unmeasured). The brick must declare
 `requires_services: speaches:8000`, and it needs P3 to survive partial failures.
 
+**Update 2026-09-27 — the premise is now grounded in existing code, not an assumption:**
+
+- The file endpoint **is real and already used**: `pipeline/voice_presence.py:107` posts to
+  `{base}/v1/audio/transcriptions` (OpenAI-compatible multipart), with `DEFAULT_STT_MODEL =
+  Systran/faster-whisper-base` — CPU-based, so chat VRAM stays free. So the brick is **a batching loop over a call
+  the repo already makes**, not a new integration.
+- **Target measured by the P11 census:** 92 files / 976.5 MB (89 `.mp3` + 3 `.wav`).
+- **Still genuinely unverified:** an end-to-end batch run — Speaches was down on `:8000` during this pass. Cheapest
+  possible check once it is up: `curl -F file=@<one.mp3> -F model=Systran/faster-whisper-base
+  http://127.0.0.1:8000/v1/audio/transcriptions`. If that returns text, the remaining work is the loop and the
+  P3 retry wiring; if not, the premise dies here and cheaply, which is the point of checking first.
+- **Shape:** batch loop + per-file outcome written through `pipeline/job_schedule.plan_after_failure` so a partial
+  failure quarantines only the file that failed; skip zero-byte inputs (one exists today).
+
 ## P9 — Structural code reach  → GATED
 
 Tree-sitter/`ast-grep` needs real source trees. Future harvests can preserve directory trees; the *existing*
