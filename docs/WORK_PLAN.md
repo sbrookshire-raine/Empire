@@ -60,9 +60,14 @@ brick copies rather than inventing a third style.
 
 ## P4 — Memory curation rebuild  → **WAITING (prune sign-off)**
 
-Strip the `nlm*` +55 bonus and add duplicate/residue guards in `scripts/optimize_eve_memory.py`; rebuild
+Strip the `nlm*` +55 bonus and add duplicate/residue guards in the recall-optimize path; rebuild
 `eve_core` from `config/foundation.json`; then prove it with a recall test that names `source_file`. Measured
 baseline: 8 registered / 37 reference / 21 forbidden / 9 unregistered of 75. Pruning needs explicit approval.
+
+**The artifact is `scripts/optimize-eve-memory.ps1`** (corrected 2026-09-27 — this section previously said `.py`), and
+it takes **`-DryRun`**, which forwards `--dry-run` to the module that does the scoring. So the decision can be made
+concretely rather than in the abstract: the candidate list printed by `.\scripts\optimize-eve-memory.ps1 -DryRun` is
+what gets approved, and the approval can name individual entries.
 
 ## P5 — Rerank expansion (8 → ~50 real cases)  → TODO
 
