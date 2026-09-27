@@ -127,3 +127,61 @@ rejects its own first half (RabbitMQ → in-process, PostgresSaver → file-back
 four mechanisms we genuinely lack. **The mechanism-level items are worth having; the technology-level items are
 worth refusing** — which is exactly the pattern this project keeps meeting, and the reason the LEGO gate exists.
 
+## Second round (2026-09-27): the "translation matrix" + `task-runner` brick
+
+Asked to revalidate with full context, the model returned a translation matrix and one concrete brick
+(`task-runner`: in-process SQLite WAL queue, retry counters, dead-letter quarantine, five tools). Compared
+against the repo, not against itself:
+
+### Where it matches the plan above
+
+| Its proposal | My phase | Note |
+|---|---|---|
+| Dead-letter quarantine / parking lot | **Phase 3** | Same mechanism, independently arrived at |
+| Tree-sitter AST gate before execution | **Phase 6** | Still gated on the de-flattening precondition |
+| `is_relative_to` containment | **Phase 1** | But applied *only inside its new server* — see the structural note below |
+
+### What is genuinely new here (adopt into the plan)
+
+1. **Persistent retry *scheduling*** — `next_run_at` + exponential backoff (`base × 2^attempt`) + `last_error`.
+   Verified gap: `scripts/ingest_workbench.py` retries with a **fixed 15 s sleep in-process** (`RETRY_DELAY_SECONDS`)
+   and nothing anywhere stores a `next_run_at`. Worth noting we *already* use `wait_exponential_jitter(8, 128)`
+   for LLM calls in `cognee_client.py`, so the technique is not new to us — only the durable schedule is.
+   **Phase 3 schema now includes: `status, retry_count, max_retries, next_run_at, last_error, failure_reason`.**
+2. **A quarantine record with a reason and notes**, plus a listing tool (`list_dead_letters`) as the review
+   surface. My plan had "a review script"; a *tool* Eve can call is better and costs one playbook line.
+   **Phase 3 absorbs this.**
+
+### Already ours — do not rebuild
+
+| Its proposal | What exists |
+|---|---|
+| HITL staging mailbox (`pending_approvals`) | `mcp/work_order_mcp.py` already drafts work orders with `- **Status:** open`, alongside the work-orders and resource-queue directories. The right move is to extend the existing statuses (open → approved → done), not add a parallel mailbox |
+| A five-tool queue API | `ingestion_jobs` (PocketBase) already models job lifecycle with `in_progress` / `complete` / `failed`, plus the memory propose/confirm path for candidates |
+
+### Repeated errors (third appearance across these outputs)
+
+1. `from fastmcp import FastMCP`, `mask_error_details=True`, `from fastmcp.exceptions import ToolError` — still
+   the standalone package; every server here uses `from mcp.server.fastmcp import FastMCP`. **Its code does not run as written.**
+2. "standalone daemon services with open ports … are automatic rejections" — still overbroad. Postgres,
+   PocketBase, Ollama and Speaches *are* the system; they are documented, admitted services. The rule applies to
+   MCP servers.
+3. A **new SQLite database** (`data/task_runner.db`) for job state — a second persistence store duplicating
+   PocketBase's `ingestion_jobs`. Mechanism yes; new store no.
+4. `EMPIRE_WORKSPACE_ROOT: process.cwd()` as the jail root default — a *defaulted* containment root is how
+   containment fails. Our bricks declare explicit roots.
+5. `./empire-mcp-client` again (ours is `agent/lib/mcp-client.ts`), and `enqueue_task(payload: dict)` accepts
+   arbitrary payloads — a path inside a payload would bypass the very jailing the brick performs.
+
+### The structural note that matters most
+
+**It proposes new bricks that obey the contract, while our verified gaps are in existing code that does not.**
+Its `task-runner` would make job state live in a *fifth* place, while the four existing places keep their
+inconsistent path handling. That is the same shape as the last round (a second vector store, a second ASR
+engine): the mechanism is right and the technology duplicates something we already run.
+
+**Therefore the plan is unchanged in priority, and Phase 3 is now specified.** Phase 1 (path jailing across the
+servers that already exist) remains first: it is the only item here that fixes code we have rather than
+creating code we would then have to maintain.
+
+
