@@ -43,7 +43,7 @@ async def wiki_ingest_batch(
     limit: max files this run (0 = all remaining). Resumes from checkpoint automatically.
     """
     if mode not in {"fast", "full"}:
-        raise ValueError("mode must be 'fast' or 'full'")
+        return _json({"ok": False, "error": "mode must be 'fast' or 'full'", "mode": mode})
     args = ["--year", str(year), "--batch", str(batch), "--mode", mode, "--limit", str(limit)]
     if dataset:
         args.extend(["--dataset", dataset])
@@ -60,7 +60,7 @@ async def wiki_ingest_export_dir(
 ) -> str:
     """Ingest a flat directory of exported .md chunks (Weaviate staging) into Cognee."""
     if mode not in {"fast", "full"}:
-        raise ValueError("mode must be 'fast' or 'full'")
+        return _json({"ok": False, "error": "mode must be 'fast' or 'full'", "mode": mode})
     args = ["--export-dir", export_dir, "--mode", mode, "--limit", str(limit), "--dataset", dataset]
     result = await run_wiki_ingest(*args)
     return _json(result)

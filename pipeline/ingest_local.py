@@ -9,12 +9,14 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
 
 from pipeline.cognee_client import IngestMode, embed_dataset, improve, remember
 from pipeline.config import MOCK_DATA_DIR, POCKETBASE_URL, ROOT
+from pipeline.job_schedule import classify_failure, plan_after_failure
 from pipeline.normalizer import normalize_file
 
 load_dotenv(ROOT / ".env.local")
@@ -47,14 +49,20 @@ async def _pb_update_job(
     status: str,
     records_ingested: int = 0,
     error: str = "",
+    extra: dict[str, Any] | None = None,
 ) -> None:
-    payload: dict[str, str | int] = {
+    payload: dict[str, str | int | None] = {
         "status": status,
         "records_ingested": records_ingested,
         "finished_at": _utc_now_iso(),
     }
     if error:
         payload["error"] = error[:5000]
+
+    # `extra` carries the retry schedule (retry_count / next_run_at / failure_reason) computed by
+    # pipeline.job_schedule. Applied last so the policy owns those fields and this function stays a dumb writer.
+    if extra:
+        payload.update(extra)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.patch(
@@ -110,8 +118,12 @@ async def ingest_file(path: Path, mode: IngestMode = "fast") -> dict[str, str | 
             "mode": mode,
             "seconds": round(elapsed, 1),
         }
-    except Exception as exc:  # noqa: BLE001
-        await _pb_update_job(job_id, status="failed", error=str(exc))
+    except Exception as exc:
+        # Record *why* it failed and *when to try again* in the row itself, so the retry outlives this process
+        # (P3). A permanent reason quarantines immediately instead of retrying a lost cause; an exhausted row
+        # becomes `dead_letter` rather than silently disappearing into the failed pile.
+        plan = plan_after_failure(reason=classify_failure(exc), error=str(exc))
+        await _pb_update_job(job_id, status=str(plan["status"]), extra=plan)
         raise
 
 

@@ -6,7 +6,16 @@ measure before adopting.** Status: `DONE` · `NEXT` · `TODO` · `WAITING` (owne
 Consolidates: the audit→contract programme, the Lens A/Lens B surveys, the memory-curation work, and three rounds
 of outside proposals reviewed in `docs/audits/2026-09-27-gemini-architecture-review.md`.
 
-## P1 — Canonical path jailing  → **NEXT**
+## P1 — Canonical path jailing  → **DONE** (2026-09-27)
+
+- **Shipped:** `pipeline/paths.py` (`resolve_within` / `is_within`) applied to `mcp/cognee_mcp.py`,
+  `mcp/work_order_mcp.py`, `mcp/workbench_mcp.py` and the docling staging output. 28 tests across
+  `tests/test_paths.py` and `tests/test_mcp_path_jailing.py`, all green (suite 625).
+- **Two live holes were closed, not hypothetical ones:** `cognee_ingest_mock_file` had **no containment at all**
+  (any `.json`/`.md` on the machine could be read and pushed into graph memory), and `docling_convert` wrote
+  Markdown to **any path the model named**, with `mkdir(parents=True)`.
+- **Not at `mcp/lib/security.py`,** as outside advice suggested: this repo's top-level `mcp/` collides with the MCP
+  SDK's own `mcp` package, so that import would resolve inside the SDK. `pipeline/` is the real package home.
 
 - **Why:** some servers call `.resolve()`, others do not, and **nothing enforces `is_relative_to(root)`** across
   the tool surface — including any Docker mount path. Independently identified by both reviewers.
@@ -16,13 +25,30 @@ of outside proposals reviewed in `docs/audits/2026-09-27-gemini-architecture-rev
   refused while legitimate paths still work.
 - **Cost:** no new dependency. **Risk:** a legitimate path the tests miss gets refused — so the tests come first.
 
-## P2 — Error discipline, decided once  → TODO
+## P2 — Error discipline, decided once  → **DONE** (2026-09-27)
+
+- **Decision:** tool-call failures return `{ok: false, error}`; exceptions remain correct for **startup/config**
+  failures, where refusing to boot is the desired behaviour. `pocketbase_mcp._require_env` is the model case — a
+  missing credential must be loud, not a silent default.
+- **Audit:** every `raise` in `mcp/*.py` inspected. `wiki_mcp`'s two `mode` validations were raising and are now
+  returned (`{ok:false,error,mode}`); the only remaining raise is the credential guard. No third style anywhere.
 
 `ToolError` is never used in `mcp/*.py`; the contract is met today by structured returns. Decide once (SDK's
 `ToolError` vs `{ok:false,error}` only), apply uniformly, and record it in `OPERATING_CONTRACT.md` §5 so the next
 brick copies rather than inventing a third style.
 
-## P3 — Retry schedule + quarantine  → TODO (before P8)
+## P3 — Retry schedule + quarantine  → **DONE** (2026-09-27)
+
+- **Shipped:** migration `1700000003_ingestion_job_retries.js` (adds `retry_count`, `max_retries`, `next_run_at`,
+  `failure_reason`, and `dead_letter` to the status vocabulary) · `pipeline/job_schedule.py` (pure policy, 21 tests,
+  exponential-with-jitter expressed as an *absolute timestamp* because a durable schedule must outlive its process)
+  · wired into `pipeline/ingest_local.py` · `scripts/requeue-stale-jobs.py` behind the existing
+  `cleanup-stale-ingestion-jobs.ps1` command.
+- **Verified against the live database,** not assumed: migration applied, `dead_letter` + all four fields present,
+  and the 14 rows stuck in `running` were requeued to `pending` with jittered `next_run_at` values (16:30:06–16:30:09
+  rather than in lockstep). `running` is now 0 of 544.
+- **Deliberately a script, not a Toolbelt tool** (Lens B discipline): an operator path on CPU, and Eve can already
+  act on these rows through the generic `pb_update_record` — a new limb would have cost her prompt budget.
 
 - **Why:** retries are ad-hoc in-process sleeps (fixed 15 s in `ingest_workbench.py`); no `next_run_at`, no
   terminal state. We already use exponential jitter for LLM calls — the technique exists, the durable schedule
