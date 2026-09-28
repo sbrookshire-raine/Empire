@@ -113,7 +113,44 @@ Read from the notes on 2026-09-27. Several of these had never been recorded anyw
 | **IRENE 2.0** | Nov 2025 | the revival | — |
 | **AI Factory** | Dec 2025 | agent-zero + n8n + Qdrant + knowledge bases | the vector-store era, then n8n deliberately dropped |
 | **Raine Abacus** | May 2026 | dockerised agent system, own Weaviate, `agent_resource_pipeline/`, `MANUAL.md` | EMPIRE's closest structural ancestor |
-| **The Hatch projects** — *13 complete + 1 incomplete* | **Jun 2025 → Feb 2026** | found 2026-09-28 in a Heptabase card, `Hatch Projects Archive - Master Index.md` (17.8 KB): React 18.2 + Tailwind apps built on the **Hatch platform before it closed**, ~**25,000+ lines** across five domains, exported and documented *"for future reference, potential reuse in Heptabase, and preservation of working code patterns"* — deliberately, at the time. Named: **Energia Integrated Productivity System** (3,838 lines — energy-based prioritisation, multi-view: Work/Learning/Museum/Organizer/Focus), **80s Synth Project Manager (Aporia)** (2,552 lines — the *"Energia"* daily-energy quota, tasks at Skimmed/Learned/Mastered levels), **idea-farm (3)** (3,897 lines, *in production with real data, 8 real organisations, partnerships formed*), **final-stable-anamchara** (v8, in active use, Celtic-themed "soul-friend"), **mind-map-game-fixed**, **area-56-band-manager-fixed**, **aporia-v1-community-demo**, **dynamic-chimera-protocol-interactive**, **project-management-board**, two **student-advisor-dashboard** variants, **react-11T8hu**, **idea-farm (2)**, and one failed export. Themes: Celtic spirituality, cyberpunk, neural interfaces, gamification, 80s synth, minimalism | **A whole project family absent from this register until now** — and the *worker-scale* half of 2025–26: students, advising, advocacy, music, habit systems. **Two lessons sit in this card.** (1) The energy-quota and Skimmed/Learned/Mastered ideas are the same instinct as §9.1's *"accumulating unlocks"* — motivation as a design material, three years before Eve. (2) **He has already run the preservation drill once**: a platform he built on died, and the response was a deliberate export plus a documented index of reusable patterns. That is exactly the discipline §5 says was missing between the other attempts — it was present here |
+| **The Hatch projects** — *13 complete + 1 incomplete* | **Jun 2025 → Feb 2026** | found 2026-09-28 in a Heptabase card, `Hatch Projects Archive - Master Index.md` (17.8 KB): React 18.2 + Tailwind apps built on **Hatch** — *"a canvas coding environment which i did some beta testing on and created some things"* (`hatchcanvas.com`) — **before the company went out of business**, ~**25,000+ lines** across five domains, exported and documented *"for future reference, potential reuse in Heptabase, and preservation of working code patterns"* — deliberately, at the time. Named: **Energia Integrated Productivity System** (3,838 lines — energy-based prioritisation, multi-view: Work/Learning/Museum/Organizer/Focus), **80s Synth Project Manager (Aporia)** (2,552 lines — the *"Energia"* daily-energy quota, tasks at Skimmed/Learned/Mastered levels), **idea-farm (3)** (3,897 lines, *in production with real data, 8 real organisations, partnerships formed*), **final-stable-anamchara** (v8, in active use, Celtic-themed "soul-friend"), **mind-map-game-fixed**, **area-56-band-manager-fixed**, **aporia-v1-community-demo**, **dynamic-chimera-protocol-interactive**, **project-management-board**, two **student-advisor-dashboard** variants, **react-11T8hu**, **idea-farm (2)**, and one failed export. Themes: Celtic spirituality, cyberpunk, neural interfaces, gamification, 80s synth, minimalism | **A whole project family absent from this register until now** — and the *worker-scale* half of 2025–26: students, advising, advocacy, music, habit systems. **Two lessons sit in this card.** (1) The energy-quota and Skimmed/Learned/Mastered ideas are the same instinct as §9.1's *"accumulating unlocks"* — motivation as a design material, three years before Eve. (2) **He has already run the preservation drill once**: a platform he built on died, and the response was a deliberate export plus a documented index of reusable patterns. That is exactly the discipline §5 says was missing between the other attempts — it was present here |
+
+### 8.1 A note on platforms — Hatch and Playful, in the Architect's own account *(added 2026-09-28)*
+
+> *"Hatch is a name of a canvas coding environment which i did some beta testing on and created some things. They
+> eventually went out of business. The code was my ideas and exports. I also in a discord community beta testing the
+> next incarnation of the Hatch product called 'Playful' but I didn't like it nearly as much and focused on my own work.
+> Neither were paid, but experience talking to developers."*
+
+**The disk agrees, and adds specifics.** Two Heptabase cards carry the Playful thread — `Playful is fully open.md` and
+`PLAYFUL TESTING.md` — in **both** the May and July 2026 exports. The first is a personal onboarding email: *"Hi Seth,
+Good news, you can start using Playful now… create your account… I'd also love to invite you to a quick 15 to 20 minute
+onboarding call… installing the iOS app via **TestFlight**"*, from a named staff member with a booking link — i.e. a
+**hand-onboarded beta tester**, not a mailing list. And the Hatch side leaves a bookmark created **2025-11-28**, tagged
+`Prevail`, pointing at `https://hatchcanvas.com/project/proj_CCOp3B6wGFGn1ki2bj2OI` — *"Hatch - AI Education
+Presentation"*: **a real Hatch project URL, filed under the education project**, which is what he meant by *"the code was
+my ideas and exports."*
+
+**Three things this changes in the record:**
+
+1. **The Hatch projects are his IP, not the platform's.** 13 + 1 apps, ~25,000 lines, exported and indexed on his own
+   initiative before the shutdown. The register above lists them as a *carried-forward* body of work, and that is now
+   the correct reading: they are his, reusable, and the Master Index is his documentation of them.
+2. **The local-first principle has testimony, not just conviction.** He has watched a platform he built on go out of
+   business, and a successor product arrive, be tried, and be declined. `MOTIVATION.md` §2's *"independence: local-first,
+   meter-free, no rented intelligence"* is not an ideology he adopted — **it is a position he earned, twice, at
+   personal cost.** Any future session tempted to route core capability through someone else's platform should read
+   this first.
+3. **There is a developer-relationship thread here that no document recorded** — beta testing a canvas coding
+   environment, onboarding calls, TestFlight builds, a Discord community, feedback given on two successive product
+   incarnations. **That is product experience**: he has watched what a small team builds, what survives a pivot, and
+   what a user actually wants from a canvas. It belongs beside the *"Thinking Coordinator"* idea (`MOTIVATION.md` §2)
+   and the Hatch `PROJECT_SUMMARY.md` files, because it is the same person doing the same thing from the other side of
+   the table.
+
+**Playful, for completeness:** `my.playful.app`, iOS via TestFlight, an assigned contact, and a verdict — *"didn't like
+it nearly as much"*. Nothing else about it appears anywhere in the estate, and it is **not** to be confused with any
+current project.
 
 ## 9. The friction case study — the difficulties, written by the AI collaborator (2025-08-16)
 
