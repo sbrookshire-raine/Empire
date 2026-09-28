@@ -105,6 +105,46 @@ Cognee datasets. It was abandoned, not disproven.
 corpus, embedded) → EMPIRE (task loop + Cognee memory + MCP limbs + Eve). Each attempt kept the previous one's best
 idea and dropped its machinery. **The corpus is the one asset that survived all four.**
 
+### From the Obsidian notes — the 2025 thread the folders couldn't show (added 2026-09-27)
+
+The vault notes carry dates in filenames, so they recover a year that the folder hierarchy alone hid. This is the
+**idea layer** beneath the four build attempts: several of these were designed in detail and never shipped.
+
+| Date | Note | The idea |
+|---|---|---|
+| 2025-01-12 | *(oldest note in both live vaults)* | the notes begin here — six months before the first corpus work |
+| 2025-01-18 | `Abacus - related.md` | **Abacus** — the first named system |
+| **2025-01-19** | **`rAInE - Raine AI Expression (or exchange).md`** | **the origin of the name "Raine"** — an *AI expression/exchange* concept, not a codename |
+| 2025-02-19 → 03-12 | `6. testing with abacus.md`, `ABACUS - prompt changes.md` | Abacus in active prompting |
+| 2025-03-14 | `Synthesis.md` | synthesis of the above |
+| **2025-03-22 → 03-26** | `Zettelkasten, Severance, and the Cold Harbor Project.md` · `Zettel Template.md` · `Zed learning process notes.md` · `2a. Youtube Zeded.md` · `3A - ZED2RSS.md` · **`MASTER- Gemini Zet God script.md`** · `MASTER - Shortened Notegpt Zet prompt.md` · `7A - agentic code for ripping and zet summarizing from consolex.ai.md` | **"Zet" = Zettelkasten (Zed)**: an automated *capture → summarize → zettel* pipeline — YouTube, RSS, ConsoleX and Gemini feeding structured notes |
+| 2025-03-31 | `Possible job - Thinking Coordinator.md` | an idea for the work itself |
+| 2025-04-09 → 04-18 | `Gemini Learning hub project summary (project save point)`, `gemini ui research`, `Learning home (possible next step)`, `041825 - Workflow success with Cove AI…` | a **learning hub**, and the first automation win (Cove AI) |
+| 2025-08-15 → 08-18 | `08-15-2025 - Raine blueprint.md` · `raine roadblocks - clear paths` · **`08_16_25_rAIne non n8n_MVP_v1 setup.md`** · `RAINE DEV CHAT PT1/PT2` · `rAIne Oauth` | the **Raine blueprint**, its blockers, and the decision to build an MVP **without n8n** |
+| **2025-11-18** | `IRENE 2.0 1/2/3` | **IRENE revived** — a year after the 2024-11 scripts |
+
+**Reading:** the documented arc is *Abacus → rAInE (AI expression) → Zet/Zed (knowledge capture) → learning hub →
+Raine blueprint & non-n8n MVP → IRENE 2.0 → the 2026 markdown pipeline → EMPIRE*. **`Zet` is the unbuilt ancestor of
+EMPIRE's intake logic**: the same instinct that later became `wiki_scout` (capture → structure → retrieve), designed
+in March 2025 and never finished.
+
+**Vault inventory**
+
+| Vault | Notes | Oldest → newest | State |
+|---|---|---|---|
+| `…\Documents\RESYNC_2026` | **497** | 2025-01-12 → 2026-06-29 | **the live vault**; folders `0.EVOLVE 5_18_26`, `1_SBX`, `1. GADGET FOCUS`, `2. PAST LIVES`, `Clippings`, `Excalidraw`, `Zettelkasten (Zed)` |
+| `…\Desktop\SBX_Vault` | **474** | 2025-01-12 → 2026-05-18 | earlier sibling of the same tree (overlapping dates) |
+| `…\Documents\SBX_Vault` | **0** | — | **empty shell** — folder structure only |
+| `…\Documents\Obsidian Vault` | **0** | — | **empty shell** — only `.obsidian` |
+
+`2. PAST LIVES\Zettelkasten (Zed)` holds the Zed system proper: `Experiments`, `Guides`, `Learning Notes`,
+`Reference Notes`, `Templates`, **`ZED Notes`**.
+
+Two consequences: the vaults live **inside OneDrive**, so a cloud copy likely exists already — but OneDrive sync is
+*not* a backup (deletions and account problems propagate), so the notes belong in the backup plan as their own tier.
+And three of the four vaults are duplicates or empty shells, which is why the note count looked ambiguous until each
+was counted.
+
 ### Unlocated — must be found before archiving anything
 
 - **`RAINE_ABACUS_PROJ_FOLDER`** — its container mounted
@@ -134,6 +174,8 @@ archived, not integrated — the estate is large enough to drown in.
 | **`H:\AI_MODELS_2026`** (2.4 TB) | GGUF + Transformer models | Mostly **re-downloadable — no backup**. Exception: `BGE-reranker-v2-m3` (wiki interpreter), `Whisper-Large-V3`/`XTTS-v2` (voice) are referenced by EMPIRE. |
 | **`H:\Heptabase backup 4_7_26`** | knowledge-tool backup | Inspect for notes worth ingesting, then archive. |
 | **Music libs** (`EZDrummer`, `Toontracks`, `Superior`, samples) | music production | **Not EMPIRE.** Leave in place; exclude from backup scope. |
+| **Obsidian vaults** — `…\Documents\RESYNC_2026` (497 notes) + `…\Desktop\SBX_Vault` (474), plus two empty shells | Jan-2025 → Jun-2026, dates in filenames | **The idea layer, and EMPIRE's "why".** Curated knowledge worth ingesting into the `primitives`/reference path after curation — but *read first*: `08-15-2025 - Raine blueprint.md`, `raine roadblocks - clear paths`, `08_16_25_rAIne non n8n_MVP_v1 setup.md`, `MASTER- Gemini Zet God script.md`. Those recover designed-but-unbuilt work. Back up as its own tier (§4): OneDrive sync is not a backup. |
+| **`Zet` / Zettelkasten (Zed)** — Mar 2025, never shipped | an automated *capture → summarize → zettel* pipeline fed by YouTube, RSS, ConsoleX and Gemini; `2. PAST LIVES\Zettelkasten (Zed)\{Experiments, Guides, Learning Notes, Reference Notes, Templates, ZED Notes}` | **The unbuilt ancestor of EMPIRE's intake logic** — same instinct as `wiki_scout` and the learn-from cache. Review `3A - ZED2RSS.md`, `7A - agentic code for ripping and zet summarizing from consolex.ai.md`, `MASTER - Shortened Notegpt Zet prompt.md`, then **register it in `EMPIRE_IDEA_QUEUE`** rather than let it be redesigned again. |
 | **`H:\llama.cpp`**, `SteamLibrary` | tooling/games | Regenerable; no backup. |
 
 ## 4. Backup tiers and placement
@@ -149,6 +191,7 @@ Ranked by irreplaceability, not size. **Rule: the runtime copy is never the back
 | **T4 system** | `C:\EMPIRE` 5.1 · `C:\Empire_Workbench` · `%LOCALAPPDATA%\EMPIRE` · Postgres dump | ~10 GB | restic: 1 snapshot, Workbench only |
 | **T5 regenerable** | models 2.4 TB, Steam, most ZIMs | — | **do not back up** |
 | **T6 legacy** | Raine/v2 pipeline, AI Factory, IRENE, Desktop projects, tool-factory ZIPs | GBs | archive as-is |
+| **T7 notes** | Obsidian vaults (497 + 474 notes) + Desktop note folders (`DAZE`, `PROJECT HUB`, `HIDDEN`, `TOOL_FACTORY_GUMLOOP*`, `FROM EXHDD` ×200 notes back to 2020) | GBs | in OneDrive → a cloud copy exists, but **that is sync, not backup** |
 
 **Placement**
 
