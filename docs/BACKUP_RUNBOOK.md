@@ -222,12 +222,15 @@ never match byte-for-byte while it is open (see §7).
 
 Three more, from 2026-09-28:
 
-- **Never trust a copy's name for what it is.** `01_notes_T7\SBX_Vault_obsidian_earlier` is byte-identical to the
-  *current live* vault, while `RESYNC_2026_obsidian_live` holds **24 notes the live vault does not**. Verify by content;
-  the labels were backwards in both directions. See `ESTATE_INVENTORY` §10.4.
-- **Near-identical snapshots are not duplicates.** Those two vault copies differ by 24 files, and that difference is the
-  only copy of the `0.EVOLVE 5_18_26` journal thread. Applying dedup to "95% identical" folders destroys exactly the
-  content a backup exists to protect — the same rule already in force for the 2017/2021/2026 chunk datasets.
+- **Resolve which tree is *live* before comparing anything, and test the path you actually mean.** I compared the Desktop
+  vault against a T7 copy and announced that the copy names were backwards; in truth `Documents\RESYNC_2026` is the live
+  vault — `ESTATE_INVENTORY` §7 said so all along — and **both T7 names were correct**. In the same pass I tested a OneNote
+  path on `H:` when the document said `…\OneDrive\Documents\…`, then reported my own mis-read as a stale path. **Read the
+  inventory's line before overriding it, and copy paths from the file rather than retyping them.**
+- **Near-identical snapshots are not duplicates.** The two vault copies differ only in `0.EVOLVE 5_18_26\` — **1 file** in
+  the earlier snapshot, **21** today. An earlier snapshot of a folder that later grew is not redundant data, it is
+  *evidence of growth*. Applying dedup to "95% identical" folders destroys exactly the content a backup exists to protect —
+  the same rule already in force for the 2017/2021/2026 chunk datasets.
 - **A copy of a *live* tree ages immediately.** T6 was verified 450 files short inside `SBX_Vault` because the vault kept
   being written to. Re-run the copy as a delta (`robocopy … /E` again: it recopies only new/changed), re-verify, and
   expect the delta to recur for any tree that is still in use.

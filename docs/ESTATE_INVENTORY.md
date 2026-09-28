@@ -506,7 +506,7 @@ So the T6 exclusion was **right about the 1,050 GB** and **deliberately left two
 1.0737. That difference (718.587 vs 771.58 for the same 6,328 files) is not a discrepancy and not missing files; it
 was checked.
 
-### 10.4 The vault exists in two *divergent* states — do not deduplicate them
+### 10.4 The two vaults, the two T7 copies — and a correction: **the copy names were right**
 
 The Obsidian vault (`Desktop\SBX_Vault`) is held in the estate in three copies that are **not** the same content:
 
@@ -516,18 +516,30 @@ The Obsidian vault (`Desktop\SBX_Vault`) is held in the estate in three copies t
 | `01_notes_T7\RESYNC_2026_obsidian_live` | **543** | holds **24 files the live vault does not**, all under `0.EVOLVE 5_18_26\`; `START FROM ZERO.md` appears there as `0. START FROM ZERO.md` — a **rename** |
 | `07_legacy_T6\Desktop_all\SBX_Vault` | 519 | was 450 files behind when first checked; **re-copied 2026-09-28 and now identical** |
 
-**The names are backwards**, so they must not be trusted: the copy called "earlier" is the current live state, and the
-copy called "live" is the richer one. The 24 extra files are a dated personal thread — *"Grey rock - respect
-boundaries"*, *"2.1 Entire Gemini convo"*, *"2.2 Tech stack additions to explore"*, *"BASS VI POWERUP"*, *"Beat -
-parallel lives"*, *"Balance of good and bad seth"* — the **`0.EVOLVE 5_18_26` journal**, exactly the category of content
-that must never be lost.
+**CORRECTION — this section's first version had it backwards.** It claimed the T7 copy names were wrong and that
+`Desktop\SBX_Vault` was the live vault. **Not so:** `…\OneDrive\Documents\RESYNC_2026` is the live vault — §7 of this
+document already said so (497 notes then, **543 now**) — and the T7 copy named `RESYNC_2026_obsidian_live` matches it
+**exactly, 0 missing / 0 extra**. `Desktop\SBX_Vault` (519) is the **earlier** copy, matching `SBX_Vault_obsidian_earlier`
+**exactly, 0 / 0**. Both T7 names were correct all along.
 
-Two readings, both currently safe: either those notes were **deleted from the live vault after** the RESYNC was taken
-(making RESYNC a snapshot of something no longer live), or the live vault is a **partial view** of a larger one. Either
-way **all three states are in the estate.** The consequence for any future cleanup:
+What fooled me, twice in one pass: I compared against the wrong vault, and I tested the OneNote path on `H:` when this
+estate's own note says `…\OneDrive\**Documents**\…` — a mis-read of my own document, briefly reported as a stale path.
 
-> **`SBX_Vault_obsidian_earlier` and `RESYNC_2026_obsidian_live` are ~95% identical and must NOT be deduplicated.**
-> The 24-file difference is the only copy of that thread. Same rule as the three chunk datasets (2017 / 2021 / 2026).
+**And the alarm was false.** The difference is `0.EVOLVE 5_18_26\`, which held **1 file** in the earlier copy and holds
+**21** in the live one: a folder that **grew between the two copies**. Nothing was deleted. Its files are a dated
+personal thread — *"START FROM ZERO"*, *"1. May 21 2026 - Grey rock - respect boundaries"*, *"2.0 May 22 2026 - Somehow
+you just knew what to do. Trust that"*, *"2.1 Entire Gemini convo"*, *"2.2 Tech stack additions to explore"*, *"BASS VI
+POWERUP"*, *"Balance of good and bad seth"*.
+
+**What is actually true, and what survives as a rule:**
+
+- **T7 holds both vaults, each verified identical to its own source** — the live one (`RESYNC_2026_obsidian_live` ↔
+  `Documents\RESYNC_2026`, 543) and the earlier one (`SBX_Vault_obsidian_earlier` ↔ `Desktop\SBX_Vault`, 519). **T6's
+  copy is the Desktop (earlier) one**, so the **live vault is covered by T7**, not T6.
+
+> **Do not deduplicate the two T7 vault copies.** They are ~95% identical, and the difference is `0.EVOLVE 5_18_26\` —
+> an earlier snapshot of a folder that later grew is not redundant data, it is *evidence of growth*: what was written,
+> and when. Same rule as the three chunk datasets (2017 / 2021 / 2026).
 
 **One hazard checked and cleared:** there is **no OneDrive placeholder problem**. `Desktop` is 353,135 files with **0
 offline** and **0 recall-on-data-access** attributes, and all four vault copies agree at 7 zero-byte files — so nothing
