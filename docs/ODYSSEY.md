@@ -196,5 +196,53 @@ Three things follow:
    machine is where it is** — worth checking for an old `AI_PROJECTS` folder, since this estate's copy was migrated
    and the original may hold more.
 
+## 12. Heptabase — the best-organised era, what it holds, and no CLI needed
+
+You described Heptabase as *"where I started trying to organize and link docs and project meaning and momentum"*, and
+offered its CLI. Read on 2026-09-27, the export answers the question directly: **the CLI adds nothing we don't already
+have, and is not installed on this machine anyway.** The official export is complete by the vendor's own description —
+*"all your cards, journals, highlights, mindmaps, and whiteboards… tags and properties are preserved as YAML."*
+
+| Source | Contents | Use it for |
+|---|---|---|
+| **`Card Library\` (749 .md)** + `Journal` (17) + `Text Element` (53) + `Whiteboard` (58) + `Highlight` (3) | the human-readable content, with YAML tags/properties | **reading** — cards are the ideas |
+| **`All-Data.json` (25.3 MB)** — a relational dump | `cardInstances` **627** · `whiteBoardList` **65** · **`contextItems` 3,004** · `chats` 42 / `chatMessages` **542** · `pdfCardInstances` **81** · `mediaCards` 68 · `templates` 2 · `highlightElements` 3 | **the structure** — `contextItems` is the **link graph** between cards, which markdown cannot carry |
+
+**So: read the markdown, but keep the JSON.** Heptabase was the era with *relationships* (3,004 links across 627
+cards) — the one place where "project meaning and momentum" is stored as structure rather than prose. That makes
+`All-Data.json` the single best map of how you were thinking in that period, and it is the one file in the T7 tier
+whose *value depends on not being reduced to markdown*. Note `mindMapInstances` is 0: the README's "mindmaps" are the
+65 whiteboards.
+
+### 12.1 A project discovered in the Heptabase folder: **Local Indie Art Hub**
+
+Found inside the backup, `readme for what was built in cursor.md` (last updated **2026-03-08**):
+
+> *"Build a **hybrid local-AI + cloud community hub** where fans can discover **indie artists**, play **retro
+> mini-games**, and unlock **local business flash-sale offers**."*
+>
+> Status: **"advanced prototype (core experience live)"** — Next.js app with mobile-friendly routes.
+
+Not previously recorded anywhere in this audit. And look at what it recombines:
+
+| Its ingredient | Where it came from |
+|---|---|
+| **retro mini-games / arcade** | **Youtube on Rails** — the arcade instinct, back again |
+| **indie artists, discovery** | the music thread (`Area_56_Bandapp`, drum research, the artist/music libraries) |
+| **local business offers** | local-first, community-scale — the same instinct as the offline corpus |
+| **hybrid local-AI + cloud** | the only project of yours that deliberately mixes the two |
+| **community hub** | the *classroom* instinct, aimed at a town instead of a school |
+
+**It is the education idea, the arcade idea and the local-first idea recombined for a different audience.** Worth a
+follow-up read of the brief and the prototype's current state — it may be the most directly *social* thing you have
+built, and it is the one project that was never folded into the EMPIRE line.
+
+### 12.2 What this means for the extraction
+
+Heptabase is now the **least-read, highest-density** source in the estate: 749 cards and 3,004 relationships, of which
+I have read two titles. It belongs at the top of the next pass, alongside the OneNote dump and the remainder of the
+41 KB blueprint.
+
+
 
 
