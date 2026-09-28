@@ -6,6 +6,7 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 **Document map (find any doc; what is history vs vendor vs generated):** [docs/DOC_MAP.md](docs/DOC_MAP.md)  
 **Estate inventory (drives by serial, the four attempts, backup placement, space recovery):** [docs/ESTATE_INVENTORY.md](docs/ESTATE_INVENTORY.md)  
 **Motivation and history (the two-year through-line; the source for Eve's `<history>` block):** [docs/MOTIVATION.md](docs/MOTIVATION.md)  
+**Three-year audit (the narrative, for explaining this work to others and for students):** [docs/ODYSSEY.md](docs/ODYSSEY.md)  
 **Clarity (Core vs LEGO vs staging):** [docs/EMPIRE_CLARITY.md](docs/EMPIRE_CLARITY.md)  
 **Architect how-to (pages, Toolbelt, recipes):** [docs/EMPIRE_USAGE_GUIDE.md](docs/EMPIRE_USAGE_GUIDE.md)  
 **Vision phases:** [EMPIRE_MANIFESTO.md](EMPIRE_MANIFESTO.md)  
