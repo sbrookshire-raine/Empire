@@ -224,9 +224,21 @@ not a justification.
 | `tar -czf` (gzip) | ~13 min | **~130 files/s** | **~40 hours** |
 | **`tar -cf` (no compression)** | **57.8 s** | **1,729 files/s, 24.3 MB/s** | **~3 hours**, archive ≈ **85 GB** |
 
-**So: pack T1 uncompressed.** Space is not the constraint (3.5 TB free), the archive is only ~5% larger than the source,
-and it turns a 40-hour job into a 3-hour one. `2017` is 66.5% of the corpus (535 of 804 batch dirs), so packing *only*
-the irreplaceable year is ~2 hours. For reference: `2017` 535 batches · `2021` 126 · `2026` 143.
+**T1 timing — corrected by the real run (2026-09-28 11:05).** The "~3 hours" above was measured with the probe writing to
+**`C:` (NVMe)** — the real job writes to the **USB HDD**, and with millions of tiny files that is ~20× slower:
+**`2017` alone took 5 h 40 m** (24.8 GB archive, ~1.2 MB/s, ~600 files/s). So the estimate was destination-bound, not
+source-bound: the corpus *read* was never the problem. Revised: `2021` ~1.5–2 h and `2026` ~2 h follow, total ~9–10 h.
+Lesson: **a throughput probe is only valid if it writes to the destination medium** — same lesson as the 2 GB write
+test that was too small to expose SMR.
+
+**Also: `%TIME%` in a `cmd` `for` block is expanded once at parse time.** The T1 log shows every timestamp identical to
+the second. Exit codes (via `!ERRORLEVEL!` with delayed expansion) are correct; the timestamps are not. Use `!TIME!`.
+
+**Status 2026-09-28 11:05 — copied 579.8 GB of 3725.6.** `wiki_md_2017.tar` complete (24.8 GB, exit 0),
+`wiki_md_2021.tar` running, `2026` queued. **`User_Files` (781,163 files / 1.67 GB) is still missing** — bsdtar failed
+on it instantly, exactly as it did on the restic repo; it needs Python `tarfile`. Everything else in `09_i_drive_leftovers`
+is present: `EMPIRE_DATA` (44.03 GB loose, `weaviate_dump` partial), `EMPIRE_VHDX` (4.04 GB), `EMPIRE_BACKUP.tar`
+(3.83 GB), `weaviate_dump.tar` (712.9 MB, completed 05:20:59).
 
 **Backup progress (2026-09-27, copy-first, destination `E:` = the 2627 `WX32D10DE684`):**
 
