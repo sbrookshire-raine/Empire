@@ -29,6 +29,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Architecture, APIs, Eve tools, backup | [manifest/README.md](manifest/README.md) |
 | Structural plan / evaluation | [REFACTOR_PLAN.md](REFACTOR_PLAN.md), [REFACTOR_EVAL.md](REFACTOR_EVAL.md) |
 | Audit record (dated, measured running state) | [audits/2026-09-26.md](audits/2026-09-26.md) |
+| **Vault + dialogue digest** (what the Obsidian entries and Gemini chats add: development, feelings, depth) | [audits/2026-09-28-vault-and-dialogue-digest.md](audits/2026-09-28-vault-and-dialogue-digest.md) |
 | **Operating contract** (single source of truth; measured by `scripts/audit-empire.py`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) |
 | **Memory governance** (what Eve may remember, and where — her tier rules, wired into the `memory-and-ideas` limb) | [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md) |
 | **LEGO contract** (what fits: brick footprint, invariants, reject list, acceptance checklist) | [LEGO_CONTRACT.md](LEGO_CONTRACT.md) |
