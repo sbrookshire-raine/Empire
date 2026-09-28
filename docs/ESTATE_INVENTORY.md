@@ -215,6 +215,19 @@ that can hold backup data."* So the empty 3.7 TB external drive **removes the re
 in this document authorises deleting a source, a snapshot, or a copy; the space-recovery column is now a convenience,
 not a justification.
 
+**T1 packing cost — measured 2026-09-27.** The "~100–170 h" above is for *loose-file* copying; the real bottleneck is
+**compression**, not the copy. Probe: two real batch directories from `D:\wiki_md\2021` (each exactly **50,000 files**),
+1,403 MB of source:
+
+| Method | Time for 100,000 files | Rate | Extrapolated to 18.76M files / 81 GB |
+|---|---|---|---|
+| `tar -czf` (gzip) | ~13 min | **~130 files/s** | **~40 hours** |
+| **`tar -cf` (no compression)** | **57.8 s** | **1,729 files/s, 24.3 MB/s** | **~3 hours**, archive ≈ **85 GB** |
+
+**So: pack T1 uncompressed.** Space is not the constraint (3.5 TB free), the archive is only ~5% larger than the source,
+and it turns a 40-hour job into a 3-hour one. `2017` is 66.5% of the corpus (535 of 804 batch dirs), so packing *only*
+the irreplaceable year is ~2 hours. For reference: `2017` 535 batches · `2021` 126 · `2026` 143.
+
 **Backup progress (2026-09-27, copy-first, destination `E:` = the 2627 `WX32D10DE684`):**
 
 | # | Tier | Destination | Copied | Verified |
