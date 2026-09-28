@@ -183,4 +183,59 @@ container), which links one of the §6 "unidentified" items to a known project.
 3. The five design notes, the `learning_hub` logs, `hermes_toolset_rollup.json` (previous repo chunking), and the
    still-unread `PREVaiL` / `Z_Future project hub` notes.
 
+## I. Aporia — the alias, the first todo/chat web app, and the found project (2026-09-27)
+
+You noted that Raine also went by **Aporia**, built on **PythonAnywhere** as the first todo-chat interface — a
+predecessor of the Tasks UI + Eve chat that exists today. The repositories confirm it, and they push the timeline
+back again:
+
+| Repo | First commit | Contents | What it is |
+|---|---|---|---|
+| **`sbx2020\Aporia`** | **2024-12-07** — *"Initial Commit: Aporia Progress tracker"* | `app.py`, `templates/`, `static/`, `instance/`, `debug_notes.md`, `requirements.txt` | **a Flask web app** — the progress/todo tracker. **Earliest repository found in the estate.** |
+| **`sbx2020\PA_Aporia`** | **2025-01-14** — *"Some changes made, going to try in IDE"* | plus `.virtualenvs`, `.bash_history`, `.python_history`, `.ipython`, `.bashrc`, `.profile`, `.env` | the **PythonAnywhere deployment pulled back down** — those dotfiles are the PA console's. The move from cloud IDE to local IDE is dated in the commit message. |
+| `sbx2020\rAIne_project` | — | — | a Raine-era repo not yet examined |
+| `sbx2020\Hatch_LCC_tasker` | — | — | task-oriented; possibly the same lineage |
+
+**So the lineage of today's Tasks/chat UI is now documented:** Flask on PythonAnywhere (Dec 2024) → pulled local
+(Jan 2025) → … → EMPIRE's PocketBase + HTMX/Alpine Tasks UI with Eve chat. The current stack is the fourth
+implementation of the same idea.
+
+**The name was deliberate.** `…\2_Seths Head\Evaluated for Zet\Concepts\Aporia.md` opens:
+
+> *"In philosophy, an aporia is a philosophical puzzle or a seemingly irresoluble impasse in an inquiry, often arising
+> as a result of equally plausible yet inconsistent premises, i.e. a paradox… In Pyrrhonism, aporia is intentionally
+> induced as a means of producing ataraxia."*
+
+Tagged `#pieces [[Library]]` — a working Zettelkasten convention. So "Aporia" named the *problem state the system
+exists to move through*, not a codename either.
+
+### I.1 `Zet` had a real workflow, visible in the folder structure
+
+`…\2_Seths Head\` contains: **`Evaluated for Zet`**, `journal`, `Misc lists`, `Music room`. Inside
+`Evaluated for Zet\` sit dated notes (`Dec 8th 2024.md`, `Dec xx 2024 New Beginnings.md`,
+`Jan 6 2025 Aporia Append to Project summary.md`, `Feb 6th 2025 phase 2.md`, `Feb 26 2025.md`), a `Concepts\`
+folder, and `CLOSE THE LOOP - daily successes\`.
+
+**That is an intake queue** — notes gathered *and evaluated for* Zet, with `Concepts` and `Library` pieces. The
+unbuilt Zet was not a vague idea; it had an operating method, and the method is legible from the folders alone.
+
+### I.2 Open item resolved: `RAINE_ABACUS_PROJ_FOLDER` found
+
+It was never missing — it lives at **`…\OneDrive\Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER\`** (May 2026), which
+is where its Docker container's recorded path ultimately pointed:
+
+```
+.abacusai/                     ← Abacus.AI tooling/config
+.git/                          (last commit 2026-05-16)
+agent_resource_pipeline/  +  .egg-info/     ← a Python package: the agent resource pipeline
+config/        MAX REPORT HUB/        repos/       (awesome-chatgpt-prompts, awesome-mcp-servers, …)
+runtime/                       ← the Weaviate runtime the docker container mounted
+docker-compose.yml  Dockerfile  MANUAL.md  package.json  pyproject.toml  requirements.txt
+```
+
+So Raine Abacus was a **dockerised agent system with a packaged resource pipeline, its own vector store, and a
+manual** — the closest structural ancestor of EMPIRE itself. `MANUAL.md` and `agent_resource_pipeline/` are the two
+things to read first.
+
+
 

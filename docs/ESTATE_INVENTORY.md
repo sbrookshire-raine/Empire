@@ -221,7 +221,7 @@ Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SS
 
 ## 6. Open items — verify before touching
 
-1. **`RAINE_ABACUS_PROJ_FOLDER`** — missing from its recorded path; `R_UNIVERSAL SYNTHESIS ARCH` is an unverified guess.
+1. ~~**`RAINE_ABACUS_PROJ_FOLDER`**~~ **RESOLVED 2026-09-27** — never missing: it lives at `…\Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER\` (May 2026), containing a dockerised agent system with `agent_resource_pipeline/`, its own Weaviate `runtime/`, cloned resource repos and a `MANUAL.md`. Read `MANUAL.md` + `agent_resource_pipeline/` first. See digest §I.2.
 2. **`C:\wiki_*`** — sizes unknown; must be compared against D: before any deletion.
 3. **`media-weaviate` volume** `cursor_hol_weaviate_data` — unidentified.
 4. **ZIM integrity** — 16 archives, 461 GB; verify checksums before treating as a source of record.
