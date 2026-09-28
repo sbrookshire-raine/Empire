@@ -90,7 +90,7 @@ take turns, reflect. The March 2025 note and the prompt were always the same ide
 
 - **Explaining your work to others:** §1 is the thesis, §2–§4 the narrative, §6 the assets.
 - **For students:** §5, and the day-log note as an example of honest documentation.
-- **Unread, in priority order:** the full **Raine blueprint** (41 KB — only the opening read); the **OneNote dump** (8,339 lines — sampled only); the **`raine roadblocks`** note (filename differs from my guess — search by `roadblocks`); the **learning_hub logs** (the 2024-11 trail, and the last hope for the October start); the **Heptabase Card Library**; the **`PREVaiL`** and **`Z_Future project hub`** notes.
+- **Unread, in priority order:** the full **Raine blueprint** (41 KB — only the opening read); the **OneNote dump** (8,339 lines — sampled only); the **`raine roadblocks`** note (filename differs from my guess — search by `roadblocks`); the **learning_hub logs** (the 2024-11 trail, and the last hope for the October start); the **`PREVaiL`** and **`Z_Future project hub`** notes. *(The **Heptabase Card Library** was on this list — **read 2026-09-27, §12.3–§12.5**; it held Truthdrift's own design card, dated five months early.)*
 - **A precise gap worth stating:** IRENE's `src/` holds only `app.py` and the two YouTube modules — the **SQLite store, NLP semantic lists and junk filters you described are not in the files I found.** The weighted re-ranker *is*. So either those parts lived in another folder, or the refiltering was done with the weighted score alone. Worth settling, because it is the earliest version of the ranking question we are still working on.
 
 ## 8. The project register — every attempt, and what each carried forward
@@ -214,6 +214,12 @@ cards) — the one place where "project meaning and momentum" is stored as struc
 whose *value depends on not being reduced to markdown*. Note `mindMapInstances` is 0: the README's "mindmaps" are the
 65 whiteboards.
 
+> **Read §12.3 before trusting the `contextItems` row above.** The counts in this table were all confirmed exactly on
+> 2026-09-27, but `contextItems` is **not** the card-to-card link graph — it records which cards were attached as
+> context to which AI chat message. The card-to-card structure is whiteboard membership + `connections` +
+> `sectionObjectRelations`. The correction is kept visible rather than edited away, because the boundary between
+> "what the JSON holds" and "what I assumed it held" is the thing a later session needs to inherit.
+
 ### 12.1 A project discovered in the Heptabase folder: **Local Indie Art Hub**
 
 Found inside the backup, `readme for what was built in cursor.md` (last updated **2026-03-08**):
@@ -243,6 +249,155 @@ Heptabase is now the **least-read, highest-density** source in the estate: 749 c
 I have read two titles. It belongs at the top of the next pass, alongside the OneNote dump and the remainder of the
 41 KB blueprint.
 
+### 12.3 The pass itself, 2026-09-27 — the register, the graph, and one correction
+
+The pass was run the way §13 prescribed: card titles first, then the JSON. Tool:
+`scripts/probe-heptabase-register.py` (read-only; the JSON is read in place and **never** rewritten or reduced).
+Everything below is measured on `H:\Heptabase backup 4_7_26\Heptabase-Data-Backup-2026-04-08T03-50-14-422Z\`.
+
+**Every count in §12 was confirmed exactly** — `cardInstances` 627, `whiteBoardList` 65, `contextItems` 3,004,
+`chats` 42, `chatMessages` 542, `pdfCardInstances` 81, `mediaCards` 68, `templates` 2, `highlightElements` 3,
+`mindMapInstances` 0. The doc was right about that table. It was wrong about one *interpretation*, and the JSON holds
+**33 more collections it does not list**:
+
+| Collection | Count | What it adds |
+|---|---|---|
+| `cardList` | **775** | the cards themselves — 683 live, **92 trashed**; `content` is ProseMirror JSON on all 775 |
+| `connections` | 104 | **drawn connector lines between cards** on whiteboards (begin/end ids, curve points) |
+| `sections` / `sectionObjectRelations` | 50 / 341 | named groups inside boards — the closest thing to a topic label |
+| `whiteboardInstances` | 86 | board-as-card nesting (boards inside boards) |
+| `textElements` | 54 | free text living on boards, not in cards |
+| `files` / `pdfCards` / `webCards` | 232 / 82 / 12 | attachments, PDFs, saved web pages |
+| `tagList` / `cardTagList` | 2 / 65 | the only two real tags (**Zotero**, plus one) and 65 card→tag links |
+| `tabs` / `tabGroups` / `mapState` | 52 / 1 / 1 | the working layout — what was open, in what order |
+
+**Correction to §12 (kept rather than quietly fixed).** The table above says `contextItems` is *"the link graph
+between cards, which markdown cannot carry."* It is not. `contextItems` records **which cards were attached as context
+to which AI chat message**:
+
+- `appendToObjectType`: **`chatMessage` 2,835** · `chat2AccountRelation` 169 (sharing)
+- `locateToObjectType`: `cardInstance` 2,744 · whiteboard 166 · section 61 · imageElement 17 · card 8 · journalInstance 5
+- degree: the most-attached objects are the **journal entries** (35 chats each) and boards — `PROJECT: RESEARCH TITAN`
+  (29), `AI MUSIC PRODUCTION` (27)
+
+So it is still a link graph, and still the thing markdown cannot carry — but the link it carries is
+**"what I was thinking *with*, and when"**, not card-to-card relationship. The card-to-card structure lives in
+`cardInstances.whiteboardId` (membership), `connections` (104 drawn links) and `sectionObjectRelations` (341). That
+distinction matters for the extraction: `contextItems` is a **provenance index over the chats**, which makes the 42
+chats / 542 messages readable *as a record of what the material was used for*.
+
+**The 749 names are not 749 ideas.** Classified (`--register`):
+
+| Bucket | Count | What it is |
+|---|---|---|
+| **journal** | **63** | date-named cards (`3!1!26` — `!` is the export's stand-in for `/`) |
+| **placeholder** | **71** | `A wonderful new card 1…70` — never-titled cards, **junk** |
+| **concept** | **30** | bracketed atomic ideas — the distilled thinking, listed in §12.4 |
+| **idea** | **585** | everything else, including many where the "title" is a paragraph of AI output |
+
+Two mechanical facts that change how it should be read: `cardList` titles are **derived from the first line of the
+card**, so 775 titles contain only 650 unique strings and `RESEARCH TITAN` is a *whiteboard name* rather than a card;
+and the **markdown stems are the better title register** (749 unique, no newlines, max 99 chars) even though only 437
+match the JSON first-lines. `insights` is empty on every card — Heptabase's AI-insight field was never used.
+
+### 12.4 What the register found that no document in this repo lists
+
+**1. Truthdrift's design document — in Heptabase, 2026-03-16, five months early.**
+Card `3. THE IDEA: INFORMATION VERIFICATION THROUGH WIKIPEDIA` (4,350 ch) is a five-phase plan, and it is the
+ancestor of everything the wiki corpus later did:
+
+> *"you need to move beyond simply reading text and start measuring **structural drift**. Wikipedia's SQL/XML dumps
+> are the best foundation because they provide a **forensic audit trail of how 'truth' is edited**…"*
+
+Its phases and signals, in substance verbatim: **Phase 1** *stub-meta-history* XML only (metadata, timestamps, user
+IDs — *drastically* smaller), MariaDB for the article neighbourhood, filtered to *"volatility keywords"*; **Phase 2
+"the Memory Hole"** — a **byte-count audit** of the `rev_len` field where *"a sudden 20%+ drop in article length…
+often indicates narrative pruning"*, plus **"Adjective Drift"** (*"are words like 'proven' being replaced with
+'alleged'?"*); **Phase 3 "Reference Decay"** — the ratio of `.gov`/`.edu` links against `.com`/social, cross-referenced
+against the Wayback Machine to detect *permanent* information loss; **Phase 4** Common Crawl and GDELT as the
+*leading* indicators, with a **"Verification Vacuum"** defined as an event that spikes in GDELT but stays vague on
+Wikipedia for 48+ hours; **Phase 5** a dashboard of three metrics — **Edit Frequency** (*"high frequency = contested
+reality"*), **Contributor Diversity** (a small cluster of IDs = *"potential 'Ghost in the Machine' influence"*),
+**Citation Age**.
+
+Two things follow. First, the April 2026 meta-history recon (the two `.part` slices, digest §C) is **Phase 1 being
+executed** — the theory came first and it is dated. Second, this card is a **ready-made signal list** for the
+DriftBench harness that already exists: `rev_len` drop, adjective drift, reference decay, contributor concentration.
+The bench's `parametric_distractor` tag is the same argument from the other direction, and the card's language —
+*"Predictability Contract"* (26 cards mention it), *"the Ghost in the Machine"* (15 cards) — is the vocabulary the
+ingested Perplexity research arrived in.
+
+**2. EMPIRE's own stack, specified 2026-02-24.** Card `The Synoptic Transition: Master Blueprint (Cloud to Local
+Architecture)` sets out moving the processing "Right Room" to local hardware: **Lenovo Legion RTX 5080, 64 GB**;
+**llama3.1 8B via Ollama** as reasoning, **nomic-embed-text via Ollama** as embedding; **AnythingLLM + local LanceDB**;
+**400-token chunks**; three core whiteboards *before* any automation. That is the local-first, meter-free stack EMPIRE
+runs today, written in February 2026 — the same carry-forward pattern §10 documents for the Raine blueprint, and a
+second, independent instance of it.
+
+**3. Boards are the real topical clustering.** 65 of them; the largest by content:
+
+| Board | Cards | Links | Sections | Created |
+|---|---|---|---|---|
+| `BAND DATA` | 94 | 0 | 5 | 2026-03-05 |
+| `KNOWTHYSELF` | 53 | **47** | 11 | 2026-04-03 |
+| `Project origins - Societies Questions` | 44 | 0 | 0 | 2026-02-26 |
+| `Perplexity reports 2_17_26-4_1` | 45 | 0 | 0 | 2026-03-16 |
+| `CRYPTO` | 38 | 0 | 1 | 2026-02-26 |
+| `PROJECT: RESEARCH TITAN` | 30 | 4 | 7 | 2026-03-16 |
+| `Project Systems & Idea Incubator` | 22 | 0 | 0 | 2026-02-25 |
+| `Shadow` · `LOOT-BOX` · `Guides and knowledge bases` | 22 · 18 · 17 | — | — | 2026-03 |
+| `HEPTABASE MAP` · `CURSOR` · `MUSIC AND MULTIMEDIA` | 15 · 14 · 12 | — | — | 2026-03 |
+| `Local AI Architecture & Data Refinery` · `LOCAL AI FACTORY` · `I./II./III. Synoptic Library / Intelligence Engine / Sovereign Stack` | 6 · 5 · 3+9+1 | — | — | 2026-02/03 |
+| `COURSE DESIGN` · `eLEARNING HUB - FEYMAN TECHNIQUE` · `COMMUNITY PROJECTS` · `ARTIST HUB` · `SAMPLE INSTRUMENT HUB` | 13 · 11 · 5 · 4 · 4 | — | — | 2026-03 |
+
+**4. Named projects no repo document mentions** — found by content search, with the number of cards carrying the term:
+**`Energia`** (10 — an energy-gated productivity system), **`Anamchara`** (9, incl. `Final Stable Anamchara`),
+**`Dynamic Chimera Protocol`** (5), `Neural Advocacy Architect`, `Hatch Projects Archive - Master Index`,
+`Idea Farm v2/v3`, `Area 56 Band Manager`, `Aporia V1 Community Demo Version`, `Mind Map Game - Fixed`,
+`Student Advisor Dashboard v1`. Two links worth noting: `Area 56 Band Manager` is the **`Area_56_Bandapp` repo** in
+the staged repos, so a card and a repo are opposite ends of one project; and `Hatch_*` names appear in **both** the
+cards and the staged repo list (`Hatch_LCC_tasker`).
+
+**5. The 68 `mediaCards` are a recorded-watching corpus with transcripts** (2026-02-24 → 04-03), not bookmarks:
+Heptabase fundamentals, Dify (75,715 ch), NotebookLM (68,578), n8n/RAG masterclass (44,085), OpenClaw, Claude Code
+limits, Gemma 4, *"You're Paying $2,000/Month For AI That Should Cost $250."*, BMAD, Hermes Agent. The one that
+matters for EMPIRE is **`If You Have Too Many Interests, You Have The 'Synoptic Mind'` (17,505 ch, 2026-02-24)** — the
+vocabulary behind "Synoptic Transition", and the source of the trait profile Eve's prompt carries as *Scanner /
+Pattern-Weaver*. This is *reading that was done*, and it is recorded nowhere else.
+
+**6. A course corpus is sitting in the PDFs.** 82 PDFs, concentrated on **`Mastering Learning Strategies` (44)** and
+**`Psychology of Influence & Persuasion` (32)**, plus `Programming Fundamentals and Problem Solving` (5). With
+`COURSE DESIGN` (13 cards) and `eLEARNING HUB - FEYMAN TECHNIQUE` (11 cards), this is the **education half of the
+blueprint** (§10) in material form — the half §10 lists as *not yet built*.
+
+**7. The 30 concept cards are the distilled thinking**, and several are already EMPIRE's design rules in a student's
+language: `[The 85% Sweet Spot of Struggle]` · `[Difficulty is a Filter, Not a Stop Sign]` · `[Expose the Wires]` ·
+`[Outsource Your Memory]` · `[The Brain is a Context Machine]` · `[Naming is Not Knowing]` · `[Cook Meals, Not
+Snacks]` · `[Confident Mistakes Make Permanent Memories]` · `[Failing First Makes You Smarter]` · `[Perfection Kills
+Connection]` · `[Points and Badges Don't Create Addiction]` · `[Structure Emerges From Chaos]` · `[The !Ugly First
+Step! Protocol]` · `[The Autonomy Engine]` · `[Bugs Are Actually Features]` · `[Building It Right vs. Building The
+Right Thing]` · `[Copy The Body To Steal The Mind]` · `[Dive Deep For Bigger Fish]` · `[Everything Becomes a
+Commodity]` · `[Experts Actually Think Less]` · `[Making Intentional Mistakes Makes You Smarter]` · `[Perfect Logic
+Kills Adaptability]` · `[Question Your Hidden Assumptions]` · `[Silence Builds the Clock]` · `[Spawn a Digital Meat
+Shield]` · `[Speak It Before You Do It]` · `[Spoon-Feeding Kills Adaptability]` · `[Turn Off Your Inner Critic To
+Unlock Flow]` · `[You Have Two Brains Working at Once]` · `[Chasing High Scores Creates Fragile Learners]`.
+
+Read against §9.1 (*"present work as accumulating unlocks"*), these are the same argument — difficulty as a filter,
+mistakes as training signal, intrinsic over extrinsic reward — stated for learners instead of for a build.
+
+### 12.5 What this changes
+
+- **Heptabase is now read, and §13's priority 1 is done.** The JSON stays exactly as it is; extraction from here is
+  *selective reads* through `scripts/probe-heptabase-register.py`, not an ingest.
+- **Do not ingest Heptabase as a corpus.** 71 placeholder cards, 63 journal-date cards and 585 paragraph-titled cards
+  would be noise. The ingestable core is the **30 concept cards**, the named-project cards, the `mediaCard`
+  transcripts and the Truthdrift set — a few hundred cards, not 749.
+- **The next Heptabase reads are now specific**: the 26 cards that mention the *Predictability Contract* and the
+  `Perplexity reports 2_17_26-4_1` board (45 cards). That is the source set behind the Truthdrift card and the
+  cheapest remaining win in this tier.
+- **§12.2's "least-read, highest-density source" was right, for a reason it did not know**: the density is in the
+  *boards and the chats*, not in the 3,004 `contextItems` it credited.
+
 ## 13. Handoff — how to continue this in a fresh session
 
 This work is deliberately **checkpointed**: everything learned lives in four repo documents, so a new session starts
@@ -257,9 +412,11 @@ from the map instead of re-deriving it. If context is getting long, start a **ne
 
 **Next pass, in priority order (all read-only)**
 
-1. **Heptabase** — the richest unread source: **749 cards, 3,004 `contextItems`**. Read card *titles* first (a cheap
-   idea register, like the vault search), then `All-Data.json` → `contextItems` for the link graph.
-   **Keep the JSON; never reduce it to markdown.**
+1. ~~**Heptabase**~~ **DONE 2026-09-27** — §12.3–§12.5: all documented counts confirmed, one interpretation corrected
+   (`contextItems` is chat-context, not card-to-card), 749 names classified (71 placeholders / 63 journal-dates /
+   30 concept cards / 585 other), and Truthdrift's own March 2026 design card found. Tool:
+   `scripts/probe-heptabase-register.py`. **Keep the JSON; never reduce it to markdown.** The two reads it left
+   open: the 26 *Predictability Contract* cards, and the `Perplexity reports 2_17_26-4_1` board (45 cards).
 2. **The OneNote dump** (`…\RESYNC_2026\2. PAST LIVES\ONENOTE BACKUP PREOBSIDIAN.md`, 8,339 lines) — the pre-2025
    trail and the most likely route to the **October 2024** start.
 3. **The rest of the Raine blueprint** (41 KB) — the *Personality & Tone Engine* spec and the *Autonomous R&D
