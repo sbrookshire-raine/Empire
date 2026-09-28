@@ -243,12 +243,12 @@ Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SS
 9. **Archive the T6 legacy tree** to the 2627, after identifying items 1 and 3 above.
 10. **Then** the approved `V:\Cognee` cleanup (it holds nothing but the three wiki datasets).
 
-## 9. What to glean before moving anything
+## 8. What to glean before moving anything
 
 The move is not urgent; the *reading* is. Extraction first, relocation second — because moving changes the paths that
 docs and scripts reference, and because some of this is only readable while a given drive is alive.
 
-### 9.1 The earliest material is older than the notes suggest
+### 8.1 The earliest material is older than the notes suggest
 
 `E:\AI_PROJECTS` contains **`learning_hub_20241114_172407.log`** — a log **dated 2024-11-14 by its own filename**,
 with siblings from mid-November and a `learning_hub.log`. So project activity predates the vault (whose oldest note
@@ -259,7 +259,7 @@ is 2025-01-12) by roughly two months, matching your memory of work starting in *
 - **OneDrive version history** on the vault folders — the only place a *pre-2025* note text could still exist
 - (Note: `…\Desktop\FROM EXHDD` holds `.md` from **2020-09-29**, but its files are audio — that is music archive, not project history.)
 
-### 9.2 The repo already contains a measurement layer — and it encodes your research thesis
+### 8.2 The repo already contains a measurement layer — and it encodes your research thesis
 
 `data/eval/` is small, structured, and far more valuable than its size suggests:
 
@@ -277,7 +277,7 @@ currently ~7 handwritten cases asking "does the model answer from the archive in
 *edits themselves* as ground truth about how a claim changed. Nothing needs to be built from scratch to start; the
 vocabulary (`parametric_distractor`, `revival`) and the harness already exist.
 
-### 9.3 Cheap reads with high yield, in order
+### 8.3 Cheap reads with high yield, in order
 
 1. **`data/eval/*` + the acceptance series** — minutes; establishes the baseline and the drift vocabulary.
 2. **The five design notes** — `08-15-2025 - Raine blueprint.md`, `raine roadblocks - clear paths`,
@@ -292,13 +292,13 @@ vocabulary (`parametric_distractor`, `revival`) and the harness already exist.
 7. **`D:\AI_Factory\qdrant_storage`** — possibly embeddings already paid for.
 8. **`%LOCALAPPDATA%\EMPIRE\chat-history`** + `eve-trace.jsonl` — what Eve was actually asked and answered.
 
-### 9.4 What cannot be gleaned, and should not be claimed
+### 8.4 What cannot be gleaned, and should not be claimed
 
 `media-weaviate` volume contents, the missing `RAINE_ABACUS_PROJ_FOLDER`, Google Drive quota, ZIM integrity, and
 both HDDs' health are all still **unknown**. They stay listed as unknown in §6 rather than estimated.
 
 
-## 10. Method note
+## 9. Method note
 
 Every number here was measured on this machine on 2026-09-27 — drive serials, file counts, sizes, chunk counts from
 a live Weaviate aggregate query, and a timed read benchmark. Where something is *not* known it is listed as unknown
