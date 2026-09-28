@@ -150,7 +150,7 @@ was counted.
 - **`RAINE_ABACUS_PROJ_FOLDER`** — its container mounted
   `C:\Users\m69nr\OneDrive\Desktop\RAINE_ABACUS_PROJ_FOLDER\runtime\weaviate` in May 2026; that path no longer
   exists. There is a Desktop folder `R_UNIVERSAL SYNTHESIS ARCH` (2026-08-30) — **hypothesis only, unverified**.
-- **`media-weaviate`** used docker volume `cursor_hol_weaviate_data` — contents unidentified.
+- **`media-weaviate`** used docker volume `cursor_hol_weaviate_data` — **identified 2026-09-27:** compose project `cursor_hol`, and the volume is 994.5 kB (§6 item 3).
 - **`E:\wikipedia\*.zim`** — 16 Kiwix ZIM archives, 461 GB. Intactness unverified (ZIM carries internal checksums).
 
 ## 3. How the legacy assets can be converted or placed to serve EMPIRE
@@ -235,7 +235,9 @@ Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SS
 
 1. ~~**`RAINE_ABACUS_PROJ_FOLDER`**~~ **RESOLVED 2026-09-27** — never missing: it lives at `…\Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER\` (May 2026), containing a dockerised agent system with `agent_resource_pipeline/`, its own Weaviate `runtime/`, cloned resource repos and a `MANUAL.md`. Read `MANUAL.md` + `agent_resource_pipeline/` first. See digest §I.2.
 2. ~~**`C:\wiki_*`** — sizes unknown; must be compared against D: before any deletion.~~ **RESOLVED 2026-09-27 — they are empty.** `C:\wiki_md`, `C:\wiki_runs` and `C:\wiki_dumps` each hold **0 files / 0 GB** (verified to depth 2 with `-Force`). No comparison was needed because there is nothing there. **The §5 space-recovery row is corrected accordingly** — a reminder that the 2026-04-07 creation dates were evidence of a *plan*, not of content.
-3. **`media-weaviate` volume** `cursor_hol_weaviate_data` — unidentified.
+3. ~~**`media-weaviate` volume** `cursor_hol_weaviate_data` — unidentified.~~ **RESOLVED 2026-09-27.** Docker is running (29.8.0), so it could finally be read: the volume belongs to compose project **`cursor_hol`** (created 2026-06-08, label `com.docker.compose.project: cursor_hol`), confirming the digest §H.3 hunch that it matches the **`cursor_HOL`** repo in the staged repos — and it is **994.5 kB**, a stub, not lost data. The same read turned up something more important:
+   - **`docker_data.vhdx` (101.2 GB) is not junk.** It holds ~12 GB that exists nowhere else: **`empire_empire_cognee_pgdata` 8.418 GB** (the live Cognee memory database), **`open-webui` + `ai_factory_open-webui` + `agent-zero_open-webui-data` ≈ 3.2 GB** (prior-era chat history, three copies), `agent-zero_postgres-data` 238.1 MB, `v2-markdown-pipeline_v2_dify_postgres_data` 139.3 MB, `docker_postgres_data` 80.8 MB, plus n8n storages and ~640 MB build cache.
+   - **Consequence:** §4's tiers do not account for these, and step 8 of §7 relocates the VHDX without reading it. Treat the Cognee `pgdata` as **T4 system** — the `pg_dump` in step 6 is the right tool but needs Postgres **running** (the container is currently exited) — and the open-webui / agent-zero / dify volumes as **T6 legacy**. **Do not run a general `docker system prune` before these are copied**; `prune-sandbox-containers.ps1` remains safe (sandbox containers only).
 4. **ZIM integrity** — 16 archives, 461 GB; verify checksums before treating as a source of record.
 5. **HDD health** — no SMART from either WD; read real counters before entrusting T3/T0/T2.
 6. **`I:\wiki_md` + `I:\weaviate_v2_archive`** (dated 2026-04-16) — complete or stale? Answered **2026-09-27, by file-level comparison** (`eve-audit/compare-trees.py`, `eve-audit/weaviate-diff-classify.py`) — and it corrected this document's own first attempt at the answer:
@@ -245,7 +247,7 @@ Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SS
    - **Consequence for the plan:** a live-database copy can never be byte-identical, so "verify the copy" has to mean *compare the durable index files*, and the 2627 copy should be taken **after a clean Weaviate shutdown** (WALs checkpointed into the index) — see step 4.
 7. ~~**`D:\AI_Factory\qdrant_storage`** — may hold reusable embeddings.~~ **RESOLVED 2026-09-27 — nothing to reuse.** Measured **2 files / ~0 GB** (created 2025-12-04, last written 2025-12-09). The "embeddings already paid for" hope in §3 does not survive contact with the directory, so nothing in the AI Factory tree needs special handling for that reason.
 8. **Google Drive quota** — unreadable via the mount.
-9. **The tooling for the remaining checks is not installed (measured 2026-09-27).** `smartctl`, `7z`, `rclone`, `bzip2`, `zimdump` and `zimcheck` are all **missing**; `docker`, `tar` and `python` are present. Per item: **ZIM integrity (#4)** still needs `kiwix-tools`/`libzim` (the `.bz2` dumps are fine — `tar` handles bzip2); **HDD health (#5)** needs **smartmontools**, and `winget install smartmontools.smartmontools` (7.5) is available — note SMART reads need elevation; **Google Drive quota (#8)** needs `rclone` or the Drive UI; **`media-weaviate` (#3)** needs only Docker, which *is* present — so that one is runnable right now, and is the cheapest remaining unknown.
+9. **The tooling for the remaining checks is not installed (measured 2026-09-27).** `smartctl`, `7z`, `rclone`, `bzip2`, `zimdump` and `zimcheck` are all **missing**; `docker`, `tar` and `python` are present. Per item: **ZIM integrity (#4)** still needs `kiwix-tools`/`libzim` (the `.bz2` dumps are fine — `tar` handles bzip2); **HDD health (#5)** needs **smartmontools**, and `winget install smartmontools.smartmontools` (7.5) is available — note SMART reads need elevation; **Google Drive quota (#8)** needs `rclone` or the Drive UI; **`media-weaviate` (#3)** is now **resolved** (compose project `cursor_hol`, 994.5 kB — §6 item 3), and it turned up ~12 GB of unique data inside `docker_data.vhdx` that the tiers did not account for.
 
 ## 7. Ordered next actions
 
@@ -318,7 +320,8 @@ vocabulary (`parametric_distractor`, `revival`) and the harness already exist.
 
 ### 8.4 What cannot be gleaned, and should not be claimed
 
-`media-weaviate` volume contents, Google Drive quota, ZIM integrity, and both HDDs' health are all still **unknown**. They
+Google Drive quota, ZIM integrity, and both HDDs' health are all still **unknown** (the `media-weaviate` volume was
+resolved 2026-09-27 — §6 item 3). They
 stay listed as unknown in §6 rather than estimated. Two former entries on this list are now closed rather than
 unknown: **`RAINE_ABACUS_PROJ_FOLDER` was found** (digest §I.2), and the `I:` copies are no longer merely unknown —
 `I:\weaviate_v2_archive` is *measurably short* (§6 item 6), which is a finding, not a gap in the record.
