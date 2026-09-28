@@ -243,6 +243,45 @@ Heptabase is now the **least-read, highest-density** source in the estate: 749 c
 I have read two titles. It belongs at the top of the next pass, alongside the OneNote dump and the remainder of the
 41 KB blueprint.
 
+## 13. Handoff — how to continue this in a fresh session
+
+This work is deliberately **checkpointed**: everything learned lives in four repo documents, so a new session starts
+from the map instead of re-deriving it. If context is getting long, start a **new task** and begin there.
+
+**Read first, in this order**
+
+1. `docs/ODYSSEY.md` — this file; §12.2 lists what is still unread
+2. `docs/audits/2026-09-27-ideas-and-evidence-digest.md` — §§A–J, the archaeology, including corrections
+3. `docs/ESTATE_INVENTORY.md` — drives by serial, backup tiers, space recovery, §8 *what to glean before moving*
+4. `docs/MOTIVATION.md` — the why, and the difficulties as design input
+
+**Next pass, in priority order (all read-only)**
+
+1. **Heptabase** — the richest unread source: **749 cards, 3,004 `contextItems`**. Read card *titles* first (a cheap
+   idea register, like the vault search), then `All-Data.json` → `contextItems` for the link graph.
+   **Keep the JSON; never reduce it to markdown.**
+2. **The OneNote dump** (`…\RESYNC_2026\2. PAST LIVES\ONENOTE BACKUP PREOBSIDIAN.md`, 8,339 lines) — the pre-2025
+   trail and the most likely route to the **October 2024** start.
+3. **The rest of the Raine blueprint** (41 KB) — the *Personality & Tone Engine* spec and the *Autonomous R&D
+   Protocol* detail; the parts most directly reusable for Eve.
+4. **Local Indie Art Hub** — the brief plus the prototype's current state (both inside the Heptabase folder).
+5. `08-16-25 post retrospective rAIne backup.md` (22 KB) · `v2_markdown_pipeline\docs\` · `hermes_toolset_rollup.json`.
+6. **The old machine** — `C:\Users\sbrookshire\`; the migrated `AI_PROJECTS` may be a subset of that original.
+
+**Method that has worked here**
+
+- **Measure, never assume.** Identify drives by serial; count files; read bytes. That is how the `.part` partial
+  meta-history, the two empty vaults, and the drive-letter swap were caught.
+- **State the boundary.** Mark what is unread or unknown rather than inferring it — the docs do this deliberately.
+- **Write it into the repo as you go.** The writing *is* the continuity; it is the only thing that has survived every
+  rebuild.
+- **Record corrections rather than quietly fixing them** — digest §G is a list of my own earlier errors, kept on
+  purpose.
+
+**Do not**: move, compress or delete anything in the estate until backup step 1 is done — `I:\HDD_MOVE_TEMP`
+(423 GB of personal archive) onto verified media.
+
+
 
 
 
