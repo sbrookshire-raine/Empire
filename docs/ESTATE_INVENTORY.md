@@ -255,10 +255,11 @@ is present: `EMPIRE_DATA` (44.03 GB loose, `weaviate_dump` partial), `EMPIRE_VHD
 |---|---|---|---|---|
 | 1 | **T7 notes** | `01_notes_T7\` | 2,036 files / 929.9 MB | **identical** (path + size) |
 | 2 | **T4 system** — `C:\Empire_Workbench` + `%LOCALAPPDATA%\EMPIRE` | `02_system_T4\` | 14,653 files / 2.69 GB and 270 files / 10.9 GB | **identical** (path + size) |
-| 3 | **T3 personal** — `I:\HDD_MOVE_TEMP` | `03_personal_T3\` | **439.4 GB** — finished 22:27:57 | verification running at wrap-up |
-| 4 | **T6 legacy** (curated: v2 pipeline code+docs, Legion docs, IRENE, AI_Factory, all Desktop projects) | `07_legacy_T6\` | finished 22:46:57 | v2 pipeline compared: **320 files, 0 differences** |
+| 3 | **T3 personal** — `I:\HDD_MOVE_TEMP` | `03_personal_T3\` | **439.4 GiB = 454.48 GB** — finished 22:27:57 | **identical — verified 2026-09-28: 182,684 files, 0 missing, 0 size-mismatch** |
+| 4 | **T6 legacy** (curated: v2 pipeline code+docs, Legion docs, IRENE, AI_Factory, all Desktop projects) | `07_legacy_T6\` | finished 22:46:57 | **fully verified 2026-09-28: 353,135 files / 53.65 GB identical.** The first pass showed **519 files missing, all in `SBX_Vault`** — the live vault had grown after the copy. Delta re-copied (149.48 MiB, robocopy `exit=1` = success) and T6 now matches exactly. See §10.4 |
 | 5 | **Docker-era volumes** — 13 volumes (Cognee `pgdata` 8.0 GB, open-webui ×3, postgres ×3, n8n ×3, cursor_hol) | `08_volumes\` | **26 files / 12.39 GB** | **identical** (path + size) |
 | 6 | **I: leftovers** — `EMPIRE_DATA` (incl. the 2017 dump), `EMPIRE_VHDX`, `EMPIRE_BACKUP` (restic), `User_Files` | `09_i_drive_leftovers\` | **running** — `EMPIRE_I_LEFTOVERS` | pending |
+| 7 | **T0 sources** — ZIMs/knowledge bases, `H:\AI_ARCHIVE\AI_Archive_Legion\knowledge_bases` | `04_sources_T0\knowledge_bases_H\` | **finished 14:07:45** — 6,328 files / 718.59 GiB | **identical — verified 2026-09-28: 0 missing, 0 size-mismatch, 0 extra** (T1 resume started straight after) |
 
 **Operational findings, 2026-09-27 — earned the hard way, worth not rediscovering:**
 
@@ -471,7 +472,7 @@ not inferred.
 
 | Subdir | Files | Size | Verdict |
 |---|---|---|---|
-| `knowledge_bases` | 6,328 | **771.6 GB** | 49 ZIMs (595 GB) + StackExchange/devdocs/other — **being copied now** |
+| `knowledge_bases` | 6,328 | **771.6 GB** | 49 ZIMs (595 GB) + StackExchange/devdocs/other — **copied 2026-09-28 and verified identical by path+size** (`04_sources_T0\knowledge_bases_H`, 0 differences; robocopy `exit=1` = success) |
 | `models` | 384 | 237.2 GB | T5, regenerable |
 | `embeddings_models` | 818 | 54.8 GB | T5 |
 | `datasets` | 191 | 23.8 GB | **HumanEval, OpenOrca** — HF datasets, re-downloadable |
@@ -497,32 +498,70 @@ So the T6 exclusion was **right about the 1,050 GB** and **deliberately left two
 | **`rag_tools` + `search_engines`** (Legion) | 2.6 GB | excluded on purpose; re-installable |
 | **`H:\AI_stuff_backup`** unique parts (`*-Aporia.py`, `.env`) | ~MBs | the rest of that 26.8 GB is a venv |
 | `H:\gutenberg_books_txt` | 26.2 GB | public domain, re-downloadable |
-| **T1 `2021` + `2026` archives** | — | the resume job is queued |
+| **`G:\My Drive\3.MUSIC RELATED\Music\stem_factory`** | **519.30 GB** (derived **303 GB**; `demucs_raw` 216.32 GB optional) | **cloud copy only.** The Architect's one named value in the music tier: his Moises clone run across the whole collection — six stages plus raw model output (§11.5). The *tool* is in T6; **its outputs are in no backup tier.** Largest single remaining gap |
+| **T1 `2021` + `2026` archives** | — | **in progress since 14:07** — `wiki_md_2017.tar` rebuilt (24.22 GiB), `2021` (0.95 GiB) and `2026` now running |
 | **T2 Weaviate**, **T0 (25E1 ZIMs + XML)** | 563 GB + 558 GB | T2 already on two drives; T0 needs the drive attached |
 
 **Unit caution for future readings:** `robocopy` reports **GiB**, my Python probes report **decimal GB** — the ratio is
 1.0737. That difference (718.587 vs 771.58 for the same 6,328 files) is not a discrepancy and not missing files; it
 was checked.
 
-## 11. Google Drive (`G:`) — the tier that was never opened
+### 10.4 The vault exists in two *divergent* states — do not deduplicate them
+
+The Obsidian vault (`Desktop\SBX_Vault`) is held in the estate in three copies that are **not** the same content:
+
+| Copy | Files | Relation to the live vault |
+|---|---|---|
+| `01_notes_T7\SBX_Vault_obsidian_earlier` | 519 | **byte-identical to the live Desktop vault** — *despite* the name |
+| `01_notes_T7\RESYNC_2026_obsidian_live` | **543** | holds **24 files the live vault does not**, all under `0.EVOLVE 5_18_26\`; `START FROM ZERO.md` appears there as `0. START FROM ZERO.md` — a **rename** |
+| `07_legacy_T6\Desktop_all\SBX_Vault` | 519 | was 450 files behind when first checked; **re-copied 2026-09-28 and now identical** |
+
+**The names are backwards**, so they must not be trusted: the copy called "earlier" is the current live state, and the
+copy called "live" is the richer one. The 24 extra files are a dated personal thread — *"Grey rock - respect
+boundaries"*, *"2.1 Entire Gemini convo"*, *"2.2 Tech stack additions to explore"*, *"BASS VI POWERUP"*, *"Beat -
+parallel lives"*, *"Balance of good and bad seth"* — the **`0.EVOLVE 5_18_26` journal**, exactly the category of content
+that must never be lost.
+
+Two readings, both currently safe: either those notes were **deleted from the live vault after** the RESYNC was taken
+(making RESYNC a snapshot of something no longer live), or the live vault is a **partial view** of a larger one. Either
+way **all three states are in the estate.** The consequence for any future cleanup:
+
+> **`SBX_Vault_obsidian_earlier` and `RESYNC_2026_obsidian_live` are ~95% identical and must NOT be deduplicated.**
+> The 24-file difference is the only copy of that thread. Same rule as the three chunk datasets (2017 / 2021 / 2026).
+
+**One hazard checked and cleared:** there is **no OneDrive placeholder problem**. `Desktop` is 353,135 files with **0
+offline** and **0 recall-on-data-access** attributes, and all four vault copies agree at 7 zero-byte files — so nothing
+was copied as a stub and no tier was silently short.
+
+
 
 Added 2026-09-28, on the Architect's prompt: *"dont forget about my google drive on G: drive / the folder
 'G:\My Drive\0.0_new_incoming_including_knit_perform' doesnt say AI or coding but has alot in there."* Correct on both
 counts: `G:` had never been inventoried, and that folder is far more than its name suggests. Census:
 `eve-audit/g-drive-census.py`.
 
-### 11.1 Quota — §6 item 8 is resolved
+### 11.1 Quota — **correction: §6 item 8 is NOT resolved; this subsection's first version was wrong**
 
 | | |
 |---|---|
-| Total | **~1,021.8 GB** |
-| Used | **749.3 GB (73.3%)** |
-| **Free** | **272.5 GB** |
+| What the mount reports | total **1,021.8 GB** · used **749.3 GB** · free **272.5 GB** |
+| What that actually is | **`C:`'s volume.** `Get-Volume C:` = `1,021,821,579,264` bytes = **1021.8 GB = 951.6 GiB** — the same total `Get-PSDrive G:` reports for `G:`. |
 
-§1 said the Drive FS "reports the same size as `C:` — not your Drive quota" and §6 item 8 listed the quota as
-unreadable via the mount. **It is readable now** (`shutil.disk_usage` on `G:\My Drive`), and the numbers are not
-`C:`'s (951.6 total / 267.4 free). **Consequence: `G:` is a usable cloud destination with ~272 GB free** — enough for
-the packed 2017 markdown plus a manifest, which is what §4's placement table proposed for it.
+The first version of this subsection claimed the number "is not `C:`'s (951.6 total / 267.4 free)" and concluded that
+`G:` was a usable cloud destination with ~272 GB free. **That was a unit error of exactly the kind §10 warns about:** I
+weighed the census's *decimal-GB* figure against `C:`'s *GiB* figure. In the same units they are the same size
+(`951.6 GiB × 1.0737 = 1021.8 GB`). Drive FS passes the host volume's numbers through `GetDiskFreeSpaceEx`, so
+`shutil.disk_usage("G:\\My Drive")` measures **`C:`**, not Google. **§1 was right the first time. §6 item 8 stays open.**
+
+Stated correctly:
+
+- **The Google Drive quota is still unreadable from the mount** — only the Drive API or the web UI can answer it.
+- Enumerable content alone is already **~1.5 TB** (`Music` 484.87 + `stem_factory` 519.30 + `Music2` 343.02 +
+  `3_16_26_wiki_research` 71.56 + `1. AI related` 14.44 + `4. personal` 14.17 + the rest), so the plan is **at least
+  2 TB**. The "272.5 GB free" figure is `C:`'s free space and **must not be used to plan any upload.**
+- If §4's placement table proposed parking the packed 2017 markdown on `G:`, **that proposal is unverified** and should
+  not be relied on until the real quota is read.
+
 
 ### 11.2 Top level of `G:\My Drive`
 
@@ -579,27 +618,62 @@ Asked in passing and worth pinning down, because the answer is narrow: *"the onl
 is stem factory… I created a moises clone and then ran it across my music collection with each instrument track having
 its own 'louder' variant. i also had it build tracks missing a stem for practicing with."*
 
-**Verified.** The item is **Shard of the Division**, and it is not in the cloud at all — it lives at
-`…\OneDrive\Desktop\HIDDEN\Shard_of_the_Division\` (**122,907 files / 16.95 GB**, **already copied in T6**). Its own
-`PROJECT_HISTORY.md` records the arc: an *"audio processing and drum analysis toolkit"* that *"has evolved into a
-comprehensive music practice track generator"*, using **Demucs `htdemucs_ft`** to split songs into four stems and
-building custom practice mixes — with `practice_generator.py` named as *"the flagship tool"*. It began as
-**reverse-engineering Moises**: `scripts/analyze_moises.py` is titled *"Analyze Moises output vs original to understand
-their processing approach"* and measures sample rate, channels, RMS, peak and dynamic range.
+**Verified — and it is the one real asset in the music tier.** It is not only the Desktop project. There is a second,
+deployed copy on `G:` at **`G:\My Drive\3.MUSIC RELATED\Music\stem_factory\`**, and it is `Music` that holds it:
 
-**The music folders on `G:` hold its *outputs*, not more projects:**
+```
+stem_factory\
+  input\                       output\
+                                    1_stems              2_stems_reduction
+                                    3_focus              4_play_along
+                                    5_library            6_instrument_hub
+                                    demucs_raw           temp_input
+```
 
-| On `G:\My Drive\2. DRUM_MIDI_STEM_CENTRAL` | Files | Size | What it is |
+**Measured with `os.scandir` (33,973 files / 519.30 GB — 1 second in Python, where PowerShell took >300 s on the same
+virtual FS; a tooling note for anything else touching `G:`):**
+
+| Stage | Files | Size | What it is — and the Architect's own words |
 |---|---|---|---|
-| `N20 drumless for jam\` | 43 | 286.7 MB | **`*_mixed.mp3` practice tracks** — the stem-missing versions (*Flowers*, *It's a Heartache*, *Dreams*, *All I Wanna Do*…) |
-| `ONLYDRUMS_PACK_FEB_2026\` | 2,276 | 134.3 MB | MIDI, drums only |
-| `DRUM_TRACKS\` | 4,446 | **13.7 GB** | MIDI + audio drum material |
-| plus `Big bought drum midi pack`, `DRUMHUB PRACTICE HUB UPDATED SHEETS`, `Free IRs`, `Soundfonts`, `PROJECT TOONTRACK TO MP3`, `Padley 1.1`, `Hazard Guy`, `N20 DCB Charts`, `drumapp`, and drum PDFs | — | — | supporting drum/practice material |
+| `1_stems\` | 6,344 | **66.27 GB** | `drums_iso_full_06  Cenotaph.mp3`, `bass_iso_full_…`, `guitar_iso_full_…`, `vocals_iso_full_…` — isolated full tracks, one per instrument per song |
+| `3_focus\` | 444 | **5.29 GB** | `D_focus_`, `B_focus_`, `V_focus_`, `G_focus_` — **"each instrument track having its own 'louder' variant"** (D/B/V/G = drums/bass/vocals/guitar, boosted) |
+| `5_library\` | 11,188 | **115.72 GB** | the same focus mixes at library scale |
+| `6_instrument_hub\` | 11,193 | **115.70 GB** | `drums\`, `bass\`, `vocals\`, `guitar\`, each holding `D_focus_*` **and** `D_playalong_*` |
+| `demucs_raw\` | 4,804 | **216.32 GB** | `htdemucs_ft` raw model output |
+| `2_stems_reduction\` | 0 | 0 | **empty** — **"tracks missing a stem for practicing with"** |
+| `4_play_along\` | 0 | 0 | **empty** — the play-along outputs now live in `6_instrument_hub` |
+| `input\`, `temp_input\` | 0 | 0 | working folders |
+| **total** | **33,973** | **519.30 GB** | |
 
-**So the music estate has exactly one buildable asset, and it already became an EMPIRE limb:** `stem_factory`
-(`mcp_server/` → `stem-factory-mcp.ts`, Toolbelt category, `skill-stem-factory.md`). Inbox/outbox on this machine
-(`C:\Empire_Workbench\stem_factory\`) are nearly empty — **the library-scale work was done by the original project, not
-by the limb.** Everything else in the music folders is material for using it: drumless tracks, MIDI packs, sheets.
+**Partial-duplication check:** `D_focus_06  Cenotaph.mp3` is byte-identical in `5_library` and `6_instrument_hub\drums`
+(10,321,430 bytes each), so the hub does re-store focus mixes — **but the two trees list different song sets**
+(`5_library`: *Cenotaph*, *Missilia Amori*…; hub: *spit.it.out*, *tattered.and.torn*, *frail.limb.nursery*, *purity*…),
+so this is **overlap, not a clean duplicate**, and a dedup decision needs a full pass over both. `6_instrument_hub` also
+carries a stray `desktop.ini`.
+
+**Backup consequence — this is a new gap, and it is the largest single one left:**
+
+- **519.30 GB is in the cloud only.** It is not on any backed-up drive unless the Shard project's local `output*`
+  folders hold it (`Desktop\HIDDEN\Shard_of_the_Division`, **already copied in T6** — but that is the *tool*, 16.95 GB).
+- **`demucs_raw` is 216.32 GB and is the re-derivable part** — it is the model's raw output, reproducible from source
+  audio plus Demucs. **The derived product that is *not* cheap to reproduce is `1_stems` + `3_focus` + `5_library` +
+  `6_instrument_hub` ≈ 303 GB.**
+- Recommendation: copy **the derived 303 GB**, and treat `demucs_raw` as optional — it is 41.7% of the bytes for the
+  least unique content.
+
+Underlying tool and its history: **`Desktop\HIDDEN\Shard_of_the_Division`** — 122,907 files / 16.95 GB, **already copied
+in T6**. Its own `PROJECT_HISTORY.md` records the arc from an *"audio processing and drum analysis toolkit"* to *"a
+comprehensive music practice track generator"*, using **Demucs `htdemucs_ft`** for four-stem separation, with
+`practice_generator.py` named as *"the flagship tool"*. It began by **reverse-engineering Moises**:
+`scripts/analyze_moises.py` is titled *"Analyze Moises output vs original to understand their processing approach"* and
+measures sample rate, channels, RMS, peak and dynamic range.
+
+**So the music estate has exactly one buildable asset, it exists in two places (`Desktop\HIDDEN` and `G:`), one is
+backed up and one is not, and it already became an EMPIRE limb:** `stem_factory` (`mcp_server/` →
+`stem-factory-mcp.ts`, the `stem_factory` Toolbelt category, `skill-stem-factory.md`). The limb's own inbox/outbox on
+this machine (`C:\Empire_Workbench\stem_factory\`) are nearly empty — **the library-scale work was done by the original
+project, not by the limb.** The rest of `Music` (484.87 GB of mp3s) and all of `Music2` (343.02 GB) are material for
+running it, not output from it.
 
 ### 11.6 What is unique here, what is duplicated, and the honest boundary
 

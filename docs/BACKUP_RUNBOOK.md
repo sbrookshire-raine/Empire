@@ -52,9 +52,22 @@ likewise the 2.4 TB model library on `H:`, `SteamLibrary`, `%LOCALAPPDATA%\EMPIR
 4. **Verify independently of the copy.** `robocopy`'s own counts are not proof; `scripts/compare-trees.py` is
    (relative path + size; 0 = match, 1 = difference, 2 = bad path). Use `--exclude` for anything copied with
    `robocopy /XD`, or the excluded directories report as "only in source" and mask real differences.
+   **`robocopy`'s exit code is not a pass/fail:** `0` = nothing to do, **`1` = files copied successfully**, `2`/`3` =
+   extra items seen, **`≥ 8` = failure**. The `knowledge_bases` job logged `exit=1` and was in fact complete — judge by
+   comparison, never by the code.
 5. **Nothing is deleted.** Copy-first: originals stay. Space recovery is optional, and last.
 6. **Measure before committing to a tier.** `robocopy <src> <dst> /E /L` prints the exact files/bytes that *would*
    copy while writing nothing. That is how T6 turned out to be 53 GB rather than the 1.2 TB it looked like.
+7. **Use Python (`os.scandir`) on `G:` and on the USB drives — not PowerShell.** The same 33,973-file tree under
+   `G:\My Drive\…\Music\stem_factory` took **1 second in Python and over 300 seconds in PowerShell**; Drive FS is a
+   virtual filesystem and `Get-ChildItem -Recurse` is pathological on it. Stranded PowerShell walks also queue later
+   commands behind them, which is how two jobs ended up both "running" with no output.
+   **And mind the search tool:** `eve-audit/find-name.py` indexes **files only**, so a search for `stem factor` reported
+   "0 matches" while `…\Music\stem_factory\` — the single most valuable folder in the music tier — sat in plain sight as
+   a *directory*. Search for directories separately before concluding something is absent.
+8. **Keep the units straight.** `robocopy` reports **GiB**; the Python probes report **decimal GB** (×1.0737). One copy
+   read as **718.59 GiB** and **771.58 GB** — the same bytes. A wrong-unit comparison is what made §11.1 of
+   `ESTATE_INVENTORY.md` read `C:`'s volume as a Google quota; compare like with like, always.
 
 ## 4. Per-tier procedures
 
@@ -148,7 +161,7 @@ known**. Composition of the 74:
 
 | Group | Count ≥ 10 GB | Sizes | Backed up? |
 |---|---|---|---|
-| ZIMs on `H:` | 5 | 249.5 · 109.9 · 80.5 · 76.8 · 17.4 GB | no — T6 excluded `knowledge_bases` |
+| ZIMs on `H:` | 5 | 249.5 · 109.9 · 80.5 · 76.8 · 17.4 GB | **yes — copied 2026-09-28 and verified identical by path+size**: `H:\AI_ARCHIVE\AI_Archive_Legion\knowledge_bases` → `04_sources_T0\knowledge_bases_H`, 6,328 files / 718.59 GiB / 771.58 GB, 0 differences (robocopy `exit=1` = success) |
 | **Weaviate LSM segments** | **20** (10 unique × the `D:`/`I:` pair) | 53.0 · 49.3 · 49.0 · 32.9 · 30.2 · 26.6 · 24.4 · 22.6 · 15.7 · 15.0 GB | no — T2 not copied yet |
 | GGUF / LoRA / ollama model blobs | ~13 | 47.4 · 42.5 ×4 · 26.4 (.partial) · 23.3 ×3 · 21.8 · 19.9 · 18.7 GB | **never** — T5 |
 | **Our own `wiki_md_2017.tar`** | 1 | **26.0 GB** | **yes** — this is the T1 archive |
@@ -207,6 +220,18 @@ For tars, compare entry counts rather than sizes:
 Two cautions learned the hard way: `robocopy`'s summary counts are **not** verification, and a database archive can
 never match byte-for-byte while it is open (see §7).
 
+Three more, from 2026-09-28:
+
+- **Never trust a copy's name for what it is.** `01_notes_T7\SBX_Vault_obsidian_earlier` is byte-identical to the
+  *current live* vault, while `RESYNC_2026_obsidian_live` holds **24 notes the live vault does not**. Verify by content;
+  the labels were backwards in both directions. See `ESTATE_INVENTORY` §10.4.
+- **Near-identical snapshots are not duplicates.** Those two vault copies differ by 24 files, and that difference is the
+  only copy of the `0.EVOLVE 5_18_26` journal thread. Applying dedup to "95% identical" folders destroys exactly the
+  content a backup exists to protect — the same rule already in force for the 2017/2021/2026 chunk datasets.
+- **A copy of a *live* tree ages immediately.** T6 was verified 450 files short inside `SBX_Vault` because the vault kept
+  being written to. Re-run the copy as a delta (`robocopy … /E` again: it recopies only new/changed), re-verify, and
+  expect the delta to recur for any tree that is still in use.
+
 ## 7. Failure modes and cures
 
 | Symptom | Cause | Cure |
@@ -226,6 +251,10 @@ The procedure is the same; what changes is **order** and **destination**. Given 
 offsite), a second copy should protect the single-copy tiers first:
 
 1. **T3 personal (423 GB)** — single copy, on the drive with 912 unsafe shutdowns
+1b. **`G:…\Music\stem_factory` derived set (~303 GB)** — **cloud-only, single copy**, and named by the Architect as
+   the one thing of value in the music tier (`ESTATE_INVENTORY` §11.5). Copy `1_stems`, `3_focus`, `5_library`,
+   `6_instrument_hub`; leave `demucs_raw` (216 GB) unless space allows, since that is the regenerable part. It is
+   Drive FS, so this copy **downloads from Google** — allow time, and use Python/robocopy, not `Get-ChildItem`.
 2. **ZIMs (~1.06 TB across both sets)** — single copy per set, and the Architect's ruling is that these **may not be
    re-downloadable**. This is the largest *essential* item after T3, and it is all large files, so it copies fast
    (~1–2 h for 595 GB) unlike the tiny-file tiers
