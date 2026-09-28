@@ -235,6 +235,25 @@ read its log). Manifests live in `_manifests\`.
 §8.3's "what Eve was actually asked and answered". Also present: **`restic-pass.txt`, a credential** — back it up,
 never ingest it.
 
+**T6 scoped by measurement (2026-09-27) — most of "legacy" is not data, it is regenerable:**
+
+| Source | Measured | Unique part |
+|---|---|---|
+| `H:\AI_ARCHIVE` — **1,154 GB** | `AI_Archive_Legion` **1,054 GB** of models / datasets / docker images / python+node packages / binaries / runtimes / embeddings (a Nov-2025 offline-RAG toolset); `v2_markdown_pipeline` **89 GB**, of which **`data` is 54.9 GB of DERIVED corpus in 5.45M files** and `.git` is 3.8 GB; `ai_factory_workspace` 10.9 GB | **~30 MB** of v2 code + docs, the Legion's inventory docs / prompts / scripts, `_old_docs`, `_old_scripts` |
+| `D:\AI_Factory` — 30.4 GB | `.venv` 2.5 + `models` 27.3 = **29.8 GB regenerable** | **~1.3 GB**: agent-zero, affine, knowledge_bases, repos, n8n_data, and the six `AI_FACTORY_*.md` planning docs (§8.3 wanted those read) |
+| `H:\Inception_of_Dreams` | 120 MB | all of it — **IRENE** |
+| Desktop projects | ~51 GB — `HIDDEN` 17.4 · `PROJECT HUB` 17.9 · `FROM EXHDD` 12.9 · `INSPIRATION COVE` 1.3 · rest < 0.7 each | all unique |
+| **curated T6** | | **≈ 53 GB, not ~1.2 TB** — a 95% reduction with no unique data dropped |
+
+**Finding that raises T1's value:** `H:\AI_ARCHIVE\v2_markdown_pipeline\DOWNLOAD_WIKI_2017.txt` records that the
+**2017 dump is gone from `dumps.wikimedia.org`** (`/enwiki/20170501/` → **404**; old trees were rotated off the index),
+that acquisition means **archival hunting** (Meta-Wiki community torrents, Internet Archive, Academic Torrents — oldest
+visible ≈ 2020-02), and that the format contract is `pages-articles-multistream.xml.bz2` with a `snapshot_id` and
+**SHA-256 manifests** via `build_archive_manifest.py`. So **`wiki_md/2017` is *not* cheaply re-derivable** (2021's
+source *is* on disk, 18.21 GB) — which is the argument for **packing and copying T1** rather than treating it as
+regenerable. The same file warns that concurrent heavy transfers collapse throughput — the identical lesson to the
+SMR contention that shaped the copy order here.
+
 Two mechanical facts that shape all of this: **`wiki_md` cannot be copied as files** (18.76M × ~4 KB → ~100–170 h per
 copy; pack it first), and both WD portables are likely **SMR** — sustained writes can collapse, so large jobs run
 deliberately, not unattended.
