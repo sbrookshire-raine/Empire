@@ -140,16 +140,32 @@ Measured sizes, in GB. "Essential" = irreplaceable or single-copy; "Optional" = 
 | | **TOTAL, everything worth keeping** | **≈ 2.4 TB** | |
 | T5 | models 2.4 TB, Steam, `EZDrummer`/`Superior` 481, Speaches cache | ~2.9 TB | **never copied** — regenerable |
 
-**Files ≥ 10 GB (measured 2026-09-28, `eve-audit/find-large-files.py` + `large-targeted.py`):** **50** among 2.19M
-files stat-ed, plus one on the detached 25E1 = **51 known**; 151 ≥ 4 GB, 245 ≥ 2 GB. The largest: ZIMs (249.5, 109.9,
-80.5, 76.8 GB), `docker_data.vhdx` 108.7 GB, Weaviate LSM segments (53.0 → 22.6 GB, ~10 of them),
-`title-index.sqlite` **32.7 GB**, **our own `wiki_md_2017.tar` 24.8 GB**, the wiki dumps (97.1 / 26.2 / 19.6 / 12.8 GB),
-GGUF models (47.4, 42.5, 23–26 GB each — T5, not copied), Steam paks (31.6, 26.3 GB).
+**Files ≥ 10 GB (measured 2026-09-28).** Full sweep (`eve-audit/find-large-files.py`, 4,297,090 files stat-ed in
+479 s): **74 files ≥ 10 GB · 193 ≥ 4 GB · 307 ≥ 2 GB** — plus the 97.1 GB Oct-2024 dump on the detached 25E1, so **75
+known**. Composition of the 74:
+
+| Group | Count ≥ 10 GB | Sizes | Backed up? |
+|---|---|---|---|
+| ZIMs on `H:` | 5 | 249.5 · 109.9 · 80.5 · 76.8 · 17.4 GB | no — T6 excluded `knowledge_bases` |
+| **Weaviate LSM segments** | **20** (10 unique × the `D:`/`I:` pair) | 53.0 · 49.3 · 49.0 · 32.9 · 30.2 · 26.6 · 24.4 · 22.6 · 15.7 · 15.0 GB | no — T2 not copied yet |
+| GGUF / LoRA / ollama model blobs | ~13 | 47.4 · 42.5 ×4 · 26.4 (.partial) · 23.3 ×3 · 21.8 · 19.9 · 18.7 GB | **never** — T5 |
+| **Our own `wiki_md_2017.tar`** | 1 | **26.0 GB** | **yes** — this is the T1 archive |
+| wiki dumps | 4 unique (7 copies) | 26.2 ×3 copies · 19.6 · 12.8 | partly |
+| `title-index.sqlite` | 2 (source + our copy) | 32.7 GB each | **yes** (E:) |
+| Steam game paks | 2 | 31.6 · 26.3 GB | no — regenerable |
+| `docker_data.vhdx` | 1 | 108.7 GB | no — the volumes inside it are copied instead |
 
 **If a destination caps a single file** — 10 GB is a common cloud limit, 4 GB is FAT32 — then **the wiki dumps, the
-big ZIMs, ~10 Weaviate segments, the title index and our own T1 archive all exceed it.** Remedies: build T1 as
+big ZIMs, 20 Weaviate segments, the title index and our own T1 archive all exceed it.** Remedies: build T1 as
 **per-batch archives** instead of per-year (a 50,000-file batch is ~1–2 GB), pipe a tar through `split -b 5G`, or use
-7z volumes. Plan for this *before* choosing a destination, not after. NTFS and exFAT have no practical per-file cap.
+7z volumes. Decide this *before* choosing a destination, not after. NTFS and exFAT have no practical per-file cap.
+
+**Three incidental findings from the same sweep**, each worth a look before any cleanup:
+`C:\Users\m69nr\Downloads\enwiki-20260401-…xml.bz2` (26.2 GB) and
+`H:\AI_ARCHIVE\…\knowledge_bases\wikipedia\enwiki-latest-…xml.bz2` (26.2 GB) are **third and fourth copies of the 2026
+dump**; `H:\AI_MODELS_2026\GGUF_Models\blobs\sha256-…-partial` (26.4 GB) is an **interrupted download**; and
+`C:\Users\m69nr\.ollama\models\blobs\` holds 19.9 + 18.7 GB blobs that the earlier tier notes never accounted for.
+
 
 
 **What that means for capacity:**
