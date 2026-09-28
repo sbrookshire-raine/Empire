@@ -36,6 +36,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | **LEGO prompt** (hand this to an outside model: rules, output format, self-check, rejections) | [LEGO_PROMPT.md](LEGO_PROMPT.md) |
 | **Attribution** (credits by origin, not a licence gate) | [ATTRIBUTION.md](ATTRIBUTION.md) |
 | **Library access points** (reference material Eve reaches by name; registry `config/library.json`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) §7 |
+| **Local-upgrade contracts** — `EVE_OLLAMA_EXPANSION_MANIFEST.md` (the source of the operating rules), `EMPIRE_LOCAL_UPGRADE_RESEARCH.md`, `LOCAL_NO_ACCOUNT_MCP_CATALOG.md` | [expansion_docs/](expansion_docs/) |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
 | **Backup: what exists, how to copy it, how much space** | [ESTATE_INVENTORY.md](ESTATE_INVENTORY.md), [BACKUP_RUNBOOK.md](BACKUP_RUNBOOK.md), [ODYSSEY.md](ODYSSEY.md) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
@@ -52,7 +53,7 @@ decision was made.
 |---|---|---|
 | `tools/archify/docs/` | 52 files, 0.7 MB | `research-visual-evolution-round-N.md` — per-round design logs |
 | `docs/superpowers/` | 9 files, 0.1 MB | dated specs and plans (`2026-…`) |
-| `docs/expansion_docs/` | 9 files, 0.2 MB | local-upgrade research + manifests |
+| `docs/expansion_docs/` | 9 files, 0.2 MB | **RECLASSIFIED 2026-09-28 — not history.** Three of these are **contracts**: the Eve/Ollama expansion manifest (68.9 KB, *the source of the operating rules the repo now enforces*), the local-upgrade research (61.2 KB) and the no-account MCP catalog. Read when relevant; see ESTATE_INVENTORY §11.3–§11.4 |
 | `docs/research/` | 2 files, 0.1 MB | earlier structure/strategy notes |
 
 `eve-skills/*/docs/**` (40 files, <0.1 MB) is per-skill reference that ships with each skill —

@@ -504,4 +504,94 @@ So the T6 exclusion was **right about the 1,050 GB** and **deliberately left two
 1.0737. That difference (718.587 vs 771.58 for the same 6,328 files) is not a discrepancy and not missing files; it
 was checked.
 
+## 11. Google Drive (`G:`) — the tier that was never opened
+
+Added 2026-09-28, on the Architect's prompt: *"dont forget about my google drive on G: drive / the folder
+'G:\My Drive\0.0_new_incoming_including_knit_perform' doesnt say AI or coding but has alot in there."* Correct on both
+counts: `G:` had never been inventoried, and that folder is far more than its name suggests. Census:
+`eve-audit/g-drive-census.py`.
+
+### 11.1 Quota — §6 item 8 is resolved
+
+| | |
+|---|---|
+| Total | **~1,021.8 GB** |
+| Used | **749.3 GB (73.3%)** |
+| **Free** | **272.5 GB** |
+
+§1 said the Drive FS "reports the same size as `C:` — not your Drive quota" and §6 item 8 listed the quota as
+unreadable via the mount. **It is readable now** (`shutil.disk_usage` on `G:\My Drive`), and the numbers are not
+`C:`'s (951.6 total / 267.4 free). **Consequence: `G:` is a usable cloud destination with ~272 GB free** — enough for
+the packed 2017 markdown plus a manifest, which is what §4's placement table proposed for it.
+
+### 11.2 Top level of `G:\My Drive`
+
+| Folder / item | What it is |
+|---|---|
+| **`_Project Master`** | **a Drive copy of the repo's `docs/expansion_docs/`** — `EVE_OLLAMA_EXPANSION_MANIFEST.md` (68.9 KB), `EMPIRE_LOCAL_UPGRADE_RESEARCH.md` (61.2 KB), the research snapshot, idea queue, `LOCAL_NO_ACCOUNT_MCP_CATALOG.md`, `local-no-account-tools.yaml`, `CURSOR_HANDOFF.md`, `last_communication.md`, and a `.github/agents/empire-upgrade-researcher.agent.md` Copilot agent definition — **plus** `PROMPTS AND RESULTS\` (NLM-extraction prompts for Eve with their outputs: `aiunited`, `SimplyAI`, `48 LAWS OF POWER`), `3 prong processing engine` (270 KB), and the **`P_Raine to Empire_pt1…pt5_final.md`** series with `P_Truth Drift.md`, `P_Universal Primitives.md`, `P_Universal Synthesis Framework.md`, `P_ProctorWIZ.md` |
+| **`0.0_new_incoming_including_knit_perform`** | 20 entries: the **Alliance** band material (`ALLIANCE - WRITING ON THE WALL`, `GIG_FILES COMBINED`, `WOW2`, `Alliance Knitting Factory Photos`), `ELECTRIC CALLBOY BLISS`, `BRIDGE`, `KEEPER_7_7_26`, `THE KEEPER AND LOOM CONSTRUCT IN FULL`, `TOOLBOX_GUMLOOP_PROJECT`, `gumloop_multi_agent skill audit`, `notebooklm to gumloop for skills creation`, `master guides`, `NEXTUS`, `kimi experimenr`, `openai_workaround`, `inspiration_images_shotdesk`, a 1.8 GB `RMC_CHOIR_PROMO.VOB` (the same file as in `I:\HDD_MOVE_TEMP`), two drumming PDFs — **and `comparing_models_for_eve_and_weaviate.txt`** |
+| **`1. AI related in any way`** | 12 entries: `1. SCRIPT AND TOOL LIBRARY`, `2. App_Projects`, `BEE HUB`, `CREATED PROMPT LIBRARY`, `DAZE`, `DAZE-docs`, `DIFY KNOWLEDGE BASE FILES`, **`hatchprojects_app_closed_down`**, **`Perplexity Reports`**, `proctor_WIZ`, `UNSORTED`, `WEB TUTORIALS` |
+| **`nov26_lcc_laptop_docs`** | 14 recent project folders: **`BEE HUB`, `chatter`, `chord sheet container`, `DAZE`, `dbs`, `HIGH LEVEL RESEARCH HUB`, `NEXTUS`, `proctor_WIZ`, `Project_polymath`, `ragbuild`, `Repo_ripper Agent`, `student degree tracker`** — several of these names appear in no repo document |
+| **`DAZE-docs`** | 8 files: `DAZE_Case_Study`, `DAZE_Full_Summary`, `DAZE_New_Developer_Checklist`, `DAZE_Prompt_Library`, `DAZE_Slide_Outline`, `DAZE_Smoke_Test_Script`, `DAZE_Teaching_Packet`, `DAZE_Workshop_Handout` — **a full product-and-teaching packet for a shipped EMPIRE product** |
+| `_NLM PROCESSING` · `0.1_postLCC_AI` · `..shadowplanner_sync` · `3_16_26_wiki_research` · `lcc laptop dump` · `AI model dump` · `Flowchart AI` (×2) · `Gemini Gems` | NotebookLM processing (the Workbench vault's recorded source), post-LCC AI material, wiki research, laptop dumps, an AI model dump |
+| `2. DRUM_MIDI_STEM_CENTRAL` · `3.MUSIC RELATED` · `5.BAND_MEDIA` · `6. AI MUSIC AND VOICE CREATIONS` · `MY MUSIC HUB` · `Jennifer's music` | the music estate, in the cloud |
+| `4_1_26_work_pc_backup_new_pc_coming` · `4. personal` | a work-PC backup and personal material |
+| **`DAZE-prevscode`** | a previous VS Code state: `src`, `index.html`, `package.json`, `tailwind.config.js`, `vite.config.js`, **and a `.env`** (secrets — never ingest) |
+| **110 loose `.gdoc` files** | an architecture-doc library by title: *100x Synoptic System Research Expansion*, *Advanced Agentic AI Design Patterns and Execution Skills*, *Advanced Agentic Workflow and LLM Skill Registry*, *Advanced Knowledge Graph Embeddings and Semantic Entity Resolution Framework (SERF) Implementation Blueprint*, *Advanced MCP Skill Sets for Agentic Workflows*, *Architectural Blueprint: Semantic Routing Gateways and Agentic Governance*, *Agentic PRD Generation*, *AI AND MENTAL HEALTH*, *AI Toolbase Research: LangSmith/Langfuse*, *Architecture Guide: VLM Ingestion & Claim Check Pattern*, … **+50 loose `.eml` files** (5.4 MB of AI newsletters, `🦾`-prefixed TAAFT items) |
+
+### 11.3 The three things here that matter most
+
+1. **`EVE_OLLAMA_EXPANSION_MANIFEST.md` is the source contract for the system as built** — *"Status: research complete;
+   implementation plan ready for Cursor. **Verified: 2026-09-06**"*, written against *"RTX 5080-class GPU with 16 GB
+   VRAM, 64 GB system RAM"*, stating the governance in plain terms: **"PostgreSQL is authoritative for jobs,
+   approvals, audit records, artifacts, and provenance"** · **"PocketBase is the human-facing task/realtime UI layer,
+   not a second source of truth"** · **"Never give the model an arbitrary shell, filesystem path, SQL, Docker, or
+   browser-JavaScript tool"** · **"Every destructive, external, desktop-input, Docker-lifecycle, or source-file
+   mutation action requires an explicit approval token"** · Cognee *"holds curated durable memories… not a
+   raw-document dumping ground."* **This is the design that `OPERATING_CONTRACT.md`, the Toolbelt and `admit_for_goal`
+   implement.** It also makes model availability *"a health check, not an assumption."*
+2. **`comparing_models_for_eve_and_weaviate.txt` (created 2026-09-05)** — a model-selection conversation **about Eve
+   itself**, sitting in the folder that "doesn't say AI": *"I have 16gb vram and 64gb ram. i am using if for versel
+   eve."* It weighs **Spark-X2.5-4B** (1 M-token context, ~2.5 GB, leaving VRAM for the KV cache — recommended
+   precisely because *"Eve agents parse directories of code and text"*) against **Qwen3.8-27B-GSQ-RCO IQ3_S** (~11.8 GB,
+   native reasoning traces, multimodal, 262 K context, MTP for speculative decoding). **A dated, reasoned model decision
+   for the Eve runtime that exists nowhere in the repo.**
+3. **`P_Raine to Empire_pt5_final.md`** — a structured self-review of the migration in seven sections, closing with
+   **"Semantic analysis of overall feelings on the project"**: *"Overall mood: Pragmatically ambitious yet financially
+   and structurally constrained."* It records an intent not yet carried out — **"Plans to reuse behavioral data and
+   conversation logs (focused on frustration management) from previous Gemini Gems to shape the personality of the
+   agent Eve"** — and names the lineage: *"Rain: serves as the direct successor/evolution of the Rain project,
+   retaining PocketBase as the local task manager"*, plus the **Universal Synthesis Architecture** as its origin. The
+   `pt1…pt5` series with `P_Truth Drift.md` is the Raine→EMPIRE transition write-up, in the Architect's own words.
+
+### 11.4 Correction to `DOC_MAP.md`
+
+`DOC_MAP` §3 files `docs/expansion_docs/` (9 files) under **"History — kept, not read"**, described as work logs with
+"no code references". That is wrong in substance: three of those files are **contracts** —
+`EVE_OLLAMA_EXPANSION_MANIFEST.md`, `EMPIRE_LOCAL_UPGRADE_RESEARCH.md`, `LOCAL_NO_ACCOUNT_MCP_CATALOG.md` — and the
+manifest is the *source* of the operating rules the repo now enforces. The mislabel is explained by size: DOC_MAP
+recorded the folder as 0.2 MB, but it holds a 68.9 KB manifest and a 61.2 KB research report. **Corrected in
+`DOC_MAP.md` on 2026-09-28** — the folder is read-when-relevant, not history.
+
+### 11.5 What is unique here, what is duplicated, and the honest boundary
+
+- **Duplicated (safe):** `project_manifesto_9_7_26` **is** the repo's `docs/expansion_docs/`, and
+  `2. EMPIRE_MANIFESTO.md` is the repo's root `EMPIRE_MANIFESTO.md`. **Both exist in two places, one of them cloud.**
+- **Unique to `G:` (not found in the repo in this pass):** the `P_*` prompt series (`P_Raine to Empire_pt1–5`,
+  `P_Truth Drift`, `P_Universal Primitives`, `P_Universal Synthesis Framework`, `P_ProctorWIZ`), `3 prong processing
+  engine` (270 KB), the `PROMPTS AND RESULTS` prompt/output pairs, the **`DAZE-docs` product-and-teaching packet**,
+  `hatchprojects_app_closed_down`, the **`Perplexity Reports`**, the `nov26_lcc_laptop_docs` project set
+  (`chatter`, `Project_polymath`, `NEXTUS`, `HIGH LEVEL RESEARCH HUB`, `chord sheet container`, `student degree
+  tracker`, `ragbuild`…), the `KEEPER`/`LOOM`/`GUMLOOP` material, the Eve model-comparison chat, and the
+  **110 `.gdoc` titles + 50 `.eml` newsletters**.
+- **Boundary that matters:** **`.gdoc` files on a Drive mount are *shortcuts*, not documents.** A filesystem walk sees
+  the title and the id; the content is not there. Reading those 110 documents needs a Drive export (web UI or API), so
+  **they are inventoried but unread, and nothing should be claimed about them beyond their titles.**
+- **Also unresolved:** `Gemini Gems` and `lcc laptop dump` report **0 children** through the mount — either empty or
+  online-only and unmaterialised. Not guessed at.
+- **Nothing unique in 11.5 is backed up.** It exists **only in the cloud**, and `G:` is a *sync* target, not a backup
+  (deletions and account problems propagate — the same rule §2 applies to OneDrive). `G:` is therefore a candidate for
+  **both** roles, and the two are not the same thing: the 272 GB of free space makes it a destination, while being the
+  sole home of the `P_*` series and the DAZE packet makes it a *source* to copy outward.
+
 
