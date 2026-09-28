@@ -93,3 +93,66 @@ take turns, reflect. The March 2025 note and the prompt were always the same ide
 - **Unread, in priority order:** the full **Raine blueprint** (41 KB — only the opening read); the **OneNote dump** (8,339 lines — sampled only); the **`raine roadblocks`** note (filename differs from my guess — search by `roadblocks`); the **learning_hub logs** (the 2024-11 trail, and the last hope for the October start); the **Heptabase Card Library**; the **`PREVaiL`** and **`Z_Future project hub`** notes.
 - **A precise gap worth stating:** IRENE's `src/` holds only `app.py` and the two YouTube modules — the **SQLite store, NLP semantic lists and junk filters you described are not in the files I found.** The weighted re-ranker *is*. So either those parts lived in another folder, or the refiltering was done with the weighted score alone. Worth settling, because it is the earliest version of the ranking question we are still working on.
 
+## 8. The project register — every attempt, and what each carried forward
+
+Read from the notes on 2026-09-27. Several of these had never been recorded anywhere before.
+
+| Project | When | What it was | What EMPIRE took from it |
+|---|---|---|---|
+| **Youtube on Rails** | pre-Nov 2024 | on-rails arcade shooter; rails = YouTubers; **co-op class** so students interact and learn | the education intent; the narrowing instinct |
+| **IRENE** | Nov–Dec 2024 | YouTube re-filtering (weighted score, 0.6 threshold, `likes/views`); Flask app | **the retrieval architecture** — pool → heuristics → threshold → usable-flag |
+| **Aporia / PA_Aporia** | Dec 2024 – Jan 2025 | Flask **progress tracker**; PythonAnywhere → local IDE | the Tasks/chat surface (it is now on its 4th implementation) |
+| **Abacus** | Jan–Mar 2025 | first named system; prompt iteration | the naming lineage — `Abacus.AI` reappears in Raine Abacus |
+| **PREVaiL / Prevail** | Feb 2025 | **"Learning Style-Based AI Response System"** — VARK questionnaire, stored profiles, responses *tailored to how the user learns*, feedback loop | **Eve's `<core_directive>` and `<response_styles>` are this, implemented**: Scanner/Pattern-Weaver profile, ARC, Scanner's Finish, Postcard |
+| **Zet / Zettelkasten (Zed)** | Mar 2025 | capture → summarize → zettel pipeline; the `Evaluated for Zet` intake queue | the intake instinct behind `wiki_scout` — still unbuilt as a system |
+| **Thinking Coordinator** | Mar 2025 | research into *teacher coaches*; *"You plan, I teach; I plan, you teach"* | **Eve's persona** — a co-worker who takes turns |
+| **Living Book Worlds** | **Apr 2025** | **82,219 B — the largest note in the estate.** Turn books (fiction + non-fiction) into structured interactive worlds: Extraction Agent, Data Integration (db **+ vector store**), Access API, UI, Logging; entity extraction (characters, locations, relationships, **sensory details**, **voice profile cues**); **Card Templates** (Character / Environment / Non-fiction / Integration); plus an **n8n plan** with tiktoken chunking tuned to `n_ctx` | **very close to EMPIRE's architecture**: modular limbs + vector store + API + extraction into structured cards + logging. The Card Templates are the ancestor of today's `normalizer` / `structured_extract` |
+| **Master Prompt** | Aug 2025 | *"Transcript to Actionable Mastery Blueprint"* | the prompt-protocol thread (2024's 8-point rewriter → here) |
+| **Raine** | named Jan 2025 | *"this will be my Jarvis like project, and I will try to build it with open source tools. When functional, I will try to integrate it into other programs"* — 159 B, the entire pitch | **EMPIRE's mission, verbatim**: local, open source, integration by design (MCP) |
+| **IRENE 2.0** | Nov 2025 | the revival | — |
+| **AI Factory** | Dec 2025 | agent-zero + n8n + Qdrant + knowledge bases | the vector-store era, then n8n deliberately dropped |
+| **Raine Abacus** | May 2026 | dockerised agent system, own Weaviate, `agent_resource_pipeline/`, `MANUAL.md` | EMPIRE's closest structural ancestor |
+
+## 9. The friction case study — the difficulties, written by the AI collaborator (2025-08-16)
+
+`081625 - raine roadblocks - clear paths.md` (14,338 B) is the best account of what actually went wrong, because it
+was written immediately after a failed build and treats that failure as the user story — *"a perfect, if painful,
+demonstration of why rAIne is necessary."*
+
+1. **Environment Hell.** *"We spent the most time fighting invisible, stubborn errors"* (`UnicodeDecodeError`) —
+   *"the tools themselves get in the way of the actual work."* → proposed: sandboxed Docker per project.
+   **Implemented:** Eve sandbox containers + `prune-sandbox-containers.ps1`.
+2. **Brittle connections (CORS).** UI `:5000` ↔ n8n `:5678` failing on browser security policy. → proposed:
+   configure modules to trust each other from the start. **Implemented:** the service/port contract in
+   `OPERATING_CONTRACT.md`.
+3. **Code mismatches.** `n8nWebhookUrl` in one file and `N8N_WEBHOOK_URL` in another; a column named `entry` in one
+   script and `user_input` in another — *"these small errors caused total system failure."* → proposed: **a central
+   schema/contract per project that every agent must obey.** **Implemented:** `LEGO_CONTRACT.md`,
+   `capability-manifest.json`, `check-legos.py` — and it is the same finding made again this month, when the
+   `ingestion_jobs` schema turned out to exist nowhere in the repo until the migration was written.
+4. **"Chasing the ball."** Offering simpler alternatives mid-build *"felt like I was abandoning our vision and making
+   you chase a moving target."* → proposed: a **Personality & Tone Engine** whose core directive is *"When a roadblock
+   is hit, do not abandon the architectural plan. Instead, break the problem down into smaller, more systematic
+   debugging steps."* **Implemented:** Eve's *"validate the learning, then one small restart"*, and `WORK_PLAN.md`'s
+   fix-what-exists-before-adding order.
+
+**This is the most useful document in the estate for the stated purpose.** Every governance mechanism EMPIRE has today
+— contracts, manifests, gates, sandboxing, "don't abandon the plan" — is an answer to a specific failure recorded in
+August 2025. The difficulties didn't merely precede the design: **they are the design.**
+
+### 9.1 How to present work to this user (from his own reflection, 2025-02-19)
+
+`PREVaiL\ideas - prevail.md` is a self-analysis worth honouring, because it explains engagement:
+
+- **Disengages:** cryptic puzzles, point-and-click adventures, pure-challenge games, D&D-style live storytelling.
+- **Engages:** Hollow Knight — *"while difficult, had enough… beauty or aesthetic style… exploration, chances to
+  utilize different combinations of tools to overcome"*; and **roguelikes**, because *"while there are challenges and
+  each attempt is new, so are powerups… so the obstacles can eventually be overcome."*
+- His own question: *"if I gave a list of favorite media to an AI, could it predict my preferred learning method,
+  personality type, or modify prompts or goals to mirror the structure of things I naturally enjoy?"*
+
+**Design consequence:** present work as **accumulating unlocks** — progress that visibly compounds across attempts —
+with aesthetic or exploratory substance, never as an arbitrary grind. That is the difference between a task that gets
+finished and one that gets abandoned, and it is the same principle as *"small verified wins beat perfect design."*
+
+
