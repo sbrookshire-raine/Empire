@@ -213,29 +213,30 @@ deliberately, not unattended.
 |---|---|---|
 | **`D:\weaviate_v2_archive` (524.6 GB) → 2627** | **D: 174.7 → ~699 GB free** | Weaviate is archival; Eve's runtime reads markdown. Verify the copy, then delete from D: |
 | `D:\wiki_dumps` (44.2) + `D:\wiki_runs` (27.4) → 2627 | D: → ~770 GB free | optional; both are cold |
-| **`C:\wiki_md` + `C:\wiki_runs` + `C:\wiki_dumps`** (created 2026-04-07, D: versions are newer) | **C: up to ~150 GB** if they are stale duplicates | **verify first** — size and compare before deleting anything |
+| **`C:\wiki_md` + `C:\wiki_runs` + `C:\wiki_dumps`** (created 2026-04-07) | **nothing — measured empty 2026-09-27** | ~~C: up to ~150 GB if they are stale duplicates~~ **CORRECTED:** all three hold **0 files / 0 GB**, so there is no C: win here and nothing left to compare. The estimate above came from dates alone — the first row in this document disproved by looking |
 | **`docker_data.vhdx` (101.2 GB) → D:** | C: → ~368 GB free | Docker Desktop → Settings → Resources → Advanced → *Disk image location*; stop Docker first; do it *after* D: is freed |
-| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | confirm which is live before removing either |
+| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | **RESOLVED 2026-09-27:** `C:` is live (13 top-level entries, written 2026-09-26); `D:\Empire_Workbench` is a **2-entry stub** from 2026-09-01. `D:`'s copy can go once nothing references it |
 
 Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SSD latency.
 
 ## 6. Open items — verify before touching
 
 1. ~~**`RAINE_ABACUS_PROJ_FOLDER`**~~ **RESOLVED 2026-09-27** — never missing: it lives at `…\Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER\` (May 2026), containing a dockerised agent system with `agent_resource_pipeline/`, its own Weaviate `runtime/`, cloned resource repos and a `MANUAL.md`. Read `MANUAL.md` + `agent_resource_pipeline/` first. See digest §I.2.
-2. **`C:\wiki_*`** — sizes unknown; must be compared against D: before any deletion.
+2. ~~**`C:\wiki_*`** — sizes unknown; must be compared against D: before any deletion.~~ **RESOLVED 2026-09-27 — they are empty.** `C:\wiki_md`, `C:\wiki_runs` and `C:\wiki_dumps` each hold **0 files / 0 GB** (verified to depth 2 with `-Force`). No comparison was needed because there is nothing there. **The §5 space-recovery row is corrected accordingly** — a reminder that the 2026-04-07 creation dates were evidence of a *plan*, not of content.
 3. **`media-weaviate` volume** `cursor_hol_weaviate_data` — unidentified.
 4. **ZIM integrity** — 16 archives, 461 GB; verify checksums before treating as a source of record.
 5. **HDD health** — no SMART from either WD; read real counters before entrusting T3/T0/T2.
-6. **`I:\wiki_md` + `I:\weaviate_v2_archive`** (dated 2026-04-16) — complete or stale? Until checked they are copies of *unknown fidelity*, not backups.
-7. **`D:\AI_Factory\qdrant_storage`** — may hold reusable embeddings.
+6. **`I:\wiki_md` + `I:\weaviate_v2_archive`** (dated 2026-04-16) — complete or stale? Until checked they are copies of *unknown fidelity*, not backups. **PARTLY ANSWERED 2026-09-27 — and the answer is bad:** `D:\weaviate_v2_archive` holds **1,928 files / 524.58 GB**; `I:\weaviate_v2_archive` holds **1,857 files / 524.55 GB**. The I: copy is **71 files and ~30 MB short**, so it is **verifiably incomplete**, not merely of unknown fidelity — it must not be treated as a backup of that archive, and the difference needs naming before D: is cleared. `I:\wiki_md` is **not yet compared** (same method, same risk).
+7. ~~**`D:\AI_Factory\qdrant_storage`** — may hold reusable embeddings.~~ **RESOLVED 2026-09-27 — nothing to reuse.** Measured **2 files / ~0 GB** (created 2025-12-04, last written 2025-12-09). The "embeddings already paid for" hope in §3 does not survive contact with the directory, so nothing in the AI Factory tree needs special handling for that reason.
 8. **Google Drive quota** — unreadable via the mount.
 
 ## 7. Ordered next actions
 
 1. **Land `I:\HDD_MOVE_TEMP` (423 GB) on the 2627 and verify** — highest urgency anywhere in this document; also frees 423 GB on I: as a side effect.
 2. **Health-check the 2627** (SMART via `smartmontools -d sat`, plus a timed write test) *before* it holds anything irreplaceable.
-3. **Size and compare `C:\wiki_*`** → take the C: win if they are stale.
+3. ~~**Size and compare `C:\wiki_*`** → take the C: win if they are stale.~~ **DONE 2026-09-27 — no C: win exists.** All three directories are empty (0 files); the step is void. What it *does* free is attention: the C: recovery story is now `docker_data.vhdx` (step 8) and nothing else.
 4. **Move `D:\weaviate_v2_archive` → 2627**, verify, then delete from D: → ~699 GB free on D:.
+   **Verification caveat (2026-09-27):** verify the **2627 copy against D:**, never against the existing `I:` copy — `I:\weaviate_v2_archive` is **71 files / ~30 MB short** (item 6 above), so it cannot be used as the reference for a delete decision.
 5. **Pack + copy T1 markdown**, 2017 first → 2627 **and** `G:`.
 6. **Extend restic**: add `C:\EMPIRE`, `%LOCALAPPDATA%\EMPIRE`, a `pg_dump`; replicate the repo off `I:`.
 7. **Re-home the cloned repos** to `D:\repos\` (P9 source trees).
@@ -294,8 +295,10 @@ vocabulary (`parametric_distractor`, `revival`) and the harness already exist.
 
 ### 8.4 What cannot be gleaned, and should not be claimed
 
-`media-weaviate` volume contents, the missing `RAINE_ABACUS_PROJ_FOLDER`, Google Drive quota, ZIM integrity, and
-both HDDs' health are all still **unknown**. They stay listed as unknown in §6 rather than estimated.
+`media-weaviate` volume contents, Google Drive quota, ZIM integrity, and both HDDs' health are all still **unknown**. They
+stay listed as unknown in §6 rather than estimated. Two former entries on this list are now closed rather than
+unknown: **`RAINE_ABACUS_PROJ_FOLDER` was found** (digest §I.2), and the `I:` copies are no longer merely unknown —
+`I:\weaviate_v2_archive` is *measurably short* (§6 item 6), which is a finding, not a gap in the record.
 
 
 ## 9. Method note
