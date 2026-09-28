@@ -185,7 +185,7 @@ Ranked by irreplaceability, not size. **Rule: the runtime copy is never the back
 | Tier | Contents | Size (measured) | Copies today |
 |---|---|---|---|
 | **T0 sources** | `enwiki…xml` 97 · `wiki_dumps` 44 · meta-history · ZIM library 461 | ~602 GB | 1 each |
-| **T1 markdown** | `D:\wiki_md` (18.76M files) + `I:` copy | 80.7 GB | 2, both unverified |
+| **T1 markdown** | `D:\wiki_md` (18.76M files) + ~~`I:` copy~~ | 80.7 GB | **1 today, not 2** — measured 2026-09-27: `I:\wiki_md` is an **empty tree** (0 files, only an empty `2017` folder). The runtime corpus is **single-copy**, and its three year-directories (2017/2021/2026) are deliberate snapshots, not duplicates |
 | **T2 Weaviate** | `D:` original + `I:` working copy | 524.6 GB | 2, one machine |
 | **T3 personal** | `I:\HDD_MOVE_TEMP` | **423.3 GB** | **1 — on an SSD, post-migration** |
 | **T4 system** | `C:\EMPIRE` 5.1 · `C:\Empire_Workbench` · `%LOCALAPPDATA%\EMPIRE` · Postgres dump | ~10 GB | restic: 1 snapshot, Workbench only |
@@ -203,11 +203,23 @@ Ranked by irreplaceability, not size. **Rule: the runtime copy is never the back
 | **I:** | keeps Weaviate *working* copy + VHDX + restic repo | already there |
 | **H:** | unchanged (models/apps); candidate for the restic replica | fast SSD |
 
+**Copy-first (Architect, 2026-09-27):** *"i dont want you deleting anything unnecessary. i have an external hdd empty
+that can hold backup data."* So the empty 3.7 TB external drive **removes the reason any of this had to be a move**:
+**back up by copying, verify, and keep every original.** The deletions in §5 and in steps 4–10 of §7 are demoted to
+*optional, last, and only after a verified backup exists* — and none of them is required to make the backup. Nothing
+in this document authorises deleting a source, a snapshot, or a copy; the space-recovery column is now a convenience,
+not a justification.
+
 Two mechanical facts that shape all of this: **`wiki_md` cannot be copied as files** (18.76M × ~4 KB → ~100–170 h per
 copy; pack it first), and both WD portables are likely **SMR** — sustained writes can collapse, so large jobs run
 deliberately, not unattended.
 
+
 ## 5. Recovering working space on C: and D:
+
+**Optional, and last — see the copy-first note in §4.** Nothing here is needed to make a backup, and nothing here
+authorises deleting a source or a snapshot. Freeing space is a convenience; the backup comes first, verified, with the
+originals intact.
 
 | Move | Recovers | Notes |
 |---|---|---|
@@ -237,17 +249,23 @@ Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SS
 
 ## 7. Ordered next actions
 
-1. **Land `I:\HDD_MOVE_TEMP` (423 GB) on the 2627 and verify** — highest urgency anywhere in this document; also frees 423 GB on I: as a side effect.
-2. **Health-check the 2627** (SMART via `smartmontools -d sat`, plus a timed write test) *before* it holds anything irreplaceable.
+**Copy-first (2026-09-27).** Every step below is a **copy or a read**; the delete halves are optional, last, and only
+after that copy is verified. Identify the destination drive **by serial** before writing anything to it, and never
+assume the free letter is the right disk — this document exists partly because a drive letter moved.
+
+1. **Land `I:\HDD_MOVE_TEMP` (423 GB) onto the verified external drive** — still the highest urgency anywhere in this
+   document. **Keeping the original is the point**; freeing 423 GB on I: is a side effect, not a goal.
+2. **Health-check that drive before it holds anything irreplaceable** — SMART via `smartmontools -d sat`, plus a timed
+   write test (both WD portables are likely SMR; identify by serial, e.g. the blank one is `WX32D10DE684`).
 3. ~~**Size and compare `C:\wiki_*`** → take the C: win if they are stale.~~ **DONE 2026-09-27 — no C: win exists.** All three directories are empty (0 files); the step is void. What it *does* free is attention: the C: recovery story is now `docker_data.vhdx` (step 8) and nothing else.
-4. **Move `D:\weaviate_v2_archive` → 2627**, verify, then delete from D: → ~699 GB free on D:.
+4. **Copy `D:\weaviate_v2_archive` → the external drive**, verify — **then, optionally and later,** consider deleting from D: (§5 note: optional and last; the archive is irreplaceable and its three snapshots are the design).
    **Verification caveat (2026-09-27, corrected):** stop Weaviate and let it shut down **cleanly** before copying (so the write-ahead logs checkpoint into the index), and verify by comparing **durable index files** — 1,128 of them today — never by raw file count. A copy taken while the database is open will always differ in `*.wal` and `hnsw.commitlog` files, which is what made the `I:` copy look "short" when it was only unclean (§6 item 6).
-5. **Pack + copy T1 markdown**, 2017 first → 2627 **and** `G:`.
+5. **Pack + copy T1 markdown** (`D:\wiki_md`, 18.76M files) → external drive **and** `G:` — **the top priority after step 1**, because T1 is **single-copy** (§4). Pack it; do not copy 18.76M loose files.
 6. **Extend restic**: add `C:\EMPIRE`, `%LOCALAPPDATA%\EMPIRE`, a `pg_dump`; replicate the repo off `I:`.
 7. **Re-home the cloned repos** to `D:\repos\` (P9 source trees).
 8. **Relocate `docker_data.vhdx`** to D: once D: is free → ~368 GB on C:.
 9. **Archive the T6 legacy tree** to the 2627, after identifying items 1 and 3 above.
-10. **Then** the approved `V:\Cognee` cleanup (it holds nothing but the three wiki datasets).
+10. **Then, and only then**, the `V:\Cognee` cleanup — **optional and last** (it holds nothing but the three wiki datasets), and never before a verified backup exists. Nothing in this list requires deleting a snapshot, a source, or a copy.
 
 ## 8. What to glean before moving anything
 
