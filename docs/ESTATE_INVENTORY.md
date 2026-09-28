@@ -14,7 +14,8 @@ Letters move when hardware is swapped. Serials do not.
 |---|---|---|---|---|---|---|
 | **C** | SKHynix `HFS001TEJ9X115N` (internal NVMe) | SSD | 951.6 | 267.5 | 684.1 | NTFS |
 | **D** | SKHynix `HFS001TEJ9X115N` (internal NVMe) | SSD | 953.9 | **174.7** | 779.1 | NTFS |
-| **E** | WD My Passport **25E1** `WX41AA69RHTD` | **HDD** USB | 1863.0 | 1017.4 | 845.6 | NTFS |
+| **E** | ~~WD My Passport **25E1** `WX41AA69RHTD`~~ → **now WD My Passport 2627 `WX32D10DE684`** | **HDD** USB | 3726 | **3725.6 — blank** | 0 | NTFS |
+| *(detached)* | WD My Passport **25E1** `WX41AA69RHTD` — its letter was taken | **HDD** USB | 1863 | 1017.4 (when mounted) | 845.6 | NTFS |
 | **H** | Samsung T7 Shield `E843119X0SNFS6S` (T7 #2) | SSD USB | 3725.9 | 1291.7 | 2434.2 | exFAT |
 | **I** | Samsung T7 Shield `M471025W0JNFS6S` (T7 #1) | SSD USB | 3725.7 | 1860.1 | 1865.6 | exFAT |
 | **V** | VHDX file *inside* `I:\EMPIRE_VHDX\empire_cognee.vhdx` | — | 2048 | 2044.4 | 3.6 | NTFS |
@@ -22,6 +23,11 @@ Letters move when hardware is swapped. Serials do not.
 | *(detached)* | WD My Passport **2627** `WX32D10DE684` | **HDD** USB | 3726 | **3726 — wiped blank** | 0 | NTFS |
 
 Notes that matter:
+
+- **Letters moved on 2026-09-27 — read paths with care.** The blank 2627 (`WX32D10DE684`) was attached after the
+  25E1 was ejected, and it **took the freed letter `E:`**. So today **`E:` is the 2627 (blank backup target)**, and
+  every `E:\wikipedia`, `E:\enwiki…xml`, `E:\AI_PROJECTS` path in this document now refers to the **detached 25E1**.
+  This is the same class of event as the 2026 drive-letter swap that Rule one exists for.
 
 - **`V:` is not a disk.** It is an NTFS volume inside a VHDX *file* that lives on `I:`. Clearing it frees nothing on
   C: or D:, and frees nothing on I: unless the VHDX is compacted. Mount/detach: `scripts/mount-cognee-vhdx.ps1`
@@ -191,7 +197,7 @@ Ranked by irreplaceability, not size. **Rule: the runtime copy is never the back
 | **T4 system** | `C:\EMPIRE` 5.1 · `C:\Empire_Workbench` · `%LOCALAPPDATA%\EMPIRE` · Postgres dump | ~10 GB | restic: 1 snapshot, Workbench only |
 | **T5 regenerable** | models 2.4 TB, Steam, most ZIMs | — | **do not back up** |
 | **T6 legacy** | Raine/v2 pipeline, AI Factory, IRENE, Desktop projects, tool-factory ZIPs | GBs | archive as-is |
-| **T7 notes** | **three documentation eras, all located:** OneNote (`ONENOTE BACKUP PREOBSIDIAN.md`, 383,846 B / 8,339 lines, **Dec 2024 → 2025**) · Obsidian (497 + 474 notes) · Heptabase (`All-Data.json` 25.3 MB + `Card Library` + `Journal` + `Whiteboard`) — plus Desktop note folders (`DAZE`, `PROJECT HUB`, `HIDDEN`, `TOOL_FACTORY_GUMLOOP*`) | ~1.5 GB | OneNote + Obsidian live **in OneDrive** (sync ≠ backup); the Heptabase export sits on `H:`. See digest §H |
+| **T7 notes** | **three documentation eras, all located:** OneNote (`ONENOTE BACKUP PREOBSIDIAN.md`, 383,846 B / 8,339 lines, **Dec 2024 → 2025**) · Obsidian (497 + 474 notes) · Heptabase (`All-Data.json` 25.3 MB + `Card Library` + `Journal` + `Whiteboard`) — plus Desktop note folders (`DAZE`, `PROJECT HUB`, `HIDDEN`, `TOOL_FACTORY_GUMLOOP*`) | ~1.5 GB | OneNote + Obsidian live **in OneDrive** (sync ≠ backup); the Heptabase export sits on `H:`. **First copy made 2026-09-27** → `E:\EMPIRE_BACKUP_2026-09-27\01_notes_T7\` — 2,036 files / 929.9 MB, **verified identical by relative path + size** (`eve-audit/compare-trees.py`, 0 differences). **Finding:** the live `Seth @ FVCC` notebook holds only `OneNote_RecycleBin` — it is **empty** — so `ONENOTE BACKUP PREOBSIDIAN.md` is the *only* OneNote-era record on this machine; the `.onepkg` sits on the detached 25E1. See digest §H |
 
 **Placement**
 
