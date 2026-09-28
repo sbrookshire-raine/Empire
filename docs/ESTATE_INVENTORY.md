@@ -573,6 +573,34 @@ manifest is the *source* of the operating rules the repo now enforces. The misla
 recorded the folder as 0.2 MB, but it holds a 68.9 KB manifest and a 61.2 KB research report. **Corrected in
 `DOC_MAP.md` on 2026-09-28** — the folder is read-when-relevant, not history.
 
+### 11.6 The music folders — what is actually of value there
+
+Asked in passing and worth pinning down, because the answer is narrow: *"the only thing of value in the music folders
+is stem factory… I created a moises clone and then ran it across my music collection with each instrument track having
+its own 'louder' variant. i also had it build tracks missing a stem for practicing with."*
+
+**Verified.** The item is **Shard of the Division**, and it is not in the cloud at all — it lives at
+`…\OneDrive\Desktop\HIDDEN\Shard_of_the_Division\` (**122,907 files / 16.95 GB**, **already copied in T6**). Its own
+`PROJECT_HISTORY.md` records the arc: an *"audio processing and drum analysis toolkit"* that *"has evolved into a
+comprehensive music practice track generator"*, using **Demucs `htdemucs_ft`** to split songs into four stems and
+building custom practice mixes — with `practice_generator.py` named as *"the flagship tool"*. It began as
+**reverse-engineering Moises**: `scripts/analyze_moises.py` is titled *"Analyze Moises output vs original to understand
+their processing approach"* and measures sample rate, channels, RMS, peak and dynamic range.
+
+**The music folders on `G:` hold its *outputs*, not more projects:**
+
+| On `G:\My Drive\2. DRUM_MIDI_STEM_CENTRAL` | Files | Size | What it is |
+|---|---|---|---|
+| `N20 drumless for jam\` | 43 | 286.7 MB | **`*_mixed.mp3` practice tracks** — the stem-missing versions (*Flowers*, *It's a Heartache*, *Dreams*, *All I Wanna Do*…) |
+| `ONLYDRUMS_PACK_FEB_2026\` | 2,276 | 134.3 MB | MIDI, drums only |
+| `DRUM_TRACKS\` | 4,446 | **13.7 GB** | MIDI + audio drum material |
+| plus `Big bought drum midi pack`, `DRUMHUB PRACTICE HUB UPDATED SHEETS`, `Free IRs`, `Soundfonts`, `PROJECT TOONTRACK TO MP3`, `Padley 1.1`, `Hazard Guy`, `N20 DCB Charts`, `drumapp`, and drum PDFs | — | — | supporting drum/practice material |
+
+**So the music estate has exactly one buildable asset, and it already became an EMPIRE limb:** `stem_factory`
+(`mcp_server/` → `stem-factory-mcp.ts`, Toolbelt category, `skill-stem-factory.md`). Inbox/outbox on this machine
+(`C:\Empire_Workbench\stem_factory\`) are nearly empty — **the library-scale work was done by the original project, not
+by the limb.** Everything else in the music folders is material for using it: drumless tracks, MIDI packs, sheets.
+
 ### 11.5 What is unique here, what is duplicated, and the honest boundary
 
 - **Duplicated (safe):** `project_manifesto_9_7_26` **is** the repo's `docs/expansion_docs/`, and
