@@ -398,6 +398,36 @@ mistakes as training signal, intrinsic over extrinsic reward — stated for lear
 - **§12.2's "least-read, highest-density source" was right, for a reason it did not know**: the density is in the
   *boards and the chats*, not in the 3,004 `contextItems` it credited.
 
+### 12.6 Correction: the CLI is installed now — and the export is not the whole library
+
+§12 opens by saying the CLI *"adds nothing we don't already have, and is not installed on this machine anyway."*
+Both halves are now out of date, and the second one changed the extraction plan.
+
+**Installed and live (measured 2026-09-27).** `C:\Users\m69nr\.heptabase\bin\heptabase.cmd` (a `heptabase` shim sits
+beside it for POSIX shells) is on the **user PATH** (11 entries, value kind preserved as `ExpandString`), reporting
+**`0.6.0`** — inside the `0.6.x` range the `heptabase-cli` skill requires. The desktop app is running with its local
+CLI server, so commands return live JSON: `heptabase card list --limit 3` succeeded, and `heptabase help` lists
+`start · audio · card · course · file · goal · journal · lesson · local-file · note · object · pdf · tag · video ·
+whiteboard`.
+
+**The library is nearly twice the export.** The CLI reports **1,574 cards**; the April 2026 export holds **775** in
+`cardList` / 749 as markdown. The newest 100 cards by `createdTime` span **2026-08-12 → 2026-09-05** and *every one*
+postdates the 2026-04-08 export — five months of material that §12.3–§12.5 could not see, and that no document in this
+repo accounts for. (Boundary: I have not verified whether the CLI's `total` spans every space, so treat "~800 unseen
+cards" as a floor, not a count.)
+
+**What that changes.** For anything after 2026-04-08, the **CLI is the read path** — not a new export: it reads notes,
+journals, tags and properties live, plus PDF page ranges, audio/video transcript ranges, whiteboard structure with
+lint and schematic screenshots, and AI Tutor goals/courses/lessons. The `All-Data.json` export keeps its distinct
+value as the only carrier of that period's *historical structure* (`sections`, `connections`, `tabs`, `mapState`).
+The two are complementary, and the skill that drives the CLI carries a hard rule worth honouring here: **use the CLI
+as the only data-access path** — never read or write Heptabase's own app storage, caches or internal endpoints.
+
+Skill install (this machine): the repo clone lives at `~/.agents/heptabase-cli-skills`, and the skill itself is at
+`~/.agents/skills/heptabase-cli`, `~/.claude/skills/heptabase-cli` and `.cursor/skills/heptabase-cli` in this repo.
+`jq` is **not** installed, so the skill's `jq`-based recipes need `python -m json.tool` (or a `winget install
+jqlang.jq`) until it is.
+
 ## 13. Handoff — how to continue this in a fresh session
 
 This work is deliberately **checkpointed**: everything learned lives in four repo documents, so a new session starts
@@ -417,6 +447,8 @@ from the map instead of re-deriving it. If context is getting long, start a **ne
    30 concept cards / 585 other), and Truthdrift's own March 2026 design card found. Tool:
    `scripts/probe-heptabase-register.py`. **Keep the JSON; never reduce it to markdown.** The two reads it left
    open: the 26 *Predictability Contract* cards, and the `Perplexity reports 2_17_26-4_1` board (45 cards).
+   **Then read §12.6 before continuing from this tier** — the live CLI now reads everything the April 2026 export
+   never held (1,574 cards live vs 775 exported, nothing newer than 2026-04-08 in the JSON).
 2. **The OneNote dump** (`…\RESYNC_2026\2. PAST LIVES\ONENOTE BACKUP PREOBSIDIAN.md`, 8,339 lines) — the pre-2025
    trail and the most likely route to the **October 2024** start.
 3. **The rest of the Raine blueprint** (41 KB) — the *Personality & Tone Engine* spec and the *Autonomous R&D
