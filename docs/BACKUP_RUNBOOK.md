@@ -255,6 +255,10 @@ offsite), a second copy should protect the single-copy tiers first:
    the one thing of value in the music tier (`ESTATE_INVENTORY` §11.5). Copy `1_stems`, `3_focus`, `5_library`,
    `6_instrument_hub`; leave `demucs_raw` (216 GB) unless space allows, since that is the regenerable part. It is
    Drive FS, so this copy **downloads from Google** — allow time, and use Python/robocopy, not `Get-ChildItem`.
+   **Scripted and queued:** `eve-audit/stem-factory-copy.cmd` → `05_stem_factory_T8`, called at the end of
+   `gap-chain.cmd` so it cannot contend with the T1 resume or the gap fill. It copies the four derived stages, logs
+   per-stage robocopy results with delayed expansion, then verifies each stage with `compare-trees.py`. Enable the
+   commented `demucs_raw` line only if the derived set verifies first.
 2. **ZIMs (~1.06 TB across both sets)** — single copy per set, and the Architect's ruling is that these **may not be
    re-downloadable**. This is the largest *essential* item after T3, and it is all large files, so it copies fast
    (~1–2 h for 595 GB) unlike the tiny-file tiers

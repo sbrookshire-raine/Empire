@@ -498,7 +498,7 @@ So the T6 exclusion was **right about the 1,050 GB** and **deliberately left two
 | **`rag_tools` + `search_engines`** (Legion) | 2.6 GB | excluded on purpose; re-installable |
 | **`H:\AI_stuff_backup`** unique parts (`*-Aporia.py`, `.env`) | ~MBs | the rest of that 26.8 GB is a venv |
 | `H:\gutenberg_books_txt` | 26.2 GB | public domain, re-downloadable |
-| **`G:\My Drive\3.MUSIC RELATED\Music\stem_factory`** | **519.30 GB** (derived **303 GB**; `demucs_raw` 216.32 GB optional) | **cloud copy only.** The Architect's one named value in the music tier: his Moises clone run across the whole collection — six stages plus raw model output (§11.5). The *tool* is in T6; **its outputs are in no backup tier.** Largest single remaining gap |
+| **`G:\My Drive\3.MUSIC RELATED\Music\stem_factory`** | **519.30 GB** (derived **303 GB**; `demucs_raw` 216.32 GB optional) | **cloud copy only.** The Architect's one named value in the music tier: his Moises clone run across the whole collection — six stages plus raw model output (§11.5). The *tool* is in T6; **its outputs are in no backup tier.** **Queued as `05_stem_factory_T8`** at the end of the gap chain (`eve-audit/stem-factory-copy.cmd`, called from `gap-chain.cmd` after `gap-fill`), copying the four derived stages and leaving `demucs_raw` off by default |
 | **T1 `2021` + `2026` archives** | — | **in progress since 14:07** — `wiki_md_2017.tar` rebuilt (24.22 GiB), `2021` (0.95 GiB) and `2026` now running |
 | **T2 Weaviate**, **T0 (25E1 ZIMs + XML)** | 563 GB + 558 GB | T2 already on two drives; T0 needs the drive attached |
 
