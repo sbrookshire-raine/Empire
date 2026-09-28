@@ -573,7 +573,7 @@ manifest is the *source* of the operating rules the repo now enforces. The misla
 recorded the folder as 0.2 MB, but it holds a 68.9 KB manifest and a 61.2 KB research report. **Corrected in
 `DOC_MAP.md` on 2026-09-28** — the folder is read-when-relevant, not history.
 
-### 11.6 The music folders — what is actually of value there
+### 11.5 The music folders — what is actually of value there
 
 Asked in passing and worth pinning down, because the answer is narrow: *"the only thing of value in the music folders
 is stem factory… I created a moises clone and then ran it across my music collection with each instrument track having
@@ -601,7 +601,7 @@ their processing approach"* and measures sample rate, channels, RMS, peak and dy
 (`C:\Empire_Workbench\stem_factory\`) are nearly empty — **the library-scale work was done by the original project, not
 by the limb.** Everything else in the music folders is material for using it: drumless tracks, MIDI packs, sheets.
 
-### 11.5 What is unique here, what is duplicated, and the honest boundary
+### 11.6 What is unique here, what is duplicated, and the honest boundary
 
 - **Duplicated (safe):** `project_manifesto_9_7_26` **is** the repo's `docs/expansion_docs/`, and
   `2. EMPIRE_MANIFESTO.md` is the repo's root `EMPIRE_MANIFESTO.md`. **Both exist in two places, one of them cloud.**
