@@ -237,5 +237,62 @@ So Raine Abacus was a **dockerised agent system with a packaged resource pipelin
 manual** — the closest structural ancestor of EMPIRE itself. `MANUAL.md` and `agent_resource_pipeline/` are the two
 things to read first.
 
+## J. The origin: "Youtube on Rails" → the refiltering program → IRENE (2026-09-27)
+
+This is the earliest idea in the story, and it reframes everything that followed as the pursuit of one problem.
+
+**The original ambition: "Youtube on Rails."** An arcade **on-rails shooter**, but the rails were *YouTubers* —
+find creators, then run a **co-op as a class**, so students interacted and learned rather than passively watched. When
+that proved too ambitious, the idea narrowed rather than died.
+
+**The narrowed version — a re-ranking program.** Take YouTube search results and re-order them so that creators with
+**high reviews but low view counts** rose to the top. The stack you described: **SQLite** as the store, **NLP semantic
+lists**, **junk filters**, and **YouTube's API**.
+
+**What is verified on disk:**
+
+- **`H:\Inception_of_Dreams\01_IRENE\src\youtube_integration.py`** — 3,731 B, 92 lines, dated **2024-12-12/13**
+  (with a copy at `src\api\youtube_integration.py`). It is a class **`YouTubeComparison`** built on
+  `build('youtube', 'v3', developerKey=api_key)`: it searches with `order='viewCount'`, then enriches every result
+  with `videos().list(part='statistics,contentDetails')`, converts `viewCount` to an integer *"for proper sorting"*,
+  and keeps a formatted copy for display.
+- The IRENE venv carries the matching Google discovery docs — `youtube.v3.json`, `youtubeAnalytics.v1/v2`,
+  `youtubereporting.v1` — confirming the YouTube Data API was the data source.
+
+**Honest boundary:** the file above is the *search-and-compare* layer. The **re-ranking logic itself** — the
+review-vs-viewcount weighting, the junk filters, the SQLite schema, the semantic lists — is **not in it**, so it lives
+in other IRENE modules or in the later Raine-era work. `rAIne_project\youtube_mcp_processor.py` exists in the staged
+repos, which suggests the YouTube thread was **carried from IRENE into Raine** rather than dropped. Locating the
+actual re-ranking code is the next step, and it is worth doing: it is the first implementation of the exact problem
+EMPIRE still argues about.
+
+### J.1 Why this matters more than it looks
+
+**"High reviews, low view count" is a quality-over-popularity ranking signal** — the same argument as this estate's
+other hard ranking questions:
+
+- the **rerank decision** (P5) — is a cross-encoder worth it, or is lexical ordering enough?
+- the wiki retrieval *`usable`/confidence* logic, which exists so Eve refuses rather than invents
+- the drift bench's **`parametric_distractor`** tag — which is also a "popularity beats truth" failure, in the
+  opposite direction: the *popular* (parametric) answer wins over the *correct* (archived) one
+
+So the through-line from 2024 is not "student tools" — it is **rank the trustworthy thing above the popular thing**,
+first for YouTube creators with students as the audience, now for retrieved memory with hallucination as the risk.
+Naming that lineage is useful because it explains why the retrieval quality work keeps resurfacing as the priority.
+
+### J.2 Placement in the timeline
+
+| Date | Evidence | Idea |
+|---|---|---|
+| *(pre-2024-11)* | your recollection; **"Youtube on Rails" not found in the Quick Notes dump by that name** — likely in the live `Seth @ FVCC` notebook | on-rails coop class built from YouTubers |
+| **2024-12-12** | `01_IRENE\src\youtube_integration.py` + Google API docs in the venv | **the refiltering program — the success in IRENE** |
+| 2026 (Raine era) | `rAIne_project\youtube_mcp_processor.py` | the YouTube thread carried forward |
+| 2026 → | EMPIRE retrieval, rerank (P5), drift bench | the same ranking problem, inside memory |
+
+**"Youtube on Rails" remains unlocated by name.** The Quick Notes export has no hit for it, so the two places left are
+the **live OneNote notebook** (`…\Documents\OneNote Notebooks\Seth @ FVCC\`) and the Heptabase cards — both are
+searchable, and both are already in the T7 notes tier for backup.
+
+
 
 
