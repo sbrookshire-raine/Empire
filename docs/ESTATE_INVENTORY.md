@@ -223,11 +223,11 @@ originals intact.
 
 | Move | Recovers | Notes |
 |---|---|---|
-| **`D:\weaviate_v2_archive` (524.6 GB) → 2627** | **D: 174.7 → ~699 GB free** | Weaviate is archival; Eve's runtime reads markdown. Verify the copy, then delete from D: |
+| **`D:\weaviate_v2_archive` (563 GB) → external drive** | D: 174.7 → ~699 GB free **only if you later choose to delete** | **Copy and verify first** (durable index files, after a clean Weaviate shutdown). The archive is irreplaceable and its three snapshots are by design — deletion is optional and last, never a prerequisite |
 | `D:\wiki_dumps` (44.2) + `D:\wiki_runs` (27.4) → 2627 | D: → ~770 GB free | optional; both are cold |
 | **`C:\wiki_md` + `C:\wiki_runs` + `C:\wiki_dumps`** (created 2026-04-07) | **nothing — measured empty 2026-09-27** | ~~C: up to ~150 GB if they are stale duplicates~~ **CORRECTED:** all three hold **0 files / 0 GB**, so there is no C: win here and nothing left to compare. The estimate above came from dates alone — the first row in this document disproved by looking |
 | **`docker_data.vhdx` (101.2 GB) → D:** | C: → ~368 GB free | Docker Desktop → Settings → Resources → Advanced → *Disk image location*; stop Docker first; do it *after* D: is freed |
-| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | **RESOLVED 2026-09-27:** `C:` is live (13 top-level entries, written 2026-09-26); `D:\Empire_Workbench` is a **2-entry stub** from 2026-09-01. `D:`'s copy can go once nothing references it |
+| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | **RESOLVED 2026-09-27:** `C:` is live (13 top-level entries, written 2026-09-26); `D:\Empire_Workbench` is a **2-entry stub** from 2026-09-01. The stub can go later **if you choose** — optional, and not needed for any backup |
 
 Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SSD latency.
 
