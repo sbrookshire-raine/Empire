@@ -136,9 +136,21 @@ Measured sizes, in GB. "Essential" = irreplaceable or single-copy; "Optional" = 
 | T1 | `wiki_md` packed, uncompressed | **~85** *(24.8 done: 2017)* | **essential** (partly re-derivable) |
 | | **Subtotal — irreplaceable set** | **≈ 640 GB** | |
 | T2 | Weaviate archive, 3 snapshots | 563.3 | optional — already on `D:` **and** `I:` |
-| T0 | 16 ZIMs 461.4 + enwiki XML 97.1 | 558.5 | optional — re-downloadable |
-| | **TOTAL, everything worth keeping** | **≈ 1.76 TB** | |
+| T0 | ZIMs **two sets**: 49 on `H:` 595.4 + 16 on the 25E1 461.4; plus enwiki XML (97.1 Oct-2024, 26.2 2026, 19.6 2021) | **~1,200** | optional — re-downloadable |
+| | **TOTAL, everything worth keeping** | **≈ 2.4 TB** | |
 | T5 | models 2.4 TB, Steam, `EZDrummer`/`Superior` 481, Speaches cache | ~2.9 TB | **never copied** — regenerable |
+
+**Files ≥ 10 GB (measured 2026-09-28, `eve-audit/find-large-files.py` + `large-targeted.py`):** **50** among 2.19M
+files stat-ed, plus one on the detached 25E1 = **51 known**; 151 ≥ 4 GB, 245 ≥ 2 GB. The largest: ZIMs (249.5, 109.9,
+80.5, 76.8 GB), `docker_data.vhdx` 108.7 GB, Weaviate LSM segments (53.0 → 22.6 GB, ~10 of them),
+`title-index.sqlite` **32.7 GB**, **our own `wiki_md_2017.tar` 24.8 GB**, the wiki dumps (97.1 / 26.2 / 19.6 / 12.8 GB),
+GGUF models (47.4, 42.5, 23–26 GB each — T5, not copied), Steam paks (31.6, 26.3 GB).
+
+**If a destination caps a single file** — 10 GB is a common cloud limit, 4 GB is FAT32 — then **the wiki dumps, the
+big ZIMs, ~10 Weaviate segments, the title index and our own T1 archive all exceed it.** Remedies: build T1 as
+**per-batch archives** instead of per-year (a 50,000-file batch is ~1–2 GB), pipe a tar through `split -b 5G`, or use
+7z volumes. Plan for this *before* choosing a destination, not after. NTFS and exFAT have no practical per-file cap.
+
 
 **What that means for capacity:**
 
