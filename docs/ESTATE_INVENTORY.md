@@ -215,6 +215,26 @@ that can hold backup data."* So the empty 3.7 TB external drive **removes the re
 in this document authorises deleting a source, a snapshot, or a copy; the space-recovery column is now a convenience,
 not a justification.
 
+**Backup progress (2026-09-27, copy-first, destination `E:` = the 2627 `WX32D10DE684`):**
+
+| # | Tier | Destination | Copied | Verified |
+|---|---|---|---|---|
+| 1 | **T7 notes** | `01_notes_T7\` | 2,036 files / 929.9 MB | **identical** (path + size) |
+| 2 | **T4 system** — `C:\Empire_Workbench` + `%LOCALAPPDATA%\EMPIRE` | `02_system_T4\` | 14,653 files / 2.69 GB and 270 files / 10.9 GB | **identical** (path + size) |
+| 3 | **T3 personal** — `I:\HDD_MOVE_TEMP` | `03_personal_T3\` | **running** — scheduled task `EMPIRE_T3_COPY`, progress in `_logs\T3_progress.txt` | pending |
+
+Method notes worth keeping: copy with `robocopy /E /COPY:DAT /R:2 /W:5`; verify **independently** with
+`eve-audit/compare-trees.py` (relative path + size, exit 1 on any mismatch) rather than trusting robocopy's own
+counts; **long jobs run as a Windows scheduled task**, because a child process launched from an agent shell is killed
+when that shell's job closes (learned the hard way on the drive self-test, which needed a second elevated call to
+read its log). Manifests live in `_manifests\`.
+
+**Finding — `%LOCALAPPDATA%\EMPIRE` is mostly regenerable.** Of its 10.9 GB, **`models` 8,584.7 MB + `bin` 2,277 MB =
+10.86 GB** is re-downloadable model and binary cache. The *unique* state is ~30 MB: `chat-history` (184 files),
+`eve-trace.jsonl`, `wiki-error-book.jsonl`, `gpu-lease.json`, `eve-toolbelt.json`, the ollama profiles — the answer to
+§8.3's "what Eve was actually asked and answered". Also present: **`restic-pass.txt`, a credential** — back it up,
+never ingest it.
+
 Two mechanical facts that shape all of this: **`wiki_md` cannot be copied as files** (18.76M × ~4 KB → ~100–170 h per
 copy; pack it first), and both WD portables are likely **SMR** — sustained writes can collapse, so large jobs run
 deliberately, not unattended.
