@@ -191,7 +191,7 @@ Ranked by irreplaceability, not size. **Rule: the runtime copy is never the back
 | **T4 system** | `C:\EMPIRE` 5.1 · `C:\Empire_Workbench` · `%LOCALAPPDATA%\EMPIRE` · Postgres dump | ~10 GB | restic: 1 snapshot, Workbench only |
 | **T5 regenerable** | models 2.4 TB, Steam, most ZIMs | — | **do not back up** |
 | **T6 legacy** | Raine/v2 pipeline, AI Factory, IRENE, Desktop projects, tool-factory ZIPs | GBs | archive as-is |
-| **T7 notes** | Obsidian vaults (497 + 474 notes) + Desktop note folders (`DAZE`, `PROJECT HUB`, `HIDDEN`, `TOOL_FACTORY_GUMLOOP*`, `FROM EXHDD` ×200 notes back to 2020) | GBs | in OneDrive → a cloud copy exists, but **that is sync, not backup** |
+| **T7 notes** | **three documentation eras, all located:** OneNote (`ONENOTE BACKUP PREOBSIDIAN.md`, 383,846 B / 8,339 lines, **Dec 2024 → 2025**) · Obsidian (497 + 474 notes) · Heptabase (`All-Data.json` 25.3 MB + `Card Library` + `Journal` + `Whiteboard`) — plus Desktop note folders (`DAZE`, `PROJECT HUB`, `HIDDEN`, `TOOL_FACTORY_GUMLOOP*`) | ~1.5 GB | OneNote + Obsidian live **in OneDrive** (sync ≠ backup); the Heptabase export sits on `H:`. See digest §H |
 
 **Placement**
 
