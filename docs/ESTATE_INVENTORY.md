@@ -258,14 +258,16 @@ never ingest it.
 | Desktop projects | ~51 GB — `HIDDEN` 17.4 · `PROJECT HUB` 17.9 · `FROM EXHDD` 12.9 · `INSPIRATION COVE` 1.3 · rest < 0.7 each | all unique |
 | **curated T6** | | **≈ 53 GB, not ~1.2 TB** — a 95% reduction with no unique data dropped |
 
-**Finding that raises T1's value:** `H:\AI_ARCHIVE\v2_markdown_pipeline\DOWNLOAD_WIKI_2017.txt` records that the
-**2017 dump is gone from `dumps.wikimedia.org`** (`/enwiki/20170501/` → **404**; old trees were rotated off the index),
-that acquisition means **archival hunting** (Meta-Wiki community torrents, Internet Archive, Academic Torrents — oldest
-visible ≈ 2020-02), and that the format contract is `pages-articles-multistream.xml.bz2` with a `snapshot_id` and
-**SHA-256 manifests** via `build_archive_manifest.py`. So **`wiki_md/2017` is *not* cheaply re-derivable** (2021's
-source *is* on disk, 18.21 GB) — which is the argument for **packing and copying T1** rather than treating it as
-regenerable. The same file warns that concurrent heavy transfers collapse throughput — the identical lesson to the
-SMR contention that shaped the copy order here.
+**CORRECTION (same session, better measurement): the 2017 source *is* on disk.** `I:\EMPIRE_DATA\wiki_xml_20170301\`
+holds **`enwiki-20170301-pages-articles.xml.bz2` (12.81 GB)** plus `convert_2017.log` / `.err` / `.pid` from 2026-07-22
+— i.e. the dump *and* the conversion run that produced `wiki_md/2017`. So **`wiki_md/2017` is re-derivable locally
+after all** (as is 2021, whose dump is on `D:\wiki_dumps`), and the argument above for packing T1 out of
+irreplaceability does not hold. The statement that "2017 is gone from dumps.wikimedia.org and not cheaply
+re-derivable" was true about *Wikimedia's* index and false about *this machine* — the third time in this session that
+measuring beat a confident inference. What the finding really does is **move the priority to `I:\EMPIRE_DATA` itself**:
+13 GB of 2017 dump + **31.2 GB of `wiki-reports`** (the title registry / priority reports used at runtime) are sitting
+**unprotected on the fault drive**. Still worth packing T1 (~3 h, uncompressed) as insurance — but as convenience, not
+as rescue.
 
 Two mechanical facts that shape all of this: **`wiki_md` cannot be copied as files** (18.76M × ~4 KB → ~100–170 h per
 copy; pack it first), and both WD portables are likely **SMR** — sustained writes can collapse, so large jobs run
