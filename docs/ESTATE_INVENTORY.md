@@ -234,13 +234,21 @@ the irreplaceable year is ~2 hours. For reference: `2017` 535 batches · `2021` 
 |---|---|---|---|---|
 | 1 | **T7 notes** | `01_notes_T7\` | 2,036 files / 929.9 MB | **identical** (path + size) |
 | 2 | **T4 system** — `C:\Empire_Workbench` + `%LOCALAPPDATA%\EMPIRE` | `02_system_T4\` | 14,653 files / 2.69 GB and 270 files / 10.9 GB | **identical** (path + size) |
-| 3 | **T3 personal** — `I:\HDD_MOVE_TEMP` | `03_personal_T3\` | **running** — scheduled task `EMPIRE_T3_COPY`, progress in `_logs\T3_progress.txt` | pending |
+| 3 | **T3 personal** — `I:\HDD_MOVE_TEMP` | `03_personal_T3\` | **439.4 GB** — finished 22:27:57 | verification running at wrap-up |
+| 4 | **T6 legacy** (curated: v2 pipeline code+docs, Legion docs, IRENE, AI_Factory, all Desktop projects) | `07_legacy_T6\` | finished 22:46:57 | v2 pipeline compared: **320 files, 0 differences** |
+| 5 | **Docker-era volumes** — 13 volumes (Cognee `pgdata` 8.0 GB, open-webui ×3, postgres ×3, n8n ×3, cursor_hol) | `08_volumes\` | **26 files / 12.39 GB** | **identical** (path + size) |
+| 6 | **I: leftovers** — `EMPIRE_DATA` (incl. the 2017 dump), `EMPIRE_VHDX`, `EMPIRE_BACKUP` (restic), `User_Files` | `09_i_drive_leftovers\` | **running** — `EMPIRE_I_LEFTOVERS` | pending |
 
-Method notes worth keeping: copy with `robocopy /E /COPY:DAT /R:2 /W:5`; verify **independently** with
-`scripts/compare-trees.py` (relative path + size, exit 1 on any mismatch) rather than trusting robocopy's own
-counts; **long jobs run as a Windows scheduled task**, because a child process launched from an agent shell is killed
-when that shell's job closes (learned the hard way on the drive self-test, which needed a second elevated call to
-read its log). Manifests live in `_manifests\`.
+**Operational findings, 2026-09-27 — earned the hard way, worth not rediscovering:**
+
+| Finding | Consequence |
+|---|---|
+| **`docker run` fails inside a Windows scheduled task** | Docker Desktop needs an interactive session. The Docker-volume job died silently there (task went `Ready`, no container, no log line, no `CHAIN DONE`). **Run Docker jobs from an interactive shell**; scheduled tasks are fine for plain `robocopy`. |
+| **USB drives are not bind-mountable into Docker** | `-v E:\path:/dst` → `invalid reference format` (the drive-letter colon), and with forward slashes it mounts but **writes fail** (`Wrote only 6144 of 10240 bytes`) because the WSL2 VM has no automount for removable drives. **Fix that worked: tar to `C:` staging, then `robocopy` to the backup drive** (13 volumes → 11.53 GB of tars → verified identical). |
+| **A long job launched as a child of an agent shell is killed when that shell's job closes** | The drive self-test lost its log this way and needed a second elevated call. Long jobs go through `schtasks` (`EMPIRE_T3_COPY`, `EMPIRE_T6_COPY`, `EMPIRE_I_LEFTOVERS` pattern), and they survive the session. |
+| **`smartctl` installs without elevation but *reads* need it** | `start-process -Verb RunAs` for reads; `-d sat` for the WD bridge, `-d sntasmedia` for the T7s' USB-NVMe bridges. |
+| **`robocopy /L` is the cheap way to size a filtered copy** | It prints the exact file/byte totals that *would* copy without writing anything — used to size T6 before committing to it. |
+| **Do not run two jobs at one USB disk** | SMR portables thrash. All copy jobs here were serialised through one chain for that reason. |
 
 **Finding — `%LOCALAPPDATA%\EMPIRE` is mostly regenerable.** Of its 10.9 GB, **`models` 8,584.7 MB + `bin` 2,277 MB =
 10.86 GB** is re-downloadable model and binary cache. The *unique* state is ~30 MB: `chat-history` (184 files),
