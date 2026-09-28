@@ -154,8 +154,17 @@ was counted.
 
 - **`RAINE_ABACUS_PROJ_FOLDER`** — its container mounted
   `C:\Users\m69nr\OneDrive\Desktop\RAINE_ABACUS_PROJ_FOLDER\runtime\weaviate` in May 2026; that path no longer
-  exists. There is a Desktop folder `R_UNIVERSAL SYNTHESIS ARCH` (2026-08-30) — **hypothesis only, unverified**.
+  exists. There is a Desktop folder `R_UNIVERSAL SYNTHESIS ARCH` (2026-08-30) — **hypothesis only, unverified.**
+  **RESOLVED 2026-09-28 by direct check:** it lives at `…\OneDrive\Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER\` and
+  is **present — 70,861 files / 3.48 GB**. (The digest's §I.2 finding was right; this line had simply never been
+  updated.)
 - **`media-weaviate`** used docker volume `cursor_hol_weaviate_data` — **identified 2026-09-27:** compose project `cursor_hol`, and the volume is 994.5 kB (§6 item 3).
+
+**Verified absent, 2026-09-28:** **`C:\Users\sbrookshire\` does not exist** — the only profile on this machine is
+`m69nr` (+ Default/Public). So **the "old machine" is not reachable from here at all**: the `AI_PROJECTS` material that
+did migrate is all there is. Likewise **`D:\repos` and `I:\repos` do not exist**, so the plan to re-home the cloned
+repos has not happened — and the repos that *are* staged sit in **`D:\Empire_Workbench\_github_staging\`**.
+**`E:\wikipedia` is absent** because `E:` is now the 2627; the 16 ZIMs are on the detached 25E1.
 - **`E:\wikipedia\*.zim`** — 16 Kiwix ZIM archives, 461 GB. Intactness unverified (ZIM carries internal checksums).
 
 ## 3. How the legacy assets can be converted or placed to serve EMPIRE
@@ -310,7 +319,7 @@ originals intact.
 | `D:\wiki_dumps` (44.2) + `D:\wiki_runs` (27.4) → 2627 | D: → ~770 GB free | optional; both are cold |
 | **`C:\wiki_md` + `C:\wiki_runs` + `C:\wiki_dumps`** (created 2026-04-07) | **nothing — measured empty 2026-09-27** | ~~C: up to ~150 GB if they are stale duplicates~~ **CORRECTED:** all three hold **0 files / 0 GB**, so there is no C: win here and nothing left to compare. The estimate above came from dates alone — the first row in this document disproved by looking |
 | **`docker_data.vhdx` (101.2 GB) → D:** | C: → ~368 GB free | Docker Desktop → Settings → Resources → Advanced → *Disk image location*; stop Docker first; do it *after* D: is freed |
-| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | **RESOLVED 2026-09-27:** `C:` is live (13 top-level entries, written 2026-09-26); `D:\Empire_Workbench` is a **2-entry stub** from 2026-09-01. The stub can go later **if you choose** — optional, and not needed for any backup |
+| Reconcile `C:\Empire_Workbench` vs `D:\Empire_Workbench` | small | **RESOLVED 2026-09-27, then CORRECTED 2026-09-28.** The first reading called `D:` a "2-entry stub" — that counted *top-level* entries only. Measured properly: **`C:` is 14,653 files / 2.82 GB** (the live vault) and **`D:` is 11,313 files / 1.27 GB** — not a stub at all: it holds **`_github_staging\`** (the staged GitHub repos, the P9 source trees) plus `04_Infrastructure`. **Neither copy is in the backup yet** — T4 copied `C:` only. The stub can go later **if you choose** — optional, and not needed for any backup |
 
 Keep on internal D:: `wiki_md` (81 GB) — it is the runtime corpus and wants SSD latency.
 
@@ -432,5 +441,67 @@ a live Weaviate aggregate query, and a timed read benchmark. Where something is 
 above rather than estimated. Two earlier errors are recorded deliberately, because both would have destroyed value:
 the dormant Cognee store was nearly discarded as "re-derivable public data" before its contents were read, and the
 `E:` letter was assumed to name the same disk across a hardware swap.
+
+## 10. Deep verification, 2026-09-28 — what IS and IS NOT present
+
+The Architect's instruction: *"go deep into any structures that werent looked at before and verify what is and is not
+there."* Method: `eve-audit/deep-probe.py` (read-only, 41 s) plus targeted follow-ups. Everything below was opened,
+not inferred.
+
+### 10.1 Verified present, and what each actually is
+
+| Tree | Measured | What it is |
+|---|---|---|
+| **`I:\User_Files`** | **781,163 files / 1.67 GB** | **Identified at last: a music archive.** 777,941 `.mid`, 2,171 `.mp3`, 263 `.bfd2pal` (BFD palettes), plus `.g24`/`.dfh`/`.kt3` (Drumagog, Kontakt). Dirs: `800000_Drum_Percussion_MIDI_Archive[6_19_15]`, `Presets`, `PresetsEZX`, `User_Midi`, `User_Presets`. **Not project data — drum/MIDI material**, and a *tiny-file* tier, so it needs `tar` (the bsdtar crash on it is now explained by shape, not corruption) |
+| **`H:\AI_stuff_backup`** | 259,754 files / 26.77 GB | A Python environment/dist backup — 67,830 `.py`, 62,832 `.pyc`, 58,061 `.xml`, 26,262 `.h` (a `site-packages` shape) — **plus the unique part: `setup_environment-Aporia.py`, `full_stack_setup-Aporia.py`, and a `.env`**. The `-Aporia` names tie it to the Aporia lineage; **`.env` is a secrets file** and must never be ingested |
+| **`H:\gutenberg_books_txt`** | **67,588 `.txt` + index** / 26.21 GB | A clean **Project Gutenberg corpus**, `NNNNN-Title.txt`, with `.gutenberg_index.json`. Public domain; likely a second copy of the corpus in `E:\gutenberg_books_txt` |
+| **`H:\colibri`** 252 files / 0.01 GB · **`H:\llama.cpp`** 1,141 / 0.14 GB · **`H:\User_Files`** **0 files** | — | trivial / empty |
+| **`C:\Users\m69nr\.ollama\models\blobs`** | **61 files / 118.63 GB** | the ollama model store — **118.6 GB, not the ~38 GB implied by the large-file list** (that list only caught its biggest blobs). Regenerable (T5) |
+| **`Desktop\PROJECT HUB\RAINE_ABACUS_PROJ_FOLDER`** | **70,861 files / 3.48 GB** | the Abacus project, present as the digest §I.2 said |
+| **`C:\Empire_Workbench`** | 14,653 / 2.82 GB | the live vault (T4 copy made) |
+| **`D:\Empire_Workbench`** | **11,313 / 1.27 GB** | **not a stub** — holds **`_github_staging\`** (the P9 repo source trees) + `04_Infrastructure`. **Not backed up** |
+| **`I:\EMPIRE_BACKUP\restic`** | 74 files / 1.18 GB | the only restic repository; its `restore-test\` (14,653 files / 2.82 GB) is a restored copy of `C:\Empire_Workbench` — so **that backup covers the Workbench only** |
+| **`C:\ProgramData`** | — | DockerDesktop data, Toontrack, and the music-gear vendors (Akai, Roland Cloud, inMusic, Drum Workshop), NVIDIA, Oculus |
+| **`V:\Cognee`** | just `databases\` | the Cognee store, as expected |
+| **`C:\EMPIRE\backend\pocketbase\pb_data`** | 3 files / 2 MB | the PocketBase database is tiny |
+
+### 10.2 The Legion's never-opened subdirectories (measured)
+
+`AI_Archive_Legion` = 1,131 GB. Its 1,054 GB headline hides this split:
+
+| Subdir | Files | Size | Verdict |
+|---|---|---|---|
+| `knowledge_bases` | 6,328 | **771.6 GB** | 49 ZIMs (595 GB) + StackExchange/devdocs/other — **being copied now** |
+| `models` | 384 | 237.2 GB | T5, regenerable |
+| `embeddings_models` | 818 | 54.8 GB | T5 |
+| `datasets` | 191 | 23.8 GB | **HumanEval, OpenOrca** — HF datasets, re-downloadable |
+| `github_repos` | **215,019** | 18.9 GB | 38 repo clones (anything-llm, ComfyUI, applio, alltalk-tts, amical…) — re-clonable |
+| `python_packages` | 904 | 17.1 GB | T5 |
+| `binaries` | 8 | 4.9 GB | T5 |
+| **`rag_tools`** | **42,484** | **2.4 GB** | chroma, docling, faiss, graphrag, haystack, lancedb, langchain, llama_index, meilisearch, milvus — a RAG tooling collection. **Excluded from the T6 copy** |
+| `drivers` · `runtimes` · `docker_images` | 3 · 5 · 1 | 0.8 · 0.2 · 0 GB | T5 |
+| **`search_engines`** | 4 | 0.16 GB | **meilisearch.exe (132 MB), qdrant, typesense, zincsearch** — a local search kit. **Excluded from T6** |
+| **`prompts`** · **`documentation`** · `scripts` | 5 · 4 · 62 | ~0 | `phase1_architect.md`, `phase2_engineer.md`, `PROMPT_LIBRARY.md`, `prompts.json`; `AI_DEVELOPER_TOOLKIT.md`, `SPECIALIST_MODELS.md`. **These WERE copied** (T6 included root + these dirs) |
+| `500-AI-Agents-Projects` | 35 | ~0 | list only |
+
+So the T6 exclusion was **right about the 1,050 GB** and **deliberately left two small-but-real collections behind**:
+`rag_tools` (2.4 GB) and `search_engines` (0.16 GB) — both re-installable, but now named rather than assumed.
+
+### 10.3 What is still in NO backup tier (the honest gap list)
+
+| Item | Size | Why it matters |
+|---|---|---|
+| **`D:\Empire_Workbench`** (`_github_staging` — the P9 repo trees) | 1.27 GB | unique working trees; T4 copied only `C:` |
+| **the two later Heptabase exports** (`Downloads`, 1,009 + 1,290 cards) | ~1.5 GB | discovered 2026-09-28; newer than the April export |
+| **`I:\User_Files`** (MIDI/drum archive) | 1.67 GB | music material, single copy, tiny-file shape |
+| **`rag_tools` + `search_engines`** (Legion) | 2.6 GB | excluded on purpose; re-installable |
+| **`H:\AI_stuff_backup`** unique parts (`*-Aporia.py`, `.env`) | ~MBs | the rest of that 26.8 GB is a venv |
+| `H:\gutenberg_books_txt` | 26.2 GB | public domain, re-downloadable |
+| **T1 `2021` + `2026` archives** | — | the resume job is queued |
+| **T2 Weaviate**, **T0 (25E1 ZIMs + XML)** | 563 GB + 558 GB | T2 already on two drives; T0 needs the drive attached |
+
+**Unit caution for future readings:** `robocopy` reports **GiB**, my Python probes report **decimal GB** — the ratio is
+1.0737. That difference (718.587 vs 771.58 for the same 6,328 files) is not a discrepancy and not missing files; it
+was checked.
 
 
