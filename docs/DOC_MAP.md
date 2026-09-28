@@ -36,6 +36,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | **Attribution** (credits by origin, not a licence gate) | [ATTRIBUTION.md](ATTRIBUTION.md) |
 | **Library access points** (reference material Eve reaches by name; registry `config/library.json`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) §7 |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
+| **Backup: what exists, how to copy it, how much space** | [ESTATE_INVENTORY.md](ESTATE_INVENTORY.md), [BACKUP_RUNBOOK.md](BACKUP_RUNBOOK.md), [ODYSSEY.md](ODYSSEY.md) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
 
 If a fact appears in more than one of these, **AGENTS.md wins for commands**, this map wins
