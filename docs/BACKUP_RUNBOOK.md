@@ -8,8 +8,8 @@ in what order, and how much room it takes*. Sizes are measured where marked, pro
 
 | Question | Answer |
 |---|---|
-| **Space for everything worth keeping** | **≈ 1.76 TB** |
-| Space for the irreplaceable set only *(no Weaviate mirror, no re-downloadable sources)* | **≈ 640 GB** |
+| **Space for everything worth keeping** | **≈ 2.4 TB** |
+| Space for the irreplaceable set only *(no Weaviate mirror)* | **≈ 1.7 TB** — **the ZIMs are 1.06 TB of it** |
 | Space used by the first pass so far | 579.8 GB |
 | Largest single tier | **T3 personal — 423 GB** |
 | Fits on one 3.7 TB drive? | Yes; a full backup leaves ~1.9 TB free |
@@ -33,9 +33,10 @@ same 4 GB in *800,000* files takes hours — that single fact drives every metho
 | **T2 Weaviate** *(optional)* | `D:\weaviate_v2_archive` | **563 GB** | `robocopy /E` after a **clean Weaviate shutdown** | — |
 | **T0 sources** *(optional)* | `E:\wikipedia` (16 ZIMs), `E:\enwiki-20241001…xml` | **558 GB** | `robocopy /E` | — |
 
-**Never copied (tier T5, regenerable):** the 2.4 TB model library on `H:`, `SteamLibrary`, `EZDrummer`/`Superior`
-sample libraries (450 + 31 GB, re-installable with the Toontrack licence), `%LOCALAPPDATA%\EMPIRE\models`, and the
-ZIM library *if* you accept re-downloading 461 GB.
+**Never copied (tier T5, regenerable — confirmed by the Architect 2026-09-28):** the **Toontrack libraries
+(`I:\EZDrummer` 31 GB + `I:\Superior` 450 GB, plus the `H:\Toontracks` copies) can be re-downloaded from the vendor**;
+likewise the 2.4 TB model library on `H:`, `SteamLibrary`, `%LOCALAPPDATA%\EMPIRE\models`, `~/.ollama/models`, and the
+26.4 GB `.partial` download.
 
 ## 3. Ground rules (each of these was learned by breaking it)
 
@@ -134,11 +135,12 @@ Measured sizes, in GB. "Essential" = irreplaceable or single-copy; "Optional" = 
 | T4b | 13 Docker volumes (Cognee `pgdata`, chat history, DBs) | 12.4 | **essential** |
 | T9 | I: leftovers (`EMPIRE_DATA` incl. 2017 dump, VHDX, restic) | 53.5 | **essential** |
 | T1 | `wiki_md` packed, uncompressed | **~85** *(24.8 done: 2017)* | **essential** (partly re-derivable) |
-| | **Subtotal — irreplaceable set** | **≈ 640 GB** | |
+| | **Subtotal — irreplaceable set** (now includes the ZIMs) | **≈ 1.7 TB** | |
 | T2 | Weaviate archive, 3 snapshots | 563.3 | optional — already on `D:` **and** `I:` |
-| T0 | ZIMs **two sets**: 49 on `H:` 595.4 + 16 on the 25E1 461.4; plus enwiki XML (97.1 Oct-2024, 26.2 2026, 19.6 2021) | **~1,200** | optional — re-downloadable |
+| T0 | **ZIMs, two sets: 49 on `H:` 595.4 + 16 on the 25E1 461.4 — upper bound 1,057, union unknown until the 25E1 returns** | **~1,060** | **essential — Architect 2026-09-28: "the zims may not" be reclaimable** |
+| T0b | wiki XML dumps: Oct-2024 97.1 (25E1), 2026 26.2 (×3 copies), 2021 19.6, 2017 12.8 | ~156 | optional — *2017 is the weak one* (see §7 note in ESTATE_INVENTORY) |
 | | **TOTAL, everything worth keeping** | **≈ 2.4 TB** | |
-| T5 | models 2.4 TB, Steam, `EZDrummer`/`Superior` 481, Speaches cache | ~2.9 TB | **never copied** — regenerable |
+| T5 | models 2.4 TB, Steam, **Toontrack 481 GB (vendor re-download confirmed)**, Speaches cache, `~/.ollama` blobs | ~2.9 TB | **never copied** — regenerable |
 
 **Files ≥ 10 GB (measured 2026-09-28).** Full sweep (`eve-audit/find-large-files.py`, 4,297,090 files stat-ed in
 479 s): **74 files ≥ 10 GB · 193 ≥ 4 GB · 307 ≥ 2 GB** — plus the 97.1 GB Oct-2024 dump on the detached 25E1, so **75
@@ -172,9 +174,9 @@ dump**; `H:\AI_MODELS_2026\GGUF_Models\blobs\sha256-…-partial` (26.4 GB) is an
 
 | Destination | Verdict |
 |---|---|
-| **One 3.7 TB drive** (the 2627) | Everything fits with **~1.9 TB spare**. A full pass writes ~1.76 TB |
-| **One 1 TB drive** | Fits the irreplaceable set (640 GB) with ~360 GB spare — **this is the tier to protect first** |
-| **A second full copy** | Needs the same 640 GB (essential) or 1.76 TB (everything) again |
+| **One 3.7 TB drive** (the 2627) | Everything fits with **~1.3 TB spare** (~2.4 TB written) |
+| **One 2 TB drive** | Fits the irreplaceable set (**1.7 TB**) with ~300 GB spare — the ZIMs are what pushed this up from 1 TB |
+| **A second full copy** | Needs the same 1.7 TB (essential) or 2.4 TB (everything) again |
 | Free space check | `[math]::Round((Get-Volume -DriveLetter E).SizeRemaining/1GB,1)` before starting |
 
 **Time, not space, is the real budget:** ~1 h for T3's 423 GB; ~6 h for T1's 81 GB; ~1 h each for T2 and T0. The
@@ -224,10 +226,13 @@ The procedure is the same; what changes is **order** and **destination**. Given 
 offsite), a second copy should protect the single-copy tiers first:
 
 1. **T3 personal (423 GB)** — single copy, on the drive with 912 unsafe shutdowns
-2. **T1 markdown (85 GB packed)** — single copy, and 2017 is not trivially re-acquirable
-3. **T9 leftovers (53.5 GB)** and **T4b volumes (12.4 GB)** — small, unique, single-copy
-4. **T6 (53 GB)** and **T7/T4 (14.5 GB)** — unique but small
-5. T2 and T0 last (already duplicated or re-downloadable)
+2. **ZIMs (~1.06 TB across both sets)** — single copy per set, and the Architect's ruling is that these **may not be
+   re-downloadable**. This is the largest *essential* item after T3, and it is all large files, so it copies fast
+   (~1–2 h for 595 GB) unlike the tiny-file tiers
+3. **T1 markdown (85 GB packed)** — single copy, though re-derivable from dumps that are all on disk
+4. **T9 leftovers (53.5 GB)** and **T4b volumes (12.4 GB)** — small, unique, single-copy
+5. **T6 (53 GB)** and **T7/T4 (14.5 GB)** — unique but small
+6. T2 last (already on two drives)
 
 Practical notes for a second copy:
 
