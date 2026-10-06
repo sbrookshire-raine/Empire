@@ -66,6 +66,9 @@ take turns, reflect. The March 2025 note and the prompt were always the same ide
 | 2026-09 | EMPIRE matures: the Workbench, the LEGO governance contract, audits, `mechanic-green` gates, and **Eve** with MCP limbs |
 | 2026-09-25 | the live Weaviate container dies mid-run: `input/output error` on `/var/lib/weaviate` — the storage risk made concrete |
 | 2026-09-27 | this audit, and the first backup architecture |
+| 2026-09-28 | the audit deepens: Heptabase dialogue record, Google Drive (`G:`) inventoried, ZIM libraries recounted (two, ~1.06 TB), copies verified tier by tier |
+| **2026-09-29 → 10-05** | **the backup moves to the cloud**: four 5 TiB Google accounts pooled with rclone into one 20 TiB `union` remote (`pool:`, mounted as `Z:`), and `cloud_archiver_hub.py` built to mount it, tar folders without compression, and upload them. First loads: `BACKUP_H_DRIVE`, `_AI RELATED`, `_NOT_AI_RELATED` (~860 GiB), `ZIM_RESOURCES`, `ARCHIVE_COLLECTION`, and the Toontrack/EZdrummer library (499 GiB). See §14 |
+| **2026-10-06** | **the hub**: a survey of `C:`/`D:`/`F:`/`K:` against the pool, a staging tree on `E:\EMPIRE_HUB` that mirrors the repo, and the first verified cloud upload of the core archives. See §14 |
 
 ## 5. The difficulties — reframed as lessons anyone can use
 
@@ -532,6 +535,67 @@ Architect remembers asking for; that log is a *different* artifact, and the two 
 §4 (the **Build1** trio, 2026-07-22/23) and §8 (the **Hatch archive index**). The distinction is worth keeping
 because the two documents do different jobs: a model-written log captures *what was thought at the time*, while this
 one tries to be an **audit** — measured, dated, and explicit about what is still unread.
+
+## 14. Update 2026-10-06 — from copies on disks to an organised cloud hub
+
+*(Numbered 14 so §13's numbering, which other documents cite, is unchanged; it sits before the handoff so the handoff stays last. Read §13 for method.)*
+
+**Why this chapter exists.** The 2026-09-27 audit ended with a *local* backup architecture (tiers T0–T7 copied to the
+WD 2627 and the T7s). Between 09-29 and 10-05 the Architect built the next layer himself: a cloud pool. This chapter
+records that layer, what the 10-06 survey found, and the rules the reorganisation follows. Everything here was measured
+on 2026-10-06 unless marked otherwise.
+
+**The pool.** `pool:` is an rclone `union` of four Google accounts (`gdrive_m69n`, `gdrive_aporia`, `gdrive_sethb`,
+`gdrive_gadget`), 5 TiB each — **20 TiB total, ~18.3 TiB free** at survey (1.70 TiB used). `rclone mount pool: Z:` exposes
+it as `Z:`; `E:\cloud_archiver_hub.py` is the Architect's tool for it (tab 1 mount with a live bandwidth control, tab 2
+uncompressed tars per subfolder, tab 3 `rclone copy` with `--transfers`/`--bwlimit`). Design choice worth keeping:
+**tar first, so the cloud sees a few large files instead of millions of small ones** — the same lesson as the
+T1 packing in `ESTATE_INVENTORY.md` §4. `G:` (Google Drive for Desktop) is **one of the four pool members
+(`gdrive_m69n`)**, not a separate store; the old census folders now live under `_AI RELATED` / `_NOT_AI_RELATED`.
+A sync client is not a backup: deleting on `G:` deletes in the cloud, so the cloud copy needs the single offline disc
+the Architect plans as the second copy.
+
+**What the survey found (read-only).**
+
+| Finding | Detail |
+|---|---|
+| `C:` and `D:` are nearly full | 194 GB and 175 GB free of ~950 GB each. Weaviate (`D:\weaviate_v2_archive`, 563 GB) is the largest single item; `C:\Users` is ~529 GB |
+| Empty and stale | `C:\wiki_dumps`, `C:\wiki_md`, `C:\wiki_runs`, `C:\models` hold 0 files (confirms `ESTATE_INVENTORY.md` §6 item 2) |
+| Duplicate | `enwiki-20260401-pages-articles-multistream.xml.bz2` (26,207,949,994 B) exists in both `Downloads` and `D:\wiki_dumps\2026`. `enwiki-20170301…` (13.75 GB) exists **only** in `Downloads` |
+| **Gaps in the local backup** | `K:\…\05_weaviate_T2` is **empty** (Weaviate has no second copy on K); `K:\…\06_markdown_T1_packed\wiki_md_2026.tar` is a **0.01 GB stub** while `D:\wiki_md\2026` has 143 batch folders |
+| Already in the cloud | Toontrack library (499 GiB, matched by `E:\Temp_Tars`), the `gutenberg_books_txt` tree, ZIM resources |
+| Not in the cloud at all | the repo, both Workbench copies, `AI_Factory`, Weaviate, the wiki dumps/runs/markdown, the Heptabase exports |
+| Not project material | ~3 GB of installers in `Downloads`, `.venv`/`venv`/`node_modules` trees, regenerable model weights |
+
+**The rules this reorganisation follows** (the Architect's, 2026-10-06): do not delete; copy and verify; archive only
+what is a resource, a piece, or part of the history of the project; work out the layout on `E:` *before* it is finalised
+in the cloud; and make the structure **mirror the eventual GitHub push and backup**, with Empire, the Workbench, the
+resources and the Weaviate database as the centre that everything else hangs from. The wikipedia archives are the
+named priority — nothing there may be lost.
+
+**The hub layout** (staged at `E:\EMPIRE_HUB`, destined for `pool:EMPIRE_HUB`):
+
+```
+00_CORE/            C:\EMPIRE, C:\Empire_Workbench, D:\Empire_Workbench, D:\AI_Factory  (tars)
+01_DATA_WEAVIATE/   weaviate_v2_archive as per-class tars (wikichunk, 2021, 2026, rest)
+02_RESOURCES/       wikipedia_dumps, wikipedia_runs, wiki_md_packed (2017/2021/2026)
+03_NOTES_HISTORY/   Heptabase exports, recall_backup, notes, legacy attempts
+04_PERSONAL_MUSIC/  Toontracks and music material
+99_INDEX/           manifests, build scripts, logs, RESTORE.md, INDEX.md
+```
+
+**Verified so far.** The four core archives (6.6 GiB, 5 files incl. manifest) were uploaded to
+`pool:EMPIRE_CLOUD_2026-10/core` and checked with `rclone check --size-only`: **0 differences**. They were then moved
+into `00_CORE` on `E:`. `AI_Factory` excludes its 26.6 GB of models; two symlink files in a cloned repo could not be
+read (logged, harmless). The wiki and Weaviate staging was running when this was written.
+
+**What is still unfinished** (be exact): Weaviate and wiki tars verified in the cloud; `03_NOTES_HISTORY` and
+`04_PERSONAL_MUSIC` populated; `RESTORE.md`/`INDEX.md` written; the `Downloads` model folders (qwen/gemma, ~41 GB)
+and `F:\AI_ARCHIVE` (1.24 TB) / `F:\AI_MODELS_2026` (460 GB) not yet decided; the C:/D: space-recovery list not yet
+finalised. The Architect deletes nothing until the offline disc exists.
+
+*Lesson added to §5:* **a backup that exists in three places but is organised in none is still a scattered estate.**
+The hub is the answer to "it doesn't feel like I'm spread out so far."
 
 ## 13. Handoff — how to continue this in a fresh session
 
