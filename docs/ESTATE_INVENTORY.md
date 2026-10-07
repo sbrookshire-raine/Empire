@@ -709,3 +709,36 @@ running it, not output from it.
   sole home of the `P_*` series and the DAZE packet makes it a *source* to copy outward.
 
 
+
+
+## 12. Update 2026-10-06 — the cloud pool and the EMPIRE_HUB (supersedes the "no cloud" assumptions above)
+
+*Read after §10–§11. The detail and the reasoning are in `ODYSSEY.md` §14; this section only corrects this inventory.*
+
+- **A cloud tier now exists.** `pool:` (rclone `union` of four Google accounts, 20 TiB, mounted as `Z:`) is the cloud copy.
+  `G:` is one pool member (`gdrive_m69n`), not a separate store. `I:` is now a Drive alias, so `I:\EMPIRE_VHDX` and the
+  `V:\Cognee` mount are unreachable; the only Cognee image is the 2026-09-27 copy in `K:\…\09_i_drive_leftovers`.
+- **One staging tree, three destinations.** `E:\EMPIRE_HUB` is the local backup, the source for `pool:EMPIRE_HUB`, and
+  the source for the offline disc. Layout and per-archive contents: `E:\EMPIRE_HUB\99_INDEX\INDEX.md`; restore commands:
+  `RESTORE.md`. Archives are uncompressed tars so a few large files cross the cloud link.
+- **Secrets never go to the cloud.** `00_CORE\local_only\` holds `.env`, `cognee.env`, `.cursor/mcp*.json`, tokens and
+  password files; it goes on the offline disc only. If that disc is lost, re-issue the keys.
+- **§10.3 gap list, closed or changed:**
+  - Repo, both Workbenches, `AI_Factory` (minus models): **staged** (`00_CORE`).
+  - Weaviate (`K:\…\05_weaviate_T2` was empty): **staged** as four per-class tars (`01_DATA_WEAVIATE`).
+  - `wiki_md_2026` (K: held a 0.01 GB stub): **rebuilt** from `D:\wiki_md\2026`.
+  - **New finding:** K:'s `wiki_md_2021.tar` is **truncated** (read error at end of data). Rebuilt from `D:\wiki_md\2021`;
+    the K: copy should not be trusted. K:'s `wiki_md_2017.tar` read clean.
+  - Heptabase (three exports), Obsidian vaults, recall backups, the Desktop PROJECT HUB and loom skills, the
+    `Shard_of_the_Division` source, `v2_markdown_pipeline` code, `AI_stuff_backup\projects`, `incoming_haul`:
+    **staged** (`03_NOTES_HISTORY`, `05_PROJECT_PARTS`).
+  - **Still in no backup:** `D:\AI_Factory\models` (26.6 GB), `F:\AI_MODELS_2026` (460 GB), `F:\AI_ARCHIVE` models,
+    embeddings and datasets, the 718 GB ZIM library (separate upload pending), `F:\colibri`, `F:\llama.cpp`,
+    `F:\gutenberg_books_txt` (already in the cloud).
+- **§5 space recovery — done and pending.** Done: the four `Downloads` model folders (identical to `.ollama` blobs),
+  installers, `pinokio\cache`, pip cache, `ms-playwright`, `D:\wheels` — C: 194 → 253 GB free. Pending (needs the cloud
+  copy verified and the offline disc): `D:\wiki_dumps`, `D:\wiki_runs`, the two `Downloads` dumps, `D:\Empire_Workbench`,
+  `D:\incoming_haul`, `D:\AI_Factory` code; Weaviate (525 GB) only if re-importing it is acceptable. Measured list and the
+  proof for each item: `E:\EMPIRE_HUB\99_INDEX\SPACE_RECOVERY.md`. **Keep** `D:\wiki_md` (runtime corpus).
+- **Out of scope by decision:** music/audio (the `Shard_of_the_Division` program source is in), `shadow-planner` (a
+  third-party app being evaluated), ROMs, games and personal photos.

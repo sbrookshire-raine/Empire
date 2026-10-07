@@ -573,27 +573,48 @@ in the cloud; and make the structure **mirror the eventual GitHub push and backu
 resources and the Weaviate database as the centre that everything else hangs from. The wikipedia archives are the
 named priority — nothing there may be lost.
 
-**The hub layout** (staged at `E:\EMPIRE_HUB`, destined for `pool:EMPIRE_HUB`):
+**The hub layout** (staged at `E:\EMPIRE_HUB`, destined for `pool:EMPIRE_HUB`; `README.md`, `99_INDEX/INDEX.md` and
+`99_INDEX/RESTORE.md` travel with it and say what each archive is and how to put it back):
 
 ```
-00_CORE/            C:\EMPIRE, C:\Empire_Workbench, D:\Empire_Workbench, D:\AI_Factory  (tars)
+00_CORE/
+  repo_mirror/      C:\EMPIRE as one tar (tracked + untracked-not-ignored + .git; also on GitHub)
+  state/            git-ignored runtime state, %LOCALAPPDATA%\EMPIRE, the Cognee VHDX, 11 Docker volumes
+  vault/            C:\Empire_Workbench, D:\Empire_Workbench, D:\AI_Factory (models excluded)
+  local_only/       secrets, split out of every archive — NEVER uploaded (offline disc only)
 01_DATA_WEAVIATE/   weaviate_v2_archive as per-class tars (wikichunk, 2021, 2026, rest)
 02_RESOURCES/       wikipedia_dumps, wikipedia_runs, wiki_md_packed (2017/2021/2026)
-03_NOTES_HISTORY/   Heptabase exports, recall_backup, notes, legacy attempts
-04_PERSONAL_MUSIC/  Toontracks and music material
-99_INDEX/           manifests, build scripts, logs, RESTORE.md, INDEX.md
+03_NOTES_HISTORY/   Heptabase x3, Obsidian vaults, recall backups, Desktop PROJECT HUB (56 cloned reference repos),
+                    Desktop projects (loom skills), Shard_of_the_Division source (no audio)
+05_PROJECT_PARTS/   v2_markdown_pipeline code (+ .git supplement), AI_Archive docs, AI_stuff_backup projects, incoming_haul
+99_INDEX/           INDEX.md, RESTORE.md, SPACE_RECOVERY.md, catalog/ (skills + MCP + cloned repos), manifests, builders
 ```
 
-**Verified so far.** The four core archives (6.6 GiB, 5 files incl. manifest) were uploaded to
-`pool:EMPIRE_CLOUD_2026-10/core` and checked with `rclone check --size-only`: **0 differences**. They were then moved
-into `00_CORE` on `E:`. `AI_Factory` excludes its 26.6 GB of models; two symlink files in a cloned repo could not be
-read (logged, harmless). The wiki and Weaviate staging was running when this was written.
+**A mistake caught, and fixed.** The first four "core" tars had been uploaded to `pool:EMPIRE_CLOUD_2026-10/core` — and
+contained `.env`, `cognee.env`, `.cursor/mcp*.json` and two password files. They were deleted from the cloud, kept locally
+under `99_INDEX/_superseded_contains_secrets/`, and every unit was rebuilt with a name-based secret filter that writes the
+secrets to a separate `local_only` tar. The filter is `is_secret()` in `99_INDEX/build_core.py`; a scan of the upload
+tars finds none. *Lesson: tar-first protects the file count, not the contents. Decide what may leave the machine before
+deciding how to pack it.*
 
-**What is still unfinished** (be exact): Weaviate and wiki tars verified in the cloud; `03_NOTES_HISTORY` and
-`04_PERSONAL_MUSIC` populated; `RESTORE.md`/`INDEX.md` written; the `Downloads` model folders (qwen/gemma, ~41 GB)
-and `F:\AI_ARCHIVE` (1.24 TB) / `F:\AI_MODELS_2026` (460 GB) not yet decided; the C:/D: space-recovery list not yet
-finalised. The Architect deletes nothing until the offline disc exists.
+**A second mistake caught by verifying.** The `wiki_md_2021.tar` that the 09-27 backup left on `K:` is **truncated**
+(`unexpected end of data` on a full read; its 2017 sibling is sound). It was found only because every tar was read
+end-to-end before anything was offered for deletion. It was set aside and is rebuilt from `D:\wiki_md\2021`.
+*Lesson: a file that exists with the right size is not a backup. Read it.*
 
+**Verified in this pass.** Every Wikipedia dump and run file was SHA-256 compared source-vs-staged (all identical,
+including the two `Downloads` dumps against the staged copies); the four `Downloads` model folders (41.4 GB) were proven
+identical to `.ollama` blobs and removed with the installers and caches (C: 194 → 253 GB free). Whole-archive coverage
+checks confirm `D:\Empire_Workbench`, `D:\AI_Factory` (code), `D:\incoming_haul` and the `Downloads` Heptabase/recall
+folders are in tars except what was excluded on purpose (venvs, `__pycache__`, third-party models, audio, `.dll`/`.exe`).
+
+**What is still unfinished** (be exact): the upload to `pool:EMPIRE_HUB` and its size check (a pipeline script,
+`99_INDEX/finish_and_upload.ps1`, runs staging → verify → upload → check and logs to `99_INDEX/pipeline.log`); the 718 GB
+ZIM library as a separate upload; the unconfirmed list of which loom skills became MCP servers
+(`99_INDEX/catalog/`); the `D:\AI_Factory\models` (26.6 GB) and `F:\AI_MODELS_2026` decisions. The Cognee VHDX in the hub is
+the 2026-09-27 copy — `I:` is now a Drive alias and `V:` is not mounted, so the live graph could not be re-copied. The
+Architect deletes nothing until the cloud copy is verified **and** the offline disc exists; the measured deletion list
+is `99_INDEX/SPACE_RECOVERY.md`.
 *Lesson added to §5:* **a backup that exists in three places but is organised in none is still a scattered estate.**
 The hub is the answer to "it doesn't feel like I'm spread out so far."
 
