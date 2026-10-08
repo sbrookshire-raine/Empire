@@ -1,0 +1,46 @@
+{
+  "hub_root": "E:\\EMPIRE_HUB",
+  "remote": "pool:EMPIRE_HUB",
+  "phase": "consolidation_complete",
+  "comment": "One-time hub sync done 2026-10-08. E: staging matches pool:EMPIRE_HUB for all archive payload (excludes below). Incremental repo/vault updates: future phase.",
+  "schedule": {
+    "night_start": "00:00",
+    "night_bwlimit": "off",
+    "day_start": "14:00",
+    "day_bwlimit": "3M"
+  },
+  "google": {
+    "upload_limit_gib_per_account_per_day": 750,
+    "comment": "Limit is per Google account, not per 20TiB pool. Union spreads objects across gdrive_*; multi-tar hub copies can use several accounts. stop_on_upload_limit = per-remote safety only.",
+    "stop_on_upload_limit": true
+  },
+  "rclone": {
+    "transfers": 4,
+    "checkers": 8,
+    "drive_chunk_size": "256M",
+    "buffer_size": "64M",
+    "multi_thread_cutoff": "256M",
+    "multi_thread_streams": 4,
+    "retries": 5,
+    "low_level_retries": 20,
+    "stats_interval": "60s"
+  },
+  "excludes": [
+    "*.part",
+    "00_CORE/local_only/**",
+    "99_INDEX/_superseded*/**",
+    "99_INDEX/__pycache__/**",
+    "99_INDEX/pipeline.log",
+    "99_INDEX/pipeline_weaviate.log",
+    "99_INDEX/rclone_*.log",
+    "99_INDEX/rclone_upload.log",
+    "99_INDEX/rclone_check.log"
+  ],
+  "consolidation_order": [
+    "Stage and verify tars on E:\\EMPIRE_HUB (INDEX.md layout)",
+    "Upload pool:EMPIRE_HUB with this script (night-weighted)",
+    "rclone check one-way size-only",
+    "Optional offline disc from E: (secrets in local_only only)",
+    "GitHub: revision-refactor is source of truth; merge to main when ready"
+  ]
+}

@@ -19,7 +19,11 @@
 
 ---
 
-## Current state (2026-09-24, branch `revision-refactor`)
+## Current state (2026-10-08, branch `revision-refactor`)
+
+**GitHub note:** `main` is ~145 commits behind this branch (last `main` tip: Eve Clarity / resource pulse). Treat **`revision-refactor` as canonical** until merged.
+
+**Estate / backup (Oct 2026):** **`E:\EMPIRE_HUB` staging complete; `pool:EMPIRE_HUB` upload verified** — see [`docs/BACKUP_CONSOLIDATION.md`](docs/BACKUP_CONSOLIDATION.md). Cloud pool mounts as **`Z:`** (remount after reboot via `E:\cloud_archiver_hub.py`). Still pending: **offline disc**, **~719 GiB ZIMs on F:** → cloud. Read [`docs/ESTATE_INVENTORY.md`](docs/ESTATE_INVENTORY.md) **§12** and [`docs/ODYSSEY.md`](docs/ODYSSEY.md) **§14** before deletes. **`V:\Cognee` may be unmounted** if `I:` is a Drive alias.
 
 The **answer path** is the refactor target, not the whole repo:
 

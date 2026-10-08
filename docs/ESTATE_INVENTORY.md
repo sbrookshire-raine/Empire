@@ -736,9 +736,11 @@ running it, not output from it.
     embeddings and datasets, the 718 GB ZIM library (separate upload pending), `F:\colibri`, `F:\llama.cpp`,
     `F:\gutenberg_books_txt` (already in the cloud).
 - **§5 space recovery — done and pending.** Done: the four `Downloads` model folders (identical to `.ollama` blobs),
-  installers, `pinokio\cache`, pip cache, `ms-playwright`, `D:\wheels` — C: 194 → 253 GB free. Pending (needs the cloud
-  copy verified and the offline disc): `D:\wiki_dumps`, `D:\wiki_runs`, the two `Downloads` dumps, `D:\Empire_Workbench`,
-  `D:\incoming_haul`, `D:\AI_Factory` code; Weaviate (525 GB) only if re-importing it is acceptable. Measured list and the
-  proof for each item: `E:\EMPIRE_HUB\99_INDEX\SPACE_RECOVERY.md`. **Keep** `D:\wiki_md` (runtime corpus).
+  installers, `pinokio\cache`, pip cache, `ms-playwright`, `D:\wheels` — C: 194 → 253 GB free. **`pool:EMPIRE_HUB` verified
+  2026-10-08** (`docs/BACKUP_CONSOLIDATION.md`; `hub-rclone-sync.ps1 -Action check`). Pending before large deletes: **offline
+  disc** copy of full `E:\EMPIRE_HUB`; then per `SPACE_RECOVERY.md`: `D:\wiki_dumps`, `D:\wiki_runs`, the two `Downloads`
+  dumps, `D:\Empire_Workbench`, `D:\incoming_haul`, `D:\AI_Factory` code; Weaviate (525 GB) only if re-importing it is
+  acceptable. **Keep** `D:\wiki_md` (runtime corpus). ZIM library (~719 GiB on `F:\…\knowledge_bases`) remains a **separate**
+  cloud tier — not in EMPIRE_HUB.
 - **Out of scope by decision:** music/audio (the `Shard_of_the_Division` program source is in), `shadow-planner` (a
   third-party app being evaluated), ROMs, games and personal photos.

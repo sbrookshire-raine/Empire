@@ -93,6 +93,7 @@ take turns, reflect. The March 2025 note and the prompt were always the same ide
 ## 7. How to use this, and what is still unread
 
 - **Explaining your work to others:** §1 is the thesis, §2–§4 the narrative, §6 the assets.
+- **Portfolio (curated extract for employers/collaborators):** [`docs/PORTFOLIO.md`](PORTFOLIO.md) — maintained from this file; when §1–§4, §8, or §9 change, follow [`docs/PORTFOLIO_MAINTENANCE.md`](PORTFOLIO_MAINTENANCE.md). ODYSSEY keeps **adding**; PORTFOLIO **selects**.
 - **For students:** §5, and the day-log note as an example of honest documentation.
 - **Unread, in priority order:** the full **Raine blueprint** (41 KB — only the opening read); the **OneNote dump** (8,339 lines — sampled only); the **`raine roadblocks`** note (filename differs from my guess — search by `roadblocks`); the **learning_hub logs** (the 2024-11 trail, and the last hope for the October start); the **`PREVaiL`** and **`Z_Future project hub`** notes. *(The **Heptabase Card Library** was on this list — **read 2026-09-27, §12.3–§12.5**; it held Truthdrift's own design card, dated five months early.)* **Added 2026-09-28:** the **dialogue record** — 9 kept conversations, ~3.6 MB, listed in §12.7 — and the **two later Heptabase exports** (2026-05-09, 2026-07-24) plus the **Hatch archive index** of 13+1 projects.
 - **A precise gap worth stating:** IRENE's `src/` holds only `app.py` and the two YouTube modules — the **SQLite store, NLP semantic lists and junk filters you described are not in the files I found.** The weighted re-ranker *is*. So either those parts lived in another folder, or the refiltering was done with the weighted score alone. Worth settling, because it is the earliest version of the ranking question we are still working on.
@@ -608,13 +609,13 @@ identical to `.ollama` blobs and removed with the installers and caches (C: 194 
 checks confirm `D:\Empire_Workbench`, `D:\AI_Factory` (code), `D:\incoming_haul` and the `Downloads` Heptabase/recall
 folders are in tars except what was excluded on purpose (venvs, `__pycache__`, third-party models, audio, `.dll`/`.exe`).
 
-**What is still unfinished** (be exact): the upload to `pool:EMPIRE_HUB` and its size check (a pipeline script,
-`99_INDEX/finish_and_upload.ps1`, runs staging → verify → upload → check and logs to `99_INDEX/pipeline.log`); the 718 GB
-ZIM library as a separate upload; the unconfirmed list of which loom skills became MCP servers
-(`99_INDEX/catalog/`); the `D:\AI_Factory\models` (26.6 GB) and `F:\AI_MODELS_2026` decisions. The Cognee VHDX in the hub is
-the 2026-09-27 copy — `I:` is now a Drive alias and `V:` is not mounted, so the live graph could not be re-copied. The
-Architect deletes nothing until the cloud copy is verified **and** the offline disc exists; the measured deletion list
-is `99_INDEX/SPACE_RECOVERY.md`.
+**What is still unfinished** (be exact, updated 2026-10-08): **`pool:EMPIRE_HUB` consolidation upload and payload check — DONE**
+(see `docs/BACKUP_CONSOLIDATION.md`; `hub-rclone-sync.ps1 -Action check` with `config/hub-upload.json` excludes). Still open: the
+**~719 GiB ZIM library** on `F:\AI_ARCHIVE\AI_Archive_Legion\knowledge_bases` as a **separate** cloud upload (`pool:ZIM_RESOURCES`
+is not a full copy); **offline disc** second local copy of `E:\EMPIRE_HUB` including `local_only`; unconfirmed loom→MCP list
+(`99_INDEX/catalog/`); `D:\AI_Factory\models` (26.6 GB) and `F:\AI_MODELS_2026` decisions. The Cognee VHDX in the hub is the
+2026-09-27 copy — live graph was not re-copied when `V:` was unmounted. The Architect deletes nothing on C:/D: until **offline disc**
+exists for the hub; measured deletion candidates remain `99_INDEX/SPACE_RECOVERY.md` (cloud gate for hub payload now satisfied).
 *Lesson added to §5:* **a backup that exists in three places but is organised in none is still a scattered estate.**
 The hub is the answer to "it doesn't feel like I'm spread out so far."
 
