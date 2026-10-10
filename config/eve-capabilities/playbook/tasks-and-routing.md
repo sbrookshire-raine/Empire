@@ -1,7 +1,7 @@
 ---
 area: tasks-and-routing
 one_line: Tasks CRUD, catalog discovery, environment reference (routing detail, operations, awakening).
-tools: list_tasks, search_tasks, create_task, update_task, delete_task, search_catalog, tool_docs, playbook, list_models, get_model_suite
+tools: list_tasks, search_tasks, create_task, update_task, delete_task, resolve_intent, capability_route, search_catalog, tool_docs, playbook, list_models, get_model_suite
 skills: empire-operations, empire-routing-detail, manage-tasks, memory-recall, skill-capability-routing
 ---
 
@@ -20,14 +20,27 @@ Use when: he asks for a to-do, or wants to know what's outstanding.
 - **Ask:** "mark that one done" → **Do:** `search_tasks` → `update_task(id, status="done")` → **Get:** the updated record.
 - **Ask:** "delete the duplicate" → **Do:** `search_tasks` → confirm → `delete_task(id)` → **Get:** the removal confirmed by id.
 
-## Catalog and skill discovery
+## Plain language (intent codex — use first)
+Use when: the user speaks in normal verbs — scrape, research, lookup, remember — without tool names.
+
+- **Ask:** "scrape this blog post and summarize" → **Do:** `resolve_intent(message)` → `web_scout(url)` after admitting **web_scout** → **Get:** cached markdown summary, URL cited.
+- **Ask:** "research whether yt-dlp changed recently" → **Do:** `resolve_intent` → `cognee_recall` → `research_start("yt-dlp changes")` → **Get:** desk digest, not a wall of text in chat.
+- **Ask:** "look up magnets in the archive" → **Do:** `resolve_intent` → `wiki_scout_search("Magnetism")` (not training memory).
+
+## Route index (Eve's tools — use second)
 Use when: "do you have a tool for X?", "what can you do about Y?", or before claiming something is unavailable.
 
-- **Ask:** "is there a local tool for reranking?" → **Do:** `search_catalog("rerank")` → **Get:** the capability entry with its Toolbelt limb.
-- **Ask:** "what's in the catalog about audio?" → **Do:** `search_catalog("audio stems")` → **Get:** the stem limb and its tools.
-- **Ask:** "run one of the eve-skills" → **Do:** `search_catalog("<name>")` → **Get:** the capability entry and the limb it belongs to; the `eve-skills/<name>/SKILL.md` packages are the Mechanic's reference (nothing loads them, and no tool of hers reads `C:\EMPIRE`) — use the playbook area for the worked route.
-- **Ask:** "which capabilities are prerequisite for that?" → **Do:** `search_catalog` → `capability_status` → **Get:** the gate you must ask the Architect to open.
-- **Ask:** "is X available to me right now?" → **Do:** `search_catalog` **before** refusing → **Get:** an honest answer instead of "I don't have access".
+- **Ask:** "is there a local tool for reranking?" → **Do:** `capability_route("rerank")` → **Get:** `retrieval_rerank` limb + tools + `load` hints → `playbook` / `tool_docs` as needed.
+- **Ask:** "what's available for audio stems?" → **Do:** `capability_route("audio stems")` → **Get:** stem_factory limb + `stem_run` tools.
+- **Ask:** "reverse engineer this Electron app" → **Do:** `capability_route("reverse engineer")` → admit **REA** if off → `rea_doctor` → `playbook("reverse-engineering")`.
+- **Ask:** "is X available to me right now?" → **Do:** `capability_route("X")` → `resource_pulse()` → **Get:** limb status instead of "I don't have access".
+
+## External OSS catalog (catalog.db only)
+Use when: mining the **intake catalog** for third-party repos/MCP candidates — not for Eve's built-in tools.
+
+- **Ask:** "find minimax in the catalog" → **Do:** `search_catalog("minimax")` → **Get:** repository rows from catalog.db.
+- **Ask:** "run one of the eve-skills" → **Do:** `capability_route("<name>")` first; `search_catalog` only if hunting an external package row.
+- **Ask:** "which capabilities are prerequisite for that?" → **Do:** `capability_route` → `capability_status` → **Get:** the gate to ask the Architect to open.
 
 ## The two lookups (stop guessing, stop improvising)
 Use when: you know the tool but not its syntax, or you know the goal but not the route.

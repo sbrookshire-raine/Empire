@@ -27,9 +27,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\cognee-vhdx-config.ps1')
 
-$VhdxPath    = 'I:\EMPIRE_VHDX\empire_cognee.vhdx'
-$DriveLetter = 'V'
+$VhdxPath    = Get-EmpireCogneeVhdxPath
+$DriveLetter = $script:EmpireCogneeDriveLetter
 $DriveRoot   = 'V:\'
 $CogneeRoot  = 'V:\Cognee'
 
@@ -94,7 +95,8 @@ if (-not (Test-IsAdmin)) {
 }
 
 if (-not (Test-Path -LiteralPath $VhdxPath)) {
-    Write-Warning 'VHDX not found at I:\EMPIRE_VHDX\empire_cognee.vhdx. Plug in the T7 (I:) first.'
+    Write-Warning "VHDX not found at $VhdxPath"
+    Write-Warning 'Run: .\scripts\restore-cognee-vhdx.ps1  (copies hub snapshot to E:\EMPIRE_VHDX), then mount again as admin.'
     exit 3
 }
 

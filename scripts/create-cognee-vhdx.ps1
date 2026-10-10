@@ -7,7 +7,7 @@
     The 4TB I: drive is exFAT; Cognee DBs (lancedb/kuzu/sqlite) need NTFS.
     This script creates a dynamically expanding NTFS VHDX on I: and mounts it at V:.
 
-    VHDX file : I:\EMPIRE_VHDX\empire_cognee.vhdx
+    VHDX file : E:\EMPIRE_VHDX\empire_cognee.vhdx (override with EMPIRE_COGNEE_VHDX)
     Type      : dynamically expanding
     Max size  : 2 TB (2097152 MB)
     Filesystem: NTFS, label EMPIRE_COGNEE
@@ -25,10 +25,11 @@
 #>
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\cognee-vhdx-config.ps1')
 
-$VhdxDir     = 'I:\EMPIRE_VHDX'
-$VhdxPath    = 'I:\EMPIRE_VHDX\empire_cognee.vhdx'
-$DriveLetter = 'V'
+$VhdxPath    = if ($env:EMPIRE_COGNEE_VHDX) { $env:EMPIRE_COGNEE_VHDX } else { 'E:\EMPIRE_VHDX\empire_cognee.vhdx' }
+$VhdxDir     = Split-Path -Parent $VhdxPath
+$DriveLetter = $script:EmpireCogneeDriveLetter
 $MaxSizeMB   = 2097152
 $Label       = 'EMPIRE_COGNEE'
 $CogneeRoot  = 'V:\Cognee'

@@ -199,6 +199,16 @@
       "network": false,
       "requires_services": [],
       "min_disk_free_gb": 1
+    },
+    "rea": {
+      "label": "REA",
+      "auto_enable": false,
+      "session_ttl_min": 45,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 5,
+      "notes": "Node MCP (rea-agents). Native deep analysis needs Hopper/Ghidra/IDA configured separately."
     }
   },
   "max_session_capabilities": 6

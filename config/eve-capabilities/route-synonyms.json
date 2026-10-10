@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "notes": "Manual intent → toolbelt / playbook area / tool boosts for capability_route. Keep short; regenerate index picks these up at runtime.",
+  "phrases": {
+    "wikipedia": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search"] },
+    "wiki": { "limbs": ["wiki_local"], "areas": ["wiki-archive"] },
+    "reverse engineer": { "limbs": ["rea"], "areas": ["reverse-engineering"], "tools": ["rea_doctor"] },
+    "reverse engineering": { "limbs": ["rea"], "areas": ["reverse-engineering"] },
+    "github": { "limbs": ["github_scout"], "tools": ["github_scout_search"] },
+    "docker": { "limbs": ["container_scout"], "tools": ["container_scout_search"] },
+    "web page": { "limbs": ["web_scout"], "tools": ["web_scout"] },
+    "search the web": { "limbs": ["web_research"], "tools": ["searxng_search", "research_start"] },
+    "memory": { "tools": ["cognee_recall", "cognee_remember"], "areas": ["memory-and-ideas"] },
+    "task": { "tools": ["list_tasks", "create_task"], "areas": ["tasks-and-routing"] },
+    "spreadsheet": { "tools": ["create_spreadsheet"], "areas": ["build-and-verify"] },
+    "voice": { "limbs": ["voice_presence"], "tools": ["voice_transcribe", "voice_speak"] },
+    "screenshot": { "limbs": ["vision_local"], "tools": ["vision_describe"] },
+    "stem": { "limbs": ["stem_factory"], "tools": ["stem_run"] },
+    "schedule": { "limbs": ["time_reclaim"], "tools": ["daze_list_day"] },
+    "pdf": { "tools": ["read_document", "docling_convert"] },
+    "rerank": { "limbs": ["retrieval_rerank"], "tools": ["retrieval_rerank"] }
+  }
+}

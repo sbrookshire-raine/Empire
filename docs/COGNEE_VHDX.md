@@ -10,7 +10,9 @@ but which presents a normal NTFS volume once mounted. Cognee is pointed at that 
 
 | Property | Value |
 |----------|-------|
-| VHDX backing file | `I:\EMPIRE_VHDX\empire_cognee.vhdx` |
+| VHDX backing file (live) | `E:\EMPIRE_VHDX\empire_cognee.vhdx` (NTFS on **E: T7 Shield** — do **not** put the VHDX on **I:** Google Drive) |
+| Hub snapshot (2026-09-27) | `E:\EMPIRE_HUB\00_CORE\state\cognee_vhdx\empire_cognee.vhdx` |
+| Legacy path (obsolete) | `I:\EMPIRE_VHDX\…` when **I:** was the physical T7 exFAT drive |
 | Type | dynamically expanding (grows as data is written) |
 | Max capacity | 2 TB (`maximum=2097152` MB in diskpart) |
 | Filesystem / label | NTFS / `EMPIRE_COGNEE` |
@@ -27,6 +29,20 @@ stay on `C:` under `%LOCALAPPDATA%\EMPIRE`, matching the original design:
 
 - `%LOCALAPPDATA%\EMPIRE\cognee.lock` — cross-process lock (MCP + CLI safe together)
 - `%LOCALAPPDATA%\EMPIRE\wiki-checkpoint.json` — resumable ingest checkpoint
+
+## After drive reformat (restore V:, do not start empty)
+
+If **`V:` is missing** and **`I:\EMPIRE_VHDX` is gone** (common when **I:** became Google Drive and the old T7 was formatted):
+
+```powershell
+cd C:\EMPIRE
+.\scripts\restore-cognee-vhdx.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\EMPIRE\scripts\mount-cognee-vhdx.ps1"   # Administrator
+```
+
+That restores the **hub snapshot** (~4 GB, dated 2026-09-27) to `E:\EMPIRE_VHDX\` and mounts **`V:\Cognee`**. Graph data in **Postgres/Docker** is separate; if containers were wiped, you may still need a DB restore from hub/docker backups.
+
+Override paths with env `EMPIRE_COGNEE_VHDX` (full path to `.vhdx` file).
 
 ## One-time creation (requires Administrator)
 

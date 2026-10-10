@@ -17,7 +17,7 @@ ENV_FILE = ROOT / "config" / "cognee.env"
 IngestMode = Literal["fast", "full"]
 
 
-DEFAULT_COGNEE_ROOT = r"V:\Cognee"
+DEFAULT_COGNEE_ROOT = r"E:\EMPIRE_COGNEE"
 
 # Dataset-filtered recall: initial candidate pool, then fallback when filter is empty.
 DEFAULT_RECALL_TOP_K = 250

@@ -10,7 +10,8 @@ at ~1,000 tok/s ≈ 10 s per pass). These are the details it points here for.
 
 | Use | ONLY when the user asks to… | Returns | Never use for |
 |-----|------------------------------|---------|---------------|
-| **`search_catalog`** | find **tools, capabilities, micro-skills, or catalog entries** — "what tools do you have", "find a tool for minimax", "which capability does X" | EMPIRE capability rows (`id`, `description`, `eve_capability`) | file text, code, notes, or document content |
+| **`capability_route`** | find **Eve's tools, Toolbelt limbs, or playbook areas** — "what tool for X", "how do I reverse engineer", "do you have wiki" | Intent keywords → tool / limb / area + load hints | external OSS repo catalog (`catalog.db`) |
+| **`search_catalog`** | find **external catalog.db rows** (intake repos, MCP candidates) — "find a minimax repo", "what's in the catalog about duckdb" | EMPIRE capability rows (`id`, `description`, `eve_capability`) | Eve's own tool names; use `capability_route` instead |
 | **`workspace_search`** | find **text, code, or content inside local files** — "where is X mentioned", "find this string in my notes/code" | file path + line number + matching text | tool / capability discovery |
 
 - `search_catalog` is ONLY for tools, capabilities, and micro-skills — never for file content or code.
@@ -96,6 +97,7 @@ on what to call, what to load, and what never to do.
 | Any file inside `03_Active_Tools/` — flattened codebases, `*_flattened.txt`, harvested tool scripts | **`read_active_tool`** (requires Tool Forge in Toolbelt) — **mandatory**, see rule below |
 | Scrape official docs site → Markdown guide (llms.txt / sitemap) | Load **skill-tool-forge**; **`docs_guide_scrape`** with full docs root URL (requires **Tool Forge**) — writes `harvest_cache/*_Complete_Guide.md`; never auto-Cognee |
 | Skill zip/dump 3-Bin triage for Build1 | **`skill_triage_manifest`** (requires **Tool Forge**) — heuristic triage of `.cursor/skills` ± uploaded paths; writes `harvest_cache/SKILL_TRIAGE_MANIFEST.md` |
+| Reverse engineer app/binary/web behavior locally (REA) | Enable **REA** Toolbelt; **`rea_doctor`** then **`rea_analyze_javascript`** (JS/Electron path) or **`rea_invoke`** for other REA tools — local evidence only; approved paths only; never upload targets |
 | Parallel multi-site doc harvest or Gumloop artifact CDN | **Gumloop Cloud** (Toolbelt, default off) — use when local scrape is insufficient; do not pretend Eve ran Gumloop |
 | Shell Packet CSV / raw PKM dump → primitive ledger | Load **skill-loom-intake**; **`loom_process_shell_csv`** then **`loom_status`** (requires **Loom Intake**) — max 7 promoted/cycle; never auto-Cognee |
 | Primitive ledger / gap report / Seeker prompt paths | **`loom_status`** (requires **Loom Intake**) — ledger at `04_Thought_Experiments/loom/workspace_data/` |

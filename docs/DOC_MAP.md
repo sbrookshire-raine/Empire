@@ -19,6 +19,8 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Job | Document |
 |---|---|
 | Capability contract Eve reads | [PLAYBOOK.md](PLAYBOOK.md) |
+| Tool/limb keyword index (route before overload) | [CAPABILITY_ROUTE.md](CAPABILITY_ROUTE.md) |
+| Everyday verb → intent codex (scrape, research, lookup, …) | [INTENT_CODEX.md](INTENT_CODEX.md) |
 | What runs in VRAM vs RAM (measured) | [PLACEMENT.md](PLACEMENT.md) |
 | Web/wiki research behaviour + bench | [RESEARCH_BENCH.md](RESEARCH_BENCH.md), [RESEARCH_CLOSURE.md](RESEARCH_CLOSURE.md) |
 | Voice (Speaches, push-to-talk) | [VOICE_PRESENCE.md](VOICE_PRESENCE.md) |
@@ -39,7 +41,10 @@ the index. Nothing here replaces content; it says where things live and what is 
 | **Local-upgrade contracts** — `EVE_OLLAMA_EXPANSION_MANIFEST.md` (the source of the operating rules), `EMPIRE_LOCAL_UPGRADE_RESEARCH.md`, `LOCAL_NO_ACCOUNT_MCP_CATALOG.md` | [expansion_docs/](expansion_docs/) |
 | Idea queue / deferred ideas | [EMPIRE_IDEA_QUEUE.md](EMPIRE_IDEA_QUEUE.md), [ideas/README.md](ideas/README.md) |
 | **Backup: what exists, how to copy it, how much space** | [ESTATE_INVENTORY.md](ESTATE_INVENTORY.md), [BACKUP_RUNBOOK.md](BACKUP_RUNBOOK.md), [ODYSSEY.md](ODYSSEY.md) |
+| **Portfolio (public-facing extract; sync from ODYSSEY)** | [PORTFOLIO.md](PORTFOLIO.md), [PORTFOLIO_MAINTENANCE.md](PORTFOLIO_MAINTENANCE.md), [PORTFOLIO_FRAMER.md](PORTFOLIO_FRAMER.md), [data/framer-portfolio/](../data/framer-portfolio/) (Framer CSV import) |
+| **Consolidation phase (E: hub → cloud → disc → GitHub)** | [BACKUP_CONSOLIDATION.md](BACKUP_CONSOLIDATION.md), [config/hub-upload.json](../config/hub-upload.json), [scripts/hub-rclone-sync.ps1](../scripts/hub-rclone-sync.ps1) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
+| **Cursor / Cline session reset** (agent Memory Bank — not Eve Cognee; local untracked) | [../memory-bank/activeContext.md](../memory-bank/activeContext.md) (+ five sibling files under `memory-bank/`) |
 
 If a fact appears in more than one of these, **AGENTS.md wins for commands**, this map wins
 for "where is it", and the specialist doc wins for its own subject.

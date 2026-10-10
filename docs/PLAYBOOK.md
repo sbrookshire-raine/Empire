@@ -3,7 +3,9 @@
 **One breath:** the playbook is what Eve reads when she needs to *do* something — per capability, the
 tool names and 3–7 worked examples written as **ask → tools → artefact**, so a known route is reused
 instead of a tool being reached for at random. It is her runtime answer to *"how do I use this?"*;
-`tool_docs` answers *"what are this tool's parameters?"*.
+`tool_docs` answers *"what are this tool's parameters?"*; **`capability_route`** answers *"which tool
+or limb matches these keywords?"* without stuffing the full list into context — see
+[`CAPABILITY_ROUTE.md`](CAPABILITY_ROUTE.md).
 
 **Why it exists.** `agent/instructions.ts` builds the system prompt from `eve_instructions.md` +
 `empire-routing.md` only — so the 33 `agent/skills/*.md` files never entered context and every

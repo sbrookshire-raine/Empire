@@ -23,9 +23,9 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Python = Join-Path $Root "venv\Scripts\python.exe"
 
 if (-not (Test-Path $Python)) { throw "Missing venv: $Python" }
-if (-not (Test-Path "V:\Cognee")) {
-    throw "V:\Cognee not mounted. Plug in T7 and run Start-EMPIRE.bat first."
-}
+. (Join-Path $PSScriptRoot "lib\cognee-storage.ps1")
+$cogneeRoot = Ensure-EmpireCogneeRoot
+$env:EMPIRE_COGNEE_ROOT = $cogneeRoot
 
 $models = & ollama list 2>$null | Out-String
 if ($models -notmatch "nomic-embed-text") {
@@ -48,6 +48,6 @@ if ($DryRun) { $argsList += "--dry-run" }
 if ($Fresh) { $argsList += "--fresh" }
 if ($Memify) { $argsList += "--memify" }
 
-Write-Host "Optimizing workbench memory -> dataset eve_core on V:\Cognee ..."
+Write-Host "Optimizing workbench memory -> dataset eve_core ($cogneeRoot) ..."
 & $Python @argsList
 if ($LASTEXITCODE -ne 0) { throw "optimize_eve_memory failed ($LASTEXITCODE)" }

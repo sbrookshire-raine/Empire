@@ -40,6 +40,9 @@
     research_orchestrate: "Running research autopilot…",
     github_scout_search: "Searching GitHub…",
     github_scout_readme: "Reading GitHub README…",
+    rea_doctor: "Checking REA readiness…",
+    rea_analyze_javascript: "Analyzing app with REA…",
+    rea_invoke: "Running REA analysis…",
     web_scout: "Fetching web page…",
     container_scout_search: "Searching Docker Hub…",
   };
@@ -407,6 +410,13 @@
           description:
             "Shard of the Division — Demucs stems from stem_factory/input (GPU).",
         },
+        {
+          id: "rea",
+          bucket: "session",
+          label: "REA (Reverse Engineer Anything)",
+          description:
+            "Local reverse-engineering MCP (JS/Electron, native, web). Enable before rea_* tools.",
+        },
       ],
       activeTools: {
         gumloop_cloud: false,
@@ -425,6 +435,7 @@
         retrieval_rerank: false,
         browser_local: false,
         loom_intake: false,
+        rea: false,
       },
       composerQuickPrompts: [
         {

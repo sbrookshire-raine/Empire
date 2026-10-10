@@ -19,6 +19,7 @@ cognee/.cognee_system/
 
 # Eve
 agents/**/node_modules/
+tools/rea/node_modules/
 agents/**/.eve/
 agents/**/.next/
 agents/**/.output/

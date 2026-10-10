@@ -43,6 +43,7 @@ ALLOWED_CATEGORIES = (
     "switchboard",
     "system_ops",
     "file_ops",
+    "rea",
 )
 
 CATEGORY_BUCKETS: dict[str, Bucket] = {
@@ -71,6 +72,7 @@ CATEGORY_BUCKETS: dict[str, Bucket] = {
     "switchboard": "session",
     "system_ops": "session",
     "file_ops": "session",
+    "rea": "session",
 }
 
 BUCKET_ORDER: tuple[Bucket, ...] = ("always", "session", "products")

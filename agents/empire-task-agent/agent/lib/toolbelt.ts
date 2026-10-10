@@ -35,6 +35,7 @@ export const TOOLBELT_CATEGORIES = [
   "switchboard",
   "system_ops",
   "file_ops",
+  "rea",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

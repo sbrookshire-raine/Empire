@@ -38,17 +38,10 @@ Write-Host "============"
 # do not depend on each other are launched together and awaited in a second pass.
 $StartupClock = [System.Diagnostics.Stopwatch]::StartNew()
 
-if (-not (Test-Path "V:\Cognee")) {
-    Write-Host "Requesting the scheduled V: mount..."
-    schtasks /Run /TN "EMPIRE Mount Cognee VHDX" | Out-Null
-    for ($attempt = 1; $attempt -le 15 -and -not (Test-Path "V:\Cognee"); $attempt++) {
-        Start-Sleep -Seconds 1
-    }
-    if (-not (Test-Path "V:\Cognee")) {
-        throw "V:\Cognee is unavailable. Plug in the T7, then run scripts\mount-cognee-vhdx.ps1 as Administrator."
-    }
-}
-Write-Host "  V:\Cognee ready"
+. (Join-Path $PSScriptRoot "lib\cognee-storage.ps1")
+$cogneeRoot = Ensure-EmpireCogneeRoot
+$env:EMPIRE_COGNEE_ROOT = $cogneeRoot
+Write-Host "  Cognee file root: $cogneeRoot"
 
 & (Join-Path $PSScriptRoot "ensure-cognee-postgres.ps1")
 

@@ -1,0 +1,580 @@
+{
+  "schema_version": 1,
+  "notes": "Plain-language verbs/phrases → intent → local-first policy → tools/limbs. Edit freely; Mechanic runs harvest-intent-verbs.py for suggestions from playbook.",
+  "intents": [
+    {
+      "id": "remember_recall",
+      "say": "Search what we already stored in graph memory (not training knowledge).",
+      "triggers": {
+        "verbs": ["recall", "remember", "remind", "recollect"],
+        "nouns": ["memory", "memories", "interests"],
+        "phrases": [
+          "what do you know about me",
+          "what did we decide",
+          "from memory",
+          "in memory",
+          "what are my",
+          "what do we already have",
+          "did we already build",
+          "continue not start",
+          "four architectures",
+          "obsidian vault",
+          "gemini convo",
+          "extracted gemini",
+          "language barrier",
+          "how i talk",
+          "words i use",
+          "architect intent vocabulary",
+          "vault and dialogue"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["cognee_recall"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "memory-and-ideas",
+        "datasets": ["eve_core", "eve_memory", "primitives_test"]
+      }
+    },
+    {
+      "id": "save_to_memory",
+      "say": "Store a new fact in memory with consent.",
+      "triggers": {
+        "verbs": ["remember", "save", "keep", "store", "memorize", "don't forget", "dont forget"],
+        "phrases": [
+          "add to memory",
+          "put in memory",
+          "remember that",
+          "keep this for later",
+          "add it to cognee",
+          "help the language barrier",
+          "put this in cognee for eve"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["propose_remember", "confirm_remember", "cognee_remember"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "memory-and-ideas"
+      }
+    },
+    {
+      "id": "task_todo",
+      "say": "PocketBase task list — todos, not Work Orders.",
+      "triggers": {
+        "verbs": ["add", "create", "list", "mark", "complete", "delete"],
+        "nouns": ["task", "tasks", "todo", "todos", "to-do", "checklist"],
+        "phrases": ["what's on my list", "on my list", "add a task", "mark done"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["list_tasks", "search_tasks", "create_task", "update_task", "delete_task"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "tasks-and-routing"
+      }
+    },
+    {
+      "id": "wiki_fact",
+      "say": "Ground a fact in the local Wikipedia archive (Title DNS + sections).",
+      "triggers": {
+        "verbs": ["lookup", "look up", "who", "what", "when", "where", "tell me about"],
+        "nouns": ["wikipedia", "wiki", "article", "page", "lead", "discography", "cast"],
+        "phrases": ["who is", "what is", "how do", "how does", "on that page", "else on the page"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["wiki_scout_search", "wiki_read_section", "wiki_extract", "wiki_resolve"],
+        "online_tools": [],
+        "limbs": ["wiki_local"],
+        "playbook": "wiki-archive"
+      }
+    },
+    {
+      "id": "research_deep",
+      "say": "Research: local memory and files first, then desk/web tools if still open.",
+      "triggers": {
+        "verbs": ["research", "investigate", "dig", "explore", "study", "deep dive"],
+        "nouns": ["research", "investigation", "report", "brief"],
+        "phrases": [
+          "dig into",
+          "find out about",
+          "learn about",
+          "what changed in",
+          "research or lookup",
+          "notebooklm",
+          "promote to cognee",
+          "dig into my notes",
+          "goal app",
+          "how my mind works",
+          "learning hub",
+          "zet pipeline",
+          "zettelkasten"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["cognee_recall", "workspace_search", "research_start", "research_read"],
+        "online_tools": ["searxng_search", "web_scout", "research_orchestrate"],
+        "limbs": ["web_research", "web_scout"],
+        "playbook": "web-and-sources",
+        "sequence": ["cognee_recall or workspace_search", "research_start if multi-page", "searxng_search if need URLs"]
+      }
+    },
+    {
+      "id": "lookup_general",
+      "say": "Lookup: search local files and memory before claiming ignorance.",
+      "triggers": {
+        "verbs": ["lookup", "look up", "find", "search", "locate", "check"],
+        "phrases": [
+          "find in my",
+          "search my",
+          "do we have",
+          "anything about",
+          "where is",
+          "estate inventory",
+          "what exists on the drives"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["workspace_search", "cognee_recall", "capability_route"],
+        "online_tools": ["searxng_search"],
+        "limbs": ["workspace_search"],
+        "playbook": "workbench-and-files",
+        "sequence": ["workspace_search", "cognee_recall", "wiki_scout_search if entity name", "searxng_search only if online limb on"]
+      }
+    },
+    {
+      "id": "scrape_gather_web",
+      "say": "Go to a URL (or named site) and gather page content into local cache.",
+      "triggers": {
+        "verbs": ["scrape", "fetch", "pull", "grab", "harvest", "download", "get"],
+        "nouns": ["page", "site", "website", "url", "link", "html"],
+        "phrases": [
+          "get the page",
+          "pull from the site",
+          "what's on this link",
+          "read this link",
+          "summarize this url",
+          "from this url",
+          "scrape something",
+          "gathering info from a resource",
+          "getting info from",
+          "go to a location and get"
+        ]
+      },
+      "policy": {
+        "local_first": false,
+        "local_tools": [],
+        "online_tools": ["web_scout"],
+        "limbs": ["web_scout"],
+        "playbook": "web-and-sources",
+        "needs": ["url_or_explicit_site"]
+      }
+    },
+    {
+      "id": "search_online",
+      "say": "Search the public web (metasearch), not Wikipedia archive.",
+      "triggers": {
+        "verbs": ["google", "search", "bing"],
+        "phrases": ["search online", "search the web", "on the internet", "find online", "web search"]
+      },
+      "policy": {
+        "local_first": false,
+        "local_tools": [],
+        "online_tools": ["searxng_search", "research_start"],
+        "limbs": ["web_research"],
+        "playbook": "web-and-sources"
+      }
+    },
+    {
+      "id": "github_discover",
+      "say": "Search GitHub repos and read READMEs (no clone).",
+      "triggers": {
+        "verbs": ["search", "find", "browse"],
+        "nouns": ["github", "repo", "repository", "readme"],
+        "phrases": ["on github", "github repo", "open source", "mcp server"]
+      },
+      "policy": {
+        "local_first": false,
+        "local_tools": [],
+        "online_tools": ["github_scout_search", "github_scout_readme"],
+        "limbs": ["github_scout"],
+        "playbook": "web-and-sources"
+      }
+    },
+    {
+      "id": "read_document",
+      "say": "Extract text from a local file (PDF, Office, md).",
+      "triggers": {
+        "verbs": ["read", "open", "parse", "extract", "convert"],
+        "nouns": ["pdf", "docx", "document", "file", "spreadsheet", "pptx"],
+        "phrases": ["read this pdf", "what's in this file", "local file"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["read_document", "docling_convert", "workbench_read_file"],
+        "online_tools": [],
+        "limbs": ["read_document"],
+        "playbook": "workbench-and-files",
+        "needs": ["path"]
+      }
+    },
+    {
+      "id": "search_workbench",
+      "say": "Search flattened workbench text and notes on disk.",
+      "triggers": {
+        "verbs": ["grep", "search", "find"],
+        "nouns": ["workbench", "notes", "files", "folder", "directory", "queue"],
+        "phrases": ["in the workbench", "in my files", "resource queue", "active tools"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["workspace_search", "workbench_list_dir", "workbench_read_file"],
+        "online_tools": [],
+        "limbs": ["workspace_search"],
+        "playbook": "workbench-and-files"
+      }
+    },
+    {
+      "id": "reverse_engineer",
+      "say": "Reverse-engineer software locally (REA): JS/Electron, native, web bundles.",
+      "triggers": {
+        "verbs": ["reverse", "decompile", "disassemble", "analyze", "inspect"],
+        "nouns": ["binary", "exe", "dll", "electron", "asar", "apk", "firmware"],
+        "phrases": ["reverse engineer", "how does this app work", "without source code", "figure out how it works"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["rea_doctor", "rea_analyze_javascript", "rea_invoke"],
+        "online_tools": [],
+        "limbs": ["rea"],
+        "playbook": "reverse-engineering",
+        "needs": ["path"]
+      }
+    },
+    {
+      "id": "build_change_code",
+      "say": "Write or change code in a disposable worktree and verify.",
+      "triggers": {
+        "verbs": ["implement", "build", "write", "fix", "patch", "refactor", "code"],
+        "phrases": ["change the code", "add a feature", "make it so", "forge"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["author_code", "python_verify"],
+        "online_tools": [],
+        "limbs": ["author_code"],
+        "playbook": "build-and-verify"
+      }
+    },
+    {
+      "id": "make_spreadsheet",
+      "say": "Turn a table or list into an .xlsx file.",
+      "triggers": {
+        "verbs": ["spreadsheet", "table", "excel", "sheet", "csv"],
+        "phrases": ["make me a spreadsheet", "put this in a table", "columns and rows"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["create_spreadsheet", "structured_extract"],
+        "online_tools": [],
+        "limbs": ["create_spreadsheet"],
+        "playbook": "build-and-verify"
+      }
+    },
+    {
+      "id": "compare_drift",
+      "say": "Compare sources or Wikipedia years (Truth Drift product).",
+      "triggers": {
+        "verbs": ["compare", "diff", "contrast", "drift"],
+        "phrases": ["truth drift", "compare years", "2017 vs", "what changed"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["wiki_scout_compare_years"],
+        "online_tools": [],
+        "limbs": ["wiki_local"],
+        "playbook": "wiki-archive"
+      }
+    },
+    {
+      "id": "capture_idea",
+      "say": "Capture a thought experiment or idea note locally.",
+      "triggers": {
+        "verbs": ["capture", "note", "jot", "record"],
+        "nouns": ["idea", "experiment", "hypothesis", "youtube"],
+        "phrases": ["thought experiment", "save this idea", "what if we"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["thought_experiment_capture", "primitive_lookup"],
+        "online_tools": [],
+        "limbs": ["thought_experiments"],
+        "playbook": "memory-and-ideas"
+      }
+    },
+    {
+      "id": "schedule_time",
+      "say": "DAZE schedule — day blocks and free windows.",
+      "triggers": {
+        "verbs": ["schedule", "plan", "block", "calendar"],
+        "nouns": ["day", "week", "time", "free", "window", "daze"],
+        "phrases": ["free time", "time block", "on my calendar"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["daze_list_day", "daze_free_windows", "daze_upsert_block"],
+        "online_tools": [],
+        "limbs": ["time_reclaim"],
+        "playbook": "media-and-time"
+      }
+    },
+    {
+      "id": "speak_aloud",
+      "say": "Text-to-speech for the reply.",
+      "triggers": {
+        "verbs": ["speak", "say", "read aloud", "voice"],
+        "phrases": ["read that out", "say it out loud"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["voice_speak"],
+        "online_tools": [],
+        "limbs": ["voice_presence"],
+        "playbook": "media-and-time"
+      }
+    },
+    {
+      "id": "describe_image",
+      "say": "Describe a screenshot or image with local vision.",
+      "triggers": {
+        "verbs": ["describe", "see", "look at"],
+        "nouns": ["screenshot", "image", "picture", "screen"],
+        "phrases": ["what's on screen", "read the error on screen"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["vision_describe", "vision_ui_observe"],
+        "online_tools": [],
+        "limbs": ["vision_local"],
+        "playbook": "media-and-time"
+      }
+    },
+    {
+      "id": "container_docker",
+      "say": "Search Docker Hub and local empire containers.",
+      "triggers": {
+        "verbs": ["search", "find", "pull"],
+        "nouns": ["docker", "container", "image", "hub"],
+        "phrases": ["docker hub", "what containers"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["container_scout_search", "container_scout_docker_status"],
+        "online_tools": [],
+        "limbs": ["container_scout"],
+        "playbook": "web-and-sources"
+      }
+    },
+    {
+      "id": "stem_audio",
+      "say": "Demucs stem separation (Stem Factory product).",
+      "triggers": {
+        "verbs": ["stem", "split", "separate"],
+        "nouns": ["demucs", "track", "audio", "song"],
+        "phrases": ["stem factory", "split the vocals"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["stem_list_inbox", "stem_run", "stem_status"],
+        "online_tools": [],
+        "limbs": ["stem_factory"],
+        "playbook": "media-and-time"
+      }
+    },
+    {
+      "id": "external_catalog",
+      "say": "Search the OSS intake catalog (catalog.db), not Eve's tool names.",
+      "triggers": {
+        "verbs": ["catalog", "catalogue"],
+        "phrases": ["your catalog", "in the catalog", "catalog search", "find tools related to", "minimax repo"]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["search_catalog"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "tasks-and-routing"
+      }
+    },
+    {
+      "id": "what_can_you_do",
+      "say": "Discover routes and tools from plain language.",
+      "triggers": {
+        "verbs": ["help", "capabilities", "tools"],
+        "phrases": [
+          "what can you do",
+          "do you have a tool",
+          "how do i",
+          "what tool",
+          "that is amazing do that",
+          "build that systematically",
+          "vocabulary lookup",
+          "intent codex"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["resolve_intent", "capability_route", "playbook"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "tasks-and-routing"
+      }
+    },
+    {
+      "id": "forge_capability",
+      "say": "Forge EMPIRE capability — Work Orders, MCP, Eve tools (Mechanic path).",
+      "triggers": {
+        "verbs": ["forge", "wire", "install", "setup", "set up", "build", "add"],
+        "nouns": ["mcp", "skill", "limb", "tool", "work order"],
+        "phrases": [
+          "process work orders",
+          "wire eve",
+          "give eve",
+          "give her the skill",
+          "mcp tools for her",
+          "on command",
+          "future considerations",
+          "idea queue",
+          "help me understand in basic terms",
+          "mvp this morning",
+          "jumping into development too early"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["draft_work_order", "capability_route", "playbook", "read_active_tool"],
+        "online_tools": [],
+        "limbs": ["tool_forge"],
+        "playbook": "build-and-verify",
+        "sequence": ["resolve_intent", "playbook(build-and-verify)", "draft_work_order when USEFUL NOW"]
+      }
+    },
+    {
+      "id": "stack_health_verify",
+      "say": "Check EMPIRE stack / workbench health (Mechanic green).",
+      "triggers": {
+        "verbs": ["verify", "check", "green", "smoke"],
+        "phrases": [
+          "mechanic green",
+          "is the stack up",
+          "verify stack",
+          "before architect smoke",
+          "is eve running"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["check_workbench_health", "switchboard_status", "resource_pulse"],
+        "online_tools": [],
+        "limbs": ["switchboard"],
+        "playbook": "machine-and-services"
+      }
+    },
+    {
+      "id": "backup_estate_status",
+      "say": "Estate backup, hub, ZIM, rclone, Z: pool — status only (no invented cloud state).",
+      "triggers": {
+        "verbs": ["upload", "sync", "copy", "backup", "processing"],
+        "nouns": ["hub", "zim", "rclone", "pool", "z drive", "cloud", "offline disc", "vhdx"],
+        "phrases": [
+          "is anything processing to my z drive",
+          "emPIRE_hub",
+          "zim cloud upload",
+          "hub upload",
+          "backup consolidation",
+          "rclone reconnect",
+          "pool oauth"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["workspace_search", "cognee_recall", "read_document"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "workbench-and-files",
+        "sequence": [
+          "cognee_recall estate backup OR read docs/BACKUP_CONSOLIDATION.md via read_document",
+          "report only verified log facts — never invent cloud GiB"
+        ]
+      }
+    },
+    {
+      "id": "offline_sovereign",
+      "say": "Offline / no cloud tokens — local Ollama and wired resources only.",
+      "triggers": {
+        "verbs": ["offline", "unplug", "local"],
+        "phrases": [
+          "unplugged internet",
+          "run out of tokens",
+          "no money for tokens",
+          "stop gap",
+          "sovereign",
+          "without internet",
+          "backup is not operational",
+          "wired vs backup"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["resolve_intent", "cognee_recall", "capability_route", "check_workbench_health"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "tasks-and-routing",
+        "sequence": ["local tools and limbs only", "no cloud LLM in app code"]
+      }
+    },
+    {
+      "id": "interpret_architect_voice",
+      "say": "Map the Architect's everyday words to intents (codex + memory).",
+      "triggers": {
+        "phrases": [
+          "language barrier",
+          "how i talk",
+          "words i use",
+          "plain english",
+          "without technical jargon",
+          "psst i want this",
+          "magically know what i want",
+          "codex vocabulary",
+          "architect intent vocabulary",
+          "gemini note not me",
+          "obsidian clippings",
+          "digital jungle",
+          "close the loop",
+          "energy drained",
+          "shiny objects",
+          "start from zero",
+          "discard pile"
+        ]
+      },
+      "policy": {
+        "local_first": true,
+        "local_tools": ["resolve_intent", "cognee_recall", "capability_route"],
+        "online_tools": [],
+        "limbs": [],
+        "playbook": "tasks-and-routing",
+        "datasets": ["eve_memory", "eve_core"],
+        "sequence": [
+          "cognee_recall('Architect intent vocabulary vault Gemini', dataset=eve_memory)",
+          "resolve_intent(message)",
+          "playbook area from primary intent"
+        ]
+      }
+    }
+  ]
+}

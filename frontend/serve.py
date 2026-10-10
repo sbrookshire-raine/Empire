@@ -1026,11 +1026,17 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     transfer_context = _transfer_context(user_question)
                 except Exception:
                     transfer_context = ""
+                try:
+                    from pipeline.intent_codex import context_block as intent_codex_context
+
+                    intent_context = intent_codex_context(user_question)
+                except Exception:
+                    intent_context = ""
                 # Place next to the ask, not above the companion preamble: the
                 # model ignored a distant catalog block and called the wiki limb.
                 payload["message"] = _attach_server_context(
                     original_message,
-                    f"{catalog_context}{resource_context}{transfer_context}",
+                    f"{intent_context}{catalog_context}{resource_context}{transfer_context}",
                 )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None

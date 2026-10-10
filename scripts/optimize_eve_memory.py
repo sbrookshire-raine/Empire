@@ -28,6 +28,9 @@ PROFILE_FILE = CORE_OUTPUT / "USER_CORE_PROFILE.md"
 MANIFEST_FILE = CORE_OUTPUT / "eve_core_manifest.json"
 PINNED_CORE_FILES = (
     CORE_OUTPUT / "DAZE_PRODUCT_PROFILE.md",
+    EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-eve-language-bridge.md",
+    EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-intent-vocabulary.md",
+    EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-vault-voice-supplement.md",
 )
 DATASET = "eve_core"
 ALLOWED_SUFFIXES = {".md", ".txt"}

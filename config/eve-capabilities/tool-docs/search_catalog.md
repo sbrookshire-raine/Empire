@@ -6,7 +6,7 @@ one_line: Search the local EMPIRE capability catalog for tools by capability, de
 
 ## Description (verbatim from the tool schema, pre-R-03)
 
-Search the local EMPIRE capability catalog for tools by capability, description, category, or name. Read-only; use before claiming a local tool is unavailable.
+Search the **external intake catalog** (`catalog.db` — OSS/MCP repository rows). Read-only. For Eve's **own** tools and limbs, use **`capability_route`** first; do not use this tool to discover `wiki_scout_search`, tasks tools, etc.
 
 ## Parameters
 

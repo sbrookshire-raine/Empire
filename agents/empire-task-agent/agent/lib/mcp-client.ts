@@ -31,8 +31,14 @@ export type McpClientConfig = {
   /** Name this client reports to the server, e.g. "eve-empire-work-orders". */
   clientName: string;
   /** Server script under `<EMPIRE_ROOT>/mcp/`, e.g. "work_order_mcp.py". */
-  script: string;
-  /** Extra environment for the server process; PYTHONPATH is added for you. */
+  script?: string;
+  /** When set, spawn this executable instead of the repo Python venv (e.g. Node + REA). */
+  command?: string;
+  /** Arguments after `command`; defaults to `[mcp/<script>]` for Python servers. */
+  args?: string[];
+  /** Working directory for the server process. */
+  cwd?: string;
+  /** Extra environment for the server process; PYTHONPATH is added for Python scripts. */
   env?: () => Record<string, string>;
 };
 
@@ -44,7 +50,12 @@ export type EmpireMcpClient = {
 };
 
 export function createEmpireMcpClient(config: McpClientConfig): EmpireMcpClient {
-  const scriptPath = path.join(EMPIRE_ROOT, "mcp", config.script);
+  if (!config.script && !config.command) {
+    throw new Error(`${config.label}: McpClientConfig requires script or command`);
+  }
+  const scriptPath = config.script
+    ? path.join(EMPIRE_ROOT, "mcp", config.script)
+    : "";
   let client: InstanceType<Sdk["Client"]> | null = null;
   let transport: InstanceType<Sdk["StdioClientTransport"]> | null = null;
   let connectPromise: Promise<void> | null = null;
@@ -60,7 +71,9 @@ export function createEmpireMcpClient(config: McpClientConfig): EmpireMcpClient 
         env[key] = value;
       }
     }
-    env.PYTHONPATH = EMPIRE_ROOT;
+    if (config.script) {
+      env.PYTHONPATH = EMPIRE_ROOT;
+    }
     Object.assign(env, config.env?.() ?? {});
     return env;
   }
@@ -108,10 +121,10 @@ export function createEmpireMcpClient(config: McpClientConfig): EmpireMcpClient 
       connectPromise = (async () => {
         const { Client, StdioClientTransport } = await loadSdk();
         transport = new StdioClientTransport({
-          command: PYTHON_BIN,
-          args: [scriptPath],
+          command: config.command ?? PYTHON_BIN,
+          args: config.args ?? [scriptPath],
           env: buildEnv(),
-          cwd: EMPIRE_ROOT,
+          cwd: config.cwd ?? EMPIRE_ROOT,
           stderr: "pipe",
         });
         client = new Client({ name: config.clientName, version: "1.0.0" });
