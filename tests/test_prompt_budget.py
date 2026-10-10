@@ -18,9 +18,9 @@ from pipeline import prompt_budget, tool_registry
 from pipeline.prompt_budget import tokens
 
 # Measured 2026-09-24 after R-03 (see docs/REFACTOR_PLAN.md section 3).
-INSTRUCTION_CEILING_TOKENS = 3_700  # measured 3,435; was 3,897 before R-03
-DEFAULT_SCHEMA_CEILING_TOKENS = 850  # measured 695; was 1,780 before R-03
-FLOOR_CEILING_TOKENS = 4_400  # measured 4,130; was 5,677 before R-03
+INSTRUCTION_CEILING_TOKENS = 4_000  # measured ~3,969 (2026-10-09)
+DEFAULT_SCHEMA_CEILING_TOKENS = 1_100  # measured ~1,095 (2026-10-09; +5 always-on REA/disassembly)
+FLOOR_CEILING_TOKENS = 5_100  # measured ~5,065
 MIN_CONVERSATION_HEADROOM = 4_096
 TOOLBELT_CATEGORY_CEILING = 30
 

@@ -4,6 +4,29 @@
   var MAX_FILE_BYTES = 50 * 1024 * 1024;
   var MAX_FILES = 20;
   var ALLOWED_EXTENSIONS = [".md", ".txt", ".pdf"];
+  var REA_MAX_FILE_BYTES = 200 * 1024 * 1024;
+  var REA_MAX_FILES = 8;
+  var REA_ALLOWED_EXTENSIONS = [
+    ".zip",
+    ".7z",
+    ".exe",
+    ".dll",
+    ".bin",
+    ".apk",
+    ".asar",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".json",
+    ".wasm",
+    ".html",
+    ".htm",
+    ".node",
+    ".msi",
+    ".so",
+    ".dylib",
+    ".dat",
+  ];
   var DIRECTIVE_FILENAME = "SYSTEM.md";
   var TOOL_LABELS = {
     cognee_recall: "Searching memory…",
@@ -43,6 +66,14 @@
     rea_doctor: "Checking REA readiness…",
     rea_analyze_javascript: "Analyzing app with REA…",
     rea_invoke: "Running REA analysis…",
+    disassembly_card_write: "Writing Disassembly Card…",
+    disassembly_card_list: "Listing Disassembly Cards…",
+    disassembly_publish_heptabase: "Publishing to Heptabase catalog…",
+    disassembly_mark_mature: "Marking catalog card mature…",
+    heptabase_health: "Checking Heptabase…",
+    rea_list_inbox: "Listing REA uploads…",
+    browser_capture_screenshot: "Capturing page screenshot…",
+    app_visual_observe: "Observing app UI visually…",
     web_scout: "Fetching web page…",
     container_scout_search: "Searching Docker Hub…",
   };
@@ -146,6 +177,25 @@
     return "";
   }
 
+  function validateReaFiles(files) {
+    if (!files.length) return "Choose at least one file to analyze.";
+    if (files.length > REA_MAX_FILES) {
+      return "Choose " + REA_MAX_FILES + " files or fewer for REA analysis.";
+    }
+    for (var index = 0; index < files.length; index += 1) {
+      var file = files[index];
+      var basename = String(file.name || "");
+      if (REA_ALLOWED_EXTENSIONS.indexOf(fileExtension(basename)) < 0) {
+        return basename + " is not an allowed REA analysis type.";
+      }
+      if (file.size <= 0) return basename + " is empty.";
+      if (file.size > REA_MAX_FILE_BYTES) {
+        return basename + " is larger than 200 MiB.";
+      }
+    }
+    return "";
+  }
+
   function displayToolName(name) {
     return String(name || "local tool")
       .replace(/[_-]+/g, " ")
@@ -230,6 +280,9 @@
       pollInFlight: false,
       pollGeneration: 0,
       draft: "",
+      reaAttachments: [],
+      reaUploadError: "",
+      reaUploading: false,
       sessionId: null,
       continuationToken: null,
       streamIndex: 0,
@@ -1577,16 +1630,85 @@
         this.sendMessage();
       },
 
+      selectReaAnalysisFiles: async function (files) {
+        this.reaUploadError = validateReaFiles(files);
+        if (this.reaUploadError) return;
+        this.reaUploading = true;
+        var form = new FormData();
+        Array.prototype.forEach.call(files, function (file) {
+          form.append("files", file, file.name);
+        });
+        try {
+          var response = await fetch("/api/rea/upload", { method: "POST", body: form });
+          var payload = await response.json();
+          if (!response.ok || !payload.ok || !payload.upload) {
+            throw new Error(errorMessage(payload, "Could not upload files for REA analysis."));
+          }
+          var upload = payload.upload;
+          this.reaAttachments.push({
+            id: plainText(upload.id),
+            label: plainText(upload.label) || "REA upload",
+            files: Array.isArray(upload.files)
+              ? upload.files.map(function (row) {
+                  return plainText(row && row.name);
+                })
+              : [],
+            analysis_roots: Array.isArray(upload.analysis_roots)
+              ? upload.analysis_roots.map(function (row) {
+                  return plainText(row);
+                })
+              : [],
+          });
+        } catch (error) {
+          this.reaUploadError =
+            plainText(error.message) || "Could not upload files for REA analysis.";
+        } finally {
+          this.reaUploading = false;
+        }
+      },
+
+      removeReaAttachment: function (index) {
+        if (index < 0 || index >= this.reaAttachments.length) return;
+        this.reaAttachments.splice(index, 1);
+      },
+
+      clearReaAttachments: function () {
+        this.reaAttachments = [];
+        this.reaUploadError = "";
+      },
+
       sendMessage: async function () {
         var text = plainText(this.draft).trim();
-        if (!text || this.sending) return;
+        if ((!text && !this.reaAttachments.length) || this.sending || this.reaUploading) return;
+        if (!text && this.reaAttachments.length) {
+          text =
+            "Reverse-engineer the files I attached in this message. Start with rea_doctor, then analyze using the uploaded paths.";
+        }
         this.voiceSuppressed = false;
         this.stopVoicePlayback();
         var generation = this.beginChatOperation();
         this.chatError = "";
-        this.messages.push({ id: this.makeId("message"), role: "user", text: text, createdAt: new Date().toISOString() });
+        var attachmentSummary = "";
+        if (this.reaAttachments.length) {
+          attachmentSummary = this.reaAttachments
+            .map(function (row) {
+              return row.label + " (" + (row.files || []).join(", ") + ")";
+            })
+            .join("; ");
+        }
+        var displayText = attachmentSummary ? text + "\n\n[Attached: " + attachmentSummary + "]" : text;
+        this.messages.push({
+          id: this.makeId("message"),
+          role: "user",
+          text: displayText,
+          createdAt: new Date().toISOString(),
+        });
         this.scrollTranscript();
         this.draft = "";
+        var reaUploadIds = this.reaAttachments.map(function (row) {
+          return row.id;
+        });
+        this.clearReaAttachments();
         this.sending = true;
         this.suggestions = [];
         this.turnHadToolStep = false;
@@ -1610,6 +1732,7 @@
                 active_tools: this.activeToolIds(),
                 chat_id: this.ensureHistoryChatId(),
                 workbench_ui: this.buildWorkbenchUiContext(),
+                rea_uploads: reaUploadIds,
               }
             : {
                 message: text,
@@ -1617,6 +1740,7 @@
                 active_tools: this.activeToolIds(),
                 chat_id: this.ensureHistoryChatId(),
                 workbench_ui: this.buildWorkbenchUiContext(),
+                rea_uploads: reaUploadIds,
               };
           var response = await fetch(path, {
             method: "POST",

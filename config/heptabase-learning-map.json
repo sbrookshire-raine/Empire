@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "revised_at": "2026-10-10T00:00:00Z",
+  "layout": {
+    "axis": "row",
+    "origin_x": 120,
+    "origin_y": 280,
+    "step_x": 320,
+    "row_gap_y": 180,
+    "container_rows": {
+      "electron": 0,
+      "native_pe": 1,
+      "web": 2,
+      "game_logic": 3,
+      "audio_pipeline": 4,
+      "unknown": 5
+    }
+  },
+  "stage_colors": {
+    "published": "orange",
+    "linked": "blue",
+    "mature": "green",
+    "evolved": "purple",
+    "draft": "white"
+  },
+  "legend_markdown": "# EMPIRE Disassembly Catalog — Legend\n\n**Orange** — new play session (just published)\n\n**Blue** — linked to earlier sessions (dependencies drawn)\n\n**Green** — matured (kept in Eve memory)\n\n**Purple** — evolved build on prior work\n\nConnector arrows = catalog dependency (`depends_on`), not every semantic hop inside a note."
+}

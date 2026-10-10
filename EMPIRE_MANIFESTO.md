@@ -22,7 +22,7 @@ Allow the user to share a YouTube video, idea, or interest, and have Eve researc
 
 ## Phase 4: The LEGO Whiteboard
 
-Tools are adapted into lego-like structures. When Eve builds or learns something new, it is indexed for future forge-builds. Operations become short-name movable objects on a whiteboard for cooperative building and workflow design.
+Tools are adapted into lego-like structures. When Eve builds or learns something new, it is indexed for future forge-builds. Operations become short-name movable objects on a whiteboard for cooperative building and workflow design. Reverse-engineering play sessions also produce **Disassembly Cards** (local evidence + optional Heptabase catalog board) — see [docs/DISASSEMBLY_CATALOG.md](docs/DISASSEMBLY_CATALOG.md).
 
 ## Phase 5: Time Reclamation & Personal Tracking
 

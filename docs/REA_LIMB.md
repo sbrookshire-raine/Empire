@@ -27,15 +27,26 @@ Registered in `.cursor/mcp.json` as **`rea`**: Node runs `tools/rea/node_modules
 
 Override with env `REA_EVIDENCE_ROOT`.
 
-## Eve tools (Toolbelt **REA** — default off)
+## Chat uploads (no fixed folder)
+
+On **http://127.0.0.1:8080/eve.html**, use the **📎** button in the chat composer. Allowed types include `.zip`, `.exe`, `.dll`, `.asar`, `.apk`, `.js`, `.wasm`, `.html`, and related binaries (up to **200 MiB** each, **8** files per upload). Files land under:
+
+`C:/Empire_Workbench/rea_inbox/<upload_id>/`
+
+Zips are extracted automatically. Eve receives absolute `analysis_roots` on the next message (and can call `rea_list_inbox` later).
+
+## Eve tools (Toolbelt **REA** — auto-admits on first call)
 
 | Tool | Purpose |
 |------|---------|
 | `rea_doctor` | Host readiness |
+| `rea_list_inbox` | Recent chat uploads + paths |
 | `rea_analyze_javascript` | Static JS/Electron app analysis |
 | `rea_invoke` | Any REA MCP tool by name |
+| `browser_capture_screenshot` | Playwright screenshot (allowlisted URL or local HTML) |
+| `app_visual_observe` | Screenshot + qwen3-vl UI regions (how a page/app looks) |
 
-Enable **REA** on the Workbench Toolbelt (Session) or ask Eve to admit the limb, then use natural language ("reverse engineer this Electron app at …").
+Visual tools admit **Browser Local** and **Vision Local** when headroom allows. They do **not** launch arbitrary EXEs or drive clicks — use them for uploaded HTML, unpacked web bundles, or allowlisted Workbench URLs (e.g. a page you are already serving locally).
 
 ## Native analysis engines
 
@@ -55,3 +66,7 @@ npm run build
 ```
 
 Or restart via `.\scripts\start-eve.ps1` when the stack is up.
+
+## Disassembly catalog (Heptabase)
+
+One card per RE play session → local files → optional publish to the **EMPIRE Disassembly Catalog** whiteboard (colors + dependency links). See [DISASSEMBLY_CATALOG.md](DISASSEMBLY_CATALOG.md).

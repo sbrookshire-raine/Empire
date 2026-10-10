@@ -38,6 +38,7 @@ try:
         wiki_api,
         wiki_drift_api,
         workbench_ui_api,
+        rea_inbox_api,
     )
 except ModuleNotFoundError:
     import chat_continuity  # type: ignore[no-redef]
@@ -57,6 +58,7 @@ except ModuleNotFoundError:
     import wiki_api  # type: ignore[no-redef]
     import wiki_drift_api  # type: ignore[no-redef]
     import workbench_ui_api  # type: ignore[no-redef]
+    import rea_inbox_api  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = Path(__file__).resolve().parent
@@ -858,6 +860,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._chat_history_get(path)
         if path == "/api/memory/status":
             return self._memory_status()
+        if path == "/api/rea/inbox":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._rea_inbox_list()
         if path == "/api/projects/catalog":
             return self._projects_catalog_get()
         if path.startswith("/api/memory/jobs/"):
@@ -997,6 +1003,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             except Exception:
                 pass
             try:
+                payload = rea_inbox_api.enrich_eve_message_payload(payload)
+            except Exception:
+                pass
+            try:
                 payload = workbench_ui_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
@@ -1072,6 +1082,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._projects_catalog_refresh()
         if path == "/api/memory/upload":
             return self._memory_upload()
+        if path == "/api/rea/upload":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            return self._rea_upload()
         if path == "/api/ollama/summarize-tasks":
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1714,6 +1728,51 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             202,
             {"ok": True, "job": memory_api.public_job(job)},
         )
+
+    def _rea_upload(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send_json(400, {"ok": False, "error": "Invalid Content-Length."})
+        from pipeline import rea_inbox
+
+        if content_length > rea_inbox.MAX_REQUEST_BYTES:
+            return self._send_json(
+                413,
+                {"ok": False, "error": "Upload exceeds REA inbox size limit."},
+            )
+        content_type = self.headers.get("Content-Type", "")
+        try:
+            body = self.rfile.read(content_length)
+            result = rea_inbox_api.save_upload(body, content_type)
+        except ValueError as exc:
+            message_text = str(exc)
+            status = 413 if "exceeds" in message_text.casefold() or "limit" in message_text.casefold() else 400
+            return self._send_json(status, {"ok": False, "error": message_text})
+        except Exception:
+            return self._send_json(
+                500,
+                {"ok": False, "error": "Could not save REA upload."},
+            )
+        return self._send_json(201, result)
+
+    def _rea_inbox_list(self) -> None:
+        from pipeline import rea_inbox
+
+        parsed = urlparse(self.path)
+        limit = 20
+        if parsed.query:
+            for part in parsed.query.split("&"):
+                if part.startswith("limit="):
+                    try:
+                        limit = int(part.split("=", 1)[1])
+                    except ValueError:
+                        pass
+        try:
+            uploads = rea_inbox.list_bundles(limit=limit)
+        except Exception:
+            return self._send_json(500, {"ok": False, "error": "Could not list REA inbox."})
+        return self._send_json(200, {"ok": True, "uploads": uploads})
 
     def _memory_retry(self, path: str) -> None:
         prefix = "/api/memory/jobs/"

@@ -44,6 +44,7 @@ ALLOWED_CATEGORIES = (
     "system_ops",
     "file_ops",
     "rea",
+    "heptabase",
 )
 
 CATEGORY_BUCKETS: dict[str, Bucket] = {
@@ -73,6 +74,7 @@ CATEGORY_BUCKETS: dict[str, Bucket] = {
     "system_ops": "session",
     "file_ops": "session",
     "rea": "session",
+    "heptabase": "session",
 }
 
 BUCKET_ORDER: tuple[Bucket, ...] = ("always", "session", "products")

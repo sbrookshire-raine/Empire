@@ -1,20 +1,27 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
-import { isCapabilityActive } from "#lib/toolbelt";
+import { ensureLightCapability } from "#lib/ensure-capability";
 import { runPythonModule } from "#lib/python-pipeline";
+import { isCapabilityActive } from "#lib/toolbelt";
 
 export default defineDynamic({
   events: {
     "turn.started": () =>
       isCapabilityActive("vision_local")
         ? defineTool({
-            description:
-              "Observe a local screenshot for UI regions (structured). Observation only — no clicks/automation. Uses qwen3-vl. Requires Vision Local Toolbelt.",
+            description: "Structured UI regions from a local screenshot (qwen3-vl).",
             inputSchema: z.object({
               image_path: z.string().min(1),
               note: z.string().optional(),
             }),
             async execute({ image_path, note }) {
+              const gate = await ensureLightCapability(
+                "vision_local",
+                `vision observe: ${image_path}`,
+              );
+              if (!gate.ok) {
+                return gate;
+              }
               const args = [image_path];
               if (note) {
                 args.push("--note", note);

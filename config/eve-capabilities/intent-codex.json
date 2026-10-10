@@ -249,7 +249,7 @@
       },
       "policy": {
         "local_first": true,
-        "local_tools": ["rea_doctor", "rea_analyze_javascript", "rea_invoke"],
+        "local_tools": ["rea_doctor", "rea_list_inbox", "rea_analyze_javascript", "rea_invoke", "disassembly_card_write", "disassembly_publish_heptabase", "app_visual_observe", "browser_capture_screenshot"],
         "online_tools": [],
         "limbs": ["rea"],
         "playbook": "reverse-engineering",

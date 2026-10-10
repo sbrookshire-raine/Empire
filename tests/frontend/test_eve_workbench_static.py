@@ -68,8 +68,10 @@ class EveWorkbenchStaticTests(unittest.TestCase):
         self.assertNotIn("workbench__grid", self.html)
 
     def test_page_has_one_file_input_and_accessible_regions(self) -> None:
-        self.assertEqual(len(re.findall(r'type=["\']file["\']', self.html)), 1)
+        # Memory tab upload + chat REA attach input
+        self.assertEqual(len(re.findall(r'type=["\']file["\']', self.html)), 2)
         self.assertIn('accept=".md,.txt,.pdf"', self.html)
+        self.assertIn('id="rea-analysis-input"', self.html)
         self.assertIn("multiple", self.html)
         self.assertIn('id="chat-form"', self.html)
         self.assertIn('class="mode-picker"', self.html)

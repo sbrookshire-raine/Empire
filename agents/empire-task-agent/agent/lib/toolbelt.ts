@@ -36,6 +36,7 @@ export const TOOLBELT_CATEGORIES = [
   "system_ops",
   "file_ops",
   "rea",
+  "heptabase",
 ] as const;
 
 export type ToolbeltCategory = (typeof TOOLBELT_CATEGORIES)[number];

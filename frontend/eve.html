@@ -439,6 +439,30 @@
 
         <form id="chat-form" class="composer chat-composer" @submit.prevent="sendMessage()">
           <label class="visually-hidden" for="chat-message">Message Eve</label>
+          <input
+            id="rea-analysis-input"
+            class="visually-hidden"
+            type="file"
+            multiple
+            accept=".zip,.7z,.exe,.dll,.bin,.apk,.asar,.js,.mjs,.cjs,.json,.wasm,.html,.htm,.node,.msi,.so,.dylib,.dat"
+            @change="selectReaAnalysisFiles($event.target.files); $event.target.value = ''"
+          />
+          <div
+            class="composer__attachments"
+            x-show="reaAttachments.length || reaUploadError"
+            x-cloak
+            role="status"
+            aria-live="polite"
+          >
+            <p class="composer__attachments-label">REA analysis files</p>
+            <template x-for="(item, index) in reaAttachments" :key="item.id">
+              <span class="composer__attachment-chip">
+                <span x-text="item.label"></span>
+                <button type="button" class="composer__attachment-remove" @click="removeReaAttachment(index)" aria-label="Remove attachment">×</button>
+              </span>
+            </template>
+            <p class="composer__attachments-error" x-show="reaUploadError" x-text="reaUploadError"></p>
+          </div>
           <div class="composer__stack">
             <textarea
               id="chat-message"
@@ -451,6 +475,16 @@
               placeholder="Message Eve…"
             ></textarea>
             <div class="composer__actions composer__actions--chat">
+              <button
+                class="button button--quiet composer__attach"
+                type="button"
+                :disabled="sending || reaUploading"
+                @click="document.getElementById('rea-analysis-input').click()"
+                aria-label="Attach file for reverse engineering"
+                title="Attach binary, zip, ASAR, or web bundle for REA (local analysis)"
+              >
+                📎
+              </button>
               <button
                 class="button button--quiet composer__mic"
                 type="button"
@@ -468,7 +502,7 @@
               <button
                 class="button button--primary composer__send"
                 type="submit"
-                :disabled="sending || !draft.trim()"
+                :disabled="sending || reaUploading || (!draft.trim() && !reaAttachments.length)"
                 :aria-busy="sending"
                 aria-label="Send message"
               >

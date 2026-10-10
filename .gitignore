@@ -40,6 +40,7 @@ Thumbs.db
 
 data/cognee_system/
 config/cognee.env
+config/heptabase.env
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/

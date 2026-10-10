@@ -2335,6 +2335,49 @@ textarea[data-state="success"] {
   padding: 0.2rem var(--space-xs) max(0.2rem, env(safe-area-inset-bottom));
 }
 
+.composer__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.composer__attachments-label {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.composer__attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(120, 180, 255, 0.12);
+  border: 1px solid rgba(120, 180, 255, 0.35);
+}
+
+.composer__attachment-remove {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.composer__attachments-error {
+  margin: 0;
+  color: #f07178;
+  flex-basis: 100%;
+}
+
+.chat-composer .composer__attach {
+  min-width: 2.25rem;
+}
+
 .chat-composer .composer__stack {
   display: flex;
   flex-direction: column;

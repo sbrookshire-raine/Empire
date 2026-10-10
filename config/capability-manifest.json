@@ -98,7 +98,7 @@
     },
     "vision_local": {
       "label": "Vision Local",
-      "auto_enable": false,
+      "auto_enable": true,
       "session_ttl_min": 0,
       "gpu_tenant": "vision",
       "network": false,
@@ -122,7 +122,7 @@
     },
     "browser_local": {
       "label": "Browser Local",
-      "auto_enable": false,
+      "auto_enable": true,
       "session_ttl_min": 0,
       "gpu_tenant": "none",
       "network": false,
@@ -202,13 +202,23 @@
     },
     "rea": {
       "label": "REA",
-      "auto_enable": false,
+      "auto_enable": true,
       "session_ttl_min": 45,
       "gpu_tenant": "none",
       "network": false,
       "requires_services": [],
       "min_disk_free_gb": 5,
       "notes": "Node MCP (rea-agents). Native deep analysis needs Hopper/Ghidra/IDA configured separately."
+    },
+    "heptabase": {
+      "label": "Heptabase Catalog",
+      "auto_enable": false,
+      "session_ttl_min": 45,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1,
+      "notes": "Host Heptabase CLI only — desktop app must be running. Disassembly catalog publish/read."
     }
   },
   "max_session_capabilities": 6

@@ -2,7 +2,7 @@
 id: E-44
 slug: eve-heptabase-cli
 title: Eve gets Heptabase CLI access — a host-side limb for the live card library
-status: parked
+status: in_progress
 area: memory
 priority: later
 depends_on: []
@@ -88,7 +88,7 @@ rather than a snapshot.
 
 ## Promotion checklist (idea → Work Order)
 
-- [ ] Open question 1 answered (is this for Eve, or is Cursor's access enough for now?).
+- [x] Open question 1 answered — Eve + Cursor via `empire-heptabase` MCP; scoped to Disassembly catalog publish (2026-10-10).
 - [ ] Scope chosen (question 2) and the read-only boundary agreed (question 3).
 - [ ] Missing-CLI / app-closed / token-rotated behaviour specified as one-line refusals.
 - [ ] Tool names, tool docs, playbook area and test file names chosen.

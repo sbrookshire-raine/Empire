@@ -97,7 +97,7 @@ on what to call, what to load, and what never to do.
 | Any file inside `03_Active_Tools/` — flattened codebases, `*_flattened.txt`, harvested tool scripts | **`read_active_tool`** (requires Tool Forge in Toolbelt) — **mandatory**, see rule below |
 | Scrape official docs site → Markdown guide (llms.txt / sitemap) | Load **skill-tool-forge**; **`docs_guide_scrape`** with full docs root URL (requires **Tool Forge**) — writes `harvest_cache/*_Complete_Guide.md`; never auto-Cognee |
 | Skill zip/dump 3-Bin triage for Build1 | **`skill_triage_manifest`** (requires **Tool Forge**) — heuristic triage of `.cursor/skills` ± uploaded paths; writes `harvest_cache/SKILL_TRIAGE_MANIFEST.md` |
-| Reverse engineer app/binary/web behavior locally (REA) | Enable **REA** Toolbelt; **`rea_doctor`** then **`rea_analyze_javascript`** (JS/Electron path) or **`rea_invoke`** for other REA tools — local evidence only; approved paths only; never upload targets |
+| Reverse engineer app/binary/web behavior locally (REA) | Attach in chat (📎) or **`rea_inbox`**; **`rea_doctor`** → analyze → **`disassembly_card_write`** → confirm → **`disassembly_publish_heptabase`** (Heptabase colors/links); UI → **`app_visual_observe`** — local only |
 | Parallel multi-site doc harvest or Gumloop artifact CDN | **Gumloop Cloud** (Toolbelt, default off) — use when local scrape is insufficient; do not pretend Eve ran Gumloop |
 | Shell Packet CSV / raw PKM dump → primitive ledger | Load **skill-loom-intake**; **`loom_process_shell_csv`** then **`loom_status`** (requires **Loom Intake**) — max 7 promoted/cycle; never auto-Cognee |
 | Primitive ledger / gap report / Seeker prompt paths | **`loom_status`** (requires **Loom Intake**) — ledger at `04_Thought_Experiments/loom/workspace_data/` |

@@ -214,6 +214,39 @@
       "ports": { "in": ["ops"], "out": ["ops"] },
       "tools": ["switchboard_status", "switchboard_ensure", "switchboard_release", "switchboard_tenant"],
       "note": "Governed service control + GPU tenant serialization. Always on."
+    },
+    {
+      "id": "rea",
+      "label": "REA Disassembly",
+      "toolbelt": "rea",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["artifact"], "out": ["scratch"] },
+      "tools": [
+        "rea_doctor",
+        "rea_list_inbox",
+        "rea_analyze_javascript",
+        "rea_invoke",
+        "disassembly_card_write",
+        "disassembly_card_list",
+        "app_visual_observe",
+        "browser_capture_screenshot"
+      ],
+      "note": "Local reverse engineering + Disassembly Cards on disk."
+    },
+    {
+      "id": "heptabase",
+      "label": "Heptabase Catalog",
+      "toolbelt": "heptabase",
+      "default_on": false,
+      "gpu_tenant": "none",
+      "ports": { "in": ["scratch"], "out": ["scratch"] },
+      "tools": [
+        "heptabase_health",
+        "disassembly_publish_heptabase",
+        "disassembly_mark_mature"
+      ],
+      "note": "Visual catalog on Heptabase whiteboard — desktop app required."
     }
   ]
 }

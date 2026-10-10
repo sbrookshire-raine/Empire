@@ -1,0 +1,50 @@
+# Disassembly catalog (RE play sessions → LEGO memory)
+
+Eve learns by **breaking things apart**, writing one **Disassembly Card** per serious reverse-engineering session, and optionally **publishing** it to a Heptabase whiteboard so you can see connections and colors accrue over time.
+
+## Loop
+
+1. Upload or path → REA tools (`rea_doctor`, analyze, visual observe).
+2. **`disassembly_card_write`** — local markdown + JSON under `C:/Empire_Workbench/04_Thought_Experiments/disassembly_cards/`.
+3. Architect confirms → **`disassembly_publish_heptabase`** (`architect_confirm: true`).
+4. Optional memory → **`propose_remember`** → **`confirm_remember`** → **`disassembly_mark_mature`** (green on board).
+
+## Heptabase setup (once)
+
+1. Heptabase desktop app running; Local CLI enabled (`heptabase --version` → 0.6.x).
+2. From repo root:
+
+```powershell
+.\scripts\ensure-heptabase-disassembly-board.ps1 -SeedLegend
+```
+
+3. Config lives in `config/heptabase.env` (gitignored). Example keys in [config/heptabase.env.example](../config/heptabase.env.example).
+
+## Color legend
+
+Defined in [config/heptabase-learning-map.json](../config/heptabase-learning-map.json):
+
+| Color | Stage |
+|-------|--------|
+| Orange | Just published (new play session) |
+| Blue | Dependency links drawn to earlier cards |
+| Green | Matured (memory confirmed) |
+| Purple | Evolved build (`depends_on` + evolution note) |
+
+Connector arrows on the board = **catalog dependencies** (`depends_on`), not every semantic hop inside the note.
+
+## MCP
+
+- **Cursor:** `empire-heptabase` in `.cursor/mcp.json`
+- **Eve:** Toolbelt **Heptabase Catalog** (`heptabase`); tools auto-admit when headroom allows
+
+## Failures (plain English)
+
+| Symptom | Fix |
+|---------|-----|
+| CLI not found | Install/enable Local CLI in Heptabase settings |
+| Probe failed | Start the desktop app |
+| No whiteboard id | Run `ensure-heptabase-disassembly-board.ps1` |
+| Publish blocked | Pass `architect_confirm: true` in the same approved turn |
+
+See also [REA_LIMB.md](REA_LIMB.md) and [LEGO_WHITEBOARD.md](LEGO_WHITEBOARD.md) (Disassembly Session recipe).
