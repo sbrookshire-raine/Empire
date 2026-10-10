@@ -1,0 +1,11 @@
+slug,sort_order,category,examples
+retrieval-ranking,1,Retrieval & ranking,"Weighted scoring thresholds rerank ambiguity refusal"
+local-ai-ops,2,Local AI ops,"Ollama context budgets voice GPU placement"
+agents-mcp,3,Agents & MCP,"FastMCP capability registry prompt-budget governance"
+document-pipelines,4,Document pipelines,"PDF hub Docling read_document workbench ingest"
+audio-dsp,5,Audio DSP,"Demucs stems batch library practice tracks"
+fullstack-local,6,Full-stack local,"Python PocketBase HTMX Node Eve runtime"
+reliability,7,Reliability,"Docker sandboxes integration gates operating contracts"
+backup-estate,8,Backup & estate,"rclone union tar-first hub verify-before-delete"
+product-beta,9,Product beta,"Hatch Playful TestFlight export on shutdown"
+education-ux,10,Education-adjacent UX,"Co-op class origin coordinator model student dashboards"

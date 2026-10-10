@@ -1,0 +1,33 @@
+{
+  "source_root": "F:\\AI_ARCHIVE\\AI_Archive_Legion\\knowledge_bases",
+  "remote": "pool:ZIM_RESOURCES",
+  "phase": "initial_upload",
+  "comment": "Mirror F: Kiwix library to pool:ZIM_RESOURCES (flat + subfolders). Do not tar — .zim files are already compressed; rclone copy resumes per file and spreads large objects across pool members.",
+  "schedule": {
+    "night_start": "00:00",
+    "night_bwlimit": "off",
+    "day_start": "14:00",
+    "day_bwlimit": "3M"
+  },
+  "google": {
+    "upload_limit_gib_per_account_per_day": 750,
+    "stop_on_upload_limit": true
+  },
+  "rclone": {
+    "transfers": 4,
+    "checkers": 8,
+    "drive_chunk_size": "256M",
+    "buffer_size": "64M",
+    "multi_thread_cutoff": "256M",
+    "multi_thread_streams": 4,
+    "retries": 5,
+    "low_level_retries": 20,
+    "stats_interval": "60s"
+  },
+  "excludes": [
+    "**/.git/**",
+    "**/__pycache__/**",
+    "**/*.tmp",
+    "**/*.part"
+  ]
+}

@@ -7,7 +7,8 @@ vocabulary, with an output format a machine can check.
 - Canonical copy (versioned): `docs/LEGO_BLUEPRINT.md` in `github.com/sbrookshire-raine/Empire`
 - Full standard: `docs/LEGO_CONTRACT.md` · Enforced by `scripts/check-legos.py` inside `mechanic-green`
 - Maintained alongside: `docs/LEGO_PROMPT.md` (prompt only), `docs/GEMINI_RESEARCH_BRIEF.md` (research mode)
-- **Current as of 2026-09-27**
+- **Current as of 2026-10-08** (canonical repo: branch `revision-refactor`; sync to Desktop via `scripts/sync-lego-blueprint.ps1`)
+- **Not this file:** narrative history → `docs/ODYSSEY.md`; vision phases → `EMPIRE_MANIFESTO.md`; daily ops → `AGENTS.md`
 
 ---
 
@@ -25,6 +26,8 @@ Three of four were duplicates. That was a brief defect, not a reasoning defect. 
 | **§4 What is genuinely open** | so proposals aim at real problems instead of invented ones |
 | **§8 Evidence standard** | two outside runs cited unverified CVEs as their main justification |
 | **§9 Corrections** | four repeated errors, each seen at least twice — corrected here so review doesn't have to catch them again |
+| **2026-10-08 — §2 estate backup row** | Oct consolidation: `E:\EMPIRE_HUB` + `pool:` cloud (`Z:`) + scripts — so outside models do not propose a second backup/ cloud-sync brick |
+| **2026-10-08 — §4 version-debt note** | `V:\Cognee` often unmounted; live graph vs hub VHDX snapshot called out |
 
 ---
 
@@ -94,9 +97,11 @@ matter. If your idea is here, either name what the existing thing fails to do (w
 | Web + code search | self-hosted SearXNG, `searxng_search`, `web_scout`, `github_scout`, `research_*` | |
 | Containers | Eve sandbox containers (Docker) + `prune-sandbox-containers.ps1` | `ops` tenancy declared |
 | Code reach | `read_active_tool` over `03_Active_Tools` + `LEGO_INDEX.md` (flattened codebases) | text-level only; an AST needs real source trees (§4) |
-| Wiki corpus | 5.3M-article snapshot on `D:\wiki_md\2017`, read via the wiki lead path | reference, never embedded; stack halted |
-| Governance + builder tooling | `check-legos`, `audit-empire`, `check-foundation`, `vault-manifest`, `infra-checks` (deptry / ruff / gitleaks), `pre-commit`, restic backups to the T7, trivy + syft SBOM/scanning | these run in CI; a proposal that ignores them is proposing drift |
-| Declared services | Postgres 5432 · PocketBase 8090 · frontend 8080 · Ollama 11434 · Speaches 8000 | documented and admitted — **not** "external daemons" |
+| Wiki corpus | Markdown library on `D:\wiki_md` (runtime); frozen packs + dumps also in `E:\EMPIRE_HUB\02_RESOURCES` and `pool:EMPIRE_HUB` | reference, never embedded; Weaviate drain-only; scout read path live |
+| **Estate backup (Architect tier, not a limb)** | Local staging `E:\EMPIRE_HUB` (~797 GiB); cloud `pool:EMPIRE_HUB` on rclone union **`Z:`** (mount via `E:\cloud_archiver_hub.py`); sync `scripts/hub-rclone-sync.ps1` + `config/hub-upload.json`. Kiwix ZIMs on `F:\…\knowledge_bases` → `pool:ZIM_RESOURCES` via `scripts/zim-rclone-sync.ps1` (see `docs/ZIM_CLOUD_UPLOAD.md`). Hub consolidation **verified 2026-10-08**; ZIM upload may be in progress. Secrets only in hub `00_CORE/local_only/` — never cloud. | **Do not propose** a second backup stack, cloud BaaS, or "sync agent" — extend these scripts or docs |
+| Governance + builder tooling | `check-legos`, `audit-empire`, `check-foundation`, `vault-manifest`, `infra-checks` (deptry / ruff / gitleaks), `pre-commit`, `sync-lego-blueprint.ps1`, `mechanic-green.ps1`, estate docs (`BACKUP_CONSOLIDATION.md`, `ESTATE_INVENTORY.md` §12) | these run in CI / mechanic gate; a proposal that ignores them is proposing drift |
+| Declared services | Postgres 5432 · PocketBase 8090 · frontend 8080 · Ollama 11434 · Speaches 8000 · Eve 2000 | documented and admitted — **not** "external daemons" |
+| Code graph (Cursor/build) | `graft/` + MCP `graft` in `.cursor/mcp.json` | builder-side orientation; not Eve runtime memory |
 
 ## 3. Constraints, in the units this system actually pays
 
@@ -143,7 +148,9 @@ Proposals aimed here are worth writing. Everything else needs a much stronger ju
 7. **Structural code navigation.** Absent (text-level reach only). Precondition that currently fails: our
    harvested codebases are *flattened*; an AST parser needs real source trees.
 8. **Version debt.** cognee 1.4.0 → 1.6.1 (runbook written, unexecuted), PocketBase 0.28.4 → 0.40.4 (a
-   migration, not a bump), and 2.6 GB of a dormant legacy store on `V:\Cognee` awaiting a keep-or-reclaim call.
+   migration, not a bump). **Cognee storage:** live graph expects Docker Postgres + optional `V:\Cognee` on the T7 VHDX;
+   on many layouts `V:` is **not mounted** and `I:` is a Drive alias — the hub holds a **2026-09-27 VHDX snapshot** only
+   (`E:\EMPIRE_HUB\00_CORE\state\cognee_vhdx\`). Reconcile mount before assuming live graph == backup image.
 9. **Document formats are four doors, not one supported set** (measured 2026-09-27: `docs/audits/2026-09-27-document-format-census.md`).
    `.md .txt .mdx .eml .pdf .docx .pptx .xlsx` are now storable · `.json .md` cognee-ingestable · a 14-suffix read
    set · `.csv .tsv` queryable. The routing gaps the census found are **closed** (P13): `ingest_files` routes all

@@ -1,0 +1,15 @@
+slug,era_slug,sort_order,date_label,title,body,image_url,image_hint
+2024-11-documents,origin,1,2024-11,PDF learning hub,"First logs: PDF → structured learning hub; four script iterations in two days.",,Document pipeline diagram
+2024-12-irene,origin,2,2024-12,IRENE & Aporia,"Weighted YouTube refilter (likes/views, threshold 0.6); Flask progress tracker.",,Code or Aporia UI screenshot
+2025-01-raine,naming,3,2025-01,rAIne named,"PythonAnywhere → local IDE; AI expression as project name.",,
+2025-03-zet-coordinator,naming,4,2025-03,Zet & Thinking Coordinator,"Capture pipeline; peer-coaching model — plan together, take turns.",,
+2025-04-living-books,naming,5,2025-04,Living Book Worlds,"Extraction + vector store + card templates — ancestor of structured extract.",,
+2025-08-blueprint,naming,6,2025-08,Raine blueprint,"Simulate personality and architecture in dialogue before code.",,Quote card or Heptabase blur
+2025-hatch,naming,7,2025–2026,Hatch exports,"13+ apps before platform shutdown; Playful beta tested; IP preserved.",,Hatch app collage
+2025-08-friction,naming,8,2025-08,Friction documented,"Roadblocks log → sandboxes, operating contract, LEGO manifest.",,Dashboard screenshot
+2026-05-abacus,empire,9,2026-05,Raine Abacus,"Docker agents, Weaviate, resource pipeline — direct EMPIRE ancestor.",,
+2026-07-empire,empire,10,2026-07,EMPIRE repo,"PocketBase, MCP, HTMX workbench; Build1 docs match shipped stack.",,eve.html screenshot
+2026-07-wall,empire,11,2026-07,Bounded ingest,"Wiki ingest halted at checkpoint (~71k / 46M) — resumable jobs.",,
+2026-09-gates,empire,12,2026-09,Ship discipline,"Eve, LEGO governance, mechanic-green, estate audits.",,
+2026-stem,empire,13,2025–2026,Stem Factory,"Demucs pipeline, practice tracks, EMPIRE Toolbelt MCP limb.",,Waveform or stem stages
+2026-10-hub,consolidate,14,2026-10,EMPIRE_HUB,"E: staging, rclone pool, consolidation backup architecture.",,Hub diagram E→cloud→disc

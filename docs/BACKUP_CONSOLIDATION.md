@@ -15,7 +15,7 @@
 
 **Not in EMPIRE_HUB (separate decisions):**
 
-- **~719 GiB ZIM library** — `F:\AI_ARCHIVE\AI_Archive_Legion\knowledge_bases` (49 ZIMs). Still on F:; **`pool:ZIM_RESOURCES` is only ~302 MiB** — full ZIM cloud upload **pending**.
+- **~719 GiB ZIM library** — `F:\AI_ARCHIVE\AI_Archive_Legion\knowledge_bases` (49 ZIMs). Upload: [`docs/ZIM_CLOUD_UPLOAD.md`](ZIM_CLOUD_UPLOAD.md), [`scripts/zim-rclone-sync.ps1`](../scripts/zim-rclone-sync.ps1), [`config/zim-upload.json`](../config/zim-upload.json).
 - **Live Cognee graph** — hub holds 2026-09-27 VHDX snapshot only (`V:` was not mounted at staging).
 - **Ollama / large model stores** — re-downloadable; intentionally not in hub.
 

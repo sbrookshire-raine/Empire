@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "synced_from_portfolio": "2026-10-08",
+    "source_docs": [
+      "docs/PORTFOLIO.md",
+      "docs/PORTFOLIO_FRAMER.md",
+      "docs/ODYSSEY.md"
+    ],
+    "framer_hint": "Prefer CSV import in Framer CMS; use this JSON for custom components or copy-paste."
+  },
+  "site": {
+    "hero_title": "seth-brookshire",
+    "hero_subtitle": "Architect · builder · educator-adjacent systems",
+    "thesis": "Rank the trustworthy thing above the popular thing — and keep that knowledge local, unmetered, and verifiable over time.",
+    "github_url": "https://github.com/sbrookshire-raine/Empire",
+    "contact_line": "Open to teaching-adjacent product and local-first systems work.",
+    "footer_cta": "Full three-year audit available on request (ODYSSEY)."
+  },
+  "eras": [
+    {
+      "slug": "origin",
+      "era_label": "Origin",
+      "year_range": "2024",
+      "headline": "Documents and ranking",
+      "sort_order": 1
+    },
+    {
+      "slug": "naming",
+      "era_label": "Naming & volume",
+      "year_range": "2025",
+      "headline": "Simulate then build",
+      "sort_order": 2
+    },
+    {
+      "slug": "empire",
+      "era_label": "EMPIRE",
+      "year_range": "2026",
+      "headline": "Local stack shipped",
+      "sort_order": 3
+    },
+    {
+      "slug": "consolidate",
+      "era_label": "Consolidate",
+      "year_range": "2026–now",
+      "headline": "One hub two backups",
+      "sort_order": 4
+    }
+  ],
+  "collections": {
+    "timeline_csv": "timeline.csv",
+    "slides_csv": "slides.csv",
+    "case_studies_csv": "case-studies.csv",
+    "lessons_csv": "lessons.csv",
+    "skills_csv": "skills.csv",
+    "site_meta_csv": "site-meta.csv",
+    "eras_csv": "eras.csv"
+  }
+}
