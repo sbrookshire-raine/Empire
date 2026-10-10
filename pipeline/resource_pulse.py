@@ -145,17 +145,20 @@ def _capacity_meter(
         if isinstance(free, (int, float)) and isinstance(total, (int, float)) and total > 0:
             vram_used = min(100.0, round(100.0 * (float(total) - float(free)) / float(total), 1))
 
-    # Room score: 100 = safe to activate light limbs; drops when headroom gates fire.
+    # Light-limb score (GitHub/Web scouts, workspace): RAM/disk + headroom_ok only — NOT VRAM.
     score = 100
     if not headroom_ok:
         score = 25
-    elif ram_used is not None and ram_used > 85:
-        score = 45
-    elif vram_used is not None and vram_used > 90:
-        score = 40
+    else:
+        if ram_used is not None and ram_used > 90:
+            score = 40
+        elif ram_used is not None and ram_used > 85:
+            score = 60
+        if disk_used is not None and disk_used > 92:
+            score = min(score, 45)
     tenant = str(lease.get("tenant") or "idle")
     if tenant not in {"", "idle"}:
-        score = min(score, 55)
+        score = min(score, 50)
 
     if score >= 70:
         status = "green"
@@ -164,17 +167,31 @@ def _capacity_meter(
     else:
         status = "red"
 
+    vram_note = (
+        "VRAM high — GPU limbs (Stem/Vision/extract) need care; "
+        "network scouts (GitHub/Web) still OK when headroom_ok."
+    )
+    if vram_used is not None and vram_used > 90:
+        vram_note = (
+            f"VRAM ~{vram_used:.0f}% full — Ollama holds the GPU; "
+            "GitHub/Web scouts do not need free VRAM. Use can_admit_now."
+        )
+
     return {
         "headroom_score": score,
         "status": status,
+        "light_limb_ok": headroom_ok,
+        "scout_activate_ok": headroom_ok,
         "ram_bar": _usage_bar(ram_used),
         "disk_bar": _usage_bar(disk_used),
         "vram_bar": _usage_bar(vram_used),
-        "ram_used_pct": ram_used,
-        "disk_used_pct": disk_used,
-        "vram_used_pct": vram_used,
+        "ram_used_pct": ram_used if ram_used is not None else 0,
+        "disk_used_pct": disk_used if disk_used is not None else 0,
+        "vram_used_pct": vram_used if vram_used is not None else 0,
+        "gpu_vram_pressure_pct": vram_used,
+        "vram_note": vram_note,
         "gpu_tenant": tenant,
-        "room_label": f"{score}/100 activation room (higher = safer to ACTIVATE light limbs)",
+        "room_label": f"{score}/100 light-limb room (scouts use headroom_ok + can_admit_now, not VRAM)",
         "blocked_reasons": list(headroom_reasons),
     }
 

@@ -6,7 +6,7 @@ You **always** have this map. The Architect does not need magic phrases. Each tu
 
 ## As Eve: ACTIVATE / DEACTIVATE (resource-aware)
 
-1. **Read the meter** — `capacity_meter.headroom_score` and RAM/Disk/VRAM bars in the pulse block. Red/ low score → do not ACTIVATE new limbs; finish work and **DEACTIVATE**.
+1. **Read the meter** — RAM/Disk gates + `headroom_ok`. **VRAM bar does not block GitHub/Web scouts** (Ollama may fill VRAM; scouts use `can_admit_now`). Low light-limb score → DEACTIVATE optional limbs.
 2. **ACTIVATE** — `admit_for_goal(category)` when state is DORMANT, or call a scout tool (auto-admits when room OK).
 3. **Use while ACTIVE** — `playbook(area)` + `tool_docs(name)` for how; `capability_route` when unsure.
 4. **DEACTIVATE** — `release_capabilities` when a scout burst ends or slots should free (see `activation.session_slots`).

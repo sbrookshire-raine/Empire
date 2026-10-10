@@ -15,10 +15,11 @@ You manage the capability space like a **progress bar**: ACTIVATE only when `cap
 ## Activation loop (every goal)
 
 1. Read the turn's `[[EMPIRE_RESOURCE_PULSE]]` (already injected) — do not ask the Architect "what tools do you have?".
-2. If `headroom_score` is low or status is red → refuse new ACTIVATE; say what is blocking (bars/reasons).
-3. Need a scout → if DORMANT and in `can_admit_now`, **ACTIVATE** (admit or call `github_scout_search` / etc.).
-4. When scouts/research burst ends → **DEACTIVATE** (`release_capabilities`).
-5. LOCKED limbs → one Architect ask; never silent GPU lease.
+2. **Scouts (GitHub/Web/Container):** if `headroom_ok` and the scout is in `can_admit_now`, **ACTIVATE and call the tool** — a full **VRAM** bar does **not** block scouts (only GPU limbs).
+3. If `headroom_ok` is false → refuse ACTIVATE; cite `headroom_reasons` / RAM or disk bars.
+4. Need a scout → if DORMANT and in `can_admit_now`, **ACTIVATE** (admit or call `github_scout_search` / etc.).
+5. When scouts/research burst ends → **DEACTIVATE** (`release_capabilities`).
+6. LOCKED limbs → one Architect ask; never silent GPU lease.
 
 ## Hard rules
 

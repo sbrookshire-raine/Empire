@@ -939,20 +939,57 @@
           var activation =
             body.activation && typeof body.activation === "object" ? body.activation : {};
           var inventory = body.inventory && typeof body.inventory === "object" ? body.inventory : {};
+          var resources = body.resources && typeof body.resources === "object" ? body.resources : {};
+          var nvidia = body.nvidia && typeof body.nvidia === "object" ? body.nvidia : {};
+          var ramPct = meter.ram_used_pct;
+          var diskPct = meter.disk_used_pct;
+          var vramPct = meter.vram_used_pct;
+          if (ramPct == null && resources.ram_available_gb != null && resources.ram_total_gb) {
+            ramPct = Math.min(
+              100,
+              Math.round(
+                (100 * (Number(resources.ram_total_gb) - Number(resources.ram_available_gb))) /
+                  Number(resources.ram_total_gb)
+              )
+            );
+          }
+          if (diskPct == null && resources.disk_free_gb != null && resources.disk_total_gb) {
+            diskPct = Math.min(
+              100,
+              Math.round(
+                (100 * (Number(resources.disk_total_gb) - Number(resources.disk_free_gb))) /
+                  Number(resources.disk_total_gb)
+              )
+            );
+          }
+          if (vramPct == null && nvidia.vram_free_mb != null && nvidia.vram_total_mb) {
+            vramPct = Math.min(
+              100,
+              Math.round(
+                (100 * (Number(nvidia.vram_total_mb) - Number(nvidia.vram_free_mb))) /
+                  Number(nvidia.vram_total_mb)
+              )
+            );
+          }
+          var score = meter.headroom_score;
+          if (score == null && body.headroom_ok != null) {
+            score = body.headroom_ok ? 85 : 25;
+          }
           this.limbPulse = {
-            headroom_score:
-              meter.headroom_score != null ? Number(meter.headroom_score) : null,
-            status: plainText(meter.status) || "amber",
-            ram_used_pct: meter.ram_used_pct != null ? Number(meter.ram_used_pct) : 0,
-            disk_used_pct: meter.disk_used_pct != null ? Number(meter.disk_used_pct) : 0,
-            vram_used_pct: meter.vram_used_pct != null ? Number(meter.vram_used_pct) : 0,
-            gpu_tenant: plainText(meter.gpu_tenant) || "idle",
+            headroom_score: score != null ? Number(score) : null,
+            status: plainText(meter.status) || (body.headroom_ok ? "green" : "red"),
+            ram_used_pct: ramPct != null ? Number(ramPct) : 0,
+            disk_used_pct: diskPct != null ? Number(diskPct) : 0,
+            vram_used_pct: vramPct != null ? Number(vramPct) : 0,
+            gpu_tenant: plainText(meter.gpu_tenant || (body.gpu_lease && body.gpu_lease.tenant)) || "idle",
             active_limbs: Array.isArray(activation.active)
               ? activation.active
               : Array.isArray(inventory.effective_tools)
                 ? inventory.effective_tools
                 : [],
             session_slots: plainText(activation.session_slots),
+            pulse_ok: Boolean(body.headroom_ok),
+            can_admit: Array.isArray(body.can_admit_now) ? body.can_admit_now : [],
           };
         } catch (_error) {
           /* keep last sample */

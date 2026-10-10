@@ -217,6 +217,9 @@
               x-text="(limbPulse.headroom_score != null ? limbPulse.headroom_score : '—') + '/100'"
             ></span>
           </div>
+          <p class="limb-meter__hint" x-show="limbPulse.vram_used_pct > 85">
+            VRAM full (Ollama) — scouts still OK when pulse says headroom_ok.
+          </p>
           <div class="limb-meter__score-track" role="progressbar" :aria-valuenow="limbPulse.headroom_score || 0" aria-valuemin="0" aria-valuemax="100">
             <div
               class="limb-meter__score-fill"

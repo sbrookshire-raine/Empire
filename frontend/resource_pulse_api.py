@@ -53,7 +53,8 @@ def _format_pulse_block(snap: dict[str, Any], *, farm_query: bool) -> str:
         f"- eve_contract: {activation.get('eve_contract')}\n"
         + (f"- verified_hands: {verified_line}\n" if verified_line else "")
         + "ACTIVATE light limbs via admit_for_goal or scout tool call; DEACTIVATE via release_capabilities. "
-        "playbook(area) + tool_docs(name) for how. Never claim no GitHub/internet when DORMANT scouts can ACTIVATE."
+        "When headroom_ok and github_scout is in can_admit_now, call github_scout_search — VRAM bar does NOT block scouts. "
+        "playbook(area) + tool_docs(name) for how."
         + farm_hint
     )
 
