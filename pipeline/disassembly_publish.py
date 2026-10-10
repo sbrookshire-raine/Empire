@@ -104,8 +104,9 @@ def publish_to_heptabase(
                 links_created += 1
     if links_created > 0 and stage == "published":
         stage = "linked"
+        color = _stage_color("linked")
         if placement_id:
-            heptabase_cli.recolor_placement(whiteboard_id, placement_id, _stage_color("linked"))
+            heptabase_cli.recolor_placement(whiteboard_id, placement_id, color)
 
     patch = {
         "heptabase_card_id": hb_card_id,

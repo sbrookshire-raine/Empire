@@ -11,7 +11,7 @@ Eve learns by **breaking things apart**, writing one **Disassembly Card** per se
 
 ## Heptabase setup (once)
 
-1. Heptabase desktop app running; Local CLI enabled (`heptabase --version` → 0.6.x).
+1. Heptabase desktop app running; Local CLI enabled (`heptabase --version` → 0.6+).
 2. From repo root:
 
 ```powershell

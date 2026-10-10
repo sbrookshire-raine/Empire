@@ -28,6 +28,7 @@ if ($Full) {
   Write-Host "`n=== Unit tests (REA/disassembly slice) ===" -ForegroundColor Cyan
   & $Py -m pytest `
     tests/pipeline/test_disassembly_card.py `
+    tests/pipeline/test_disassembly_publish.py `
     tests/pipeline/test_heptabase_cli.py `
     tests/pipeline/test_rea_inbox.py `
     tests/pipeline/test_rea_disassembly_diagnostic.py `

@@ -100,7 +100,7 @@ def health_check() -> dict[str, Any]:
     compatible = False
     if match:
         major, minor = int(match.group(1)), int(match.group(2))
-        compatible = major == 0 and minor == 6
+        compatible = major == 0 and minor >= 6
     probe = run_cli(["card", "list", "--limit", "1"])
     return {
         "ok": proc.returncode == 0 and probe.get("ok") is not False,
