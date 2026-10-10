@@ -24,6 +24,13 @@ def _format_pulse_block(snap: dict[str, Any], *, farm_query: bool) -> str:
     can_admit = snap.get("can_admit_now") or []
     lease = snap.get("gpu_lease") if isinstance(snap.get("gpu_lease"), dict) else {}
     verified_line = str(snap.get("verified_hands_snippet") or "").strip()
+    meter = snap.get("capacity_meter") if isinstance(snap.get("capacity_meter"), dict) else {}
+    activation = snap.get("activation") if isinstance(snap.get("activation"), dict) else {}
+    dormant = [
+        str(x.get("id") or "")
+        for x in (activation.get("limbs") or [])
+        if isinstance(x, dict) and x.get("state") == "DORMANT"
+    ]
     farm_hint = ""
     if farm_query:
         farm_hint = (
@@ -37,11 +44,16 @@ def _format_pulse_block(snap: dict[str, Any], *, farm_query: bool) -> str:
         f"- effective_tools: {effective}\n"
         f"- gpu_lease.tenant: {lease.get('tenant')}\n"
         f"- headroom_ok: {snap.get('headroom_ok')}\n"
-        f"- can_admit_now: {can_admit}\n"
+        f"- can_admit_now (ACTIVATE now): {can_admit}\n"
+        f"- capacity_meter: {meter.get('room_label')} status={meter.get('status')}\n"
+        f"  RAM {meter.get('ram_bar')} | Disk {meter.get('disk_bar')} | VRAM {meter.get('vram_bar')} | "
+        f"GPU tenant {meter.get('gpu_tenant')}\n"
+        f"- activation: {activation.get('session_slots')} | ACTIVE {activation.get('active')} | "
+        f"DORMANT (ready) {dormant}\n"
+        f"- eve_contract: {activation.get('eve_contract')}\n"
         + (f"- verified_hands: {verified_line}\n" if verified_line else "")
-        + "For Ask/Do/Get paths: playbook(area). For parameters: tool_docs(name). "
-        "To search GitHub/Web/Docker, call the matching scout (auto-admits when headroom OK). "
-        "Never claim you lack internet or GitHub when scouts are available."
+        + "ACTIVATE light limbs via admit_for_goal or scout tool call; DEACTIVATE via release_capabilities. "
+        "playbook(area) + tool_docs(name) for how. Never claim no GitHub/internet when DORMANT scouts can ACTIVATE."
         + farm_hint
     )
 

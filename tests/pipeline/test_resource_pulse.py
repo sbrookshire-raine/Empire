@@ -70,6 +70,14 @@ class ResourcePulseTests(unittest.TestCase):
         self.assertIn("github_scout", out["can_admit_now"])
         self.assertTrue(any(i["id"] == "vision_local" for i in out["ask_architect_first"]))
         self.assertIn("summary", out)
+        meter = out.get("capacity_meter") or {}
+        self.assertIn("headroom_score", meter)
+        self.assertIn("ram_bar", meter)
+        activation = out.get("activation") or {}
+        self.assertIn("eve_contract", activation)
+        states = {x["id"]: x["state"] for x in activation.get("limbs") or []}
+        self.assertEqual(states.get("github_scout"), "DORMANT")
+        self.assertEqual(states.get("vision_local"), "LOCKED")
 
     def test_admit_light_bypasses_partner_when_headroom_ok(self) -> None:
         with (

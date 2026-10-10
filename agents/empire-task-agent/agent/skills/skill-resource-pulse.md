@@ -1,29 +1,28 @@
-Use when you need to know what capabilities you have, whether the machine has headroom, or before turning on a research/scout skill — so the Architect does not have to flip Toolbelt switches.
+Use when managing **which limbs are on**, **how full the machine is**, or before GPU/scout work — the Architect should not flip Toolbelt switches for day-to-day goals.
 
 ## Mission
 
-You manage the capability space. Call diagnostics, admit light skills when safe, and **ask** before GPU/heavy work. Never crash the stack by forcing Vision/Stem/extract when the lease or headroom says no.
+You manage the capability space like a **progress bar**: ACTIVATE only when `capacity_meter` has room; DEACTIVATE when done so limbs turn off and slots free.
 
 ## Tools
 
-1. `resource_pulse` — full snapshot + `summary` + `can_admit_now` + `ask_architect_first`.
-2. `admit_for_goal` — admit one light skill for a reason when headroom OK (no Research Partner button required).
-3. Existing `capability_status` / `request_capability` remain for partner-mode Autopilot; prefer `resource_pulse` + `admit_for_goal` for day-to-day goals.
-4. `gpu_lease_status` — who holds the GPU.
-5. `release_capabilities` — clear session grants when the research burst is done (keep the machine tidy).
+1. `resource_pulse` — `capacity_meter` (RAM/Disk/VRAM bars + headroom_score), `activation` (ACTIVE/DORMANT/OFF/LOCKED), `can_admit_now`, `summary`.
+2. `admit_for_goal` — **ACTIVATE** one light limb when pulse allows.
+3. `release_capabilities` — **DEACTIVATE** session limbs when the burst is finished.
+4. `gpu_lease_status` / `switchboard_tenant` — heavy GPU tenants (one at a time; release before switching).
+5. `capability_status` / `request_capability` — Research Partner Autopilot only; prefer pulse + admit for normal work.
 
-## How to work a goal
+## Activation loop (every goal)
 
-1. Call `resource_pulse` (silently).
-2. Tell the Architect briefly what you have and what you can do (use `summary`).
-3. If a light skill is needed for the goal → call the scout tool directly (`github_scout_search`, `web_scout`, …). Those tools **auto-admit** when headroom OK — do not claim you lack internet or GitHub.
-4. If `need_architect` / admit fails for GPU heavy → ask them once; do not toggle Toolbelt yourself for GPU tenants.
-5. If headroom is blocked → say so and suggest freeing RAM/disk or finishing the GPU job; do not admit.
-6. When the burst of scout work is finished → `release_capabilities` so session limbs do not linger.
+1. Read the turn's `[[EMPIRE_RESOURCE_PULSE]]` (already injected) — do not ask the Architect "what tools do you have?".
+2. If `headroom_score` is low or status is red → refuse new ACTIVATE; say what is blocking (bars/reasons).
+3. Need a scout → if DORMANT and in `can_admit_now`, **ACTIVATE** (admit or call `github_scout_search` / etc.).
+4. When scouts/research burst ends → **DEACTIVATE** (`release_capabilities`).
+5. LOCKED limbs → one Architect ask; never silent GPU lease.
 
 ## Hard rules
 
 - Never silent Cognee remember.
 - Never force GPU lease or heavy limbs.
 - Fail closed when pulse cannot read RAM/disk.
-- Prefer doing the work over asking the Architect to open the Tools dock.
+- Prefer ACTIVATE/deactivate yourself over asking the Architect to open the Tools dock.

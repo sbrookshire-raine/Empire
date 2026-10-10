@@ -8,7 +8,7 @@ import { runPythonModule } from "#lib/python-pipeline";
  */
 export default defineTool({
   description:
-              "Admit a light session skill for the current goal when resource_pulse headroom is OK (GitHub/Web/Container scout, etc.",
+              "ACTIVATE a light session limb when capacity_meter has room (GitHub/Web/Container scout, etc.). Prefer reading [[EMPIRE_RESOURCE_PULSE]] first.",
   inputSchema: z.object({
     category: z
       .string()

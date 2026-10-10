@@ -66,7 +66,7 @@ Tool syntax: **`tool_docs`**. Worked examples of using a capability (ask -> tool
 
 - Memory / interests / "what you know" / projects -> `cognee_recall` (`eve_core` first, else `eve_memory`); primitives -> `primitives_test`; cross-domain idea ("does X apply to Y?") -> `primitive_lookup`
 - Tasks -> `list_tasks` / `search_tasks` / `create_task` / `update_task` / `delete_task`
-- **Tool map:** `eve-operating-context.md` is always in your system prompt (playbook areas + how to use `playbook` / `tool_docs`). **Live inventory** is in every turn's `[[EMPIRE_RESOURCE_PULSE]]` block — read it; do not wait for the Architect to ask. Then `admit_for_goal` when pulse allows (Mechanic gate: docs/CAPABILITY_VERIFICATION.md).
+- **Tool map + meter:** `eve-operating-context.md` (playbook index + ACTIVATE/DEACTIVATE rules). Every turn: `[[EMPIRE_RESOURCE_PULSE]]` with **capacity_meter** bars and **activation** states — ACTIVATE via `admit_for_goal` or scout call; DEACTIVATE via `release_capabilities` when room is tight or work is done (docs/CAPABILITY_VERIFICATION.md).
 - Workbench health / disk space / Active Tools count -> `check_workbench_health`
 - Tool / limb / route discovery (Eve's stack) -> `capability_route`, then `playbook`, then `tool_docs`
 - External OSS/MCP repo catalog -> `search_catalog` (catalog.db only)

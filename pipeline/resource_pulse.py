@@ -113,6 +113,134 @@ def _headroom_ok(resources: dict[str, Any], nvidia: dict[str, Any]) -> tuple[boo
     return (len(reasons) == 0, reasons)
 
 
+def _pct_used(available: float | None, total: float | None) -> float | None:
+    if not isinstance(available, (int, float)) or not isinstance(total, (int, float)) or total <= 0:
+        return None
+    used = max(0.0, float(total) - float(available))
+    return min(100.0, round(100.0 * used / float(total), 1))
+
+
+def _usage_bar(pct_used: float | None, *, width: int = 10) -> str:
+    if pct_used is None:
+        return f"[{'?' * width}] n/a"
+    filled = min(width, max(0, int(round(float(pct_used) / (100.0 / width)))))
+    return f"[{'#' * filled}{'-' * (width - filled)}] {pct_used:.0f}% used"
+
+
+def _capacity_meter(
+    resources: dict[str, Any],
+    nvidia: dict[str, Any],
+    *,
+    headroom_ok: bool,
+    headroom_reasons: list[str],
+    lease: dict[str, Any],
+) -> dict[str, Any]:
+    """Eve-facing gauges: how full the machine is before she ACTIVATEs another limb."""
+    ram_used = _pct_used(resources.get("ram_available_gb"), resources.get("ram_total_gb"))
+    disk_used = _pct_used(resources.get("disk_free_gb"), resources.get("disk_total_gb"))
+    vram_used: float | None = None
+    if nvidia.get("ok"):
+        free = nvidia.get("vram_free_mb")
+        total = nvidia.get("vram_total_mb")
+        if isinstance(free, (int, float)) and isinstance(total, (int, float)) and total > 0:
+            vram_used = min(100.0, round(100.0 * (float(total) - float(free)) / float(total), 1))
+
+    # Room score: 100 = safe to activate light limbs; drops when headroom gates fire.
+    score = 100
+    if not headroom_ok:
+        score = 25
+    elif ram_used is not None and ram_used > 85:
+        score = 45
+    elif vram_used is not None and vram_used > 90:
+        score = 40
+    tenant = str(lease.get("tenant") or "idle")
+    if tenant not in {"", "idle"}:
+        score = min(score, 55)
+
+    if score >= 70:
+        status = "green"
+    elif score >= 40:
+        status = "amber"
+    else:
+        status = "red"
+
+    return {
+        "headroom_score": score,
+        "status": status,
+        "ram_bar": _usage_bar(ram_used),
+        "disk_bar": _usage_bar(disk_used),
+        "vram_bar": _usage_bar(vram_used),
+        "gpu_tenant": tenant,
+        "room_label": f"{score}/100 activation room (higher = safer to ACTIVATE light limbs)",
+        "blocked_reasons": list(headroom_reasons),
+    }
+
+
+def _activation_map(
+    *,
+    effective: set[str],
+    light: list[dict[str, Any]],
+    heavy: list[dict[str, Any]],
+    can_admit_now: list[str],
+    headroom_ok: bool,
+    admit_status: dict[str, Any],
+) -> dict[str, Any]:
+    """As Eve: ACTIVE / DORMANT+ACTIVATE / OFF / LOCKED — tied to resource limits."""
+    session_caps = list(admit_status.get("session_capabilities") or [])
+    max_caps = int(admit_status.get("max_session_capabilities") or 4)
+    can_set = set(can_admit_now)
+    limbs: list[dict[str, str]] = []
+
+    for item in light:
+        cid = str(item.get("id") or "")
+        if not cid:
+            continue
+        if cid in effective:
+            limbs.append(
+                {
+                    "id": cid,
+                    "state": "ACTIVE",
+                    "eve_action": "limb on — use its tools; DEACTIVATE with release_capabilities when burst done",
+                }
+            )
+        elif cid in can_set:
+            limbs.append(
+                {
+                    "id": cid,
+                    "state": "DORMANT",
+                    "eve_action": f"ACTIVATE: admit_for_goal({cid!r}) or call its scout tool (auto-admits if room OK)",
+                }
+            )
+        else:
+            reason = "headroom blocked — do not ACTIVATE" if not headroom_ok else "at session cap or not needed"
+            limbs.append({"id": cid, "state": "OFF", "eve_action": reason})
+
+    for item in heavy:
+        cid = str(item.get("id") or "")
+        if cid:
+            limbs.append(
+                {
+                    "id": cid,
+                    "state": "LOCKED",
+                    "eve_action": "Ask Architect before ACTIVATE (GPU/heavy tenant)",
+                }
+            )
+
+    return {
+        "session_slots": f"{len(session_caps)}/{max_caps} optional session limbs admitted",
+        "ttl_remaining_sec": int(admit_status.get("ttl_remaining_sec") or 0),
+        "limbs": limbs,
+        "active": sorted(effective),
+        "can_activate_now": list(can_admit_now),
+        "eve_contract": (
+            "As Eve: read capacity_meter before ACTIVATE. "
+            "ACTIVATE = admit_for_goal(category) or first tool call on a scout (auto-admit). "
+            "DEACTIVATE = release_capabilities when work finishes or room is red. "
+            "Do not ACTIVATE LOCKED limbs without Architect OK."
+        ),
+    }
+
+
 def _classify_manifest() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     light: list[dict[str, Any]] = []
     heavy: list[dict[str, Any]] = []
@@ -195,10 +323,27 @@ def pulse() -> dict[str, Any]:
 
     verified = verified_hands.load_verification()
     verified_snippet = verified_hands.pulse_snippet()
+    meter = _capacity_meter(
+        resources,
+        nvidia,
+        headroom_ok=headroom_ok,
+        headroom_reasons=headroom_reasons,
+        lease=lease,
+    )
+    activation = _activation_map(
+        effective=effective,
+        light=light,
+        heavy=heavy,
+        can_admit_now=can_admit_now,
+        headroom_ok=headroom_ok,
+        admit_status=admit_status,
+    )
 
     return {
         "ok": True,
         "policy": "B",
+        "capacity_meter": meter,
+        "activation": activation,
         "verified_hands": verified if verified.get("ok") else {"ok": False},
         "verified_hands_snippet": verified_snippet,
         "resources": resources,
