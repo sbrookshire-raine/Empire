@@ -47,4 +47,4 @@ Edit `config/diagnostics/capability-verification-battery.json`:
 
 Re-run verify; commit updated `EVE_VERIFIED_CAPABILITIES.md` when the report changes materially.
 
-Related: [PLAYBOOK.md](PLAYBOOK.md), [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md), [RESOURCE_FARM_AND_CATALOG.md](RESOURCE_FARM_AND_CATALOG.md).
+Related: [EMPIRE_CLARITY.md](EMPIRE_CLARITY.md) (build innovation gate — local first, local soon), [PLAYBOOK.md](PLAYBOOK.md), [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md), [RESOURCE_FARM_AND_CATALOG.md](RESOURCE_FARM_AND_CATALOG.md).

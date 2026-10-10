@@ -10,7 +10,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 |---|---|---|
 | 1 | [../AGENTS.md](../AGENTS.md) | Daily loop, commands, ports, gates. The operational page. |
 | 2 | [EMPIRE_GUIDE.md](../EMPIRE_GUIDE.md) | Fresh-chat context brief. Start here in a new session. |
-| 3 | [EMPIRE_CLARITY.md](EMPIRE_CLARITY.md) | Core vs LEGO vs staging; light hands (`resource_pulse` / `admit_for_goal`). |
+| 3 | [EMPIRE_CLARITY.md](EMPIRE_CLARITY.md) | Core vs LEGO vs staging; light hands; build gate (local first, local soon). |
 | 4 | [EMPIRE_USAGE_GUIDE.md](EMPIRE_USAGE_GUIDE.md) | Architect how-to: pages, Toolbelt, recipes. |
 | 5 | [EMPIRE_MANIFESTO.md](../EMPIRE_MANIFESTO.md) | Why the thing exists (vision phases). |
 

@@ -67,7 +67,19 @@ Research Partner (More tab) can admit read-only research limbs for a short TTL w
 
 ## Mechanic before Architect
 
-After forge or fix, Mechanic runs `.\scripts\mechanic-green.ps1` (and `-Full` when live Eve matters) **before** asking the Architect to click through UX. Architect smoke = “does this feel like the product?”, not CI.
+After forge or fix, Mechanic runs `.\scripts\mechanic-green.ps1` (and `-Full` when live Eve matters) **before** asking the Architect to click through UX. Architect smoke = “does this feel like the product?”, not CI. Proven limbs: [`CAPABILITY_VERIFICATION.md`](CAPABILITY_VERIFICATION.md) (`verify-capabilities`, optional `eve_core` sync).
+
+## Build innovation gate (local first, local soon)
+
+During **build phase**, use whatever speeds the work—Cursor agents (workspace rules stay in force), outside models, vendor UIs, Docker Agent, cloud scouts—**without treating that as the final architecture**. The rules exist so the repo does not drift off stack; they do **not** mean “stop looking for better ways while EMPIRE is still growing.”
+
+The plan is simple:
+
+1. **Local first** — try Ollama, PocketBase, Cognee, `mcp/`, Eve tools, and existing pipelines before reaching outside.
+2. **Outside when it wins today** — allowed; pair it with an **exit**: disassembly card, Work Order, or idea-queue row that says what was learned and how it becomes local (MCP wrap, pipeline module, REA, or an documented substitute).
+3. **Operational phase** — only what runs on the sovereign stack; outside helpers are scaffolding until Forge closes the gap.
+
+Experiments in Resource Queue or Thought Experiments stay provisional. Limbs that **ship** get pavement (verify + memory) so Eve knows what is proven. See also [`RESOURCE_FARM_AND_CATALOG.md`](RESOURCE_FARM_AND_CATALOG.md) (study seeds vs full REA) and [`LEGO_BLUEPRINT.md`](LEGO_BLUEPRINT.md) (outside proposals vs running system).
 
 ## Box rule (updated)
 
