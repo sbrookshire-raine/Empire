@@ -207,6 +207,22 @@
       }
     },
     {
+      "id": "resource_farm",
+      "say": "Farm GitHub into scout Disassembly Cards (processed-material catalog).",
+      "triggers": {
+        "verbs": ["farm", "process", "catalog", "index"],
+        "nouns": ["resources", "repos", "github", "catalog", "materials"],
+        "phrases": ["resource farm", "farm resources", "processed materials", "scout catalog", "github catalog"]
+      },
+      "policy": {
+        "local_first": false,
+        "local_tools": ["resource_farm_run", "disassembly_card_list"],
+        "online_tools": ["resource_farm_run"],
+        "limbs": ["github_scout", "rea", "heptabase"],
+        "playbook": "web-and-sources"
+      }
+    },
+    {
       "id": "read_document",
       "say": "Extract text from a local file (PDF, Office, md).",
       "triggers": {

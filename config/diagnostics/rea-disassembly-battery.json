@@ -5,6 +5,7 @@
   "paths": {
     "atomic_agent_repo": "C:/Empire_Workbench/00_Resource_Queue/atomic-agent",
     "atomic_agent_src": "C:/Empire_Workbench/00_Resource_Queue/atomic-agent/src",
+    "atomic_agent_rea_slice": "C:/Empire_Workbench/00_Resource_Queue/atomic-agent/src/cli",
     "disassembly_cards": "C:/Empire_Workbench/04_Thought_Experiments/disassembly_cards",
     "rea_inbox": "C:/Empire_Workbench/rea_inbox",
     "rea_evidence": "C:/Empire_Workbench/04_Thought_Experiments/rea_cache"
@@ -61,8 +62,8 @@
       "id": "rea_js_atomic_src",
       "tier": "rea",
       "kind": "rea_analyze_js",
-      "path_key": "atomic_agent_src",
-      "timeout_sec": 300,
+      "path_key": "atomic_agent_rea_slice",
+      "timeout_sec": 180,
       "optional": true
     },
     {

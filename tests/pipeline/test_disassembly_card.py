@@ -34,6 +34,26 @@ class DisassemblyCardTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             disassembly_card.validate_payload({"title": "x", "connections": []})
 
+    def test_markdown_for_heptabase_strips_yaml(self) -> None:
+        card = {
+            "id": "dc_test1234",
+            "title": "Visible title",
+            "container": "web",
+            "learning_stage": "draft",
+            "target_summary": "body text",
+            "connections": [
+                {"from": "a", "to": "b", "kind": "k"},
+                {"from": "b", "to": "c", "kind": "k"},
+                {"from": "c", "to": "d", "kind": "k"},
+            ],
+            "evidence_refs": [],
+            "depends_on": [],
+            "evolution_note": "",
+        }
+        body = disassembly_card.markdown_for_heptabase(card)
+        self.assertTrue(body.startswith("# Visible title"))
+        self.assertNotIn("\n---\n", body.split("\n", 1)[0])
+
 
 if __name__ == "__main__":
     unittest.main()

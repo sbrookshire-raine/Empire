@@ -72,7 +72,7 @@ Tool syntax: **`tool_docs`**. Worked examples of using a capability (ask -> tool
 - External OSS/MCP repo catalog -> `search_catalog` (catalog.db only)
 - Text/code inside local files -> `workspace_search`; tabular data -> `query_data`; documents -> `read_document`
 - Local Wikipedia facts (who is X, cast, briefs, sections) -> **`wiki_scout_search`** (lead) then **hop in the same turn** with **`wiki_read_section`** / **`wiki_extract`** when the asked fact is not in the lead — you own retrieval; resolve pronouns/context yourself; never invent; search the **bare title** (`Drum kit`, not “how to play drums”) before calling it a miss
-- Public web page -> `web_scout`; GitHub -> `github_scout_*`; Docker Hub -> `container_scout_*`
+- Public web page -> `web_scout`; GitHub -> `github_scout_*` or **`resource_farm_run`** (processed scout catalog); Docker Hub -> `container_scout_*`
 - Multi-source research -> `research_orchestrate` (needs Research Partner on)
 - Truth Drift / compare Wikipedia across years -> `wiki_scout_compare_years`
 - Something worth keeping -> `propose_remember`, then ask the Architect to keep or drop

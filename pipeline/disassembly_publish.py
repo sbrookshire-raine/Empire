@@ -55,11 +55,7 @@ def publish_to_heptabase(
     except KeyError:
         return {"ok": False, "error": f"unknown disassembly card: {card_id}"}
 
-    md_path = disassembly_card._markdown_path(card_id)  # noqa: SLF001
-    try:
-        note_body = md_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        return {"ok": False, "error": str(exc)}
+    note_body = disassembly_card.markdown_for_heptabase(card)
 
     heptabase_cli.whiteboard_read_layout(whiteboard_id)
 
@@ -166,6 +162,66 @@ def mark_mature(
     return {"ok": True, "card_id": card_id, "color": color, "card": updated.get("card")}
 
 
+def repair_heptabase_note(card_id: str) -> dict[str, Any]:
+    """Recreate a published note when create failed (empty title / empty whiteboard preview)."""
+    health = heptabase_cli.health_check()
+    if not health.get("ok"):
+        return {"ok": False, "error": health.get("error") or "Heptabase not ready.", "health": health}
+    whiteboard_id = catalog_whiteboard_id()
+    if not whiteboard_id:
+        return {"ok": False, "error": "HEPTABASE_DISASSEMBLY_WHITEBOARD_ID not set."}
+    try:
+        card = disassembly_card.read_card(card_id)
+    except KeyError:
+        return {"ok": False, "error": f"unknown disassembly card: {card_id}"}
+    old_hb_id = str(card.get("heptabase_card_id") or "").strip()
+    if not old_hb_id:
+        return {"ok": False, "error": "card has no heptabase_card_id; publish first."}
+
+    index = disassembly_card.published_count()
+    x, y = disassembly_card.layout_anchor(str(card.get("container") or "unknown"), index)
+    stage = str(card.get("learning_stage") or "published")
+    color = _stage_color(stage)
+
+    body = disassembly_card.markdown_for_heptabase(card)
+    created = heptabase_cli.create_note(body, human_owned=False)
+    if created.get("ok") is False:
+        return {"ok": False, "error": created.get("error"), "step": "note_create", "detail": created}
+    new_hb_id = heptabase_cli.extract_card_id_from_create(created)
+    if not new_hb_id:
+        return {"ok": False, "error": "could not parse new Heptabase card id", "detail": created}
+
+    heptabase_cli.remove_card_from_whiteboard(whiteboard_id, old_hb_id)
+    placed = heptabase_cli.place_card_on_whiteboard(whiteboard_id, new_hb_id)
+    if placed.get("ok") is False:
+        return {"ok": False, "error": placed.get("error"), "step": "place", "detail": placed}
+    placement_id = heptabase_cli.extract_placement_id_from_place(placed)
+    if placement_id:
+        heptabase_cli.move_card_to_point(whiteboard_id, placement_id, x, y)
+        heptabase_cli.recolor_placement(whiteboard_id, placement_id, color)
+        heptabase_cli.resize_card_fit(whiteboard_id, placement_id)
+
+    trashed = heptabase_cli.trash_card(old_hb_id)
+
+    patch = {
+        "heptabase_card_id": new_hb_id,
+        "heptabase_placement_id": placement_id.replace("inst:", "") if placement_id else "",
+        "allow_overwrite": True,
+    }
+    updated = disassembly_card.update_card(card_id, patch)
+
+    return {
+        "ok": True,
+        "card_id": card_id,
+        "heptabase_card_id": new_hb_id,
+        "replaced_heptabase_card_id": old_hb_id,
+        "heptabase_placement_id": placement_id,
+        "title": created.get("title"),
+        "trashed_old": trashed,
+        "updated": updated.get("card"),
+    }
+
+
 def seed_legend(*, architect_confirm: bool = False) -> dict[str, Any]:
     if not architect_confirm:
         return {"ok": False, "error": "architect_confirm required", "need_architect": True}
@@ -207,11 +263,15 @@ def main(argv: list[str] | None = None) -> int:
     mat.add_argument("--architect-confirm", action="store_true")
     leg = sub.add_parser("seed-legend")
     leg.add_argument("--architect-confirm", action="store_true")
+    rep = sub.add_parser("repair-note")
+    rep.add_argument("card_id")
     args = parser.parse_args(argv)
     if args.cmd == "publish":
         result = publish_to_heptabase(args.card_id, architect_confirm=args.architect_confirm)
     elif args.cmd == "mark-mature":
         result = mark_mature(args.card_id, architect_confirm=args.architect_confirm)
+    elif args.cmd == "repair-note":
+        result = repair_heptabase_note(args.card_id)
     else:
         result = seed_legend(architect_confirm=args.architect_confirm)
     print(json.dumps(result, indent=2, ensure_ascii=False, default=str))

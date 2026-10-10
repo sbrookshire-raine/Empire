@@ -126,14 +126,40 @@ def read_note(card_id: str) -> dict[str, Any]:
     return run_cli(["note", "read", cleaned])
 
 
+def _write_markdown_temp(body: str) -> Path:
+    handle, tmp = tempfile.mkstemp(prefix="heptabase-note-", suffix=".md")
+    temp_path = Path(tmp)
+    os.close(handle)
+    temp_path.write_text(body, encoding="utf-8")
+    return temp_path
+
+
 def create_note(content: str, *, human_owned: bool = False) -> dict[str, Any]:
     body = (content or "").strip()
     if not body:
         return {"ok": False, "error": "content required"}
-    args = ["note", "create", "--content", body]
-    if human_owned:
-        args.append("--no-created-by-ai")
-    return run_cli(args)
+    temp_path = _write_markdown_temp(body)
+    try:
+        args = ["note", "create", "--content-file", str(temp_path)]
+        if human_owned:
+            args.append("--no-created-by-ai")
+        return run_cli(args)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def append_note(card_id: str, content: str) -> dict[str, Any]:
+    cleaned_id = (card_id or "").strip()
+    body = (content or "").strip()
+    if not cleaned_id:
+        return {"ok": False, "error": "card_id required"}
+    if not body:
+        return {"ok": False, "error": "content required"}
+    temp_path = _write_markdown_temp(body)
+    try:
+        return run_cli(["note", "append", cleaned_id, "--content-file", str(temp_path)])
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 def whiteboard_read_structure(whiteboard_id: str) -> dict[str, Any]:
@@ -228,19 +254,52 @@ def extract_card_id_from_create(result: dict[str, Any]) -> str:
 
 
 def extract_placement_id_from_place(result: dict[str, Any]) -> str:
-    """Best-effort parse of place-objects response."""
-    items = result.get("objects") or result.get("placements") or result.get("results")
-    if isinstance(items, list) and items:
+    """Best-effort parse of place-objects response (whiteboard instance id, not card id)."""
+    for key in ("results", "createdWhiteboardObjects", "objects", "placements"):
+        items = result.get(key)
+        if not isinstance(items, list) or not items:
+            continue
         first = items[0]
-        if isinstance(first, dict):
-            for key in ("placementId", "placement_id", "id", "instanceId"):
-                val = first.get(key)
-                if isinstance(val, str) and val.strip():
-                    pid = val.strip()
-                    if not pid.startswith("inst:"):
-                        pid = f"inst:{pid}"
-                    return pid
+        if not isinstance(first, dict):
+            continue
+        for field in ("instanceId", "whiteboardObjectId", "placementId", "placement_id"):
+            val = first.get(field)
+            if isinstance(val, str) and val.strip():
+                pid = val.strip()
+                if not pid.startswith("inst:"):
+                    pid = f"inst:{pid}"
+                return pid
     return ""
+
+
+def remove_card_from_whiteboard(whiteboard_id: str, card_id: str) -> dict[str, Any]:
+    wid = (whiteboard_id or "").strip()
+    cid = (card_id or "").strip()
+    if not wid or not cid:
+        return {"ok": False, "error": "whiteboard_id and card_id required"}
+    payload = {
+        "whiteboardId": wid,
+        "removals": [{"id": cid, "objectType": "card"}],
+    }
+    return run_cli(["whiteboard", "remove-objects"], input_json=payload)
+
+
+def trash_card(card_id: str) -> dict[str, Any]:
+    cleaned = (card_id or "").strip()
+    if not cleaned:
+        return {"ok": False, "error": "card_id required"}
+    return run_cli(["card", "trash", cleaned])
+
+
+def resize_card_fit(whiteboard_id: str, placement_id: str) -> dict[str, Any]:
+    pid = (placement_id or "").strip()
+    if pid and not pid.startswith("inst:"):
+        pid = f"inst:{pid}"
+    payload = {
+        "whiteboardId": whiteboard_id,
+        "resizes": [{"id": pid, "objectType": "card", "mode": "fitToContent"}],
+    }
+    return run_cli(["whiteboard", "resize-objects"], input_json=payload)
 
 
 def main(argv: list[str] | None = None) -> int:

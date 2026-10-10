@@ -2,9 +2,11 @@
 
 Eve learns by **breaking things apart**, writing one **Disassembly Card** per serious reverse-engineering session, and optionally **publishing** it to a Heptabase whiteboard so you can see connections and colors accrue over time.
 
+**Resume / strategy (scout vs study vs REA, Eve vs outside agent):** [RESOURCE_FARM_AND_CATALOG.md](RESOURCE_FARM_AND_CATALOG.md)
+
 ## Loop
 
-1. Upload or path → REA tools (`rea_doctor`, analyze, visual observe).
+1. Upload or path → REA tools (`rea_doctor`, analyze, visual observe). **Or** GitHub scout → **`resource_farm_run`** (scout tickets, deduped by repo — see Eve skill **skill-resource-farm**).
 2. **`disassembly_card_write`** — local markdown + JSON under `C:/Empire_Workbench/04_Thought_Experiments/disassembly_cards/`.
 3. Architect confirms → **`disassembly_publish_heptabase`** (`architect_confirm: true`).
 4. Optional memory → **`propose_remember`** → **`confirm_remember`** → **`disassembly_mark_mature`** (green on board).

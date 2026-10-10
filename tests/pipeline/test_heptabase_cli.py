@@ -31,6 +31,24 @@ class HeptabaseCliTests(unittest.TestCase):
             out = heptabase_cli.run_cli(["card", "list", "--limit", "1"])
         self.assertTrue(out.get("ok"))
 
+    def test_create_note_uses_content_file(self) -> None:
+        seen: dict[str, list[str]] = {}
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            seen["cmd"] = cmd
+            proc = MagicMock()
+            proc.returncode = 0
+            proc.stdout = json.dumps({"id": "n1", "title": "T"})
+            proc.stderr = ""
+            return proc
+
+        with patch.object(heptabase_cli.subprocess, "run", side_effect=fake_run):
+            out = heptabase_cli.create_note("# Title\n\nHello")
+        self.assertTrue(out.get("ok"))
+        cmd = seen["cmd"]
+        self.assertIn("--content-file", cmd)
+        self.assertNotIn("--content", cmd)
+
 
 if __name__ == "__main__":
     unittest.main()

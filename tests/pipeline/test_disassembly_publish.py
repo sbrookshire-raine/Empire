@@ -42,6 +42,56 @@ class DisassemblyPublishTests(unittest.TestCase):
         self.assertFalse(out.get("ok"))
         self.assertTrue(out.get("need_architect"))
 
+    def test_publish_passes_heptabase_body_without_yaml(self) -> None:
+        card_id = self._write_card()
+        captured: dict[str, str] = {}
+
+        def fake_create(body: str, **kwargs: object) -> dict:
+            captured["body"] = body
+            return {"ok": True, "cardId": "note-1"}
+
+        with patch("pipeline.disassembly_publish.catalog_whiteboard_id", return_value="wb-1"):
+            with patch.object(heptabase_cli, "health_check", return_value={"ok": True}):
+                with patch.object(heptabase_cli, "whiteboard_read_layout", return_value={"ok": True}):
+                    with patch.object(heptabase_cli, "create_note", side_effect=fake_create):
+                        with patch.object(
+                            heptabase_cli,
+                            "place_card_on_whiteboard",
+                            return_value={"ok": True, "placementId": "inst:p"},
+                        ):
+                            with patch.object(
+                                heptabase_cli,
+                                "extract_card_id_from_create",
+                                return_value="note-1",
+                            ):
+                                with patch.object(
+                                    heptabase_cli,
+                                    "extract_placement_id_from_place",
+                                    return_value="inst:p",
+                                ):
+                                    with patch.object(
+                                        heptabase_cli,
+                                        "move_card_to_point",
+                                        return_value={"ok": True},
+                                    ):
+                                        with patch.object(
+                                            heptabase_cli,
+                                            "recolor_placement",
+                                            return_value={"ok": True},
+                                        ):
+                                            with patch.object(
+                                                heptabase_cli,
+                                                "whiteboard_lint",
+                                                return_value={"ok": True},
+                                            ):
+                                                disassembly_publish.publish_to_heptabase(
+                                                    card_id,
+                                                    architect_confirm=True,
+                                                )
+        body = captured.get("body", "")
+        self.assertTrue(body.startswith("# Publish test"))
+        self.assertFalse(body.lstrip().startswith("---"))
+
     def test_publish_applies_orange_then_blue_when_linked(self) -> None:
         dep_id = self._write_card(title="dep")
         disassembly_card.update_card(

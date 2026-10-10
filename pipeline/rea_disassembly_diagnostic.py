@@ -130,6 +130,22 @@ def _rea_analyze_js(path: Path, timeout_sec: int) -> tuple[bool, str, dict[str, 
     }
 
 
+def _repo_slug_from_package(pkg: dict[str, Any], repo_dir: Path) -> str:
+    repo_field = pkg.get("repository")
+    url = ""
+    if isinstance(repo_field, str):
+        url = repo_field
+    elif isinstance(repo_field, dict):
+        url = str(repo_field.get("url") or "")
+    match = re.search(r"github\.com[:/]+([^/\s#\"'>]+/[^/\s#\"'>]+)", url, re.I)
+    if match:
+        return match.group(1).replace(".git", "").lower()
+    folder = repo_dir.name.lower()
+    if folder:
+        return f"local/{folder}"
+    return ""
+
+
 def _atomic_seed_card(battery: dict[str, Any]) -> tuple[bool, str, dict[str, Any]]:
     from pipeline import disassembly_card
 
@@ -190,6 +206,8 @@ def _atomic_seed_card(battery: dict[str, Any]) -> tuple[bool, str, dict[str, Any
         "evolution_note": "Seed card from diagnostic battery; deepen after rea_js_atomic_src.",
         "depends_on": [],
         "related_card_ids": [],
+        "source_repo": _repo_slug_from_package(pkg, repo),
+        "farm_kind": "study",
     }
     try:
         disassembly_card.validate_payload(payload)

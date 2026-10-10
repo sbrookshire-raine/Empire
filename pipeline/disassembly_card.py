@@ -145,9 +145,33 @@ def validate_payload(data: dict[str, Any]) -> dict[str, Any]:
         "heptabase_placement_id": str(data.get("heptabase_placement_id") or "").strip(),
         "heptabase_whiteboard_id": str(data.get("heptabase_whiteboard_id") or "").strip(),
         "published_at": str(data.get("published_at") or "").strip(),
+        "source_repo": str(data.get("source_repo") or "").strip().lower()[:200],
+        "farm_kind": str(data.get("farm_kind") or "").strip().lower()[:32],
         "created_at": str(data.get("created_at") or _utc_now()),
         "updated_at": _utc_now(),
     }
+
+
+def strip_yaml_front_matter(text: str) -> str:
+    """Remove leading --- YAML --- block so Heptabase sees # title first."""
+    lines = text.splitlines()
+    if len(lines) < 2 or lines[0].strip() != "---":
+        return text
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            rest = lines[idx + 1 :]
+            while rest and not rest[0].strip():
+                rest = rest[1:]
+            body = "\n".join(rest)
+            if text.endswith("\n"):
+                body += "\n"
+            return body
+    return text
+
+
+def markdown_for_heptabase(card: dict[str, Any]) -> str:
+    """Note body for Heptabase create/append (no YAML front matter; # title first)."""
+    return strip_yaml_front_matter(render_markdown(card))
 
 
 def render_markdown(card: dict[str, Any]) -> str:
@@ -264,6 +288,8 @@ def public_card(card: dict[str, Any]) -> dict[str, Any]:
         "heptabase_card_id": card.get("heptabase_card_id"),
         "heptabase_placement_id": card.get("heptabase_placement_id"),
         "published_at": card.get("published_at"),
+        "source_repo": card.get("source_repo") or "",
+        "farm_kind": card.get("farm_kind") or "",
         "updated_at": card.get("updated_at"),
         "markdown_path": str(_markdown_path(str(card.get("id"))).resolve()),
     }

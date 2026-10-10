@@ -1,8 +1,8 @@
 ---
 area: web-and-sources
 one_line: Public web, GitHub, container images, docs scraping, document reading, multi-source research.
-tools: web_scout, searxng_search, browser_local_fetch, github_scout_search, github_scout_readme, container_scout_search, container_scout_detail, container_scout_docker_status, research_orchestrate, research_start, research_status, research_read, docs_guide_scrape, read_document, docling_convert, structured_extract
-skills: skill-browser-local, skill-container-scout, skill-read-document, skill-research-orchestrator, skill-structured-extract, skill-web-scout
+tools: web_scout, searxng_search, browser_local_fetch, github_scout_search, github_scout_readme, resource_farm_run, container_scout_search, container_scout_detail, container_scout_docker_status, research_orchestrate, research_start, research_status, research_read, docs_guide_scrape, read_document, docling_convert, structured_extract
+skills: skill-browser-local, skill-container-scout, skill-read-document, skill-research-orchestrator, skill-resource-farm, skill-structured-extract, skill-web-scout
 ---
 
 # Web and outside sources — worked pathways
@@ -32,6 +32,9 @@ limbs — **admit Web Research first** (`admit_for_goal("web_research")`), then:
 ## GitHub
 Use when: repo discovery, "is there a tool for X?", reading a project's README.
 
+- **Ask:** "farm GitHub for local MCP agent repos" → **Do:** `resource_farm_run({ query: "mcp agent local", max_new_cards: 5 })` → **Get:** scout `dc_*` cards + README cache; skips repos already in the catalog.
+- **Ask:** "what GitHub repos did we already process?" → **Do:** `resource_farm_run()` (no query) → **Get:** `farmed_repos` index + recent scout cards.
+- **Ask:** "farm those and put them on the Heptabase board" → **Do:** `resource_farm_run({ query: "…", architect_confirm: true })` when the Architect said yes this turn → **Get:** orange placements when CLI healthy.
 - **Ask:** "find GitHub MCP servers for local DuckDB" → **Do:** `github_scout_search("mcp server duckdb")` → **Get:** candidate repos with stars and links.
 - **Ask:** "what does this repo do?" → **Do:** `github_scout_readme("owner/repo")` → **Get:** the README summary, licence, and setup lines.
 - **Ask:** "anything newer than what we have for X?" → **Do:** `github_scout_search("<X> local")` → compare against `search_catalog` → **Get:** a shortlist + an intake brief path.
