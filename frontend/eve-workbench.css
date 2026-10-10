@@ -2816,10 +2816,17 @@ textarea[data-state="success"] {
 
 .limb-meter__top {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
   margin-bottom: var(--space-2xs);
+}
+
+.limb-meter__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .limb-meter__title {
@@ -2828,6 +2835,31 @@ textarea[data-state="success"] {
   text-transform: uppercase;
   color: var(--color-neon-blue);
   text-shadow: var(--glow-heading);
+}
+
+.limb-meter__legend,
+.limb-meter__section-label {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: var(--color-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.limb-meter__hint {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-ink) 55%, transparent);
+}
+
+.limb-meter__score-label--activation {
+  color: var(--color-neon-blue);
+}
+
+.limb-meter__section-label {
+  margin: var(--space-xs) 0 var(--space-2xs);
 }
 
 .limb-meter__score-label {
@@ -2887,9 +2919,17 @@ textarea[data-state="success"] {
 
 .limb-meter__bar-row {
   display: grid;
-  grid-template-columns: 2.5rem 1fr;
+  grid-template-columns: 2.5rem 1fr 2.25rem;
   align-items: center;
   gap: var(--space-xs);
+}
+
+.limb-meter__bar-pct {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.62rem;
+  color: var(--color-neon-green);
+  text-align: right;
+  text-shadow: 0 0 8px color-mix(in oklch, var(--color-neon-green) 45%, transparent);
 }
 
 .limb-meter__bar-label {
@@ -2918,16 +2958,13 @@ textarea[data-state="success"] {
   color: var(--color-muted);
 }
 
-.limb-meter__bar-fill--ram {
-  background: color-mix(in oklch, var(--color-neon-cyan) 75%, var(--color-neon-blue));
-}
-
-.limb-meter__bar-fill--disk {
-  background: color-mix(in oklch, var(--color-neon-purple) 70%, var(--color-neon-blue));
-}
-
-.limb-meter__bar-fill--vram {
-  background: var(--color-neon-blue);
+.limb-meter__bar-fill--resource {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-neon-green) 55%, black),
+    var(--color-neon-green)
+  );
+  box-shadow: 0 0 10px color-mix(in oklch, var(--color-neon-green) 50%, transparent);
 }
 
 .limb-meter__active {

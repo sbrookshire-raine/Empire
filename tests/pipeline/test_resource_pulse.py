@@ -72,6 +72,9 @@ class ResourcePulseTests(unittest.TestCase):
         self.assertIn("summary", out)
         meter = out.get("capacity_meter") or {}
         self.assertIn("headroom_score", meter)
+        self.assertIn("activation_used_pct", meter)
+        self.assertIn("activation_on_count", meter)
+        self.assertIn("activation_pool_count", meter)
         self.assertIn("ram_bar", meter)
         activation = out.get("activation") or {}
         self.assertIn("eve_contract", activation)

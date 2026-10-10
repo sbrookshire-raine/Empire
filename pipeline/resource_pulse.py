@@ -127,6 +127,29 @@ def _usage_bar(pct_used: float | None, *, width: int = 10) -> str:
     return f"[{'#' * filled}{'-' * (width - filled)}] {pct_used:.0f}% used"
 
 
+def _activation_usage_stats(
+    effective: set[str],
+    light: list[dict[str, Any]],
+    heavy: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """UI + Eve: share of activatable toolbelt limbs currently ON (not machine RAM)."""
+    pool_ids: list[str] = [str(x["id"]) for x in light if x.get("id")]
+    for item in heavy:
+        hid = str(item.get("id") or "")
+        # Voice is a heavy category but lives on the header strip like a session limb.
+        if hid == "voice_presence":
+            pool_ids.append(hid)
+    pool = sorted(set(pool_ids))
+    on_ids = sorted(x for x in pool if x in effective)
+    used_pct = round(100.0 * len(on_ids) / len(pool), 1) if pool else 0.0
+    return {
+        "activation_used_pct": used_pct,
+        "activation_on_count": len(on_ids),
+        "activation_pool_count": len(pool),
+        "activation_on_ids": on_ids,
+    }
+
+
 def _capacity_meter(
     resources: dict[str, Any],
     nvidia: dict[str, Any],
@@ -134,8 +157,9 @@ def _capacity_meter(
     headroom_ok: bool,
     headroom_reasons: list[str],
     lease: dict[str, Any],
+    activation_stats: dict[str, Any],
 ) -> dict[str, Any]:
-    """Eve-facing gauges: how full the machine is before she ACTIVATEs another limb."""
+    """Eve-facing gauges: machine headroom + UI activation fill (limbs ON vs pool)."""
     ram_used = _pct_used(resources.get("ram_available_gb"), resources.get("ram_total_gb"))
     disk_used = _pct_used(resources.get("disk_free_gb"), resources.get("disk_total_gb"))
     vram_used: float | None = None
@@ -191,8 +215,13 @@ def _capacity_meter(
         "gpu_vram_pressure_pct": vram_used,
         "vram_note": vram_note,
         "gpu_tenant": tenant,
-        "room_label": f"{score}/100 light-limb room (scouts use headroom_ok + can_admit_now, not VRAM)",
+        "room_label": (
+            f"machine headroom {score}/100 for new admits; "
+            f"tools {activation_stats.get('activation_on_count', 0)}/"
+            f"{activation_stats.get('activation_pool_count', 0)} ON"
+        ),
         "blocked_reasons": list(headroom_reasons),
+        **activation_stats,
     }
 
 
@@ -237,14 +266,24 @@ def _activation_map(
 
     for item in heavy:
         cid = str(item.get("id") or "")
-        if cid:
+        if not cid:
+            continue
+        if cid == "voice_presence" and cid in effective:
             limbs.append(
                 {
                     "id": cid,
-                    "state": "LOCKED",
-                    "eve_action": "Ask Architect before ACTIVATE (GPU/heavy tenant)",
+                    "state": "ACTIVE",
+                    "eve_action": "limb on — push-to-talk / Speaches when Architect uses mic",
                 }
             )
+            continue
+        limbs.append(
+            {
+                "id": cid,
+                "state": "LOCKED",
+                "eve_action": "Ask Architect before ACTIVATE (GPU/heavy tenant)",
+            }
+        )
 
     return {
         "session_slots": f"{len(session_caps)}/{max_caps} optional session limbs admitted",
@@ -343,12 +382,14 @@ def pulse() -> dict[str, Any]:
 
     verified = verified_hands.load_verification()
     verified_snippet = verified_hands.pulse_snippet()
+    act_stats = _activation_usage_stats(effective, light, heavy)
     meter = _capacity_meter(
         resources,
         nvidia,
         headroom_ok=headroom_ok,
         headroom_reasons=headroom_reasons,
         lease=lease,
+        activation_stats=act_stats,
     )
     activation = _activation_map(
         effective=effective,

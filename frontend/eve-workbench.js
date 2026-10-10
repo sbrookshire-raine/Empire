@@ -347,6 +347,9 @@
       },
       admissionLoading: false,
       limbPulse: {
+        activation_used_pct: 0,
+        activation_on_count: 0,
+        activation_pool_count: 0,
         headroom_score: null,
         status: "amber",
         ram_used_pct: 0,
@@ -975,7 +978,20 @@
           if (score == null && body.headroom_ok != null) {
             score = body.headroom_ok ? 85 : 25;
           }
+          var usedPct = meter.activation_used_pct;
+          var onCount = meter.activation_on_count;
+          var poolCount = meter.activation_pool_count;
+          if (usedPct == null && Array.isArray(activation.limbs)) {
+            onCount = Array.isArray(activation.active) ? activation.active.length : 0;
+            poolCount = activation.limbs.filter(function (l) {
+              return l && l.state !== "LOCKED";
+            }).length;
+            usedPct = poolCount ? Math.round((1000 * onCount) / poolCount) / 10 : 0;
+          }
           this.limbPulse = {
+            activation_used_pct: usedPct != null ? Number(usedPct) : null,
+            activation_on_count: onCount != null ? Number(onCount) : null,
+            activation_pool_count: poolCount != null ? Number(poolCount) : null,
             headroom_score: score != null ? Number(score) : null,
             status: plainText(meter.status) || (body.headroom_ok ? "green" : "red"),
             ram_used_pct: ramPct != null ? Number(ramPct) : 0,
