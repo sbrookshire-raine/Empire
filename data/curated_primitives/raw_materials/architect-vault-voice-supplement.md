@@ -3,7 +3,7 @@ title: Architect vault and Gemini dialogue voice (supplement)
 dataset: eve_memory
 fuel: architect_voice
 companion: architect-intent-vocabulary.md
-generated: 2026-10-10 03:09 UTC
+generated: 2026-10-10 04:06 UTC
 ---
 
 # Vault + Gemini — Architect phrasing (supplement)

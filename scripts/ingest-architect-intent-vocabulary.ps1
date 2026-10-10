@@ -8,7 +8,8 @@ $root = Split-Path -Parent $PSScriptRoot
 $sources = @(
     (Join-Path $root "data\curated_primitives\raw_materials\architect-intent-vocabulary.md"),
     (Join-Path $root "data\curated_primitives\raw_materials\architect-vault-voice-supplement.md"),
-    (Join-Path $root "data\curated_primitives\raw_materials\architect-eve-language-bridge.md")
+    (Join-Path $root "data\curated_primitives\raw_materials\architect-eve-language-bridge.md"),
+    (Join-Path $root "data\curated_primitives\raw_materials\architect-navigation-profile.md")
 )
 $py = Join-Path $root "venv\Scripts\python.exe"
 

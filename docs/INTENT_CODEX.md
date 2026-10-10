@@ -43,7 +43,8 @@ The Architect's phrasing is also stored for **`cognee_recall`**:
 
 - `data/curated_primitives/raw_materials/architect-intent-vocabulary.md` — session + codex-aligned phrases
 - `data/curated_primitives/raw_materials/architect-vault-voice-supplement.md` — Obsidian daily-note voice + Gemini **user** turns (see `docs/audits/2026-09-28-vault-and-dialogue-digest.md`)
-- Default dataset: **`eve_memory`**
+- `data/curated_primitives/raw_materials/architect-navigation-profile.md` — likes, frustrations, issues, response-style evidence from SBX (excludes clippings/Gemini paste)
+- Default dataset: **`eve_memory`** (navigation also in **`eve_core`**)
 
 Refresh vault lines from Obsidian (default **OneDrive SBX_Vault**):
 

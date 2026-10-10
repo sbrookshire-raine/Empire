@@ -31,6 +31,7 @@ PINNED_CORE_FILES = (
     EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-eve-language-bridge.md",
     EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-intent-vocabulary.md",
     EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-vault-voice-supplement.md",
+    EMPIRE_ROOT / "data/curated_primitives/raw_materials/architect-navigation-profile.md",
 )
 DATASET = "eve_core"
 ALLOWED_SUFFIXES = {".md", ".txt"}

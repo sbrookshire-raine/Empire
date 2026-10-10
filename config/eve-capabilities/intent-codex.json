@@ -559,7 +559,10 @@
           "energy drained",
           "shiny objects",
           "start from zero",
-          "discard pile"
+          "discard pile",
+          "what frustrates me",
+          "navigation profile",
+          "how to talk to me"
         ]
       },
       "policy": {
@@ -570,6 +573,7 @@
         "playbook": "tasks-and-routing",
         "datasets": ["eve_memory", "eve_core"],
         "sequence": [
+          "cognee_recall('Architect navigation profile likes frustrations', dataset=eve_core)",
           "cognee_recall('Architect intent vocabulary vault Gemini', dataset=eve_memory)",
           "resolve_intent(message)",
           "playbook area from primary intent"

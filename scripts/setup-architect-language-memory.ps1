@@ -16,10 +16,14 @@ Write-Host "Cognee file root: $cogneeRoot"
 Write-Host "Harvesting vault voice (static digest if no Obsidian path)..."
 & $Py (Join-Path $Root "scripts\harvest-architect-voice-from-vault.py")
 
+Write-Host "Building navigation profile (likes / friction / issues)..."
+& $Py -m pipeline.architect_navigation_profile build
+
 $languageFiles = @(
     "data\curated_primitives\raw_materials\architect-intent-vocabulary.md",
     "data\curated_primitives\raw_materials\architect-vault-voice-supplement.md",
-    "data\curated_primitives\raw_materials\architect-eve-language-bridge.md"
+    "data\curated_primitives\raw_materials\architect-eve-language-bridge.md",
+    "data\curated_primitives\raw_materials\architect-navigation-profile.md"
 )
 
 $env:PYTHONPATH = $Root

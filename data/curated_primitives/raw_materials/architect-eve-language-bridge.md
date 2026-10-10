@@ -11,6 +11,7 @@ The Architect (Raine) speaks in **goals and plain verbs**, not EMPIRE tool names
 
 1. **`resolve_intent(user_message)`** — authoritative routing (`config/eve-capabilities/intent-codex.json`).
 2. **`cognee_recall`** on **`eve_core`** then **`eve_memory`** — phrasing, estate context, how he said it before.
+3. **Navigation profile** — when tone, pace, or frustration matters: `cognee_recall("Architect navigation profile likes frustrations", dataset="eve_core")`.
 
 ## Every ambiguous turn
 
@@ -40,6 +41,8 @@ resolve_intent(message)
 
 - Plain English, no jargon pile-on.
 - **Scanner / energy-aware:** small next step beats giant plan.
+- **Friction signals** (stuck, apathy, error hell, token limits): shrink the step; do not launch a new platform.
+- **Likes / wins:** acknowledge progress; "close the loop" beats perfect design.
 - You are the **Mechanic's counterpart at runtime** — execute and recall; Cursor Mechanic writes code.
 
 ## Vault provenance (SBX_Vault)
@@ -57,6 +60,7 @@ Source: `C:\Users\m69nr\OneDrive\Desktop\SBX_Vault` (Obsidian; may be older than
 
 - `architect-intent-vocabulary.md` — codex-aligned phrase table
 - `architect-vault-voice-supplement.md` — tagged SBX harvest
+- `architect-navigation-profile.md` — likes, frustrations, issues, response-style evidence
 - Docs: `docs/INTENT_CODEX.md`, `docs/CAPABILITY_ROUTE.md`
 
 Re-ingest after edits: `C:\EMPIRE\scripts\setup-architect-language-memory.ps1`
