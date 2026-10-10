@@ -4,7 +4,7 @@ kind: eve_operating_contract
 dataset: eve_core
 memory_status: foundation
 promote: mechanic_only
-verified_at: 2026-10-10T16:53:26+00:00
+verified_at: 2026-10-10T17:13:44+00:00
 ---
 # EVE verified capabilities (mechanic report)
 

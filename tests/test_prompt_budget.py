@@ -17,10 +17,10 @@ from frontend.ollama_chat_profiles import SHARED_NUM_CTX
 from pipeline import prompt_budget, tool_registry
 from pipeline.prompt_budget import tokens
 
-# Measured 2026-09-24 after R-03 (see docs/REFACTOR_PLAN.md section 3).
-INSTRUCTION_CEILING_TOKENS = 4_000  # measured ~3,969 (2026-10-09)
-DEFAULT_SCHEMA_CEILING_TOKENS = 1_100  # measured ~1,095 (2026-10-09; +5 always-on REA/disassembly)
-FLOOR_CEILING_TOKENS = 5_100  # measured ~5,065
+# Measured after R-03 (see docs/REFACTOR_PLAN.md section 3). Re-run measure-prompt-budget.py before raising.
+INSTRUCTION_CEILING_TOKENS = 4_050  # measured ~4,016 (2026-10-10)
+DEFAULT_SCHEMA_CEILING_TOKENS = 1_220  # measured ~1,211 (2026-10-10)
+FLOOR_CEILING_TOKENS = 5_250  # measured ~5,228 (2026-10-10)
 MIN_CONVERSATION_HEADROOM = 4_096
 TOOLBELT_CATEGORY_CEILING = 30
 

@@ -46,7 +46,7 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
 }
 
 Invoke-Step "verify-capabilities (offline)" {
-    & $py (Join-Path $Root "scripts\verify-capabilities.ps1")
+    & (Join-Path $Root "scripts\verify-capabilities.ps1")
 }
 
 Invoke-Step "capability governance (fail-closed)" {
@@ -87,8 +87,14 @@ Invoke-Step "infra checks (deptry/ruff/gitleaks, advisory)" {
     & (Join-Path $Root "scripts\infra-checks.ps1")
 }
 
-Invoke-Step "wiki extract battery (CLI)" {
-    & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
+$wikiTitleIndex = "I:\EMPIRE_DATA\wiki-reports\2026\title-index.sqlite"
+if (Test-Path $wikiTitleIndex) {
+    Invoke-Step "wiki extract battery (CLI)" {
+        & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
+    }
+} else {
+    Write-Host ""
+    Write-Host "SKIP wiki extract battery (no $wikiTitleIndex — plug T7 or run build-wiki-title-index.ps1)" -ForegroundColor Yellow
 }
 
 # The browser-logic harness stubs the workbench JS in node. It is the only gate on

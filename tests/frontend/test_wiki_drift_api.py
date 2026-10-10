@@ -485,17 +485,21 @@ class WikiDriftApiTests(unittest.TestCase):
                 return_value=dns,
             ):
                 with patch(
-                    "pipeline.wiki_read_lead.wiki_read_lead",
-                    return_value=lead,
+                    "pipeline.wiki_title_dns.neighbors",
+                    return_value={"ok": False},
                 ):
-                    payload = wiki_drift_api.enrich_eve_message_payload(
-                        {
-                            "message": (
-                                "what song from Kate Bush reinvigorated her career "
-                                "in 2025-2026?"
-                            )
-                        }
-                    )
+                    with patch(
+                        "pipeline.wiki_read_lead.wiki_read_lead",
+                        return_value=lead,
+                    ):
+                        payload = wiki_drift_api.enrich_eve_message_payload(
+                            {
+                                "message": (
+                                    "what song from Kate Bush reinvigorated her career "
+                                    "in 2025-2026?"
+                                )
+                            }
+                        )
         msg = str(payload.get("message") or "")
         self.assertIn(wiki_drift_api.WIKI_LOOKUP_MARKER, msg)
         self.assertIn("EVIDENCE", msg)
@@ -532,13 +536,17 @@ class WikiDriftApiTests(unittest.TestCase):
                 return_value=dns,
             ) as resolve:
                 with patch(
-                    "pipeline.wiki_read_lead.wiki_read_lead",
-                    return_value=lead,
+                    "pipeline.wiki_title_dns.neighbors",
+                    return_value={"ok": False},
                 ):
-                    with patch.object(wiki_drift_api, "run_lookup") as lookup:
-                        payload = wiki_drift_api.enrich_eve_message_payload(
-                            {"message": "Who is Kate Bush?"}
-                        )
+                    with patch(
+                        "pipeline.wiki_read_lead.wiki_read_lead",
+                        return_value=lead,
+                    ):
+                        with patch.object(wiki_drift_api, "run_lookup") as lookup:
+                            payload = wiki_drift_api.enrich_eve_message_payload(
+                                {"message": "Who is Kate Bush?"}
+                            )
         resolve.assert_called()
         lookup.assert_not_called()
         msg = str(payload.get("message") or "")
