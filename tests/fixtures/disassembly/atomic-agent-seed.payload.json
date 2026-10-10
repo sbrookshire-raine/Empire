@@ -1,0 +1,11 @@
+{
+  "title": "atomic-agent vs EMPIRE Eve (fixture reference)",
+  "container": "electron",
+  "target_summary": "Reference payload for tests; live seed is written by diagnostic atomic_seed_card.",
+  "connections": [
+    { "from": "sidecar", "to": "host NDJSON", "kind": "protocol" },
+    { "from": "llm", "to": "llama.cpp HTTP", "kind": "inference" },
+    { "from": "memory", "to": "Cognee", "kind": "analogy" }
+  ],
+  "evidence_refs": ["C:/Empire_Workbench/00_Resource_Queue/atomic-agent/package.json"]
+}

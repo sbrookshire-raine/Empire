@@ -44,6 +44,18 @@ Connector arrows on the board = **catalog dependencies** (`depends_on`), not eve
 |---------|-----|
 | CLI not found | Install/enable Local CLI in Heptabase settings |
 | Probe failed | Start the desktop app |
+
+## Diagnostic battery
+
+Mechanic-style checks for clone material, disassembly write/list, REA Node, optional Heptabase/Eve HTTP:
+
+```powershell
+.\scripts\diagnostic-rea-disassembly.ps1 -Fast    # static + material + catalog seed (no live REA analyze)
+.\scripts\diagnostic-rea-disassembly.ps1          # includes optional live probes
+.\scripts\diagnostic-rea-disassembly.ps1 -Full    # diagnostic + pytest slice
+```
+
+Report: `tmp/rea_disassembly_diagnostic.json`. Study repo default: `C:/Empire_Workbench/00_Resource_Queue/atomic-agent`.
 | No whiteboard id | Run `ensure-heptabase-disassembly-board.ps1` |
 | Publish blocked | Pass `architect_confirm: true` in the same approved turn |
 

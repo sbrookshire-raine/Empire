@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "name": "rea-disassembly",
+  "description": "REA limb, disassembly catalog, Heptabase publish, and atomic-agent study material.",
+  "paths": {
+    "atomic_agent_repo": "C:/Empire_Workbench/00_Resource_Queue/atomic-agent",
+    "atomic_agent_src": "C:/Empire_Workbench/00_Resource_Queue/atomic-agent/src",
+    "disassembly_cards": "C:/Empire_Workbench/04_Thought_Experiments/disassembly_cards",
+    "rea_inbox": "C:/Empire_Workbench/rea_inbox",
+    "rea_evidence": "C:/Empire_Workbench/04_Thought_Experiments/rea_cache"
+  },
+  "services": {
+    "frontend": "http://127.0.0.1:8080",
+    "eve": "http://127.0.0.1:2000",
+    "ollama": "http://127.0.0.1:11434"
+  },
+  "checks": [
+    {
+      "id": "config_learning_map",
+      "tier": "static",
+      "kind": "file",
+      "path": "config/heptabase-learning-map.json"
+    },
+    {
+      "id": "pipeline_disassembly_card",
+      "tier": "static",
+      "kind": "module",
+      "target": "pipeline.disassembly_card"
+    },
+    {
+      "id": "pipeline_rea_inbox",
+      "tier": "static",
+      "kind": "module",
+      "target": "pipeline.rea_inbox"
+    },
+    {
+      "id": "atomic_agent_clone",
+      "tier": "material",
+      "kind": "dir",
+      "path_key": "atomic_agent_repo",
+      "min_entries": 5
+    },
+    {
+      "id": "atomic_agent_src",
+      "tier": "material",
+      "kind": "dir",
+      "path_key": "atomic_agent_src",
+      "min_entries": 10
+    },
+    {
+      "id": "disassembly_write_roundtrip",
+      "tier": "pipeline",
+      "kind": "disassembly_roundtrip"
+    },
+    {
+      "id": "rea_node",
+      "tier": "rea",
+      "kind": "rea_doctor_node"
+    },
+    {
+      "id": "rea_js_atomic_src",
+      "tier": "rea",
+      "kind": "rea_analyze_js",
+      "path_key": "atomic_agent_src",
+      "timeout_sec": 300,
+      "optional": true
+    },
+    {
+      "id": "heptabase_health",
+      "tier": "live",
+      "kind": "heptabase_health",
+      "optional": true
+    },
+    {
+      "id": "heptabase_env",
+      "tier": "live",
+      "kind": "file",
+      "path": "config/heptabase.env",
+      "optional": true
+    },
+    {
+      "id": "eve_runtime",
+      "tier": "live",
+      "kind": "http",
+      "url_key": "eve",
+      "path": "/",
+      "optional": true
+    },
+    {
+      "id": "frontend_workbench",
+      "tier": "live",
+      "kind": "http",
+      "url_key": "frontend",
+      "path": "/eve.html",
+      "optional": true
+    },
+    {
+      "id": "atomic_disassembly_card",
+      "tier": "catalog",
+      "kind": "atomic_seed_card"
+    }
+  ]
+}
