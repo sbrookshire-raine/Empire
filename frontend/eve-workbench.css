@@ -2355,8 +2355,8 @@ textarea[data-state="success"] {
   gap: 0.25rem;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  background: rgba(120, 180, 255, 0.12);
-  border: 1px solid rgba(120, 180, 255, 0.35);
+  background: color-mix(in oklch, var(--color-neon-blue) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-neon-blue) 35%, var(--color-rule));
 }
 
 .composer__attachment-remove {
@@ -2370,7 +2370,7 @@ textarea[data-state="success"] {
 
 .composer__attachments-error {
   margin: 0;
-  color: #f07178;
+  color: var(--color-error);
   flex-basis: 100%;
 }
 
