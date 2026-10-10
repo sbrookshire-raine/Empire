@@ -60,6 +60,8 @@
     capability_status: "Checking research capabilities…",
     request_capability: "Admitting research limb…",
     release_capabilities: "Releasing session capabilities…",
+    admit_for_goal: "Activating session limb…",
+    resource_pulse: "Reading activation headroom…",
     research_orchestrate: "Running research autopilot…",
     github_scout_search: "Searching GitHub…",
     github_scout_readme: "Reading GitHub README…",
@@ -344,6 +346,19 @@
         effective_tools: [],
       },
       admissionLoading: false,
+      limbPulse: {
+        headroom_score: null,
+        status: "amber",
+        ram_used_pct: 0,
+        disk_used_pct: 0,
+        vram_used_pct: 0,
+        gpu_tenant: "idle",
+        active_limbs: [],
+        session_slots: "",
+      },
+      limbFlashEvents: [],
+      _limbPulseTimer: null,
+      _limbAdmissionPrimed: false,
       readyStripIds: ["voice_presence", "wiki_local"],
       readyStripPills: [
         { id: "voice_presence", short: "Voice", label: "Voice Presence" },
@@ -841,6 +856,11 @@
         window.addEventListener("message", this._onToolDockMessage);
         this.refreshToolbelt();
         this.refreshAdmission();
+        this.refreshLimbPulse();
+        if (this._limbPulseTimer) clearInterval(this._limbPulseTimer);
+        this._limbPulseTimer = setInterval(function () {
+          if (workbench.activeTab === "chat") workbench.refreshLimbPulse();
+        }, 8000);
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshReadyHealth();
@@ -868,8 +888,83 @@
         }
       },
 
+      pushLimbFlash: function (kind, label) {
+        var text = plainText(label);
+        if (!text) return;
+        var evt = {
+          id: this.makeId("limb"),
+          kind: kind === "off" ? "off" : "on",
+          label: text,
+        };
+        this.limbFlashEvents.unshift(evt);
+        if (this.limbFlashEvents.length > 8) {
+          this.limbFlashEvents.length = 8;
+        }
+        var workbench = this;
+        setTimeout(function () {
+          workbench.limbFlashEvents = workbench.limbFlashEvents.filter(function (item) {
+            return item.id !== evt.id;
+          });
+        }, 5000);
+      },
+
+      noteEffectiveToolChange: function (prevList, nextList) {
+        if (!this._limbAdmissionPrimed) {
+          this._limbAdmissionPrimed = true;
+          return;
+        }
+        var prev = new Set(Array.isArray(prevList) ? prevList : []);
+        var next = new Set(Array.isArray(nextList) ? nextList : []);
+        var workbench = this;
+        prev.forEach(function (id) {
+          if (!next.has(id)) {
+            workbench.pushLimbFlash("off", "Shut off " + displayToolName(id));
+          }
+        });
+        next.forEach(function (id) {
+          if (!prev.has(id)) {
+            workbench.pushLimbFlash("on", "Activated " + displayToolName(id));
+          }
+        });
+      },
+
+      refreshLimbPulse: async function () {
+        try {
+          var response = await fetch("/api/resource-pulse", { cache: "no-store" });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || body.ok === false) return;
+          var meter = body.capacity_meter && typeof body.capacity_meter === "object" ? body.capacity_meter : {};
+          var activation =
+            body.activation && typeof body.activation === "object" ? body.activation : {};
+          var inventory = body.inventory && typeof body.inventory === "object" ? body.inventory : {};
+          this.limbPulse = {
+            headroom_score:
+              meter.headroom_score != null ? Number(meter.headroom_score) : null,
+            status: plainText(meter.status) || "amber",
+            ram_used_pct: meter.ram_used_pct != null ? Number(meter.ram_used_pct) : 0,
+            disk_used_pct: meter.disk_used_pct != null ? Number(meter.disk_used_pct) : 0,
+            vram_used_pct: meter.vram_used_pct != null ? Number(meter.vram_used_pct) : 0,
+            gpu_tenant: plainText(meter.gpu_tenant) || "idle",
+            active_limbs: Array.isArray(activation.active)
+              ? activation.active
+              : Array.isArray(inventory.effective_tools)
+                ? inventory.effective_tools
+                : [],
+            session_slots: plainText(activation.session_slots),
+          };
+        } catch (_error) {
+          /* keep last sample */
+        }
+      },
+
       refreshAdmission: async function () {
         this.admissionLoading = true;
+        var prevEffective =
+          this.admissionSession && Array.isArray(this.admissionSession.effective_tools)
+            ? this.admissionSession.effective_tools.slice()
+            : [];
         try {
           var response = await fetch("/api/admission", { cache: "no-store" });
           var body = await response.json().catch(function () {
@@ -877,13 +972,15 @@
           });
           if (!response.ok || body.ok === false) return;
           this.researchPartnerMode = Boolean(body.research_partner_mode);
+          var nextEffective = Array.isArray(body.effective_tools) ? body.effective_tools : [];
+          this.noteEffectiveToolChange(prevEffective, nextEffective);
           this.admissionSession = {
             session_capabilities: Array.isArray(body.session_capabilities)
               ? body.session_capabilities
               : [],
             ttl_remaining_sec: Number(body.ttl_remaining_sec) || 0,
             expires_at: plainText(body.expires_at),
-            effective_tools: Array.isArray(body.effective_tools) ? body.effective_tools : [],
+            effective_tools: nextEffective,
           };
         } catch (_error) {
           /* keep defaults */
@@ -927,6 +1024,7 @@
             body: JSON.stringify({ action: "release", reason: "workbench_manual" }),
           });
           await this.refreshAdmission();
+          await this.refreshLimbPulse();
         } catch (_error) {
           /* ignore */
         }
@@ -1835,6 +1933,7 @@
         if (event.type === "session.waiting") {
           this.sending = false;
           this.refreshAdmission();
+          this.refreshLimbPulse();
           if (this.streamReader) this.streamReader.cancel().catch(function () {});
           return true;
         }
@@ -2155,6 +2254,11 @@
         var workbench = this;
         list.forEach(function (action) {
           var name = actionToolName(action);
+          if (name === "admit_for_goal" || name === "request_capability") {
+            workbench.pushLimbFlash("on", TOOL_LABELS[name] || "Activating limb…");
+          } else if (name === "release_capabilities") {
+            workbench.pushLimbFlash("off", "Shutting off session limbs…");
+          }
           var activity = {
             id: plainText(action.callId || action.id) || workbench.makeId("activity"),
             role: "activity",
@@ -2200,6 +2304,21 @@
           /…$/,
           data.status === "completed" ? " complete." : " did not run."
         );
+        var finishedName = actionToolName(result) || actionToolName(data);
+        if (finishedName === "admit_for_goal" || finishedName === "request_capability") {
+          this.refreshAdmission();
+          this.refreshLimbPulse();
+        } else if (finishedName === "release_capabilities") {
+          this.refreshAdmission();
+          this.refreshLimbPulse();
+        } else if (
+          finishedName === "github_scout_search" ||
+          finishedName === "web_scout" ||
+          finishedName === "container_scout_search"
+        ) {
+          this.refreshAdmission();
+          this.refreshLimbPulse();
+        }
         this.scrollTranscript();
       },
 

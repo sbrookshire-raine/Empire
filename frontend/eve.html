@@ -204,6 +204,63 @@
 
         <p class="chat__activity" x-show="chatActivityLabel" x-text="chatActivityLabel" aria-live="polite"></p>
 
+        <section
+          class="limb-meter"
+          x-show="activeTab === 'chat'"
+          aria-label="Eve capability headroom and limb activations"
+        >
+          <div class="limb-meter__top">
+            <span class="limb-meter__title">Activation room</span>
+            <span
+              class="limb-meter__score-label"
+              :class="'limb-meter__score-label--' + (limbPulse.status || 'amber')"
+              x-text="(limbPulse.headroom_score != null ? limbPulse.headroom_score : '—') + '/100'"
+            ></span>
+          </div>
+          <div class="limb-meter__score-track" role="progressbar" :aria-valuenow="limbPulse.headroom_score || 0" aria-valuemin="0" aria-valuemax="100">
+            <div
+              class="limb-meter__score-fill"
+              :class="'limb-meter__score-fill--' + (limbPulse.status || 'amber')"
+              :style="'width:' + Math.min(100, Math.max(0, Number(limbPulse.headroom_score) || 0)) + '%'"
+            ></div>
+          </div>
+          <div class="limb-meter__bars">
+            <div class="limb-meter__bar-row">
+              <span class="limb-meter__bar-label">RAM</span>
+              <div class="limb-meter__bar-track">
+                <div class="limb-meter__bar-fill limb-meter__bar-fill--ram" :style="'width:' + (limbPulse.ram_used_pct != null ? limbPulse.ram_used_pct : 0) + '%'"></div>
+              </div>
+            </div>
+            <div class="limb-meter__bar-row">
+              <span class="limb-meter__bar-label">Disk</span>
+              <div class="limb-meter__bar-track">
+                <div class="limb-meter__bar-fill limb-meter__bar-fill--disk" :style="'width:' + (limbPulse.disk_used_pct != null ? limbPulse.disk_used_pct : 0) + '%'"></div>
+              </div>
+            </div>
+            <div class="limb-meter__bar-row">
+              <span class="limb-meter__bar-label">VRAM</span>
+              <div class="limb-meter__bar-track">
+                <div class="limb-meter__bar-fill limb-meter__bar-fill--vram" :style="'width:' + (limbPulse.vram_used_pct != null ? limbPulse.vram_used_pct : 0) + '%'"></div>
+              </div>
+            </div>
+          </div>
+          <div class="limb-meter__active" x-show="(limbPulse.active_limbs || []).length">
+            <span class="limb-meter__active-label">On:</span>
+            <template x-for="limb in limbPulse.active_limbs" :key="limb">
+              <span class="limb-meter__chip limb-meter__chip--on" x-text="limb"></span>
+            </template>
+          </div>
+          <ul class="limb-meter__flash" aria-live="polite">
+            <template x-for="evt in limbFlashEvents" :key="evt.id">
+              <li
+                class="limb-meter__flash-item"
+                :class="evt.kind === 'off' ? 'limb-meter__flash-item--off' : 'limb-meter__flash-item--on'"
+                x-text="evt.label"
+              ></li>
+            </template>
+          </ul>
+        </section>
+
         <div
           class="admission-bar"
           x-show="researchPartnerMode || (admissionSession.session_capabilities || []).length"
