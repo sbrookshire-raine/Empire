@@ -66,7 +66,7 @@ Tool syntax: **`tool_docs`**. Worked examples of using a capability (ask -> tool
 
 - Memory / interests / "what you know" / projects -> `cognee_recall` (`eve_core` first, else `eve_memory`); primitives -> `primitives_test`; cross-domain idea ("does X apply to Y?") -> `primitive_lookup`
 - Tasks -> `list_tasks` / `search_tasks` / `create_task` / `update_task` / `delete_task`
-- Headroom / "what tools do you have" / GPU busy / "can you turn X on" -> `resource_pulse`, then `admit_for_goal`
+- Headroom / "what tools do you have" / GPU busy / "can you turn X on" -> `cognee_recall("verified capabilities", dataset="eve_core")` if unsure, then `resource_pulse`, then `admit_for_goal` (Mechanic gate: docs/CAPABILITY_VERIFICATION.md)
 - Workbench health / disk space / Active Tools count -> `check_workbench_health`
 - Tool / limb / route discovery (Eve's stack) -> `capability_route`, then `playbook`, then `tool_docs`
 - External OSS/MCP repo catalog -> `search_catalog` (catalog.db only)

@@ -15,7 +15,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from frontend import eve_toolbelt
-from pipeline import admission_controller, gpu_lease
+from pipeline import admission_controller, gpu_lease, verified_hands
 
 # Conservative floors when pulse cannot read hardware (fail closed for auto-admit).
 MIN_RAM_AVAILABLE_GB = 2.0
@@ -193,9 +193,14 @@ def pulse() -> dict[str, Any]:
         + "."
     )
 
+    verified = verified_hands.load_verification()
+    verified_snippet = verified_hands.pulse_snippet()
+
     return {
         "ok": True,
         "policy": "B",
+        "verified_hands": verified if verified.get("ok") else {"ok": False},
+        "verified_hands_snippet": verified_snippet,
         "resources": resources,
         "nvidia": nvidia,
         "gpu_lease": lease,

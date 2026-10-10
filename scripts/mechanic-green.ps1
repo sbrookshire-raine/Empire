@@ -45,6 +45,10 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
 "@
 }
 
+Invoke-Step "verify-capabilities (offline)" {
+    & $py (Join-Path $Root "scripts\verify-capabilities.ps1")
+}
+
 Invoke-Step "capability governance (fail-closed)" {
     & $py -c @"
 import json, sys

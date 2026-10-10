@@ -1,0 +1,23 @@
+{
+  "schema": "CapabilityVerificationBattery.v1",
+  "description": "Offline probes for Eve tools (pipeline) and MCP import checks. Live Eve/MCP stdio probes run with --live.",
+  "offline_pipeline_probes": [
+    { "id": "playbook_coverage", "kind": "playbook_coverage" },
+    { "id": "capability_governance", "kind": "capability_governance" },
+    { "id": "eve_tool_docs_count", "kind": "eve_tool_docs" },
+    { "id": "eve_build_bundle", "kind": "eve_build" },
+    { "id": "resource_farm_catalog", "module": "pipeline.resource_farm", "call": "catalog_status" },
+    { "id": "resource_pulse", "module": "pipeline.resource_pulse", "call": "pulse" },
+    { "id": "workspace_search", "module": "pipeline.workspace_search", "call": "search", "kwargs": { "query": "EMPIRE", "max_results": 1 } },
+    { "id": "switchboard_plan", "module": "pipeline.switchboard", "call": "plan", "args": [["frontend"]] },
+    { "id": "capability_route", "module": "pipeline.capability_index", "call": "route", "args": ["github scout"] }
+  ],
+  "live_stack_probes": [
+    { "id": "smoke_eve_hands", "script": "scripts/smoke-eve-hands.py", "args": [] },
+    { "id": "eve_tools_playwright", "script": "scripts/test-eve-tools-playwright.py", "args": ["--skip-browser"], "note": "Authoritative live Eve tool-call proof (github_scout + resource_farm_run)" }
+  ],
+  "cognee": {
+    "dataset": "eve_core",
+    "markdown_out": "data/curated_primitives/raw_materials/EVE_VERIFIED_CAPABILITIES.md"
+  }
+}

@@ -14,6 +14,7 @@ Cognee happens only when he agrees.
 ## Recall
 Use when: "what do you know about…", "my interests/projects", "do you remember…".
 
+- **Ask:** "what tools actually work?" / "what can you do on this machine?" → **Do:** `cognee_recall("EVE verified capabilities", dataset="eve_core")` then `resource_pulse()` → **Get:** the mechanic report + live inventory; never invent broken tools without re-running verify.
 - **Ask:** "what are my interests?" → **Do:** `cognee_recall(query, dataset="eve_core")` (fallback `eve_memory`) → **Get:** grounded answers from what was ingested, not training memory.
 - **Ask:** "what projects do I have in memory?" → **Do:** `cognee_recall("projects")` → **Get:** the list as stored; never create tasks from this.
 - **Ask:** "what did we decide about the wiki limb?" → **Do:** `cognee_recall("wiki limb decision")` → **Get:** the stored decision or an honest "not in memory".

@@ -67,7 +67,12 @@ Eve **`resource_farm_run`** remains the **in-stack scout index**; the outside ag
 ## Verify
 
 ```powershell
+.\scripts\launch-empire.ps1 -NoBrowser
+.\venv\Scripts\python.exe scripts\smoke-eve-hands.py --eve-chat
+.\venv\Scripts\python.exe scripts\test-eve-tools-playwright.py
 .\venv\Scripts\python.exe -m pytest tests\pipeline\test_resource_farm.py tests\pipeline\test_disassembly_publish.py tests\pipeline\test_heptabase_cli.py -q
-.\venv\Scripts\python.exe -m pipeline.playbook --coverage
-.\scripts\diagnostic-rea-disassembly.ps1 -Fast
 ```
+
+After smoke/playwright PASS, `%LOCALAPPDATA%\EMPIRE\eve_hands_verified.json` is written. Eve sees it on **capability / resource farm** questions via `[[EMPIRE_RESOURCE_PULSE]]` (`verified_hands_snippet`).
+
+Workbench **Tools** dock stays read-only — Eve admits limbs; the dock shows what loaded this session.

@@ -24,12 +24,13 @@ Meter-free, zero-cloud local AI stack. Build phase uses Cursor frontier models; 
 After forge or fix, run from repo root:
 
 ```powershell
-.\scripts\mechanic-green.ps1          # units + capability governance + wiki battery + UI harness + verify-stack
+.\scripts\mechanic-green.ps1          # units + verify-capabilities (offline) + governance + wiki battery + verify-stack
 .\scripts\mechanic-green.ps1 -Full    # also live Eve workbench verify
-.\venv\Scripts\python.exe scripts\smoke-eve-hands.py --eve-chat   # pulse/admit/GitHub hands
+.\scripts\verify-capabilities.ps1 -Live   # Eve tool-calls on the wire (stack up)
+.\scripts\verify-capabilities.ps1 -Live -SyncCognee   # + eve_core remembers what works
 ```
 
-Do **not** ask the Architect to click through UX until mechanic-green exits 0. Architect smoke is optional product feel, not CI.
+Do **not** ask the Architect to click through UX until mechanic-green exits 0. **Capability pavement** (`verify-capabilities`) must pass before “does this tool work?” UX; see [docs/CAPABILITY_VERIFICATION.md](docs/CAPABILITY_VERIFICATION.md). Architect smoke is optional product feel, not CI.
 
 Eve manages light hands via `resource_pulse` / `admit_for_goal` (see [`docs/EMPIRE_CLARITY.md`](docs/EMPIRE_CLARITY.md)); do not invent new Toolbelt checklists for day-to-day work.
 

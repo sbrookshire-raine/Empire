@@ -19,6 +19,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Job | Document |
 |---|---|
 | Disassembly catalog + GitHub resource farm (pick up here) | [RESOURCE_FARM_AND_CATALOG.md](RESOURCE_FARM_AND_CATALOG.md), [DISASSEMBLY_CATALOG.md](DISASSEMBLY_CATALOG.md), [prompts/external-resource-farm-agent.md](prompts/external-resource-farm-agent.md) |
+| **Capability verification (all tools + MCP — before UX smoke)** | [CAPABILITY_VERIFICATION.md](CAPABILITY_VERIFICATION.md), `scripts/verify-capabilities.ps1`, `data/curated_primitives/raw_materials/EVE_VERIFIED_CAPABILITIES.md` |
 | Capability contract Eve reads | [PLAYBOOK.md](PLAYBOOK.md) |
 | Tool/limb keyword index (route before overload) | [CAPABILITY_ROUTE.md](CAPABILITY_ROUTE.md) |
 | Everyday verb → intent codex (scrape, research, lookup, …) | [INTENT_CODEX.md](INTENT_CODEX.md) |

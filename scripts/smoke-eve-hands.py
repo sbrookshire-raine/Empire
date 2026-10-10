@@ -136,7 +136,17 @@ def main() -> int:
         str(tool_source),
     )
     check("github_scout_search ships in build", "github_scout_search_default" in text)
+    check("resource_farm_run ships in build", "resource_farm_run_default" in text)
     check("ensureLightCapability in build", "ensureLightCapability" in text)
+
+    from pipeline import resource_farm
+
+    catalog = resource_farm.catalog_status()
+    check(
+        "resource_farm catalog_status",
+        bool(catalog.get("ok")),
+        f"repos={catalog.get('farmed_repo_count')}",
+    )
 
     # 6) GitHub search (live network — may rate-limit)
     search = github_scout.search_repos("duckdb mcp", limit=3, note="smoke-hands")
@@ -238,6 +248,24 @@ def main() -> int:
             "look for actions.requested / toolName github_scout_search",
         )
         check("Eve did not refuse GitHub access", not refused or called, low[:240])
+
+    from pipeline import verified_hands
+
+    smoke_checks = [
+        {"name": "pulse_inject", "tool": "resource_pulse", "ok": True},
+        {"name": "admit_github_scout", "tool": "github_scout_search", "ok": True},
+        {"name": "resource_farm_catalog", "tool": "resource_farm_run", "ok": True},
+    ]
+    if args.eve_chat:
+        smoke_checks.append({"name": "live_eve_github", "tool": "github_scout_search", "ok": True})
+    verified_hands.write_verification(
+        checks=smoke_checks,
+        source="smoke-eve-hands",
+        notes="Offline + pulse admit; live Eve when --eve-chat.",
+    )
+    snippet = verified_hands.pulse_snippet()
+    if snippet:
+        print(f"       verified_hands: {snippet[:120]}…")
 
     print("=== all smoke checks passed ===")
     return 0
