@@ -244,8 +244,8 @@ def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
         "",
         "## How Eve should use this",
         "",
-        "1. **Recall first:** `cognee_recall(\"verified capabilities what works\", dataset=\"eve_core\")`.",
-        "2. **Route second:** `capability_route` → `playbook` → `tool_docs` for parameters.",
+        "1. **Always-on:** `eve-operating-context.md` in system prompt + `[[EMPIRE_RESOURCE_PULSE]]` every turn.",
+        "2. **Route:** `capability_route` → `playbook` → `tool_docs` for parameters.",
         "3. **Call tools** — optional limbs auto-admit via `resource_pulse` / `admit_for_goal`; "
         "never claim you lack GitHub/internet if the tool is listed below as proven.",
         "4. **Workbench Tools dock** is read-only status; you manage admits.",
@@ -309,6 +309,10 @@ def write_artifacts(checks: list[dict[str, Any]], *, live_ran: bool) -> dict[str
         notes=f"passed={report['passed']} failed={report['failed']} live={live_ran}",
     )
     report["verified_hands_snippet"] = verified_hands.pulse_snippet()
+    from pipeline import eve_operating_context
+
+    ctx = eve_operating_context.write_operating_context()
+    report["operating_context_path"] = ctx.get("path")
     return report
 
 

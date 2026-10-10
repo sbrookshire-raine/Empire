@@ -18,9 +18,9 @@ from pipeline import prompt_budget, tool_registry
 from pipeline.prompt_budget import tokens
 
 # Measured after R-03 (see docs/REFACTOR_PLAN.md section 3). Re-run measure-prompt-budget.py before raising.
-INSTRUCTION_CEILING_TOKENS = 4_050  # measured ~4,016 (2026-10-10)
+INSTRUCTION_CEILING_TOKENS = 5_050  # measured ~4,966 (2026-10-10; + eve-operating-context.md)
 DEFAULT_SCHEMA_CEILING_TOKENS = 1_220  # measured ~1,211 (2026-10-10)
-FLOOR_CEILING_TOKENS = 5_250  # measured ~5,228 (2026-10-10)
+FLOOR_CEILING_TOKENS = 6_250  # measured ~6,178 (2026-10-10)
 MIN_CONVERSATION_HEADROOM = 4_096
 TOOLBELT_CATEGORY_CEILING = 30
 

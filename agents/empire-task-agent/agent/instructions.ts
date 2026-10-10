@@ -22,6 +22,11 @@ const ROUTING_CANDIDATES = [
   join(EMPIRE_ROOT, "agents", "empire-task-agent", "agent", "empire-routing.md"),
 ];
 
+const OPERATING_CONTEXT_CANDIDATES = [
+  join(agentDir, "eve-operating-context.md"),
+  join(EMPIRE_ROOT, "agents", "empire-task-agent", "agent", "eve-operating-context.md"),
+];
+
 function readInstructionsFile(filePath: string): string {
   try {
     return readFileSync(filePath, "utf8").trim();
@@ -45,6 +50,7 @@ function loadSystemPrompt(): string {
   const parts = [
     readInstructionsFile(eveInstructionsPath),
     readFirstFile(ROUTING_CANDIDATES, "empire-routing.md"),
+    readFirstFile(OPERATING_CONTEXT_CANDIDATES, "eve-operating-context.md"),
   ].filter(Boolean);
 
   if (parts.length === 0) {

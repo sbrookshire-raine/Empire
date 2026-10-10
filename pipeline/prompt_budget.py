@@ -23,6 +23,7 @@ CHARS_PER_TOKEN = 3.8
 INSTRUCTIONS = (
     ROOT / "eve_instructions.md",
     ROOT / "agents" / "empire-task-agent" / "agent" / "empire-routing.md",
+    ROOT / "agents" / "empire-task-agent" / "agent" / "eve-operating-context.md",
 )
 TOOLS = ROOT / "agents" / "empire-task-agent" / "agent" / "tools"
 
