@@ -80,9 +80,31 @@
       "id": "wiki_fact",
       "say": "Ground a fact in the local Wikipedia archive (Title DNS + sections).",
       "triggers": {
-        "verbs": ["lookup", "look up", "who", "what", "when", "where", "tell me about"],
-        "nouns": ["wikipedia", "wiki", "article", "page", "lead", "discography", "cast"],
-        "phrases": ["who is", "what is", "how do", "how does", "on that page", "else on the page"]
+        "verbs": ["lookup", "look up", "who", "what", "when", "where", "tell me about", "tell me"],
+        "nouns": ["wikipedia", "wiki", "article", "page", "lead", "discography", "cast", "albums", "archive"],
+        "phrases": [
+          "who is",
+          "what is",
+          "how do",
+          "how does",
+          "on that page",
+          "else on the page",
+          "wikipedia archive",
+          "wiki archive",
+          "my wikipedia archive",
+          "go to my wikipedia",
+          "go to my wiki",
+          "my wikipedia",
+          "my local wikipedia",
+          "local wikipedia archive",
+          "tell me the names",
+          "tell me the names of",
+          "names of the",
+          "names of the albums",
+          "list the albums",
+          "what albums",
+          "album names"
+        ]
       },
       "policy": {
         "local_first": true,
@@ -220,6 +242,31 @@
         "online_tools": ["resource_farm_run"],
         "limbs": ["github_scout", "rea", "heptabase"],
         "playbook": "web-and-sources"
+      }
+    },
+    {
+      "id": "intake_to_lego",
+      "say": "Intake web or GitHub into Disassembly Cards, optional Heptabase and memory legos.",
+      "triggers": {
+        "verbs": ["analyze", "learn", "intake", "catalog", "study", "reverse"],
+        "nouns": ["url", "page", "site", "repo", "github", "heptabase", "card", "lego"],
+        "phrases": [
+          "analyze this url",
+          "learn from this page",
+          "study this repo",
+          "disassembly card",
+          "building lego",
+          "put on the board",
+          "intake to lego"
+        ]
+      },
+      "policy": {
+        "local_first": false,
+        "local_tools": ["intake_to_lego_run", "disassembly_card_list", "propose_remember", "confirm_remember"],
+        "online_tools": ["intake_to_lego_run"],
+        "limbs": ["web_scout", "github_scout", "heptabase", "rea"],
+        "playbook": "intake-and-legos",
+        "sequence": ["intake_to_lego_run", "rea_doctor when depth=study", "playbook(intake-and-legos)"]
       }
     },
     {

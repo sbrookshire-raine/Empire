@@ -123,7 +123,10 @@ TRUTH_DRIFT_RE = re.compile(
 
 WIKI_ACCESS_RE = re.compile(
     r"\b(?:can you|do you|are you able to)\b.{0,40}\b(?:access|see|use|search|reach)\b"
-    r".{0,40}\b(?:wikipedia|wiki|encyclopedia|local archive)\b",
+    r".{0,40}\b(?:wikipedia|wiki|encyclopedia|local archive)\b|"
+    r"\b(?:go to|open|use)\b.{0,32}\b(?:my\s+)?(?:local\s+)?(?:wikipedia|wiki|encyclopedia)\b"
+    r".{0,24}\b(?:archive|resource)\b|"
+    r"\b(?:my\s+)?(?:local\s+)?(?:wikipedia|wiki)\s+(?:archive|resource)\b",
     re.IGNORECASE,
 )
 
@@ -157,7 +160,7 @@ WIKI_LOOKUP_RE = re.compile(
     # "tell me" is also scoped to an encyclopedia object ("tell me about ..."):
     # a bare "tell me" hijacked local tool requests such as
     # "...then tell me how much free disk space is available".
-    r"(?:tell me about|look up)\b|"
+    r"(?:tell me about|tell me the names of|look up)\b|"
     # Weak single verbs must introduce a real object. "what i asked you to find for
     # me" fired the lookup gate on the bare "find" and then extracted the pronoun
     # "that" from "on that page" (2026-09-23 regression).
@@ -240,7 +243,19 @@ def is_wiki_access_query(text: str) -> bool:
 
 def is_resource_pulse_query(text: str) -> bool:
     """True for stack/capability/headroom questions — not encyclopedia lookups."""
-    return bool(RESOURCE_PULSE_QUERY_RE.search((text or "").strip()))
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    # "Wikipedia resource", "wiki archive", discography asks — not GPU/tool inventory.
+    if re.search(
+        r"\b(?:wikipedia|wiki|encyclopedia)\b.{0,24}\b(?:resource|archive)\b|"
+        r"\b(?:local\s+)?(?:wikipedia|wiki)\s+(?:resource|archive)\b|"
+        r"\bdiscography\b|\balbums?\b",
+        raw,
+        re.I,
+    ):
+        return False
+    return bool(RESOURCE_PULSE_QUERY_RE.search(raw))
 
 
 def is_wiki_lookup_query(text: str) -> bool:
@@ -452,6 +467,68 @@ def _normalize_compare_topic(topic: str) -> str:
     return topic.strip()[:120]
 
 
+_WIKI_ARCHIVE_TAIL_RE = re.compile(
+    r"\s+(?:using|with|from|via|through)\s+(?:the\s+)?(?:(?:local|my)\s+)?"
+    r"(?:wikipedia|wiki)\s+archive\b.*$",
+    re.IGNORECASE,
+)
+
+_ALBUM_DISCOGRAPHY_PATTERNS: tuple[str, ...] = (
+    r"\b(?:find|get|show|list)\s+(?:the\s+)?discography\s+for\s+(?:the\s+)?(.+?)(?:\s+and\b|[?.!]|$)",
+    r"\bdiscography\s+for\s+(?:the\s+)?(.+?)(?:\s+and\b|[?.!]|$)",
+    r"\bwhat\s+are\s+the\s+names\s+of\s+(?:the\s+)?(.+?)(?:'s|\u2019s)?\s+albums?\b",
+    r"\b(?:tell\s+me\s+)?(?:the\s+)?names\s+of\s+(?:the\s+)?(.+?)(?:'s|\u2019s)?\s+albums?\b",
+    r"\b(?:what\s+are\s+)?(?:the\s+)?albums?\s+released\s+by\s+(?:the\s+)?(.+?)(?:\s+using\b|[?.!]|$)",
+    r"\bfind\s+(?:what\s+are\s+)?(?:the\s+)?albums?\s+released\s+by\s+(?:the\s+)?(.+?)(?:\s+using\b|[?.!]|$)",
+    r"\blist\s+(?:the\s+)?albums?\s+for\s+(?:the\s+)?(.+?)(?:\s+using\b|[?.!]|$)",
+    r"\btell\s+me\s+the\s+names\s+of\s+(?:the\s+)?(.+?)(?:'s|\u2019s)?\s+albums?\b",
+)
+
+_ALBUM_ARTIST_TYPOS: dict[str, str] = {
+    "beach boises": "Beach Boys",
+    "beach boise": "Beach Boys",
+}
+
+
+def _strip_wiki_archive_tail(text: str) -> str:
+    return _WIKI_ARCHIVE_TAIL_RE.sub("", (text or "").strip()).strip()
+
+
+def _normalize_album_artist(name: str) -> str:
+    topic = _clean_topic(name)
+    if not topic:
+        return ""
+    mapped = _ALBUM_ARTIST_TYPOS.get(topic.casefold())
+    if mapped:
+        return mapped
+    return topic
+
+
+def _artist_to_discography_title(artist: str) -> str:
+    if not artist:
+        return ""
+    base = artist if artist.casefold().startswith("the ") else f"The {artist}"
+    if "discography" in base.casefold():
+        return base[:160]
+    return f"{base} discography"[:160]
+
+
+def discography_title_from_album_question(text: str) -> str:
+    """Resolve 'names of X albums … using wiki archive' to a Title DNS discography title."""
+
+    raw = _strip_wiki_archive_tail(text)
+    if not raw or not re.search(r"\balbums?\b", raw, re.I):
+        return ""
+    for pattern in _ALBUM_DISCOGRAPHY_PATTERNS:
+        match = re.search(pattern, raw, re.I)
+        if not match:
+            continue
+        artist = _normalize_album_artist(match.group(1))
+        if artist and not _is_anaphoric_topic(artist):
+            return _artist_to_discography_title(artist)
+    return ""
+
+
 def _clean_topic(value: str) -> str:
     topic = re.sub(r"\s+", " ", (value or "").strip(" .?!,\"'"))
     if not topic:
@@ -480,8 +557,20 @@ def extract_search_query(text: str) -> str:
     from pipeline.wiki_interpreter import extract_quoted_title, resolve_lookup_topic
 
     raw = (text or "").strip()
-    if not raw or is_wiki_access_query(raw):
+    if not raw:
         return ""
+    # "Go to my Wikipedia archive and …" is both an access phrase and a concrete ask.
+    access_only = is_wiki_access_query(raw) and not re.search(
+        r"\b(?:albums?|discography|who\s+(?:is|are)|cast|names?\s+of|list\s+the)\b",
+        raw,
+        re.I,
+    )
+    if access_only:
+        return ""
+
+    discography_early = discography_title_from_album_question(raw)
+    if discography_early:
+        return discography_early
 
     # Anaphoric follow-ups ("what else is on that page", "tell me more about it") carry
     # no explicit subject. Returning the cleaned sentence here would post garbage to

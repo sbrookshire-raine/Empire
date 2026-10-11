@@ -146,6 +146,64 @@ class WikiDriftApiTests(unittest.TestCase):
         self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
         self.assertEqual(wiki_drift_api.extract_search_query(text), "white stripes")
 
+    def test_wikipedia_archive_albums_triggers_lookup(self) -> None:
+        text = (
+            "Can you go to my Wikipedia archive and tell me the names "
+            "of the Beach Boys' albums?"
+        )
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+
+    def test_local_wikipedia_find_albums_extracts_discography(self) -> None:
+        text = (
+            "Go to my local Wikipedia and find what are the albums "
+            "released by the Beach Boys."
+        )
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+        self.assertEqual(
+            wiki_drift_api.extract_search_query(text),
+            "The Beach Boys discography",
+        )
+
+    def test_architect_archive_tell_me_album_names(self) -> None:
+        text = (
+            "Can you go to my Wikipedia archive and tell me the names "
+            "of the Beach Boys' albums?"
+        )
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+        self.assertEqual(
+            wiki_drift_api.extract_search_query(text),
+            "The Beach Boys discography",
+        )
+
+    def test_list_albums_for_artist(self) -> None:
+        text = "Go to my wiki archive and list the albums for Kate Bush."
+        self.assertEqual(
+            wiki_drift_api.extract_search_query(text),
+            "The Kate Bush discography",
+        )
+
+    def test_wikipedia_resource_not_resource_pulse_query(self) -> None:
+        text = (
+            "Go to my local Wikipedia resource and find the discography "
+            "for the Beach Boys and list their albums in order."
+        )
+        self.assertFalse(wiki_drift_api.is_resource_pulse_query(text))
+        self.assertTrue(wiki_drift_api.is_wiki_lookup_query(text))
+        self.assertEqual(
+            wiki_drift_api.extract_search_query(text),
+            "The Beach Boys discography",
+        )
+
+    def test_album_names_with_wikipedia_archive_tail(self) -> None:
+        text = (
+            "What are the names of the Beach Boises albums "
+            "using the Wikipedia archive to look it up?"
+        )
+        self.assertEqual(
+            wiki_drift_api.extract_search_query(text),
+            "The Beach Boys discography",
+        )
+
     def test_anaphoric_that_page_is_not_a_title(self) -> None:
         """Regression: "not on that page" extracted the pronoun "that" and Title DNS
         resolved the grammar article "That", which was injected as mandatory evidence

@@ -121,6 +121,17 @@
     return node.textContent;
   }
 
+  /** STT often hears "get hub" / "git hub" for GitHub — keep "docker hub" intact. */
+  function applySpeechAliases(text) {
+    var value = plainText(text);
+    if (!value) return value;
+    var token = "__EMPIRE_DOCKER_HUB__";
+    var protectedText = value.replace(/\bdocker\s+hub\b/gi, token);
+    protectedText = protectedText.replace(/\bget[\s-]?hub\b/gi, "GitHub");
+    protectedText = protectedText.replace(/\bgit\s+hub\b/gi, "GitHub");
+    return protectedText.split(token).join("docker hub");
+  }
+
   function errorMessage(payload, fallback) {
     return plainText(payload && (payload.error || payload.message)) || fallback;
   }
@@ -346,6 +357,7 @@
         effective_tools: [],
       },
       admissionLoading: false,
+      baselineFlushing: false,
       limbPulse: {
         activation_used_pct: 0,
         activation_on_count: 0,
@@ -929,6 +941,36 @@
             workbench.pushLimbFlash("on", "Activated " + displayToolName(id));
           }
         });
+      },
+
+      flushBaselineLighten: async function () {
+        if (this.baselineFlushing) return;
+        this.baselineFlushing = true;
+        try {
+          var response = await fetch("/api/baseline/flush", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          var categories = this.toolbeltCategories || [];
+          for (var i = 0; i < categories.length; i += 1) {
+            var cid = categories[i].id;
+            if (cid) this.activeTools[cid] = false;
+          }
+          await this.refreshReadyHealth();
+          await this.refreshLimbPulse();
+          var summary =
+            (body && body.summary) ||
+            "Optional tools off and GPU lighten requested.";
+          this.pushLimbFlash("off", summary);
+        } catch (_err) {
+          this.pushLimbFlash("off", "Lighten failed — see Workbench logs.");
+        } finally {
+          this.baselineFlushing = false;
+        }
       },
 
       refreshLimbPulse: async function () {
@@ -2768,7 +2810,7 @@
                 workbench.chatError =
                   "No speech detected. Hold the mic closer and try again.";
               } else if (body.text) {
-                workbench.draft = plainText(body.text).trim();
+                workbench.draft = applySpeechAliases(body.text).trim();
                 workbench.chatError = "";
                 if (shouldAutoSend && workbench.draft) {
                   workbench.chatStatus = "Sending voice message…";

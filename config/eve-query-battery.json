@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "notes": "Fast = green + classify + REA routing. Session = frontend injects [[EMPIRE_WIKI_GREEN]] on POST (no LLM). Live = full Eve stream (slow when Ollama busy).",
+  "wiki_session_inject": [
+    {
+      "id": "session_beach_boys_green",
+      "query": "Go to my local Wikipedia and find what are the albums released by the Beach Boys.",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "discography"],
+      "max_seconds": 20
+    },
+    {
+      "id": "session_kate_bush_green",
+      "query": "who is Kate Bush?",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "Kate Bush"],
+      "max_seconds": 20
+    }
+  ],
+  "wiki_green_path": [
+    {
+      "id": "architect_wikipedia_archive_albums",
+      "query": "Can you go to my Wikipedia archive and tell me the names of the Beach Boys' albums?",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "Beach Boys", "album"],
+      "max_seconds": 15
+    },
+    {
+      "id": "local_wikipedia_find_albums",
+      "query": "Go to my local Wikipedia and find what are the albums released by the Beach Boys.",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "beach boys", "album"],
+      "max_seconds": 15
+    },
+    {
+      "id": "wikipedia_resource_discography",
+      "query": "Go to my local Wikipedia resource and find the discography for the Beach Boys and the list their albums in order.",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "Pet Sounds", "album"],
+      "max_seconds": 15
+    },
+    {
+      "id": "beach_boises_typo_archive_tail",
+      "query": "What are the names of the Beach Boises albums using the Wikipedia archive to look it up?",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "Pet Sounds", "album"],
+      "max_seconds": 15
+    },
+    {
+      "id": "wiki_archive_kate_bush",
+      "query": "Go to my wiki archive and list the albums for Kate Bush.",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "Kate Bush"],
+      "max_seconds": 15
+    },
+    {
+      "id": "who_is_white_stripes",
+      "query": "Who is the band the White Stripes?",
+      "must_contain": ["[[EMPIRE_WIKI_GREEN]]", "White Stripes", "Detroit"],
+      "max_seconds": 15
+    }
+  ],
+  "wiki_classify": [
+    {
+      "id": "classify_albums_released_by",
+      "query": "Go to my local Wikipedia and find what are the albums released by the Beach Boys.",
+      "expect_lookup": true,
+      "expect_extract_title": "The Beach Boys discography"
+    },
+    {
+      "id": "classify_miss",
+      "query": "Who played in the TV show Zxqwy Blorf Band?",
+      "expect_lookup": true
+    }
+  ],
+  "wiki_live": [
+    {
+      "id": "live_beach_boys_albums",
+      "query": "Go to my local Wikipedia and find what are the albums released by the Beach Boys.",
+      "must_contain": ["pet sounds", "surfin", "album"],
+      "must_not": ["intake_to_lego", "network error", "I don't have access"],
+      "max_seconds": 180,
+      "allow_known_gap": false,
+      "optional": true
+    },
+    {
+      "id": "live_white_stripes",
+      "query": "What can you tell me about the band the White Stripes?",
+      "must_contain": ["white stripes", "detroit"],
+      "max_seconds": 180,
+      "optional": true
+    },
+    {
+      "id": "live_kate_bush_who",
+      "query": "who is Kate Bush?",
+      "must_contain": ["kate bush"],
+      "max_seconds": 180,
+      "optional": true
+    }
+  ],
+  "rea_routing": [
+    {
+      "id": "rea_reverse_engineer_phrase",
+      "query": "Reverse engineer how this Electron app talks to the main process — I don't have the source.",
+      "expect_intent": "reverse_engineer",
+      "expect_tools_any": ["rea_doctor", "rea_analyze_javascript", "rea_invoke"]
+    },
+    {
+      "id": "rea_figure_out_native",
+      "query": "Figure out how this native DLL works without source code.",
+      "expect_intent": "reverse_engineer"
+    },
+    {
+      "id": "rea_mixed_wiki_wins",
+      "query": "Reverse engineer the Beach Boys discography page layout in my wiki archive.",
+      "expect_intent": "wiki_fact",
+      "note": "Wiki archive cue wins over reverse_engineer verb — use REA after wiki read"
+    }
+  ],
+  "rea_live": [
+    {
+      "id": "live_rea_routing_only",
+      "query": "What tools do you use for reverse engineering a local repo?",
+      "must_contain": ["reverse|engineer|binary|ghidra|rea_"],
+      "max_seconds": 240,
+      "active_tools": ["wiki_local", "rea"],
+      "skip_if_no_eve": true,
+      "optional": true
+    }
+  ]
+}

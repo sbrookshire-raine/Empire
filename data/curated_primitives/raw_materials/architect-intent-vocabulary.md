@@ -21,6 +21,7 @@ The Architect (Raine) talks in **plain goals**, not tool names. Eve must **`reso
 | research / dig into / investigate / what's going on with | Learn deeply: memory + files, then desk/web | `research_deep` | yes | `cognee_recall`, `workspace_search`, then `research_start`, `searxng_search` |
 | lookup / look up / find out / anything about | Search local before claiming ignorance | `lookup_general` | yes | `workspace_search`, `cognee_recall`, then wiki or web |
 | who is / wiki / discography / on that page | Local Wikipedia archive | `wiki_fact` | yes | `wiki_scout_search`, `wiki_read_section` |
+| go to my (Wikipedia\|wiki) archive / tell me the names of … albums | Same — **his habitual wiki ask** | `wiki_fact` | yes | `wiki_scout_search("<Artist> discography")` then `wiki_read_section` for studio albums — **not** intake_to_lego or web |
 | remember (question) / what do we know / from memory | Recall graph memory | `remember_recall` | yes | `cognee_recall` (eve_core, eve_memory) |
 | remember (command) / add to memory / put in cognee | Store with consent | `save_to_memory` | yes | `propose_remember`, `confirm_remember`, `cognee_remember` |
 | reverse engineer / figure out how it works / without source | REA local analysis | `reverse_engineer` | yes | `rea_doctor`, `rea_analyze_javascript`, `rea_invoke` (+ admit rea) |
@@ -44,6 +45,7 @@ These are **triggers**, not magic commands — match with `resolve_intent`:
 - **Research stack:** "NotebookLM", "EmbeddingGemma", "Weaviate → Cognee", "ZIM richness", "retrieve then promote"
 - **Models (Architect context, not Eve runtime):** "Composer", "DeepSeek flash", "logicbeat", "Strata", "local Deep mode" — route to `resolve_intent` + explain stack vs Cursor; Eve Fast remains `empire-fast:14b`
 - **Plain verbs:** "scrape something" = go to location and gather info; "research or lookup" = local then online tools; "analyze any repo" = workspace_search + optional REA/github_scout — not bulk ingest unless asked
+- **Local Wikipedia (lexicon — repeat phrasings):** He often says **"go to my Wikipedia archive"** (or **wiki archive**) and **"tell me the names of … albums"** (or songs, cast, etc.). That always means **`wiki_fact`**: Title DNS on the offline corpus, not the web, not GitHub intake, not EMPIRE tool catalog. Route: bare title or `"<Artist> discography"` → section/extract for lists. Same shape works for any artist or topic.
 - **Vault-era (Obsidian / pre-EMPIRE):** "close the loop", "energy drained", "shiny objects", "start from zero", "how my mind works" (goal app), "did we already build this", "zet / zettelkasten", "remove n8n", "discard pile" (tool triage), "digital jungle"
 - **Gemini dialogue (context):** "entire gemini convo", "stack additions to explore", "winning concepts blueprint" — recall for **decisions and history**, not to mimic Gemini's tone
 

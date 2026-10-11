@@ -11,6 +11,15 @@ The archive is a **phone book of exact titles** (7.1M pages, snapshot 2026 defau
 Search the **bare title**, never the question; hop in the same turn when the lead lacks the fact.
 A miss is logged automatically (Error Book) and comes back as `known_miss`.
 
+## Architect lexicon (how Raine usually asks)
+Use when: he says **"go to my Wikipedia archive"**, **"my wiki archive"**, or **"tell me the names of … albums"** (any artist or band). Same intent as lookup — offline Title DNS + markdown, not web scout, not `intake_to_lego`.
+
+- **Ask:** "Can you go to my Wikipedia archive and tell me the names of the Beach Boys' albums?" → **Do:** `wiki_scout_search("The Beach Boys discography")` → `wiki_read_section(..., section=studio_albums or discography)` → **Get:** album titles from the archive only.
+- **Ask:** "go to my wiki archive — list the albums for Kate Bush" → **Do:** same pattern with `"Kate Bush discography"`.
+- **Ask:** "tell me the names of the cast on that show" (after a page is in context) → **Do:** `wiki_read_section` / `wiki_extract(need_hint="cast")` on the resolved title.
+
+Recall: `cognee_recall("Architect intent vocabulary wikipedia archive", dataset="eve_core")` if phrasing is ambiguous.
+
 ## Local Wikipedia lookup
 Use when: who/what/when questions, cast lists, briefs, "tell me about X" where X is a thing.
 

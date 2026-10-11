@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +82,70 @@ def run_cli(args: list[str], *, input_json: dict[str, Any] | None = None, timeou
         return {"ok": True, "data": parsed}
     except json.JSONDecodeError:
         return {"ok": False, "error": "Heptabase CLI returned non-JSON stdout.", "raw_preview": stdout[:500]}
+
+
+def resolve_desktop_exe() -> str:
+    override = (os.environ.get("HEPTABASE_APP_PATH") or "").strip()
+    if override and Path(override).is_file():
+        return override
+    local = Path(os.environ.get("LOCALAPPDATA", ""))
+    candidates = [
+        local / "Programs" / "Heptabase" / "Heptabase.exe",
+        local / "Programs" / "heptabase" / "Heptabase.exe",
+        Path(os.environ.get("ProgramFiles", "")) / "Heptabase" / "Heptabase.exe",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return str(path)
+    return ""
+
+
+def ensure_app_running(*, wait_seconds: int = 45, launch_desktop: bool = True) -> dict[str, Any]:
+    """Start Heptabase desktop if CLI health fails, then poll until Local CLI responds."""
+    health = health_check()
+    if health.get("ok"):
+        return {"ok": True, "already_running": True, "health": health}
+
+    if not launch_desktop:
+        return {
+            "ok": False,
+            "error": health.get("error") or "Heptabase CLI not ready.",
+            "health": health,
+        }
+
+    exe = resolve_desktop_exe()
+    if not exe:
+        return {
+            "ok": False,
+            "error": "Heptabase desktop not found. Set HEPTABASE_APP_PATH or install the app.",
+            "health": health,
+        }
+
+    try:
+        subprocess.Popen(  # noqa: S603
+            [exe],
+            cwd=str(Path(exe).parent),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            shell=False,
+        )
+    except OSError as exc:
+        return {"ok": False, "error": f"failed to start Heptabase: {exc}", "health": health}
+
+    deadline = time.monotonic() + max(5, int(wait_seconds))
+    last = health
+    while time.monotonic() < deadline:
+        time.sleep(1.0)
+        last = health_check()
+        if last.get("ok"):
+            return {"ok": True, "started_desktop": True, "health": last, "exe": exe}
+    return {
+        "ok": False,
+        "error": "Heptabase CLI still not ready after starting desktop app.",
+        "health": last,
+        "exe": exe,
+        "hint": "Open Heptabase manually once; enable Local CLI in settings.",
+    }
 
 
 def health_check() -> dict[str, Any]:
@@ -308,6 +373,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="EMPIRE Heptabase CLI wrapper")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("health")
+    ensure = sub.add_parser("ensure-app", help="Launch desktop app if needed and wait for CLI")
+    ensure.add_argument("--wait", type=int, default=45)
+    ensure.add_argument("--no-launch", action="store_true")
     search = sub.add_parser("search")
     search.add_argument("query", nargs="?", default="")
     search.add_argument("--limit", type=int, default=20)
@@ -316,6 +384,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.cmd == "health":
         out = health_check()
+    elif args.cmd == "ensure-app":
+        out = ensure_app_running(
+            wait_seconds=args.wait,
+            launch_desktop=not args.no_launch,
+        )
     elif args.cmd == "search":
         out = search_cards(args.query, limit=args.limit)
     elif args.cmd == "read-note":

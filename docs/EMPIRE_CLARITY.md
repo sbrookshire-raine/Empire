@@ -59,8 +59,8 @@ research abstracts remain in the SQLite catalog and are never automatically prom
 
 | Bucket | Examples | Default |
 |--------|----------|---------|
-| **Always (core UX)** | Voice Presence (header ready strip, not dock list) | On |
-| **Session** | Wiki Local (header ready strip), scouts, forge, loom, browser, extract, rerank | Wiki Local on; rest off |
+| **Always (core UX)** | Voice Presence (header ready strip, not dock list) | Off until you toggle it on |
+| **Session** | Wiki Local (header ready strip), scouts, forge, loom, browser, extract, rerank | Off until you toggle; Eve ACTIVATEs scouts when needed |
 | **Products** | Time Reclaim (DAZE), Stem Factory | Off until you need the product |
 
 Research Partner (More tab) can admit read-only research limbs for a short TTL without permanent checklist clutter.

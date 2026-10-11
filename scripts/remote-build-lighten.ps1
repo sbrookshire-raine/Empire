@@ -35,9 +35,7 @@ $hooksLean = @'
 Set-Content -LiteralPath $hooksOff -Value $hooksLean -Encoding utf8NoBOM
 
 Write-Host "[6/6] Stop Eve sandbox Docker containers..."
-docker ps -q --filter "name=eve-sbx" 2>$null | ForEach-Object {
-    docker stop $_ 2>$null | Out-Null
-}
+& (Join-Path $root "scripts\stop-eve-sandbox-containers.ps1") -Kill -Remove
 Write-Host "  Tip: quit Docker Desktop from the tray if you are not using containers today (~3 GB WSL RAM)."
 
 Write-Host ""

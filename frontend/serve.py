@@ -761,6 +761,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path == "/api/gpu-lease"
             or path == "/api/toolbelt"
             or path == "/api/admission"
+            or path == "/api/baseline"
+            or path.startswith("/api/baseline/")
             or path.startswith("/api/voice/")
             or path.startswith("/api/lego/")
             or path.startswith("/api/daze/")
@@ -790,6 +792,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             or path == "/api/gpu-lease"
             or path == "/api/toolbelt"
             or path == "/api/admission"
+            or path == "/api/baseline"
+            or path.startswith("/api/baseline/")
             or path.startswith("/api/voice/")
             or path.startswith("/api/chat-history")
             or path.startswith("/api/lego/")
@@ -824,6 +828,10 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             return self._admission_get()
         if path == "/api/resource-pulse":
             return self._send_json(200, dashboard_api.resource())
+        if path == "/api/baseline":
+            payload = dashboard_api.baseline()
+            status = 200 if payload.get("ok") else 503
+            return self._send_json(status, payload)
         if path == "/api/catalog":
             params = parse_qs(urlparse(self.path).query)
             payload = {key: (values[0] if values else "") for key, values in params.items()}
@@ -953,7 +961,20 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             payload = self._read_eve_json()
             if payload is None:
                 return None
+            try:
+                from frontend.companion_api import COMPANION_MARKER
+                from frontend.speech_aliases import apply_speech_aliases
+
+                raw_msg = payload.get("message")
+                if isinstance(raw_msg, str) and COMPANION_MARKER not in raw_msg:
+                    payload = dict(payload)
+                    payload["message"] = apply_speech_aliases(raw_msg)
+            except Exception:
+                pass
             payload = eve_toolbelt.apply_active_tools(payload)
+            bare_user_message = ""
+            if isinstance(payload.get("message"), str):
+                bare_user_message = str(payload["message"]).strip()
             payload = ollama_api.apply_chat_mode_payload(payload)
             active_config = ollama_api.load_active_config()
             # One id per browser turn, minted before the first trace record so every later
@@ -987,11 +1008,11 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             except Exception:
                 pass
             try:
-                payload = resource_pulse_api.enrich_eve_message_payload(payload)
+                payload = companion_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
             try:
-                payload = companion_api.enrich_eve_message_payload(payload)
+                payload = resource_pulse_api.enrich_eve_message_payload(payload)
             except Exception:
                 pass
             try:
@@ -1029,24 +1050,45 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     # matched ledger rows and handed her claude-api instead of the vocabulary.
                     from frontend.companion_api import extract_user_message
 
-                    user_question = extract_user_message(original_message) or original_message
+                    user_question = (
+                        bare_user_message
+                        or extract_user_message(original_message)
+                        or original_message
+                    )
                 except Exception:
-                    user_question = original_message
+                    user_question = bare_user_message or original_message
                 try:
                     transfer_context = _transfer_context(user_question)
                 except Exception:
                     transfer_context = ""
+                wiki_green_context = ""
+                try:
+                    from frontend.wiki_green_path import WIKI_GREEN_MARKER, build_green_path_block
+
+                    wiki_green_context = build_green_path_block(user_question)
+                except Exception:
+                    wiki_green_context = ""
+                intent_context = ""
                 try:
                     from pipeline.intent_codex import context_block as intent_codex_context
 
-                    intent_context = intent_codex_context(user_question)
+                    if wiki_green_context and "[[EMPIRE_WIKI_GREEN]]" in wiki_green_context:
+                        intent_context = (
+                            "\n\n[Wiki turn: answer from [[EMPIRE_WIKI_GREEN]] only; "
+                            "skip tools and keep the reply short.]\n"
+                        )
+                        catalog_context = ""
+                        resource_context = ""
+                        transfer_context = ""
+                    else:
+                        intent_context = intent_codex_context(user_question)
                 except Exception:
                     intent_context = ""
                 # Place next to the ask, not above the companion preamble: the
                 # model ignored a distant catalog block and called the wiki limb.
                 payload["message"] = _attach_server_context(
                     original_message,
-                    f"{intent_context}{catalog_context}{resource_context}{transfer_context}",
+                    f"{intent_context}{wiki_green_context}{catalog_context}{resource_context}{transfer_context}",
                 )
             pending = payload.pop("_wiki_evidence", None)
             self._pending_wiki_evidence = pending if isinstance(pending, dict) else None
@@ -1102,6 +1144,12 @@ class EmpireHandler(SimpleHTTPRequestHandler):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
             return self._admission_post()
+        if path == "/api/baseline/flush":
+            if not self._memory_origin_allowed():
+                return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
+            payload = dashboard_api.baseline_flush()
+            status = 200 if payload.get("ok") else 500
+            return self._send_json(status, payload)
         if path.startswith("/api/lego/"):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1354,9 +1402,13 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     )
                     tool_started = time.perf_counter()
                 elif event_type == "action.result" and tool_started is not None:
+                    tool_name = ""
+                    if isinstance(data, dict):
+                        tool_name = str(data.get("toolName") or data.get("name") or "")
                     trace_event(
                         "tool.result",
                         ms=round((time.perf_counter() - tool_started) * 1000, 1),
+                        tool=tool_name or None,
                         turn=turn_id,
                         session=session_id,
                     )

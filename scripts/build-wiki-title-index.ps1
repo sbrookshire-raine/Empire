@@ -18,6 +18,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "lib\resolve-wiki-storage.ps1")
+$wikiPaths = Initialize-EmpireWikiStorageEnv -Year $Year
 $Python = Join-Path $Root "venv\Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $Python)) {
     throw "Missing venv python: $Python"
@@ -27,9 +29,10 @@ $args = @("-m", "pipeline.wiki_title_dns", "build", "--year", $Year)
 if ($LimitBatches -gt 0) {
     $args += @("--limit-batches", "$LimitBatches")
 }
-if ($IndexPath) {
-    $args += @("--index", $IndexPath)
+if (-not $IndexPath) {
+    $IndexPath = Join-Path $wikiPaths.year_dir "title-index.sqlite"
 }
+$args += @("--index", $IndexPath)
 if ($RedirectsPath) {
     $args += @("--redirects", $RedirectsPath)
 }
@@ -50,7 +53,7 @@ if ($Links) {
 
 Write-Host "Title DNS build ($Year)"
 Write-Host "wiki_md: D:\wiki_md\$Year  (override with WIKI_ROOT)"
-Write-Host "index:   I:\EMPIRE_DATA\wiki-reports\$Year\title-index.sqlite"
+Write-Host "index:   $IndexPath"
 & $Python @args
 if ($LASTEXITCODE -ne 0) {
     throw "title index build failed ($LASTEXITCODE)"

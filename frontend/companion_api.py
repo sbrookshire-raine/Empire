@@ -37,20 +37,34 @@ COMPANION_INSTRUCTIONS = (
 )
 
 
+def _strip_trailing_turn_markers(text: str) -> str:
+    """Remove server blocks mistakenly appended after the ask (no User message anchor)."""
+
+    from frontend.resource_pulse_api import RESOURCE_PULSE_MARKER
+
+    cleaned = text.strip()
+    if RESOURCE_PULSE_MARKER in cleaned:
+        cleaned = cleaned.split(RESOURCE_PULSE_MARKER, 1)[0].strip()
+    return cleaned
+
+
 def extract_user_message(message: str) -> str:
     """Return the latest user text after any EMPIRE wrapper blocks."""
 
+    from frontend.speech_aliases import apply_speech_aliases
+
     text = message.strip()
     if "\n\nUser message:\n" in text:
-        return text.rsplit("\n\nUser message:\n", 1)[-1].strip()
+        user_part = text.rsplit("\n\nUser message:\n", 1)[-1].strip()
+        return apply_speech_aliases(_strip_trailing_turn_markers(user_part))
     if "User question:" in text:
         after = text.split("User question:", 1)[1]
         if "\n\nAnswer about" in after:
-            return after.split("\n\n", 1)[0].strip()
+            return apply_speech_aliases(after.split("\n\n", 1)[0].strip())
         first_line = after.strip().splitlines()[0].strip() if after.strip() else ""
         if first_line:
-            return first_line
-    return text
+            return apply_speech_aliases(first_line)
+    return apply_speech_aliases(_strip_trailing_turn_markers(text))
 
 
 def _load_text(path: Path, max_chars: int) -> str:
@@ -85,21 +99,21 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
     if COMPANION_MARKER in message or NOW_MARKER in message:
         return payload
 
-    raw = extract_user_message(message)
+    raw = extract_user_message(message)  # includes speech alias normalization
     # Truth Drift / wiki research turns: do not inject personal CURRENT status.
     try:
         from frontend.wiki_drift_api import (
             WIKI_DRIFT_MARKER,
             WIKI_EXTRACT_MARKER,
             WIKI_LOOKUP_MARKER,
-            is_wiki_enriched_query,
+            is_wiki_lookup_query,
         )
 
         if (
             WIKI_DRIFT_MARKER in message
             or WIKI_LOOKUP_MARKER in message
             or WIKI_EXTRACT_MARKER in message
-            or is_wiki_enriched_query(raw)
+            or is_wiki_lookup_query(raw)
         ):
             return payload
     except Exception:  # noqa: BLE001

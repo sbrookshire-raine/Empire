@@ -8,9 +8,11 @@ Use when the Architect wants **processed GitHub materials** as a **fluid scratch
 - "What repos have we already farmed?", "show the processed materials catalog"
 - After triage: "turn those GitHub hits into disassembly cards"
 
+**Unified intake (web + GitHub + board + memory):** use **skill-intake-to-lego** and **`intake_to_lego_run`** instead of this skill when the Architect wants analyze/learn/catalog in one step.
+
 ## One action
 
-Call **`resource_farm_run`** once per request:
+Call **`resource_farm_run`** once per request (GitHub scout-only; prefer **`intake_to_lego_run`** when web or memory/confirm is in scope):
 
 | Architect intent | Tool call |
 |------------------|-----------|

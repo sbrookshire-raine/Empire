@@ -173,7 +173,9 @@ def _describe(record: dict) -> str | None:
     if kind == "tool.requested":
         return f"tool.requested  {record.get('tools')}"
     if kind == "tool.result":
-        return f"tool.result     {record.get('ms')} ms"
+        tool = record.get("tool")
+        suffix = f"  {tool}" if tool else ""
+        return f"tool.result     {record.get('ms')} ms{suffix}"
     if kind == "stream.end":
         return f"stream.end      {record.get('seconds')}s"
     if kind == "event" and record.get("type") in {"turn.completed", "session.waiting"}:

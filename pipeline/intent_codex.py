@@ -144,13 +144,43 @@ def resolve(message: str, *, limit: int = 3, min_score: int = 4) -> dict[str, An
     }
 
 
-def context_block(message: str, *, min_score: int = 5) -> str:
-    """Compact injection for serve.py — authoritative route hint next to the user ask."""
+def _primary_from_intent_id(message: str, intent_id: str) -> dict[str, Any] | None:
+    for intent in _load():
+        if str(intent.get("id") or "") != intent_id:
+            continue
+        _score, hits = _score_intent(message, intent)
+        policy = intent.get("policy") or {}
+        return {
+            "id": intent_id,
+            "say": intent.get("say", ""),
+            "matched": hits or [f"signal:{intent_id}"],
+            "local_first": bool(policy.get("local_first", True)),
+            "local_tools": list(policy.get("local_tools") or []),
+            "online_tools": list(policy.get("online_tools") or []),
+            "limbs": list(policy.get("limbs") or []),
+            "playbook": policy.get("playbook"),
+            "sequence": list(policy.get("sequence") or []),
+        }
+    return None
 
-    result = resolve(message, limit=2, min_score=min_score)
-    primary = result.get("primary")
-    if not primary:
-        return ""
+
+def _steps_for_primary(primary: dict[str, Any]) -> list[str]:
+    steps: list[str] = []
+    if primary.get("local_first"):
+        steps.append("Local first: " + ", ".join(primary.get("local_tools") or []) or "(see playbook)")
+    if primary.get("online_tools"):
+        steps.append(
+            "If still open and limbs allow: "
+            + ", ".join(primary.get("online_tools") or [])
+            + " — admit Toolbelt / resource_pulse first."
+        )
+    if primary.get("playbook"):
+        steps.append(f"playbook({primary['playbook']!r}) for worked examples.")
+    steps.append("tool_docs(tool) before first call if parameters are uncertain.")
+    return steps
+
+
+def _format_context_block(primary: dict[str, Any], steps: list[str]) -> str:
     compact = {
         "primary_intent": primary.get("id"),
         "meaning": primary.get("say"),
@@ -161,7 +191,7 @@ def context_block(message: str, *, min_score: int = 5) -> str:
         "playbook": primary.get("playbook"),
         "sequence": primary.get("sequence"),
         "matched": primary.get("matched"),
-        "steps": result.get("steps"),
+        "steps": steps,
     }
     body = json.dumps(compact, ensure_ascii=False)
     return (
@@ -169,6 +199,27 @@ def context_block(message: str, *, min_score: int = 5) -> str:
         "Follow local_first, then online if limbs are on.]\n"
         f"{body}"
     )
+
+
+def context_block(message: str, *, min_score: int = 5) -> str:
+    """Compact injection for serve.py — authoritative route hint next to the user ask."""
+
+    text = str(message or "").strip()
+    try:
+        from frontend.wiki_drift_api import is_wiki_lookup_query
+
+        if text and is_wiki_lookup_query(text):
+            wiki = _primary_from_intent_id(text, "wiki_fact")
+            if wiki:
+                return _format_context_block(wiki, _steps_for_primary(wiki))
+    except Exception:  # noqa: BLE001
+        pass
+
+    result = resolve(message, limit=2, min_score=min_score)
+    primary = result.get("primary")
+    if not primary:
+        return ""
+    return _format_context_block(primary, list(result.get("steps") or []))
 
 
 def main() -> int:

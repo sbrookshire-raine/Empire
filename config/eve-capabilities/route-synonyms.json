@@ -4,6 +4,12 @@
   "phrases": {
     "wikipedia": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search"] },
     "wiki": { "limbs": ["wiki_local"], "areas": ["wiki-archive"] },
+    "wikipedia archive": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search", "wiki_read_section"] },
+    "my wikipedia archive": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search", "wiki_read_section"] },
+    "go to my wikipedia": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search"] },
+    "tell me the names": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search", "wiki_read_section", "wiki_extract"] },
+    "names of the albums": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search", "wiki_read_section"] },
+    "discography": { "limbs": ["wiki_local"], "areas": ["wiki-archive"], "tools": ["wiki_scout_search", "wiki_read_section"] },
     "reverse engineer": { "limbs": ["rea"], "areas": ["reverse-engineering"], "tools": ["rea_doctor"] },
     "reverse engineering": { "limbs": ["rea"], "areas": ["reverse-engineering"] },
     "github": { "limbs": ["github_scout"], "tools": ["github_scout_search"] },

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from pipeline import disassembly_card, heptabase_cli
@@ -46,9 +47,15 @@ def publish_to_heptabase(
             "ok": False,
             "error": "HEPTABASE_DISASSEMBLY_WHITEBOARD_ID not set. Run scripts/ensure-heptabase-disassembly-board.ps1.",
         }
-    health = heptabase_cli.health_check()
-    if not health.get("ok"):
-        return {"ok": False, "error": health.get("error") or "Heptabase not ready.", "health": health}
+    warm = heptabase_cli.ensure_app_running(wait_seconds=45, launch_desktop=True)
+    if not warm.get("ok"):
+        return {
+            "ok": False,
+            "error": warm.get("error") or "Heptabase not ready.",
+            "health": warm.get("health"),
+            "warm": warm,
+        }
+    health = warm.get("health") or heptabase_cli.health_check()
 
     try:
         card = disassembly_card.read_card(card_id)
@@ -57,7 +64,9 @@ def publish_to_heptabase(
 
     note_body = disassembly_card.markdown_for_heptabase(card)
 
-    heptabase_cli.whiteboard_read_layout(whiteboard_id)
+    fast = os.environ.get("HEPTABASE_FAST_PUBLISH", "1").strip().lower() in {"1", "true", "yes", "on"}
+    if not fast:
+        heptabase_cli.whiteboard_read_layout(whiteboard_id)
 
     created = heptabase_cli.create_note(note_body, human_owned=human_owned_note)
     if created.get("ok") is False:

@@ -84,8 +84,11 @@ BUCKET_LABELS: dict[Bucket, str] = {
     "products": "Products (LEGO)",
 }
 
-DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ("voice_presence", "wiki_local")
-DEFAULTS_VERSION = 2
+# Fresh installs: no optional limbs ON (Voice/Wiki/ scouts start via header strip or Eve ACTIVATE).
+DEFAULT_ACTIVE_TOOLS: tuple[str, ...] = ()
+# v1 toolbelt files without defaults_version were upgraded to voice+wiki automatically.
+_LEGACY_V1_AUTO_DEFAULTS: tuple[str, ...] = ("voice_presence", "wiki_local")
+DEFAULTS_VERSION = 3
 
 
 def _toolbelt_path() -> Path:
@@ -171,9 +174,10 @@ def load_active_tools() -> list[str]:
     selected = normalize_active_tools(parsed.get("active_tools"))
     version = _version_number(parsed.get("defaults_version"))
     if version < DEFAULTS_VERSION:
-        for default_tool in DEFAULT_ACTIVE_TOOLS:
-            if default_tool not in selected:
-                selected = normalize_active_tools([*selected, default_tool])
+        if version < 2:
+            for default_tool in _LEGACY_V1_AUTO_DEFAULTS:
+                if default_tool not in selected:
+                    selected = normalize_active_tools([*selected, default_tool])
         parsed["active_tools"] = selected
         parsed["defaults_version"] = DEFAULTS_VERSION
         parsed["buckets"] = categories_by_bucket()

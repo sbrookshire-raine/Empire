@@ -7,6 +7,8 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "lib\resolve-wiki-storage.ps1")
+Initialize-EmpireWikiStorageEnv | Out-Null
 $python = Join-Path $Root "venv\Scripts\python.exe"
 
 if (-not (Test-Path $python)) {

@@ -30,6 +30,7 @@ Pre-router: when a user message matches strongly, `serve.py` attaches a compact
 | research / dig into X | `research_deep` | `cognee_recall`, `workspace_search` | `research_start`, `searxng_search` |
 | look up / find out | `lookup_general` | `workspace_search`, `cognee_recall` | wiki or web per entity |
 | who is / wiki / discography | `wiki_fact` | `wiki_scout_search`, … | — |
+| go to my Wikipedia archive / tell me the names of … albums | `wiki_fact` | `wiki_scout_search`, `wiki_read_section` | — |
 | remember (recall) | `remember_recall` | `cognee_recall` | — |
 | remember (save) | `save_to_memory` | `propose_remember`, … | — |
 | reverse engineer / decompile | `reverse_engineer` | REA tools | admit `rea` |

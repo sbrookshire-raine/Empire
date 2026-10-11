@@ -30,6 +30,10 @@ every other local tool.
    search engine: `"rules of juggling"` and `"learning to play the drums"` miss even though
    `Juggling` and `Drum kit` are both in the archive. Strip question words ("how to", "learn",
    "the rules of", "tips for") and pass the bare subject.
+   **Architect lexicon:** "go to my Wikipedia archive", "my wiki archive", and "tell me the
+   names of … albums" (any artist) mean the same thing — `wiki_scout_search("<Artist> discography")`
+   then `wiki_read_section` / `wiki_extract` for the list. Not web scout, not intake_to_lego.
+   Recall `Architect intent vocabulary` from Cognee if unsure.
 4. **When a phrase-shaped query returns nothing:** retry **once, in the same turn**, with the
    bare subject, and confirm it with **`wiki_resolve`** before reading. Only after that retry
    say the archive has nothing — and phrase it as **what you searched** ("no page titled *X*"),

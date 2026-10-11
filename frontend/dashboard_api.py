@@ -84,6 +84,24 @@ def resource() -> dict[str, Any]:
         return {"ok": False, "error": str(exc), "headroom_ok": False, "headroom_reasons": ["Resource pulse unavailable"]}
 
 
+def baseline() -> dict[str, Any]:
+    try:
+        from pipeline import baseline_audit
+
+        return baseline_audit.run()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "layers": {}, "blockers": [str(exc)], "warnings": []}
+
+
+def baseline_flush() -> dict[str, Any]:
+    try:
+        from pipeline import baseline_flush as flush_mod
+
+        return flush_mod.flush_baseline()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "summary": str(exc)}
+
+
 def _task_state(name: str) -> dict[str, Any]:
     try:
         result = subprocess.run(

@@ -41,11 +41,32 @@ def subjects_path() -> Path:
     return EMPIRE_DIR / "priority_subjects.json"
 
 
+def _title_index_path(reports: Path, year: str = "2026") -> Path:
+    return reports / validate_year(year) / "title-index.sqlite"
+
+
+def _empire_wiki_data_on_drive_i() -> bool:
+    if Path(r"I:\EMPIRE_DATA").is_dir():
+        return True
+    if Path(r"I:\weaviate_v2_archive").is_dir():
+        return True
+    if _title_index_path(DEFAULT_REPORTS_ROOT).is_file():
+        return True
+    return False
+
+
 def reports_root() -> Path:
     override = os.environ.get("EMPIRE_WIKI_REPORTS_ROOT", "").strip()
     if override:
         return Path(override)
-    return DEFAULT_REPORTS_ROOT
+    fallback = Path(r"D:\EMPIRE_DATA\wiki-reports")
+    if _title_index_path(DEFAULT_REPORTS_ROOT).is_file():
+        return DEFAULT_REPORTS_ROOT
+    if _title_index_path(fallback).is_file():
+        return fallback
+    if _empire_wiki_data_on_drive_i():
+        return DEFAULT_REPORTS_ROOT
+    return fallback
 
 
 def reports_dir(year: str) -> Path:

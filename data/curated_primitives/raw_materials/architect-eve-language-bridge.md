@@ -29,6 +29,7 @@ resolve_intent(message)
 | scrape / pull / get that page | `web_scout` (admit if off) |
 | research / dig / what's going on | `cognee_recall`, `workspace_search`, then `research_start` |
 | lookup / find out / anything about | `workspace_search`, `cognee_recall` |
+| go to my Wikipedia archive / tell me the names of … albums | `wiki_scout_search` → `wiki_read_section` / `wiki_extract` (Wiki Local) |
 | remember? / what do we know | `cognee_recall` (eve_core, eve_memory) |
 | add to memory / language barrier / how I talk | `propose_remember` or ingest path; `cognee_recall` bridge docs |
 | work order / forge / wire / MCP | playbook build-and-verify; Mechanic via Work Orders — not PocketBase tasks |

@@ -9,13 +9,18 @@
   .\scripts\verify-wiki-local.ps1 -StartIfDown
 #>
 param(
-    [string]$ArchivePath = "I:\weaviate_v2_archive\weaviate",
+    [string]$ArchivePath = "",
     [switch]$StartIfDown,
     [switch]$SkipSearch
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "lib\resolve-wiki-storage.ps1")
+Initialize-EmpireWikiStorageEnv | Out-Null
+if (-not $ArchivePath) {
+    $ArchivePath = Resolve-WeaviateArchivePath
+}
 $Python = Join-Path $Root "venv\Scripts\python.exe"
 $ApiKey = "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih"
 $fail = 0

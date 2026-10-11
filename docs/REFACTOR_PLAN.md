@@ -32,7 +32,7 @@ let "throw a better brain at it" be safe instead of hopeful.
 | Surfaces | Count |
 |----------|-------|
 | Agent tool files | **86** — 57 gated by Toolbelt, **29 always registered** |
-| Toolbelt categories | 25 (`DEFAULT_ACTIVE = voice_presence, wiki_local`) |
+| Toolbelt categories | 25 (`DEFAULT_ACTIVE = none`; Voice/Wiki via header strip or Eve ACTIVATE) |
 | MCP hook servers | 7 (wiki-scout, daze, loom-intake, stem-factory, tool-forge, work-orders, workbench) |
 | Skills (`.md`) | 33 |
 

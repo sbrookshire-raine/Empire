@@ -2816,10 +2816,37 @@ textarea[data-state="success"] {
 
 .limb-meter__top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
   margin-bottom: var(--space-2xs);
+}
+
+.limb-meter__top-actions {
+  flex: 0 0 auto;
+}
+
+.limb-meter__flush-btn {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: var(--rule-thin) solid color-mix(in oklch, var(--color-neon-blue) 55%, var(--color-rule));
+  background: color-mix(in oklch, var(--color-paper-3) 90%, transparent);
+  color: var(--color-neon-blue);
+  cursor: pointer;
+}
+
+.limb-meter__flush-btn:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--color-neon-blue) 18%, var(--color-paper-3));
+}
+
+.limb-meter__flush-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .limb-meter__heading {

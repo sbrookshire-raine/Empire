@@ -31,6 +31,10 @@ function Invoke-Step {
     }
 }
 
+Invoke-Step "baseline audit (L1-L4)" {
+    & (Join-Path $Root "scripts\baseline-audit.ps1") -Json
+}
+
 Invoke-Step "unit tests" {
     & $py -c @"
 import unittest, io, sys

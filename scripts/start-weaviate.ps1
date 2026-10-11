@@ -4,18 +4,20 @@
   Boot on-demand Wikipedia Weaviate on http://127.0.0.1:8091 (not part of default Start-EMPIRE).
 
 .NOTES
-  Archive: I:\weaviate_v2_archive\weaviate (canonical). D:\weaviate_v2_archive is legacy.
+  Archive: prefers I:\weaviate_v2_archive\weaviate when present; falls back to D:\weaviate_v2_archive\weaviate.
+  Override: EMPIRE_WEAVIATE_ARCHIVE or -ArchivePath.
   Container: empire-weaviate-heist-2017
   Tear down: .\scripts\stop-weaviate.ps1
 #>
 param(
-    [string]$ArchivePath = "I:\weaviate_v2_archive\weaviate",
+    [string]$ArchivePath = "",
     [string]$ContainerName = "empire-weaviate-heist-2017",
     [string]$ApiKey = "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih",
     [int]$ReadyTimeoutSec = 180
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "lib\resolve-wiki-storage.ps1")
 
 function Test-WeaviateReady {
     param([string]$Key)
@@ -30,8 +32,14 @@ function Test-WeaviateReady {
     }
 }
 
+if (-not $ArchivePath) {
+    $ArchivePath = Resolve-WeaviateArchivePath
+}
+$env:EMPIRE_WEAVIATE_ARCHIVE = $ArchivePath
+
 Write-Host "Weaviate (Wiki Local)"
 Write-Host "===================="
+Write-Host "  Archive: $ArchivePath"
 
 $docker = Get-Command docker -ErrorAction SilentlyContinue
 if (-not $docker) {
@@ -39,7 +47,11 @@ if (-not $docker) {
 }
 
 if (-not (Test-Path -LiteralPath $ArchivePath)) {
-    throw "Weaviate archive not found: $ArchivePath - plug in / mount the drive that holds weaviate_v2_archive."
+    throw @"
+Weaviate archive not found: $ArchivePath
+  Plug in the T7 or use the D: copy: D:\weaviate_v2_archive\weaviate
+  Or set EMPIRE_WEAVIATE_ARCHIVE to your weaviate folder.
+"@
 }
 
 if (Test-WeaviateReady -Key $ApiKey) {

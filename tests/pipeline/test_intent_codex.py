@@ -33,6 +33,22 @@ class IntentCodexTests(unittest.TestCase):
         assert primary is not None
         self.assertEqual(primary["id"], "wiki_fact")
 
+    def test_wikipedia_archive_albums_context(self) -> None:
+        msg = (
+            "Can you go to my Wikipedia archive and tell me the names "
+            "of the Beach Boys' albums?"
+        )
+        block = intent_codex.context_block(msg)
+        self.assertIn("wiki_fact", block)
+        self.assertIn("wiki_scout_search", block)
+
+    def test_wikipedia_archive_resolves_wiki_fact(self) -> None:
+        msg = "go to my wiki archive and list the albums for Kate Bush"
+        result = intent_codex.resolve(msg)
+        primary = result.get("primary")
+        assert primary is not None
+        self.assertEqual(primary["id"], "wiki_fact")
+
     def test_context_block_when_confident(self) -> None:
         block = intent_codex.context_block("scrape this link https://a.test")
         self.assertIn("AUTHORITATIVE INTENT ROUTE", block)

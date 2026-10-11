@@ -42,7 +42,7 @@ This repo is already built. You **feed documents into Cognee** so Eve (and Curso
 
 Plug in the T7 (`I:`). Then either:
 
-- **Double-click** `Start-EMPIRE.bat` at the repo root (starts Ollama if needed, full stack, opens browser)
+- **Double-click** `Start-EMPIRE.bat` at the repo root (Ollama 24k tune, full stack, Wiki Local when archive data exists, fast query-battery gate, opens browser). Use `-NoWiki` or `-SkipStartupChecks` only if you need a lighter start.
 - **Double-click** `Stop-EMPIRE.bat` to shut down (batch-only; no PowerShell stop scripts — AV-safe), or
 - From PowerShell:
 
@@ -212,6 +212,13 @@ Tools wrap PocketBase REST and Cognee (Python subprocess), matching Cursor MCP b
 # Reap dead Eve sandbox containers/volumes (dry run by default; -Apply to delete)
 .\scripts\prune-sandbox-containers.ps1
 .\scripts\prune-sandbox-containers.ps1 -Apply
+# Layered fresh-boot truth (host orphans, Docker, ports, toolbelt vs pulse)
+.\scripts\baseline-audit.ps1
+.\scripts\baseline-audit.ps1 -FixOrphans
+# Audit Docker: keep empire-* only; remove Dify/v2-archive, sandbox template images, optional legacy volumes
+.\scripts\prune-legacy-docker.ps1
+.\scripts\prune-legacy-docker.ps1 -Apply
+.\scripts\prune-legacy-docker.ps1 -Apply -RemoveLegacyVolumes
 
 # Prune old Eve workflow-data chunks (dry run by default; -Apply to delete, -OlderThanDays N)
 .\scripts\prune-workflow-data.ps1

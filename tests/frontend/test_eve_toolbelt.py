@@ -35,10 +35,7 @@ class EveToolbeltTests(unittest.TestCase):
         self.assertIn("loom_intake", eve_toolbelt.ALLOWED_CATEGORIES)
 
     def test_normalize_defaults_when_missing(self) -> None:
-        self.assertEqual(
-            eve_toolbelt.normalize_active_tools(None),
-            ["voice_presence", "wiki_local"],
-        )
+        self.assertEqual(eve_toolbelt.normalize_active_tools(None), [])
 
     def test_apply_persists_and_strips_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -66,16 +63,13 @@ class EveToolbeltTests(unittest.TestCase):
         payload = {"message": "hi"}
         self.assertEqual(eve_toolbelt.apply_active_tools(payload), payload)
 
-    def test_load_defaults_voice_and_wiki_when_file_missing(self) -> None:
+    def test_load_defaults_empty_when_file_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "missing.json"
             with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
-                self.assertEqual(
-                    eve_toolbelt.load_active_tools(),
-                    ["voice_presence", "wiki_local"],
-                )
+                self.assertEqual(eve_toolbelt.load_active_tools(), [])
 
-    def test_load_migrates_legacy_toolbelt_to_voice_on(self) -> None:
+    def test_load_migrates_v1_toolbelt_to_voice_on(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "eve-toolbelt.json"
             path.write_text(
@@ -89,6 +83,22 @@ class EveToolbeltTests(unittest.TestCase):
                 )
             saved = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(saved["defaults_version"], eve_toolbelt.DEFAULTS_VERSION)
+
+    def test_load_v2_to_v3_preserves_checklist_without_forcing_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            path.write_text(
+                json.dumps(
+                    {"active_tools": ["wiki_local"], "defaults_version": 2},
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                self.assertEqual(eve_toolbelt.load_active_tools(), ["wiki_local"])
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(saved["defaults_version"], 3)
 
     def test_load_honors_string_current_version_without_forcing_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -106,7 +116,17 @@ class EveToolbeltTests(unittest.TestCase):
                 self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
 
     def test_load_tolerates_legacy_version_shapes(self) -> None:
-        for raw_version in ("1", "1.0", "legacy", [], {"v": 1}, True):
+        cases: list[tuple[object, list[str]]] = [
+            ("1", ["tool_forge", "voice_presence", "wiki_local"]),
+            ("1.0", ["tool_forge", "voice_presence", "wiki_local"]),
+            ("legacy", ["tool_forge", "voice_presence", "wiki_local"]),
+            ([], ["tool_forge", "voice_presence", "wiki_local"]),
+            ({"v": 1}, ["tool_forge", "voice_presence", "wiki_local"]),
+            (True, ["tool_forge", "voice_presence", "wiki_local"]),
+            ("2", ["tool_forge"]),
+            (2, ["tool_forge"]),
+        ]
+        for raw_version, expected in cases:
             with self.subTest(raw_version=raw_version):
                 with tempfile.TemporaryDirectory() as tmp:
                     path = Path(tmp) / "eve-toolbelt.json"
@@ -115,10 +135,7 @@ class EveToolbeltTests(unittest.TestCase):
                         encoding="utf-8",
                     )
                     with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
-                        self.assertEqual(
-                            eve_toolbelt.load_active_tools(),
-                            ["tool_forge", "voice_presence", "wiki_local"],
-                        )
+                        self.assertEqual(eve_toolbelt.load_active_tools(), expected)
                     saved = json.loads(path.read_text(encoding="utf-8"))
                     self.assertEqual(saved["defaults_version"], eve_toolbelt.DEFAULTS_VERSION)
 

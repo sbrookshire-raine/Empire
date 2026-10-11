@@ -3,7 +3,9 @@ param(
     [switch]$NoBrowser,
     [switch]$SkipOllamaCheck,
     [switch]$Weaviate,
-    [switch]$NoVoice
+    [switch]$NoWiki,
+    [switch]$NoVoice,
+    [switch]$SkipStartupChecks
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,6 +74,12 @@ Write-Host ""
 if (-not $SkipOllamaCheck) {
     Write-Host "Ollama"
     Ensure-OllamaRunning
+    Write-Host "  Tuning context for Eve (24k, parallel=1)..."
+    & (Join-Path $PSScriptRoot "ensure-ollama-parallel.ps1") `
+        -NumParallel 1 -ContextLength 24576 -KvCacheType q8_0 -FlashAttention
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning ('Ollama tune exited ' + $LASTEXITCODE + '; Eve may truncate instructions.')
+    }
     Write-Host ""
 }
 
@@ -83,8 +91,14 @@ if ($SkipOllamaCheck) {
 if ($Weaviate) {
     $stackArgs.Weaviate = $true
 }
+if ($NoWiki) {
+    $stackArgs.NoWiki = $true
+}
 if ($NoVoice) {
     $stackArgs.NoVoice = $true
+}
+if ($SkipStartupChecks) {
+    $stackArgs.SkipStartupChecks = $true
 }
 & (Join-Path $PSScriptRoot "start-stack.ps1") @stackArgs
 
@@ -97,11 +111,5 @@ if (-not $NoBrowser) {
 Write-Host ""
 Write-Host "EMPIRE is ready. Services keep running in the background."
 Write-Host "Workbench: $WorkbenchUrl"
-if (-not $NoVoice) {
-    Write-Host "Voice:      http://127.0.0.1:8000  (Eve push-to-talk on eve.html)"
-}
-if ($Weaviate) {
-    Write-Host "Weaviate:   http://127.0.0.1:8091  (Toolbelt: Wiki Local)"
-    Write-Host "Stop wiki:  .\scripts\stop-weaviate.ps1"
-}
+Write-Host "Voice/Wiki: start only when voice_presence / wiki_local are ON in the header toolbelt (-NoVoice / -NoWiki override)."
 Write-Host ""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass
 from http.client import HTTPConnection, HTTPException, HTTPResponse
@@ -12,8 +13,8 @@ from urllib.parse import parse_qs, urlsplit
 
 EVE_HOST = "127.0.0.1"
 EVE_PORT = 2000
-EVE_TIMEOUT_SECONDS = 30
-EVE_STREAM_READ_TIMEOUT_SECONDS = 300
+EVE_TIMEOUT_SECONDS = int(os.environ.get("EMPIRE_EVE_TIMEOUT", "120"))
+EVE_STREAM_READ_TIMEOUT_SECONDS = int(os.environ.get("EMPIRE_EVE_STREAM_TIMEOUT", "600"))
 MAX_NDJSON_LINE_BYTES = 1024 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
@@ -475,11 +476,18 @@ _INTERNAL_MARKER_END_RE = re.compile(r"^[ \t]*\[\[EMPIRE[ _][A-Z0-9_ ]*END\]\][^
 # line. Only applied when an internal marker is present, so an answer that legitimately quotes a line
 # like "ROLE: backend engineer" is untouched.
 _COMPANION_TAIL_RE = re.compile(
-    r"^[ \t]*(?:ROLE:[^\n]*|For greetings:[^\n]*|Do not mention these markers[^\n]*|User message:)[ \t]*$",
-    re.MULTILINE,
+    r"^[ \t]*(?:ROLE:[^\n]*|For greetings:[^\n]*|Do not mention these markers[^\n]*|"
+    r"User message:|\[AUTHORITATIVE INTENT ROUTE[^\n]*|Live pulse \(authoritative)[ \t]*$",
+    re.MULTILINE | re.IGNORECASE,
 )
 # The two markers that only ever appear in an *injected* payload (companion/current-facts card).
 _INJECTED_CARD_RE = re.compile(r"\[\[EMPIRE_(?:NOW|COMPANION)\b")
+# Full turn payload echoed as the reply (companion + pulse + intent + User message:).
+_INJECTION_ECHO_RE = re.compile(
+    r"\[\[EMPIRE_COMPANION\]\].*\[\[EMPIRE_RESOURCE_PULSE\]\]|"
+    r"\[AUTHORITATIVE INTENT ROUTE",
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 def _drop_scaffolding_blocks(text: str) -> str:
@@ -647,6 +655,8 @@ def sanitize_assistant_text(text: str) -> str:
 
     if not text:
         return text
+    if _INJECTION_ECHO_RE.search(text) and _INJECTED_CARD_RE.search(text):
+        return EMPTY_AFTER_CLEAN_REPLY
     cleaned = strip_reasoning_blocks(text).strip()
     envelope_free = _strip_reasoning_json_envelope(cleaned)
     if envelope_free != cleaned:

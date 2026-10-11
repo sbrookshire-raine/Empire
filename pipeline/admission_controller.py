@@ -241,6 +241,19 @@ def _http_ready(url: str, *, headers: dict[str, str] | None = None, timeout: flo
         return False
 
 
+def _weaviate_archive_path() -> str:
+    raw = os.environ.get("EMPIRE_WEAVIATE_ARCHIVE", "").strip()
+    if raw:
+        return raw
+    for candidate in (
+        r"I:\weaviate_v2_archive\weaviate",
+        r"D:\weaviate_v2_archive\weaviate",
+    ):
+        if Path(candidate).is_dir():
+            return candidate
+    return r"I:\weaviate_v2_archive\weaviate"
+
+
 def _ensure_weaviate() -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {WEAVIATE_API_KEY}"}
     if _http_ready(WEAVIATE_READY_URL, headers=headers):
@@ -248,6 +261,7 @@ def _ensure_weaviate() -> dict[str, Any]:
     script = ROOT / "scripts" / "start-weaviate.ps1"
     if not script.is_file():
         return {"ok": False, "error": f"start script missing: {script}"}
+    archive = _weaviate_archive_path()
     try:
         completed = subprocess.run(
             [
@@ -257,6 +271,8 @@ def _ensure_weaviate() -> dict[str, Any]:
                 "Bypass",
                 "-File",
                 str(script),
+                "-ArchivePath",
+                archive,
             ],
             cwd=str(ROOT),
             capture_output=True,

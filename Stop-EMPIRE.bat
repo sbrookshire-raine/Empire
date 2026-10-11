@@ -8,17 +8,22 @@ title EMPIRE Shutdown
 
 set "KEEP_OLLAMA=0"
 set "KEEP_DOCKER=0"
-set "STOP_WEAVIATE=0"
+set "STOP_WEAVIATE=1"
+set "KEEP_WEAVIATE=0"
 :parse_args
 if "%~1"=="" goto args_done
 if /I "%~1"=="/keep-ollama" set "KEEP_OLLAMA=1"
 if /I "%~1"=="-keep-ollama" set "KEEP_OLLAMA=1"
 if /I "%~1"=="/keep-docker" set "KEEP_DOCKER=1"
 if /I "%~1"=="-keep-docker" set "KEEP_DOCKER=1"
+if /I "%~1"=="/keep-weaviate" set "KEEP_WEAVIATE=1"
+if /I "%~1"=="-keep-weaviate" set "KEEP_WEAVIATE=1"
 if /I "%~1"=="/Weaviate" set "STOP_WEAVIATE=1"
 if /I "%~1"=="-Weaviate" set "STOP_WEAVIATE=1"
 if /I "%~1"=="/weaviate" set "STOP_WEAVIATE=1"
 if /I "%~1"=="-weaviate" set "STOP_WEAVIATE=1"
+if /I "%~1"=="/keep-wiki" set "KEEP_WEAVIATE=1"
+if /I "%~1"=="-keep-wiki" set "KEEP_WEAVIATE=1"
 shift
 goto parse_args
 :args_done
@@ -35,9 +40,19 @@ echo [1/4] Eve, Workbench, PocketBase...
 call :StopPort 2000 eve
 call :StopPort 8080 workbench
 call :StopPort 8090 pocketbase
+echo   Eve Docker sandboxes ^(batch kill^)...
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo   Docker not running - skipped
+) else (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%REPO_ROOT%\scripts\stop-eve-sandbox-containers.ps1" -Kill -Remove -Quiet
+    echo   Eve sandbox containers cleared
+)
 echo.
 
-if "%STOP_WEAVIATE%"=="1" (
+if "%KEEP_WEAVIATE%"=="1" (
+    echo [2/4] Wiki Local Weaviate - left running ^(-keep-weaviate^)
+) else if "%STOP_WEAVIATE%"=="1" (
     echo [2/4] Wiki Local Weaviate...
     docker info >nul 2>&1
     if errorlevel 1 (
@@ -48,7 +63,7 @@ if "%STOP_WEAVIATE%"=="1" (
         echo   Weaviate container stopped/removed ^(port 8091^)
     )
 ) else (
-    echo [2/4] Wiki Local Weaviate - left running ^(pass -Weaviate to stop^)
+    echo [2/4] Wiki Local Weaviate - skipped
 )
 echo.
 
@@ -93,7 +108,8 @@ echo.
 echo Shutdown complete.
 echo V:\Cognee stays mounted; memory data is preserved.
 echo To start again: Start-EMPIRE.bat
-echo With wiki:      Start-EMPIRE.bat -Weaviate
+echo Wiki Local starts automatically when archive data is found.
+echo Keep wiki running: Stop-EMPIRE.bat -keep-weaviate
 echo.
 if not "%STOP_EMPIRE_NO_PAUSE%"=="" exit /b 0
 pause

@@ -214,6 +214,17 @@
               <span class="limb-meter__title">Tools activated</span>
               <span class="limb-meter__legend">Higher fill = more session tools ON (light belt + voice).</span>
             </div>
+            <div class="limb-meter__top-actions">
+              <button
+                type="button"
+                class="limb-meter__flush-btn"
+                title="Turn off optional tools, unload Ollama from GPU, stop Wiki/Voice Docker, clear orphan GPU workers. RAM and VRAM bars should drop; disk is whole-PC and usually unchanged."
+                :disabled="baselineFlushing"
+                @click="flushBaselineLighten()"
+              >
+                <span x-text="baselineFlushing ? 'Lightening…' : 'Lighten load'"></span>
+              </button>
+            </div>
             <span
               class="limb-meter__score-label limb-meter__score-label--activation"
               x-text="
