@@ -1,0 +1,5 @@
+# The vendored REA skill tree is hash-pinned to the upstream bundle's own
+# SHA-256 manifest (tests/pipeline/test_rea_skills.py). With core.autocrlf=true
+# a fresh Windows clone rewrote LF -> CRLF and 30 of 31 files failed the
+# integrity check. Mark the tree as binary so the bytes survive checkout.
+vendor/rea-skills/** -text

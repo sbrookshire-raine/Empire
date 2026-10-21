@@ -1,0 +1,24 @@
+{
+  "evidence_id": "ev_demo0001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "operation": "analyze_javascript_application",
+  "normalized_result": {
+    "sources_parsed": 1,
+    "parse_failures": 0,
+    "semantic_unknowns": 230
+  },
+  "confidence": "observed",
+  "authority": "static analysis of a supplied artifact; no runtime execution",
+  "limitations": [
+    "Static analysis only; no runtime execution was performed.",
+    "Semantic coverage is partial; 230 unknowns remain."
+  ],
+  "provider": {"id": "none", "version": "n/a"},
+  "target": {
+    "path": "/tmp/demo/app.asar",
+    "sha256": "aa11bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff00112233"
+  },
+  "artifacts": [
+    {"kind": "json", "path": "/tmp/demo/analysis.json",
+     "sha256": "1122334455667788990011223344556677889900aabbccddeeff001122334455"}
+  ]
+}

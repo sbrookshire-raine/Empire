@@ -208,7 +208,27 @@
       "network": false,
       "requires_services": [],
       "min_disk_free_gb": 5,
-      "notes": "Node MCP (rea-agents). Native deep analysis needs Hopper/Ghidra/IDA configured separately."
+      "notes": "Node MCP (rea-agents). Native deep analysis needs Hopper/Ghidra/IDA configured separately. Also hosts the six approved Bin-1 REA skills (vendor/rea-skills) and the claim-ledger limb, both of which run offline."
+    },
+    "rea_skills": {
+      "label": "REA Skills",
+      "auto_enable": true,
+      "session_ttl_min": 45,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1,
+      "notes": "Six vendored Bin-1 REA skills, run locally via pipeline.rea_skills. Offline except forkdive/discover, which reach the network for public repo data."
+    },
+    "claim_ledger": {
+      "label": "Claim Ledger",
+      "auto_enable": true,
+      "session_ttl_min": 45,
+      "gpu_tenant": "none",
+      "network": false,
+      "requires_services": [],
+      "min_disk_free_gb": 1,
+      "notes": "Claims with checks: a falsification command plus the last result. Local SQLite at eve-output/claim-ledger/claims.db. Checks run inside a declared root."
     },
     "heptabase": {
       "label": "Heptabase Catalog",

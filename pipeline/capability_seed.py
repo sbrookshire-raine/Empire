@@ -115,6 +115,65 @@ def canonical_capabilities() -> list[dict[str, Any]]:
             ],
         },
         {
+            "capability_id": "rea_skills",
+            "label": "REA Skills",
+            "domain": "local_evidence",
+            "entrypoint": "pipeline.rea_skills",
+            "note": "Six approved Bin-1 REA skills, vendored and run locally; paths jailed.",
+            "tools": [
+                _tool(
+                    "rea_skills",
+                    "Run one of six local REA skills that prove a finding instead of asserting it.",
+                    _obj(
+                        {
+                            "action": _str(
+                                "verify_evidence | audit_reconstruction | parity_check | "
+                                "build_fixtures | forkdive | discover | list"
+                            ),
+                            "files": {"type": "array", "items": {"type": "string"}},
+                            "claims": _str("claims.json to cross-check."),
+                            "config_dir": _str("Reconstruction config directory."),
+                            "reference": _str("Reference command (parity_check)."),
+                            "candidate": _str("Candidate command (parity_check)."),
+                            "scenarios": _str("Scenario corpus JSON (parity_check)."),
+                            "out": _str("Output directory (build_fixtures)."),
+                            "repo": _str("OWNER/REPO (forkdive)."),
+                            "topics": {"type": "array", "items": {"type": "string"}},
+                            "min_stars": _int("Min stars (discover)."),
+                            "work_dir": _str("Working dir inside the EMPIRE scratch root."),
+                        },
+                        required=["action"],
+                    ),
+                ),
+            ],
+        },
+        {
+            "capability_id": "claim_ledger",
+            "label": "Claim Ledger",
+            "domain": "local_evidence",
+            "entrypoint": "mcp.claim_ledger_mcp",
+            "note": "Claims with checks: a falsification command plus the last result.",
+            "tools": [
+                _tool(
+                    "claim_ledger",
+                    "Record and re-check claims that carry the command that would prove them wrong.",
+                    _obj(
+                        {
+                            "action": _str("add | verify | health | list"),
+                            "claim": _str("The claim text."),
+                            "check_cmd": _str("Command that would prove the claim wrong."),
+                            "grade": _str("promotional | community-reported | first-party-documented | "
+                                         "independently-corroborated | reproduced"),
+                            "slug": _str("One claim to check."),
+                            "unchecked": _bool("Only claims with no check."),
+                            "failing": _bool("Only claims whose check failed."),
+                        },
+                        required=["action"],
+                    ),
+                ),
+            ],
+        },
+        {
             "capability_id": "create_spreadsheet",
             "label": "Spreadsheet",
             "domain": "artifact",

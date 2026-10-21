@@ -1,0 +1,14 @@
+{
+  "runtime-hooking": {
+    "slug": "runtime-hooking",
+    "title": "Observe a running process's function calls",
+    "category": "runtime",
+    "queries": ["topic:frida", "topic:instrumentation", "topic:dynamic-analysis"]
+  },
+  "packet-analysis": {
+    "slug": "packet-analysis",
+    "title": "Read a saved packet capture",
+    "category": "network",
+    "queries": ["topic:pcap", "topic:wireshark", "topic:tshark"]
+  }
+}

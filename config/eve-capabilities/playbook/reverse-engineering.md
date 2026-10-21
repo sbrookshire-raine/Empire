@@ -1,8 +1,8 @@
 ---
 area: reverse-engineering
 one_line: Local reverse engineering via REA (JS/Electron, native, web, .NET) + Disassembly catalog.
-tools: rea_doctor, rea_list_inbox, rea_analyze_javascript, rea_invoke, disassembly_card_write, disassembly_card_list, disassembly_publish_heptabase, disassembly_mark_mature, app_visual_observe, browser_capture_screenshot, heptabase_health
-skills: skill-reverse-engineering
+tools: rea_doctor, rea_list_inbox, rea_analyze_javascript, rea_invoke, rea_skills, claim_ledger, disassembly_card_write, disassembly_card_list, disassembly_publish_heptabase, disassembly_mark_mature, app_visual_observe, browser_capture_screenshot, heptabase_health
+skills: skill-reverse-engineering, skill-rea-skills, skill-claim-ledger
 ---
 
 # Reverse engineering (REA)
@@ -15,6 +15,30 @@ Architect can **attach files in chat** (📎) — zips, EXE, DLL, ASAR, JS, etc.
 - **Ask:** "analyze this Electron folder" → **Do:** `rea_analyze_javascript("C:/path")` after upload → **Get:** module graph summary.
 - **Ask:** "inspect this native EXE" → **Do:** `rea_doctor()` → `rea_invoke("inspect", …)` → **Get:** evidence or unavailable reason.
 - **Ask:** "what did we upload for RE?" → **Do:** `rea_list_inbox()` → **Get:** upload ids and `analysis_roots`.
+
+## REA skills — proving a finding (local, offline)
+
+Six skills from the Gumloop REA bundle, vendored under `vendor/rea-skills/`. They
+*prove* things instead of asserting them.
+
+- **Ask:** "is this evidence good enough to report?" → **Do:** `rea_skills(action="verify_evidence", files=[…])` → **Get:** a pass/fail audit of the record and the claims resting on it.
+- **Ask:** "is this reconstruction actually correct?" → **Do:** `rea_skills(action="audit_reconstruction", config_dir=…)` → **Get:** per-check ledger audit (exact matches, digests, duplicates).
+- **Ask:** "does my rebuild match the original?" → **Do:** `rea_skills(action="parity_check", reference="…", candidate="…", scenarios=…)` → **Get:** a parity report — both programs scored separately against frozen literals.
+- **Ask:** "what can I read from this binary without a disassembler?" → **Do:** `rea_skills(action="build_fixtures")` → **Get:** local reader fixtures (Go/Rust/WASM/EVM/SQLite).
+- **Ask:** "what have people actually built from this repo?" → **Do:** `rea_skills(action="forkdive", repo="OWNER/REPO")` → **Get:** proven use cases from its fork network (needs network).
+- **Ask:** "which repos in this domain are worth reading?" → **Do:** `rea_skills(action="discover", topics=[…])` → **Get:** high-signal repos by topic and stars (needs network).
+- **Ask:** "which REA skills can I actually run here?" → **Do:** `rea_skills(action="list")` → **Get:** the six approved skills, their scripts, and which need the network.
+
+## Claim ledger — knowledge that is done, not read
+
+Records a claim together with the command that would prove it wrong, so it
+cannot go stale silently.
+
+- **Ask:** "remember that X is true" → **Do:** `claim_ledger(action="add", claim="X", check_cmd="…")` → **Get:** the slug, and whether it is a document (no check) or a capability.
+- **Ask:** "is that still true?" → **Do:** `claim_ledger(action="verify", slug=…)` → **Get:** pass/fail per claim with the output. A failure is the finding — report it.
+- **Ask:** "how much of this can I trust?" → **Do:** `claim_ledger(action="health")` → **Get:** the fraction of claims that have a check and pass, plus a verdict.
+- **Ask:** "what still needs a check?" → **Do:** `claim_ledger(action="list", unchecked=true)` → **Get:** the documents — the honest work queue.
+- **Ask:** "what is known-false?" → **Do:** `claim_ledger(action="list", failing=true)` → **Get:** claims whose check failed.
 
 ## Disassembly catalog (one card per play)
 

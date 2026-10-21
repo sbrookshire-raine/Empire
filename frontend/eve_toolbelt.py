@@ -44,6 +44,8 @@ ALLOWED_CATEGORIES = (
     "system_ops",
     "file_ops",
     "rea",
+    "rea_skills",
+    "claim_ledger",
     "heptabase",
 )
 
@@ -74,6 +76,8 @@ CATEGORY_BUCKETS: dict[str, Bucket] = {
     "system_ops": "session",
     "file_ops": "session",
     "rea": "session",
+    "rea_skills": "session",
+    "claim_ledger": "session",
     "heptabase": "session",
 }
 

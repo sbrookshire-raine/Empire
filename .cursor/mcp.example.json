@@ -229,6 +229,17 @@
         "EMPIRE_RESOURCE_QUEUE_DIR": "C:/Empire_Workbench/00_Resource_Queue"
       }
     },
+    "empire-claim-ledger": {
+      "command": "C:/EMPIRE/venv/Scripts/python.exe",
+      "args": [
+        "C:/EMPIRE/mcp/claim_ledger_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/EMPIRE",
+        "CLAIM_LEDGER_DB": "C:/EMPIRE/eve-output/claim-ledger/claims.db",
+        "CLAIM_LEDGER_ROOTS": "C:/EMPIRE/eve-output/claim-ledger"
+      }
+    },
     "graft": {
       "command": "npx",
       "args": [

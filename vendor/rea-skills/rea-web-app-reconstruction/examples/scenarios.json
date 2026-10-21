@@ -1,0 +1,13 @@
+{
+  "target": "tiny-ledger",
+  "version": "1.0.0",
+  "scenarios": [
+    {"name": "add then list", "steps": [
+      {"input": "{\"op\":\"add\",\"title\":\"Alpha\"}", "expected": {"ok": true, "id": 1}, "exit": 0},
+      {"input": "{\"op\":\"list\"}", "expected": {"items": [{"id": 1, "title": "Alpha"}]}, "exit": 0}
+    ]},
+    {"name": "unknown op rejected", "steps": [
+      {"input": "{\"op\":\"nope\"}", "expected": null, "exit": 2}
+    ]}
+  ]
+}

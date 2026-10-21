@@ -12,6 +12,7 @@ File: `.cursor/mcp.json`
 | `empire-cognee` | `mcp/cognee_mcp.py` | Cognee remember/recall/improve/forget/ingest |
 | `empire-wiki` | `mcp/wiki_mcp.py` | Wiki ingest (pilot **halted**) |
 | `empire-discovery` | `config/eve-capabilities/discovery-router.py` | Read-only local capability and research catalog |
+| `empire-claim-ledger` | `mcp/claim_ledger_mcp.py` | Claims with the check command that would falsify them (add / verify / health / list) |
 
 After clone, update `.cursor/mcp.json` paths if the repo is not at `C:\EMPIRE`. See [16-github-prep](../manifest/16-github-prep.md).
 

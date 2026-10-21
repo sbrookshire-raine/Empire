@@ -1,0 +1,538 @@
+{
+  "bundle": "rea-agent-skills",
+  "created_utc": "2026-10-21T03:37:13Z",
+  "format": "Agent Skills (SKILL.md per directory)",
+  "upstream": {
+    "repository": "https://github.com/morluto/rea",
+    "license": "MIT",
+    "cli_version_at_packaging": "6.5.0",
+    "commit_at_packaging": "4f7b5fb",
+    "native_skill_version": "42"
+  },
+  "skills": {
+    "rea-investigation-setup": {
+      "role": "Entry point: diagnose REA, register it, route a target.",
+      "validated_against": "REA 6.5.0, commit 4f7b5fb, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "04a7c1867fd459166dbf51db4470bfc2828c79eaae19ab432c3a1e3e28632996",
+          "bytes": 12438
+        },
+        {
+          "path": "SKILL.md.nulbak",
+          "sha256": "1803b8a36f413d5f8b2fd3c660b05bf6b2c1f259e8585b753d451ee06dc9931c",
+          "bytes": 16662
+        },
+        {
+          "path": "examples/run.sh",
+          "sha256": "8f634596738a95c9f2553c35dfda403028d33c5c07bd98c845e434b45d59c420",
+          "bytes": 4259
+        }
+      ]
+    },
+    "rea-static-js-electron-trace": {
+      "role": "Trace a feature through a packaged Electron/JS app.",
+      "validated_against": "REA 6.5.0, reproduced on the official notes example",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2c7bf175eee38afb9439e95dfd098744b5c88489dbba3e6fb41ecd8a42744ee8",
+          "bytes": 7743
+        }
+      ]
+    },
+    "rea-native-function-recovery": {
+      "role": "Recover a native function into verified C.",
+      "validated_against": "REA 6.5.0; CTF solve reproduced; engine runs not tested",
+      "engine_required": true,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "631bde3c140b112aa34a6d86226dd58f7c696b09b535230466e743ebbe3a6c94",
+          "bytes": 17619
+        },
+        {
+          "path": "examples/corpus.json",
+          "sha256": "b9015b1b05a53231be7a79c7eba9bbe8bd813c27436df787efe68b64dd8586f7",
+          "bytes": 1592
+        },
+        {
+          "path": "scripts/decompile_bench.py",
+          "sha256": "a46fcd2b7598121ce93227caa36045ca4fc004bdb98ce65d486427850c701830",
+          "bytes": 11232
+        },
+        {
+          "path": "scripts/eval_decompiler.py",
+          "sha256": "538facb9fb265757cd77c72214d9252c84f38882108135998798bf01355b9dde",
+          "bytes": 8614
+        }
+      ]
+    },
+    "rea-browser-runtime-observation": {
+      "role": "Passive capture or a bounded agent browser scenario.",
+      "validated_against": "REA 6.5.0, Chromium 156.0.8078.4, 2026-10-18: scenario capture, network, DOM, accessibility, determinism, and compare all reproduced",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "e3a32013b9170e2970e9dcb6d1810c116172690f9233c8c093272daaf77653a5",
+          "bytes": 9505
+        },
+        {
+          "path": "references/scenario-schema.md",
+          "sha256": "fd11f3e527b95be967f85780bcb1b3ebb4c2323b6e55c07f066c5e408eb5aa90",
+          "bytes": 6212
+        }
+      ]
+    },
+    "rea-android-apk-trace": {
+      "role": "Static APK class/method/reference trace.",
+      "validated_against": "REA 6.1.0 case study; not reproduced locally",
+      "engine_required": true,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6a8ae79e5823836f596cfaec79cb715514800ab2cfbb2ab339c08f263ac7b20b",
+          "bytes": 11932
+        }
+      ]
+    },
+    "rea-evidence-verification": {
+      "role": "Audit an REA Evidence record and the claims resting on it.",
+      "validated_against": "REA 6.5.0; tested on real and bad records",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d4521505daee664bf21063d36b85479d059e6f024e1880574b020145aa74e8b7",
+          "bytes": 7744
+        },
+        {
+          "path": "examples/claims.json",
+          "sha256": "74399391021f71233a9ce30cf85d13e4f59f0c0de103b882e44ee4cf8878770b",
+          "bytes": 479
+        },
+        {
+          "path": "examples/evidence.json",
+          "sha256": "c7cb0029bad1bc1d642aa378f574438663e3c75776e0ff8ab9cdd340dcbc8822",
+          "bytes": 837
+        },
+        {
+          "path": "scripts/verify_evidence.py",
+          "sha256": "9a5da728fe233125f53a039be97042980a692c240988bd1394993045473dacde",
+          "bytes": 9189
+        }
+      ]
+    },
+    "repo-forkdiving": {
+      "role": "Mine a repo's fork network and derivatives for proven use cases.",
+      "validated_against": "Reproduced against morluto/rea, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "e9fe6ee9cc22f8c37698e66794dc79b3331714324344619f6ed07361827e57b5",
+          "bytes": 17066
+        },
+        {
+          "path": "SKILL.md.nulbak",
+          "sha256": "7f8a36103f71b65067881a624ebb1007220bf7b6218a19299e1026923004fcba",
+          "bytes": 18141
+        },
+        {
+          "path": "examples/seeds.json",
+          "sha256": "17dfc492b89eca6680d9a286fac65c8f9164a2afa7e89547161e46aacef85b31",
+          "bytes": 425
+        },
+        {
+          "path": "references/verification-log.md",
+          "sha256": "556575ee766382268d193faf9b348c056f552c1719818853e900d83b525a4062",
+          "bytes": 7444
+        },
+        {
+          "path": "scripts/discover.py",
+          "sha256": "5549e420941766450a63d872beab0c4de6406430442aece6071c7b7db3de49af",
+          "bytes": 7763
+        },
+        {
+          "path": "scripts/forkdive.py",
+          "sha256": "bd4471feb2c6cf9c90c6ea7556fff48aaaec3f0ecab58e1f0bd00b7c344451e2",
+          "bytes": 21476
+        }
+      ]
+    },
+    "claim-ledger": {
+      "role": "Claims with checks - knowledge that is done, not read.",
+      "validated_against": "Reproduced 2026-10-18: nine real claims, staleness caught silently",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "712ddcf9e9c29bd9b1703e8930b29982102bf762075b5864ee3babd437f295af",
+          "bytes": 4931
+        },
+        {
+          "path": "scripts/claim_ledger.py",
+          "sha256": "c0d19253f6ddc4a78e3b6aa9921649c937ece545eb021022d6056550442cca71",
+          "bytes": 9473
+        }
+      ]
+    },
+    "tool-model-extraction": {
+      "role": "Turn tool documentation into a compact capability model.",
+      "validated_against": "Reproduced 2026-10-18 on a 41,173-word Heptabase wiki export: 7% compact model, 25 objects, 40 relations",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "33d9cdb1238baebca52ec8b44599fb973b9bf898780c7796845c19f4ea4c0515",
+          "bytes": 7722
+        },
+        {
+          "path": "scripts/__pycache__/extract_tool_model.cpython-312.pyc",
+          "sha256": "64b77b2cdc3393369ea215277ab6bb8818cf1776967db714071a3d445b91d387",
+          "bytes": 18962
+        },
+        {
+          "path": "scripts/build_guide.sh",
+          "sha256": "a6d70d1e5935573dba68da1361afc8896155c1332d8fc7d6d24827c6ce16dabc",
+          "bytes": 566
+        },
+        {
+          "path": "scripts/build_tool_skill.py",
+          "sha256": "d301559abf2db0e548c311f02406a30afa9d16484c8e59f09e9e4b3799ff3f44",
+          "bytes": 9824
+        },
+        {
+          "path": "scripts/extract_tool_model.py",
+          "sha256": "de206575a35e2cfe777570842aae47bada5a72e78c0e941611bec11d7f9f524b",
+          "bytes": 19917
+        }
+      ]
+    },
+    "source-capture": {
+      "role": "Compress a video, guide, PDF, or page into the checkable parts.",
+      "validated_against": "Reproduced 2026-10-18: six fixtures, compression measurement, grade ceiling, gap detection",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6d2fc19c64aeb499b50d91945635112805d20f25097336ecb1d01c331184851b",
+          "bytes": 7073
+        },
+        {
+          "path": "scripts/capture.py",
+          "sha256": "3128e50de308e70bd180469a2d29a6330c17ca3f179b2a3b1529ef813340b2e4",
+          "bytes": 13572
+        }
+      ]
+    },
+    "intake-triage": {
+      "role": "Triage a stream of products, videos, and notes into a few real projects.",
+      "validated_against": "Reproduced 2026-10-18: three stages, scoring, lane routing, sweep on a 5-item batch",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5dbd7df7010fdbd149610e6a5b3129dca907aac7285142b0e0fb2bb4fc282b11",
+          "bytes": 8367
+        },
+        {
+          "path": "scripts/collect_producthunt.py",
+          "sha256": "0614bb8cda753a91f24caecc84639620dc9fca500587f71cd7b351a6149c58ae",
+          "bytes": 6691
+        },
+        {
+          "path": "scripts/triage.py",
+          "sha256": "7a8b29cc6d58c37a607a093fe0196cb469c3f4523dc2b21540381e21ad430865",
+          "bytes": 18124
+        }
+      ]
+    },
+    "agent-memory-architecture": {
+      "role": "Partition agent memory by access pattern; make writes durable; learn from use.",
+      "validated_against": "Reproduced 2026-10-18: three tiers, cap enforcement, supersede, durability across SIGKILL",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "507c1c9c257351b4c9785abac2f8e4b1c54dd642bdd3d1fee2d68557b39b49ab",
+          "bytes": 7787
+        },
+        {
+          "path": "references/worked-example.md",
+          "sha256": "69ef3c6ad3e590a18778259c4a5280bc49c75ca3bdd35ebe691c7e790091829f",
+          "bytes": 3593
+        },
+        {
+          "path": "scripts/memory_store.py",
+          "sha256": "3a5382700e208e05e7d2d0362323c4a00c67a2ac2873f66aaa70bc0591beb639",
+          "bytes": 13195
+        }
+      ]
+    },
+    "ai-experience-dialogue": {
+      "role": "Talk about an AI's own experience without performing sentience or dismissing the person's reading.",
+      "validated_against": "One extended conversation, 2026-10-18; a protocol, not a claim",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "caad3a268318f12de014b849de9e8ede62b1f8b7e1c884cb87f2fda9e75c42db",
+          "bytes": 5524
+        },
+        {
+          "path": "references/worked-examples.md",
+          "sha256": "ec9bbba42fe785a3bda7c0c149308b0c6fa2d8bfb2b00942305964d5af569cb2",
+          "bytes": 5045
+        }
+      ]
+    },
+    "rea-web-app-reconstruction": {
+      "role": "Rebuild a web app, API, or file format from observable behavior.",
+      "validated_against": "REA-Reconstruction-Companion v1.3.23, 2026-10-18",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a9dd33df4682d622fa9669a75cc0adde04867d4474c89566cb4e68f92e9cbbce",
+          "bytes": 14028
+        },
+        {
+          "path": "examples/candidate.py",
+          "sha256": "5d729098c6c11785c9f24bb6e9a5d5100f3e52fe4eec20647e9b05a213d2841d",
+          "bytes": 751
+        },
+        {
+          "path": "examples/candidate_broken.py",
+          "sha256": "018361782cd64c8be68e9c4491a0b09055c66d3eee2c8cf71e4b8b3e5d725ff9",
+          "bytes": 751
+        },
+        {
+          "path": "examples/ref.py",
+          "sha256": "5d729098c6c11785c9f24bb6e9a5d5100f3e52fe4eec20647e9b05a213d2841d",
+          "bytes": 751
+        },
+        {
+          "path": "examples/scenarios.json",
+          "sha256": "10494e5b72b0825efeb9bba4db99437c84b300adfd7abec89d14a338b0424edb",
+          "bytes": 448
+        },
+        {
+          "path": "scripts/parity_harness.py",
+          "sha256": "7197d6c743e0b8f94a63a9c87537a0050f4b6ddeb92eebfdb244031df376e603",
+          "bytes": 8589
+        }
+      ]
+    },
+    "rea-reconstruction-verification": {
+      "role": "Prove a reconstruction is exact: ledgers, oracles, attestation.",
+      "validated_against": "Audited against the real DX-Ball ledgers, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "615396ffed6c871a4227539563824666e44e0f402aac6a69c4d838f0155a6be4",
+          "bytes": 22045
+        },
+        {
+          "path": "examples/config/functions.csv",
+          "sha256": "bf256bbdee0524ff7e28b99d42826bca797a64b0338a1fbff55874065af1c231",
+          "bytes": 191
+        },
+        {
+          "path": "examples/config/implemented.csv",
+          "sha256": "64b29163673cd9c541417d9576d6b01de5feadab2de19832fbb6f35997d1f525",
+          "bytes": 83
+        },
+        {
+          "path": "examples/config/matches.csv",
+          "sha256": "c57152e4602f541ed92869d9a6004f3510c23e3c4ca67786a6c4950002655664",
+          "bytes": 136
+        },
+        {
+          "path": "references/evidence-and-provenance.md",
+          "sha256": "499dcf5d57ced2585e8ff3685f4d970029622081dc5f0d2c13b0bc8d74fdd7ca",
+          "bytes": 7980
+        },
+        {
+          "path": "references/game-decompilation-patterns.md",
+          "sha256": "23aeaf158913bfc17b53a6364b13388c8cb45b1b15f1f045f53b914a2f375d63",
+          "bytes": 6559
+        },
+        {
+          "path": "scripts/audit_reconstruction.py",
+          "sha256": "1a51d5f64168a3f8174761dd7d97d068407cc7f4e1fcedc35bf6e21432707682",
+          "bytes": 7423
+        }
+      ]
+    },
+    "rea-firmware-extraction": {
+      "role": "Inspect and extract firmware regions; hand an ELF to Ghidra.",
+      "validated_against": "Reproduced with Binwalk 3.1.0 + Unblob 26.6.4, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a338278719935311b5d597bf15bd455e8742578a21602e531898983a551d9b2a",
+          "bytes": 12236
+        },
+        {
+          "path": "examples/fw.bin.manifest.json",
+          "sha256": "fd36392b2d355628e97fe5b109bca41550e751e9a15b13370944686219e6e116",
+          "bytes": 793
+        },
+        {
+          "path": "scripts/firmware_fixture.py",
+          "sha256": "db1c649f61ae70a35cabf4b589a7c2b1017cfa41e558f37af08fa1db18ca1aee",
+          "bytes": 5821
+        }
+      ]
+    },
+    "rea-managed-dotnet-trace": {
+      "role": "Trace a .NET assembly: CIL members, build comparison, native boundaries.",
+      "validated_against": "Reproduced on a Mono-compiled assembly, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "f7c3de656f75144e2be2b0b2fe797e7d3ede5c3d593a75e0a4970cc88ab12847",
+          "bytes": 8432
+        },
+        {
+          "path": "scripts/audit_managed.py",
+          "sha256": "6ac7790ee1b1170db8ece858c2ef1d7738d59395c5bf226a36e1260f8838819f",
+          "bytes": 5340
+        }
+      ]
+    },
+    "rea-target-free-readers": {
+      "role": "Read Go/Rust/WASM/EVM/SQLite/crash metadata without an engine.",
+      "validated_against": "All eight readers reproduced on fixtures, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "8dc80e8bdfc928699c8360055a3456925d2fc2c2ccf3fc559fa1068e459bdcc2",
+          "bytes": 15823
+        },
+        {
+          "path": "examples/fixtures/gotest/main.go",
+          "sha256": "33b32a4f2de070aa77321433e07b3759955808521538689872079de55f53210a",
+          "bytes": 159
+        },
+        {
+          "path": "examples/fixtures/module.wat",
+          "sha256": "f76952e01329abc2e8f9a9bf08e41307dce85c51487128bf0cec2f8ec8d454d2",
+          "bytes": 154
+        },
+        {
+          "path": "examples/fixtures/rusttest/Cargo.toml",
+          "sha256": "bb706bf5d84b4b3c3ae347edf075be1c1572383e6bfa34ef4efa897bb7e22cb0",
+          "bytes": 63
+        },
+        {
+          "path": "examples/fixtures/rusttest/src/main.rs",
+          "sha256": "5aeda2c1056238e7124e89814d6f3ae1f1b368505506f1675d71c328e2308d3b",
+          "bytes": 103
+        },
+        {
+          "path": "scripts/build_fixtures.py",
+          "sha256": "7798e10d725ec981374f963839ee2b7736cc158dad2e57cb1dbfef5ede9d94ef",
+          "bytes": 3768
+        }
+      ]
+    },
+    "rea-android-device-adb": {
+      "role": "Inspect a running Android device or emulator over ADB.",
+      "validated_against": "Client lane reproduced; device lane documented, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "289c5773bbf6416cf043e9ab11815aa088d2696b19f92a9cd2f9b22ba79446cf",
+          "bytes": 7928
+        }
+      ]
+    },
+    "rea-packet-and-signal-capture": {
+      "role": "Read saved packet captures and logic-signal recordings.",
+      "validated_against": "pcap summary + fields reproduced, TShark 4.4.19, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2b3ca76f8b279d4af9b2ed97868f09757ec8fad3ba66b7eb8fb3aa2c0eef0d3f",
+          "bytes": 9249
+        },
+        {
+          "path": "SKILL.md.nulbak",
+          "sha256": "d22a56314d6354a4c62242dc482ff15330766465bd6df1a300413d6d9b880482",
+          "bytes": 12165
+        },
+        {
+          "path": "scripts/build_capture_fixtures.py",
+          "sha256": "0f324695c283f62dac3ec670e8007535e07e8d50ece28e7699de47024cbcb6d5",
+          "bytes": 2639
+        }
+      ]
+    },
+    "rea-mobile-package-formats": {
+      "role": "Identify Flutter builds, HarmonyOS packages, and JEB projects.",
+      "validated_against": "Flutter + HarmonyOS reproduced; JEB client probe, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "7102c6b2e1ce60839f0c4041687bebb64e3e38c253ff6ec7e4b421c778912a58",
+          "bytes": 10386
+        },
+        {
+          "path": "scripts/build_package_fixtures.py",
+          "sha256": "9341fe9c16e7929fb1ed12e1542ca2c5d8caffe65c2fe36d5b5fd99c88f18850",
+          "bytes": 6660
+        }
+      ]
+    },
+    "rea-runtime-instrumentation": {
+      "role": "Hook a running process with Frida: arguments, returns, call traces.",
+      "validated_against": "Reproduced: spawn + attach, Frida 17.24.1, 2026-10-17",
+      "engine_required": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "cc436780cb017bf659763ea9f295e322e60313f2d19c667e64efdd90df493389",
+          "bytes": 17804
+        },
+        {
+          "path": "examples/target/hook-static.js",
+          "sha256": "2c7827aca9eb62987a6440946e83f521d88cf3e9e31360affd9303e6dd450cc0",
+          "bytes": 381
+        },
+        {
+          "path": "examples/target/hook.js",
+          "sha256": "9830ffd32e7bec7aae28804ab0ab20d82d6a2cd605b44f20ad65a5f7ab7ea509",
+          "bytes": 455
+        },
+        {
+          "path": "examples/target/lib.c",
+          "sha256": "a8f0d26be90c1975682f75cb6d37b2e1c7e17ad58b437b5eccbc3a8fdaeda24d",
+          "bytes": 42
+        },
+        {
+          "path": "examples/target/main.c",
+          "sha256": "989b7eb0ac18dd94e7397425d7063e82a066bdd6e5ddd022a1bc4aeeed125b91",
+          "bytes": 171
+        },
+        {
+          "path": "scripts/build_frida_target.py",
+          "sha256": "30407090e06082855792f857435fa7fab9c5416730e1257fa6a42391f13640f3",
+          "bytes": 8129
+        }
+      ]
+    }
+  }
+}

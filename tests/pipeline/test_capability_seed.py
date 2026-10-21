@@ -27,8 +27,10 @@ class CapabilitySeedTests(unittest.TestCase):
         self.assertTrue(out["ok"])
         self.assertTrue(Path(out["registry"]).is_file())
         self.assertTrue(Path(out["snapshot"]).is_file())
-        self.assertEqual(out["tool_count"], 13)
+        self.assertEqual(out["tool_count"], 15)
         self.assertIn("switchboard", out["capabilities"])
+        self.assertIn("rea_skills", out["capabilities"])
+        self.assertIn("claim_ledger", out["capabilities"])
 
     def test_seeded_capabilities_verify_approved(self) -> None:
         cs.seed(registry_dir=str(self.root))

@@ -2,7 +2,7 @@
 
 You **always** have this map. The Architect does not need magic phrases. Each turn carries `[[EMPIRE_RESOURCE_PULSE]]` with **capacity_meter** (progress bars) and **activation** (ACTIVE / DORMANT / OFF / LOCKED limbs).
 
-**Registered tools:** 99 (schema cues in your tool list; full syntax via `tool_docs`).
+**Registered tools:** 102 (schema cues in your tool list; full syntax via `tool_docs`).
 
 ## As Eve: ACTIVATE / DEACTIVATE (resource-aware)
 
@@ -16,6 +16,7 @@ You **always** have this map. The Architect does not need magic phrases. Each tu
 ## Playbook areas (`playbook("area")`)
 
 - **build-and-verify** — Write and verify code, query local data, make spreadsheets, draft work orders.
+- **intake-and-legos** — Web or GitHub → Disassembly Card → optional Heptabase → optional staged memory — one tool.
 - **machine-and-services** — Headroom, capability admission, service switchboard, GPU lease, model inventory.
 - **media-and-time** — Audio stems, vision, voice, documents to media, and the DAZE schedule.
 - **memory-and-ideas** — Recall and store memory, curated primitives, thought experiments, the decoded ledger, ideas.
@@ -27,8 +28,7 @@ You **always** have this map. The Architect does not need magic phrases. Each tu
 
 ## Mechanic verified on this machine
 
-Mechanic verified: playbook_coverage, capability_governance, eve_tool_docs, eve_build, resource_farm_catalog, resource_pulse, workspace_search, switchboard_plan, capability_route, mcp:empire-artifact, mcp:empire-atlas, mcp:empire-browser-local…. (as of 2026-10-10T17:13:44 UTC). Proven tools: capability_registry, catalog_status, empire-artifact, empire-atlas, empire-browser-local, empire-cognee, empire-container-scout, empire-daze, empire-discovery, empire-docling, empire-evidence, empire-github-scout, empire-heptabase, empire-loom-intake, empire-pocketbase, empire-retrieval-rerank, empire-stem-factory, empire-structured-extract, empire-switchboard, empire-tool-forge, empire-web-scout, empire-wiki-scout, empire-work-orders, empire-workbench, eve_runtime, graft, plan, playbook, pulse, rea, route, search, tool_docs. Trust these hands; call them when the Architect asks.
-Proven names (sample): capability_registry, catalog_status, empire-artifact, empire-atlas, empire-browser-local, empire-cognee, empire-container-scout, empire-daze, empire-discovery, empire-docling, empire-evidence, empire-github-scout, empire-heptabase, empire-loom-intake, empire-pocketbase, empire-retrieval-rerank, empire-stem-factory, empire-structured-extract, empire-switchboard, empire-tool-forge, empire-web-scout, empire-wiki-scout, empire-work-orders, empire-workbench, … (+9 more).
+Mechanic verified: playbook_coverage, capability_governance, eve_tool_docs, eve_build, resource_farm_catalog, resource_pulse, workspace_search, switchboard_plan, capability_route, mcp:empire-artifact, mcp:empire-atlas, mcp:empire-browser-local…. (as of 2026-10-21T14:24:11 UTC). Proven tools: capability_registry, catalog_status, empire-artifact, empire-atlas, empire-browser-local, empire-claim-ledger, empire-cognee, empire-container-scout, empire-daze, empire-discovery, empire-docling, empire-evidence, empire-github-scout, empire-heptabase, empire-loom-intake, empire-pocketbase, empire-retrieval-rerank, empire-stem-factory, empire-structured-extract, empire-switchboard, empire-tool-forge, empire-web-scout, empire-wiki-scout, empire-work-orders, empire-workbench, eve_runtime, graft, plan, playbook, pulse, rea, route, search, tool_docs. Trust these hands; call them when the Architect asks.
 
 ## Refresh
 

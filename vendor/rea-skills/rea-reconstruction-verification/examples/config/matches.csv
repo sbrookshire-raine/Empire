@@ -1,0 +1,3 @@
+address,name,difference_count,target_sha256,object_sha256,manifest_sha256
+0x00401000,main,0,aaa,bbb,ccc
+0x00401100,helper,0,aaa,bbb,ccc

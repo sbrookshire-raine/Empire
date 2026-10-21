@@ -1,5 +1,38 @@
 # Active Context — Current work focus & next steps
 
+## 2026-10-21 — REA Bin-1 integration landed (live, verified)
+
+Six Gumloop REA skills + the claim-ledger MCP are now in EMPIRE, gated behind
+two new Toolbelt limbs (`rea_skills`, `claim_ledger`).
+
+- **Runner:** `pipeline/rea_skills.py` — allowlist of exactly 6, paths jailed to
+  `eve-output/rea-skills`, upstream tree copied to scratch before running
+  (never modified), interpreter resolved explicitly (`python3` is a broken
+  Store alias on this host).
+- **Vendored upstream:** `vendor/rea-skills/` (byte-identical to the bundle).
+  The other 16 skills are deliberately absent and a test asserts it.
+- **EVE surface:** `rea_skills` + `claim_ledger` tools, `skill-rea-skills` +
+  `skill-claim-ledger` skill files, playbook examples in
+  `config/eve-capabilities/playbook/reverse-engineering.md`.
+- **Claim ledger:** `mcp/claim_ledger_mcp.py` — three upstream Windows bugs
+  fixed (drive-letter root parsing, always-true cwd guard, shell selection).
+- **Rollback:** `scripts/rollback-rea-integration.ps1` (one command, `-WhatIf`
+  supported).
+- **Docs:** `docs/rea-integration/probe-log.md` (evidence) and
+  `approval-matrix.md` (Bin-1/Bin-3 split + safety invariants).
+
+Verified live: Eve called both tools on the wire; `verify-capabilities -Live`
+36/36; `verify-stack` 19/19; `audit-empire` "contract satisfied".
+
+**Key host facts learned (do not re-derive):**
+- `python3` is a Microsoft Store alias stub — unusable. Use the repo venv.
+- EVE rejects unknown frontmatter keys: the upstream skills' `icon:`/`color:`
+  make them unloadable, hence EMPIRE-authored skill files.
+- The installed `rea-agents` is **6.3.0** while the bundle targets 6.5.0; some
+  readers the skills document do not exist in the live 139-tool list.
+- `objdump`, `gdb`, `tshark`, `binwalk`, `adb`, `frida` are all absent.
+- `pipeline.capability_index` needed a UTF-8 stdout guard on this console.
+
 ## Current state snapshot (as of 2026-10-08, branch `revision-refactor`)
 - **Canonical branch:** `revision-refactor` — **145 commits ahead of GitHub `main`** (last `main`: Eve Clarity / resource pulse). Do not treat `main` as current until merged.
 - Repository is **already built**; day-to-day work = feed documents into Cognee + Architect smoke / refactor phases — not a UI rebuild.

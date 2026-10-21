@@ -36,6 +36,8 @@ export const TOOLBELT_CATEGORIES = [
   "system_ops",
   "file_ops",
   "rea",
+  "rea_skills",
+  "claim_ledger",
   "heptabase",
 ] as const;
 

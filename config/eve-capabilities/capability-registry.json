@@ -111,6 +111,132 @@
       ]
     },
     {
+      "id": "rea_skills",
+      "label": "REA Skills",
+      "domain": "local_evidence",
+      "entrypoint": "pipeline.rea_skills",
+      "note": "Six approved Bin-1 REA skills, vendored and run locally; paths jailed.",
+      "tools": [
+        {
+          "name": "rea_skills",
+          "description": "Run one of six local REA skills that prove a finding instead of asserting it.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "description": "verify_evidence | audit_reconstruction | parity_check | build_fixtures | forkdive | discover | list"
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "claims": {
+                "type": "string",
+                "description": "claims.json to cross-check."
+              },
+              "config_dir": {
+                "type": "string",
+                "description": "Reconstruction config directory."
+              },
+              "reference": {
+                "type": "string",
+                "description": "Reference command (parity_check)."
+              },
+              "candidate": {
+                "type": "string",
+                "description": "Candidate command (parity_check)."
+              },
+              "scenarios": {
+                "type": "string",
+                "description": "Scenario corpus JSON (parity_check)."
+              },
+              "out": {
+                "type": "string",
+                "description": "Output directory (build_fixtures)."
+              },
+              "repo": {
+                "type": "string",
+                "description": "OWNER/REPO (forkdive)."
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "min_stars": {
+                "type": "integer",
+                "description": "Min stars (discover)."
+              },
+              "work_dir": {
+                "type": "string",
+                "description": "Working dir inside the EMPIRE scratch root."
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "8dd487eac306ac6604b7d8c923068bafffc1394508f26d7b7b3797a62dee6ed9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ledger",
+      "label": "Claim Ledger",
+      "domain": "local_evidence",
+      "entrypoint": "mcp.claim_ledger_mcp",
+      "note": "Claims with checks: a falsification command plus the last result.",
+      "tools": [
+        {
+          "name": "claim_ledger",
+          "description": "Record and re-check claims that carry the command that would prove them wrong.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "description": "add | verify | health | list"
+              },
+              "claim": {
+                "type": "string",
+                "description": "The claim text."
+              },
+              "check_cmd": {
+                "type": "string",
+                "description": "Command that would prove the claim wrong."
+              },
+              "grade": {
+                "type": "string",
+                "description": "promotional | community-reported | first-party-documented | independently-corroborated | reproduced"
+              },
+              "slug": {
+                "type": "string",
+                "description": "One claim to check."
+              },
+              "unchecked": {
+                "type": "boolean",
+                "description": "Only claims with no check."
+              },
+              "failing": {
+                "type": "boolean",
+                "description": "Only claims whose check failed."
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          "signature_hash": "12a4ca3710a750c244b98082a740fec6a8b4e2aadf8ef1ce0337fa5dc09f84bb"
+        }
+      ]
+    },
+    {
       "id": "create_spreadsheet",
       "label": "Spreadsheet",
       "domain": "artifact",

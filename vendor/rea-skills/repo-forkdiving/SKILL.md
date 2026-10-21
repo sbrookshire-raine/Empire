@@ -1,0 +1,340 @@
+---
+name: repo-forkdiving
+description: Find proven use cases, real-world examples, or community ideas for a repository, tool, or technique, or assess a project's fork network and curated case collections. Use when you need prior art, or the highest-signal repos in a domain when you have no target yet. Keywords: forks, curated cases, discovery, topics, methodology probe, use cases, divergence, awesome list. Do not use to analyze a binary or app - use rea-native-function-recovery, rea-android-apk-trace, or rea-static-js-electron-trace.
+icon: IconGitFork
+color: Bronze
+---
+
+# Repository forkdiving
+
+Mine a repository's fork network and derivative ecosystem for **proven use
+cases and community ideas**. A project's own README states intent; its forks,
+derivatives, and third-party case collections show what people actually built
+and whether it worked.
+
+The output is an evidence-graded case list, not a feature summary.
+
+## When to use it
+
+- "What are the real use cases for X?" where X is a repo, tool, or technique.
+- "Has anyone actually done Y with this?" — finding prior art before building.
+- Assessing a project's health and direction through its fork ecosystem.
+- Harvesting ideas from curated lists that track a project.
+- **Finding a target in the first place** — when you have no repo yet and want
+  the highest-signal repos in a domain, use the discovery mode below.
+
+## Discovery mode — finding targets before you have one
+
+Forkdiving normally starts from a known repo. When you do not have one, search
+by **topic and forks**, then filter by a **methodology probe**. The probe is the
+discriminator, and it is what makes this more than a popularity list.
+
+```bash
+# Highest-fork repos in a domain, with a methodology probe
+python3 scripts/discover.py --topics reverse-engineering ghidra decompiler \
+    --min-stars 500 --top 40 --probe --out discovery.json
+
+# Raw query form, for anything the topic shorthand cannot express
+python3 scripts/discover.py --query "topic:ghidra language:python" --probe
+
+# Driven by the use-case layer: run every use case's queries and tag each
+# candidate with the use case that surfaced it
+python3 scripts/discover.py --seeds seeds.json --probe --out discovery.json
+```
+
+The script ranks by **forks** (not stars — forks mean people built on it), then
+probes each candidate for methodology artifacts over `raw.githubusercontent.com`
+(which is not rate-limited the way the search API is, so probing many repos is
+cheap).
+
+### Closing the loop: use case → keywords → discovery → new use case
+
+The use-case layer is the vocabulary; discovery is the search. `search_seeds.py`
+(in the mining database directory) turns each use case into search queries:
+
+```bash
+cd /home/user/.workspace/agent/forkdive
+python3 search_seeds.py --out seeds.json          # every use case -> queries
+python3 search_seeds.py --use-case runtime-hooking  # inspect one
+cd /home/user/skills/repo-forkdiving
+python3 scripts/discover.py --seeds seeds.json --probe --out discovery.json
+```
+
+Vocabulary is derived in three tiers, in order of trust: **observed** (topics of
+repos already linked to the use case), **inferred** (a synonym map, for use cases
+with no backing yet), and **authored** (words from the use case's own title).
+
+Two filters keep the queries discriminating, and both were added after the first
+version returned junk:
+
+- **Inverse document frequency.** A topic carried by most use cases cannot tell
+  them apart. `agent-skills` appeared on five use cases and was dropped.
+- **Platform vs capability.** `topic:dotnet` returns every .NET repo — it is a
+  *language* tag, not a capability. Platform terms are only ever used as a
+  qualifier on a capability term (`topic:dotnet topic:cil`), never alone.
+
+Verified end to end: seeding discovery from `runtime-hooking` and
+`packet-analysis` surfaced `gojue/ecapture` (5 methodology artifacts),
+`zeek/zeek` (3), and `AFLplusplus/AFLplusplus` (3) — none of which any prior
+sweep had found. Each is recorded with the use case that surfaced it, so a find
+traces back to the capability it serves.
+
+| Signal | Means | Value |
+| --- | --- | --- |
+| `SKILL.md`, `skills/`, `.agents/skills/` | Ships an agent skill | **Highest** — technique already packaged |
+| `AGENTS.md`, `CLAUDE.md` | Documents how agents should work in it | High |
+| `docs/`, `docs/methodology.md` | Explains method, not just usage | High |
+| `config/`, ledgers, oracle configs | Machine-checkable acceptance data | High |
+| `CONTRIBUTING.md`, `Makefile` only | Ordinary project hygiene | Low |
+| README only | A tool, not a methodology source | Lowest |
+
+**A repo with a README and nothing else is a tool. A repo with `AGENTS.md` +
+`skills/` + `docs/` is a methodology source** — and methodology is what becomes a
+portable skill. Rank by forks for reach, but drill by methodology for yield.
+
+### Domain keyword seeds
+
+These topics reliably surface methodology-rich repos in the RE/analysis space:
+
+`reverse-engineering`, `ghidra`, `decompiler`, `disassembler`,
+`binary-analysis`, `malware-analysis`, `static-analysis`, `security-tools`,
+`frida`, `radare2`, `forensics`, `symbolic-execution`, `fuzzing`,
+`binary-instrumentation`, `code-analysis`.
+
+Add `language:` and `stars:>` qualifiers to narrow. The discovery run that
+produced this section found, among the top-fork RE repos, a **818-skill
+cybersecurity library** (`mukul975/Anthropic-Cybersecurity-Skills`, 4.2k forks)
+and a scanner that ships its own agent skill (`shadow1ng/fscan`) — neither of
+which any case-mining pass had surfaced, because no curated case cited them.
+
+## When not to use it
+
+- The repository is private or you lack authorization to inspect it.
+- You need the project's own documented capabilities — read its README and docs
+  directly instead.
+- You need to run or test the project — that is a different task.
+
+## Prerequisites
+
+- Network access to GitHub (API, HTML, and git protocol).
+- Optional `GITHUB_TOKEN` environment variable. Unauthenticated access allows
+  **60 core requests/hour and 10 search requests/hour** — enough for one
+  repository, not a sweep of many. Set the token for anything larger.
+- `git` on PATH (used as a rate-limit-free fallback).
+- `scripts/forkdive.py` from this skill (Python 3 standard library only).
+
+## Data sources and rate limits
+
+The script layers four sources so an API rate limit does not stop a sweep. It
+records which source served each result in `sources_used`.
+
+| Source | Rate limit | Forks | Compare | Notes |
+| --- | --- | --- | --- | --- |
+| GitHub REST API | 60/hr (5000 with token) | Yes, with stars | Yes | Richest; try first |
+| **ungh.cc** | **None** | No (404) | No | Cached proxy; counts lag |
+| **GitHub HTML** | **None** | Yes (owners only) | Page loads | Works when API is spent |
+| **`git ls-remote` / clone** | **None** | Yes (refs) | **Yes, full** | Slowest, most complete |
+
+**ungh.cc** (https://ungh.cc, https://github.com/unjs/ungh) is a cached,
+anonymous GitHub API proxy. It has no rate limit — 20 rapid requests all
+returned 200 in testing. Its tradeoff is staleness: it reported 290,855 stars
+for a repo whose live count was 307,107. Use it for metadata when the API is
+spent, and note the lag.
+
+**GitHub HTML** keeps working at API=0. The repo page carries
+`"stargazerCount"` in embedded JSON, and the forks page lists fork owners. It
+does not expose star counts per fork.
+
+**git** is the strongest fallback for divergence. `git ls-remote` enumerates
+refs with no API at all (3,530 refs from one repo in testing). A blobless clone
+plus a fetch of the fork's refs computes ahead/behind, the fork's own commits,
+and a diffstat locally — more than the API's compare endpoint returns. It is
+slower (tens of seconds per fork) and downloads objects, so use it for the few
+forks that matter, not all of them.
+
+## The evidence ladder
+
+Grade every case you collect. This is the core discipline — a case's grade
+determines whether you may call it a proven use case.
+
+| Grade | What it means | Example |
+| --- | --- | --- |
+| **Reproduced** | You ran it and observed the result | You executed the workflow and it worked |
+| **Independently corroborated** | A third party published a reproducible result | A separate repo with tests and artifacts |
+| **First-party documented** | The project or author documents it, with artifacts | Official case study with linked code |
+| **Community-reported** | Someone reports it; no independent check | A blog post, a fork's README |
+| **Promotional** | A claim with no demonstrated result | A video title, a marketing page |
+
+Never promote a case up the ladder without new evidence. A video that *says*
+something works is Promotional until it *shows* the result.
+
+## Procedure
+
+1. **Confirm authorization and scope.** Public repositories only unless the
+   user has authorized otherwise. Do not clone or execute anything at this
+   stage — this is read-only metadata gathering.
+
+2. **Run the forkdive sweep.**
+   ```bash
+   python3 scripts/forkdive.py OWNER/REPO --json > forkdive.json
+   ```
+   This returns the repository metadata, forks sorted by stars / recency,
+   divergence comparisons for the top forks, derivative projects found by
+   search, curated lists that track the project, and which source served each
+   result. It falls back automatically when the API is rate-limited.
+
+   Force a single source when you need to:
+   ```bash
+   python3 scripts/forkdive.py OWNER/REPO --source git    # refs only, no API
+   python3 scripts/forkdive.py OWNER/REPO --source ungh   # cached metadata
+   python3 scripts/forkdive.py OWNER/REPO --source html   # scrape
+   ```
+
+3. **Mine curated case collections before reading forks.** A maintained case
+   list is the highest-yield source: a curator already screened the entries and
+   often attached status labels. Look for a machine-readable data file
+   (`data/cases.json`) rather than rendered Markdown — easier to filter and
+   less prone to transcription error. Read the list's contribution rules and
+   build script; they encode the curation standard, which tells you how much to
+   trust the entries.
+
+   For each case, extract the GitHub repos it cites. Cases that cite a repo are
+   the ones with artifacts you can inspect; cases citing only a social post are
+   reports, not evidence.
+
+4. **Read the fork signal.** Forks that diverge from upstream are where the
+   interesting work lives.
+   - `ahead_by > 0` with a meaningful `files_changed` means the fork added
+     something. Read its commit messages.
+   - `behind_by` large with `ahead_by = 0` means an untouched mirror — ignore it.
+   - A fork with high stars but no divergence is a bookmark, not a project.
+   - Check `pushed_at` — a fork last pushed months ago is dormant.
+
+   **When the API is rate-limited**, the HTML fork list is alphabetical, so
+   `--compare-top` compares arbitrary forks rather than the most diverged. To
+   find the interesting ones, compare specific forks you already suspect:
+   ```bash
+   python3 -c "
+   import sys; sys.path.insert(0,'scripts')
+   import forkdive as F, json
+   print(json.dumps(F.git_compare('OWNER/REPO','FORK/REPO'), indent=1))
+   "
+   ```
+
+5. **Drill into the high-value repos.** A case that cites a repo is a lead, not
+   a conclusion. For each promising repo, enumerate its files and read the
+   artifacts that carry the methodology:
+   - `AGENTS.md` / `CLAUDE.md` — how the project instructs its agents
+   - `.agents/skills/` — portable skills the project wrote for itself
+   - `docs/` — methodology, oracles, handoffs
+   - `config/*.csv` / `*.toml` — claim ledgers and pinned toolchains
+   - `scripts/` — the actual verification tooling
+
+   These are where proven technique lives. A project's README states intent;
+   its ledgers and oracle configs show what it actually enforced.
+
+6. **Grade and rank.** For each candidate case, assign a grade from the ladder
+   above and record the source. Rank by grade first, then by practical
+   usefulness. A Reproduced case with a narrow scope outranks a Promotional
+   case with a broad claim.
+
+7. **Report with provenance.** Every case carries its source URL, the date you
+   observed it, and its grade. State explicitly what you could not verify.
+
+**Done when:** every case has a grade, a source, and an observation date, and
+the report separates what was demonstrated from what was claimed.
+
+## Validation
+
+- Every case cites at least one public HTTPS source.
+- No case is graded above the evidence that supports it.
+- Fork divergence claims cite `ahead_by` / `files_changed` from the API.
+- Curated-list entries retain their original status labels.
+
+## Worked example (reproduced)
+
+Running the sweep against `morluto/rea` on 2026-10-17:
+
+```
+stars=306916 forks=77652 created=2026-04-14 pushed=2026-10-17 license=MIT
+```
+
+Fork signal — most forks are untouched mirrors, but one genuinely diverges:
+
+```
+691  shijianzhong/rea        behind=102 ahead=0   files=0    (mirror)
+ 12  heaven-hm/re-agent      ahead=127 behind=926 files=300  (diverged)
+```
+
+`heaven-hm/re-agent` is the interesting one: 127 of its own commits, 300 files
+changed, with messages like `feat(verification): add experiment and exit
+outcome evidence` and `feat(autonomy): persist authenticated investigation
+checkpoints`. That is a real derivative line of work, not a bookmark.
+
+Derivative projects found by search (verify each before trusting):
+
+```
+2750  onethawt/reverseengineering-reading-list   reading list (unrelated to REA)
+ 685  lkimuk/ReArk            HarmonyOS NEXT reverse engineering (separate project)
+ 142  songshikang0111/awesome-REA-cases   401 curated cases
+  77  yibie/awesome-rea       curated AI-assisted RE list
+  70  mytechnotalent/rea      independent RE framework (name collision, not a fork)
+```
+
+The curated list `awesome-REA-cases` proved the highest-value source: 401 cases
+in a machine-readable `data/cases.json`, each with a status label
+(`case` / `unverified` / `in-progress` / `analysis-test` / `related-project`)
+and a tool label (`REA` / `other-ai` / `unknown`). Its `build.py` validates that
+every entry has a public HTTPS source and no duplicate source sets — a curation
+standard worth respecting. Its own README is explicit that entries are
+"based on author and project reports; not independently reproduced here," which
+is exactly the honesty this skill's evidence ladder is meant to preserve.
+
+**Two bugs found and fixed during this reproduction:**
+
+1. The compare endpoint needs `owner:repo:branch` with **colons**. A slash form
+   (`owner/repo:branch`) returns 404, which silently produced zero comparisons.
+2. The curated-list search matched `react/react` for the name `rea`. The script
+   now requires the project name as a standalone token, not a substring.
+
+Both are the kind of silent failure that makes a forkdive report look empty or
+noisy rather than wrong. Check for them when results seem too clean.
+
+## Common failure modes
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `ERROR: could not read repository metadata` | All sources failed (private repo, or network) | Check the repo name; set `GITHUB_TOKEN` |
+| Empty fork comparisons | Rate limit hit mid-run | The git fallback handles this; check `sources_used` |
+| `HTTP 500` on the forks endpoint | GitHub transient error | The script retries; re-run if it persists |
+| Unrelated repos in results | Name is a common substring | The token filter handles it; verify manually |
+| Fork shows `ahead=0 behind=0` | Fork is identical to upstream | Not a derivative; skip it |
+| Curated list has no data file | Rendered-only list | Parse the Markdown, but expect transcription risk |
+| `sources_used` shows `github-html` | API was exhausted | Expected; results are partial (no per-fork stars) |
+| ungh.cc counts look stale | It is a cache | Cross-check against HTML or the API when it resets |
+
+### Rate limits are the main practical constraint
+
+Unauthenticated GitHub allows **60 core requests/hour** and **10 search
+requests/hour**. A single-repo sweep costs roughly 8-12 core requests, enough
+for one repository. The layered fallback means a sweep still completes when the
+API is spent — verified with the API at 0 remaining — but the HTML path returns
+fewer fields (no per-fork star counts, no sorted-by-stars fork list).
+
+Set `GITHUB_TOKEN` for any multi-repo study. The script warns on stderr when
+fewer than three core requests remain and names the fallbacks.
+
+## Safety and authorization
+
+- Read-only. This skill gathers public metadata and never clones, executes, or
+  modifies anything.
+- Do not collect or reproduce credentials, private data, or non-public code.
+- Respect rate limits; do not hammer the API to work around them.
+- When a case involves reverse engineering, record the author's stated
+  authorization and do not present unauthorized work as a model to follow.
+
+## Verification log
+
+The reproduced results (generalization, fallback sources, case mining,
+discovery, provenance, confidence) are in `references/verification-log.md`.
+Read it before claiming a capability was verified.

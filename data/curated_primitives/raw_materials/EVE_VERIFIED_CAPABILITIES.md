@@ -4,21 +4,21 @@ kind: eve_operating_contract
 dataset: eve_core
 memory_status: foundation
 promote: mechanic_only
-verified_at: 2026-10-10T17:13:44+00:00
+verified_at: 2026-10-21T14:24:11+00:00
 ---
 # EVE verified capabilities (mechanic report)
 
 This document is **written by Mechanic** (`pipeline.capability_verification`). Eve should treat it as authoritative for *what is proven to work* on this machine. Do not tell the Architect a tool is broken without checking this report age and re-running `scripts/verify-capabilities.ps1`.
 
-- Offline checks: **33** (33 pass, 0 fail)
+- Offline checks: **34** (34 pass, 0 fail)
 - Live stack checks run: **False**
-- Eve tool-doc registry: **33+** named tools (see `tool_docs` / `playbook`)
-- MCP servers import-clean: **24**
+- Eve tool-doc registry: **34+** named tools (see `tool_docs` / `playbook`)
+- MCP servers import-clean: **25**
 
 ## How Eve should use this
 
-1. **Recall first:** `cognee_recall("verified capabilities what works", dataset="eve_core")`.
-2. **Route second:** `capability_route` → `playbook` → `tool_docs` for parameters.
+1. **Always-on:** `eve-operating-context.md` in system prompt + `[[EMPIRE_RESOURCE_PULSE]]` every turn.
+2. **Route:** `capability_route` → `playbook` → `tool_docs` for parameters.
 3. **Call tools** — optional limbs auto-admit via `resource_pulse` / `admit_for_goal`; never claim you lack GitHub/internet if the tool is listed below as proven.
 4. **Workbench Tools dock** is read-only status; you manage admits.
 
@@ -27,6 +27,7 @@ This document is **written by Mechanic** (`pipeline.capability_verification`). E
 - `empire-artifact`
 - `empire-atlas`
 - `empire-browser-local`
+- `empire-claim-ledger`
 - `empire-cognee`
 - `empire-container-scout`
 - `empire-daze`
@@ -63,6 +64,7 @@ This document is **written by Mechanic** (`pipeline.capability_verification`). E
 - **mcp:empire-artifact** — `empire-artifact` (mcp)
 - **mcp:empire-atlas** — `empire-atlas` (mcp)
 - **mcp:empire-browser-local** — `empire-browser-local` (mcp)
+- **mcp:empire-claim-ledger** — `empire-claim-ledger` (mcp)
 - **mcp:empire-cognee** — `empire-cognee` (mcp)
 - **mcp:empire-container-scout** — `empire-container-scout` (mcp)
 - **mcp:empire-daze** — `empire-daze` (mcp)

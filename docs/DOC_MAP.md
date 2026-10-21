@@ -35,6 +35,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | Audit record (dated, measured running state) | [audits/2026-09-26.md](audits/2026-09-26.md) |
 | **Vault + dialogue digest** (what the Obsidian entries and Gemini chats add: development, feelings, depth) | [audits/2026-09-28-vault-and-dialogue-digest.md](audits/2026-09-28-vault-and-dialogue-digest.md) |
 | **Operating contract** (single source of truth; measured by `scripts/audit-empire.py`) | [OPERATING_CONTRACT.md](OPERATING_CONTRACT.md) |
+| **REA Bin-1 integration** (six vendored REA skills + the claim ledger: approval split, evidence trail, rollback) | [rea-integration/approval-matrix.md](rea-integration/approval-matrix.md), [rea-integration/probe-log.md](rea-integration/probe-log.md) |
 | **Memory governance** (what Eve may remember, and where — her tier rules, wired into the `memory-and-ideas` limb) | [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md) |
 | **LEGO contract** (what fits: brick footprint, invariants, reject list, acceptance checklist) | [LEGO_CONTRACT.md](LEGO_CONTRACT.md) |
 | **LEGO prompt** (hand this to an outside model: rules, output format, self-check, rejections) | [LEGO_PROMPT.md](LEGO_PROMPT.md) |
@@ -46,7 +47,7 @@ the index. Nothing here replaces content; it says where things live and what is 
 | **Portfolio demonstration hub** (Empire/Eve story for web; sync from ODYSSEY — not EMPIRE runtime) | [PORTFOLIO.md](PORTFOLIO.md), [PORTFOLIO_MAINTENANCE.md](PORTFOLIO_MAINTENANCE.md), [PORTFOLIO_FRAMER.md](PORTFOLIO_FRAMER.md), [data/framer-portfolio/](../data/framer-portfolio/), [scripts/export-framer-portfolio.ps1](../scripts/export-framer-portfolio.ps1) |
 | **Consolidation phase (E: hub → cloud → disc → GitHub)** | [BACKUP_CONSOLIDATION.md](BACKUP_CONSOLIDATION.md), [config/hub-upload.json](../config/hub-upload.json), [scripts/hub-rclone-sync.ps1](../scripts/hub-rclone-sync.ps1) |
 | OneDrive performance tuning (optional) | [ONEDRIVE.md](ONEDRIVE.md) |
-| **Cursor / Cline session reset** (agent Memory Bank — not Eve Cognee; local untracked) | [../memory-bank/activeContext.md](../memory-bank/activeContext.md) (+ five sibling files under `memory-bank/`) |
+| **Cursor / Cline session reset** (agent Memory Bank — not Eve Cognee; tracked in git) | [../memory-bank/activeContext.md](../memory-bank/activeContext.md) (+ five sibling files under `memory-bank/`) |
 
 If a fact appears in more than one of these, **AGENTS.md wins for commands**, this map wins
 for "where is it", and the specialist doc wins for its own subject.

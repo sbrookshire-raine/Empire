@@ -336,6 +336,15 @@ def list_index(*, max_entries: int = 40) -> dict[str, Any]:
 
 def main() -> int:
     import argparse
+    import sys
+
+    # The route payload contains arrows and other non-ASCII. On a Windows
+    # console the default cp1252 codec cannot encode them, so `python -m
+    # pipeline.capability_index` died with UnicodeEncodeError instead of
+    # printing a route. The payload itself is fine — only stdout needs the
+    # wider codec.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("query", nargs="?", default="", help="Route query; omit with --list")

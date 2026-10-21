@@ -62,13 +62,10 @@ def render_operating_context_md() -> str:
         ]
     )
     if verified.get("ok") and verified_line:
+        # The pulse snippet already carries the full "Proven tools:" list — a
+        # second copy here cost ~130 prompt tokens for the same information and
+        # pushed the always-on instruction file past its ceiling.
         lines.append(verified_line)
-        tools = verified.get("tools_proven") or []
-        if isinstance(tools, list) and tools:
-            sample = ", ".join(str(t) for t in tools[:24])
-            if len(tools) > 24:
-                sample += f", … (+{len(tools) - 24} more)"
-            lines.append(f"Proven names (sample): {sample}.")
     else:
         lines.append(
             "_No fresh verification file — run `scripts/verify-capabilities.ps1` before claiming what is proven._"
