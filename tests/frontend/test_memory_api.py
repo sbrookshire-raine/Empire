@@ -34,6 +34,49 @@ import frontend.memory_api as memory_api
 from frontend.serve import EmpireHandler
 
 
+class ChatPrefetchBoundTests(unittest.TestCase):
+    """The chat prefetch is a HINT. It must not stall the turn.
+
+    It used to run 3 expanded queries x 2 datasets = 6 Cognee recalls
+    SEQUENTIALLY, each ~15 s on this machine (measured 2026-10-22: 110 s for
+    one memory ask). The session create stalled for nearly two minutes and
+    the live routing battery timed out on it.
+    """
+
+    def test_prefetch_asks_for_one_bounded_recall(self) -> None:
+        calls: list[tuple] = []
+
+        def fake_recall(query, dataset=memory_api.DEFAULT_CHAT_RECALL_DATASET, **kwargs):
+            calls.append((query, dataset, kwargs))
+            return {"ok": True, "contextBlock": "ctx", "chunkCount": 1, "sources": []}
+
+        payload = {"message": "what do you know about my memory of the project?"}
+        with patch.object(memory_api, "recall_for_chat", side_effect=fake_recall):
+            memory_api.enrich_eve_message_payload(payload)
+        self.assertEqual(len(calls), 1)
+        query, dataset, kwargs = calls[0]
+        self.assertEqual(kwargs.get("datasets"), memory_api.CHAT_PREFETCH_DATASETS)
+        self.assertEqual(kwargs.get("max_queries"), 1)
+        self.assertLessEqual(kwargs.get("timeout"), memory_api.CHAT_PREFETCH_TIMEOUT_SECONDS)
+
+    def test_recall_for_chat_honours_the_dataset_and_query_bounds(self) -> None:
+        calls: list[tuple] = []
+
+        def fake_subprocess(query, dataset=memory_api.DEFAULT_CHAT_RECALL_DATASET, **kwargs):
+            calls.append((query, dataset, kwargs))
+            return {"ok": True, "hits": []}
+
+        with patch.object(memory_api, "recall_in_subprocess", side_effect=fake_subprocess):
+            memory_api.recall_for_chat(
+                "my memory of the project",
+                datasets=("eve_core",),
+                max_queries=1,
+                timeout=20,
+            )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][1], "eve_core")
+
+
 class UploadPart:
     def __init__(self, filename: str, content: bytes) -> None:
         self._filename = filename

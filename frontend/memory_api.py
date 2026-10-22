@@ -651,6 +651,11 @@ def save_uploads(parts: list, dataset: str, full_graph: bool) -> MemoryJob:
 RECALL_TIMEOUT_SECONDS = 120
 # Soft timeout only for optional background enrich (not /api/memory/answer).
 LIGHT_RECALL_TIMEOUT_SECONDS = 5
+# The chat prefetch budget. One Cognee recall costs ~15 s on this machine
+# (worker start + Postgres + embed), so the prefetch gets ONE call with a
+# ceiling. A chat turn must not wait two minutes for a hint.
+CHAT_PREFETCH_TIMEOUT_SECONDS = 20
+CHAT_PREFETCH_DATASETS = ("eve_core",)
 MEMORY_RECALL_MARKER = "[EMPIRE memory recall"
 DEFAULT_CHAT_RECALL_DATASET = "eve_memory"
 CHAT_RECALL_DATASETS = ("eve_core", "eve_memory")
@@ -941,15 +946,25 @@ def recall_for_chat(
     *,
     fast: bool = False,
     timeout: int | None = None,
+    datasets: tuple[str, ...] | None = None,
+    max_queries: int | None = None,
 ) -> dict[str, object]:
-    """Recall workbench snippets for chat prefetch (prefers eve_core, then eve_memory)."""
+    """Recall workbench snippets for chat prefetch (prefers eve_core, then eve_memory).
+
+    `datasets` and `max_queries` bound the work. The full prefetch runs
+    len(queries) x len(datasets) Cognee recalls, and each one costs ~15 s
+    (measured 2026-10-22: 3 expanded queries x 2 datasets = 6 recalls =
+    **110 s** for one memory ask). A chat turn cannot wait two minutes for a
+    hint, so the prefetch path asks for ONE bounded recall and lets Eve's own
+    `cognee_recall` tool do the deep work when the hint misses.
+    """
 
     cleaned = query.strip()
     if not cleaned:
         return {"ok": False, "error": "Query is required."}
     if fast:
         search_queries = (cleaned,)
-        datasets: tuple[str, ...] = ("eve_core",)
+        default_datasets: tuple[str, ...] = ("eve_core",)
         max_chunks = 6
         per_query = 4
         max_hits = 10
@@ -958,7 +973,7 @@ def recall_for_chat(
         )
     else:
         search_queries = memory_recall_queries_for_chat(cleaned)
-        datasets = (
+        default_datasets = (
             CHAT_RECALL_DATASETS
             if dataset in {DEFAULT_CHAT_RECALL_DATASET, "eve_core"}
             else (validate_dataset(dataset),)
@@ -967,12 +982,16 @@ def recall_for_chat(
         per_query = 6
         max_hits = 18
         worker_timeout = timeout
+    if datasets:
+        default_datasets = tuple(datasets)
+    if max_queries is not None:
+        search_queries = tuple(search_queries[: max(1, int(max_queries))])
     try:
         payloads = [
             recall_in_subprocess(
                 search_query, recall_dataset, timeout=worker_timeout
             )
-            for recall_dataset in datasets
+            for recall_dataset in default_datasets
             for search_query in search_queries
         ]
     except Exception as exc:
@@ -991,7 +1010,7 @@ def recall_for_chat(
     return {
         "ok": True,
         "query": cleaned,
-        "dataset": "+".join(datasets),
+        "dataset": "+".join(default_datasets),
         "chunkCount": chunk_count,
         "contextBlock": context_block,
         "searchQueries": list(search_queries),
@@ -1068,7 +1087,21 @@ def enrich_eve_message_payload(payload: dict[str, object]) -> dict[str, object]:
     if "\n\nUser message:\n" in message:
         prefix = message.rsplit("\n\nUser message:\n", 1)[0].strip()
 
-    recall = recall_for_chat(raw, fast=False)
+    # The prefetch is a HINT, not a blocker. It used to run 3 expanded queries
+    # x 2 datasets = 6 Cognee recalls SEQUENTIALLY, each ~15 s (measured
+    # 2026-10-22: **110 s** for one memory ask). The session create stalled
+    # for nearly two minutes and the live routing battery timed out on it.
+    #
+    # One bounded recall on the curated set is enough for a hint; when it
+    # misses, Eve's own `cognee_recall` tool does the deep work (and the
+    # live routing battery measures that path).
+    recall = recall_for_chat(
+        raw,
+        fast=False,
+        timeout=CHAT_PREFETCH_TIMEOUT_SECONDS,
+        datasets=CHAT_PREFETCH_DATASETS,
+        max_queries=1,
+    )
     if not recall.get("ok"):
         return payload
     context_block = str(recall.get("contextBlock") or "").strip()
