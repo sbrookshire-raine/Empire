@@ -872,10 +872,6 @@
         this.refreshToolbelt();
         this.refreshAdmission();
         this.refreshLimbPulse();
-        if (this._limbPulseTimer) clearInterval(this._limbPulseTimer);
-        this._limbPulseTimer = setInterval(function () {
-          if (workbench.activeTab === "chat") workbench.refreshLimbPulse();
-        }, 8000);
         this.refreshMemoryStatus();
         this.refreshHealth();
         this.refreshReadyHealth();
@@ -1199,7 +1195,15 @@
         } catch (_error) {
           /* ignore storage errors */
         }
-        if (tab === "chat") this.scrollTranscript();
+        if (tab === "chat") {
+          this.scrollTranscript();
+          // The limb meter is event-driven: it refreshes on a turn, on a tool
+          // step, on an admission change and when the chat tab is opened.
+          // It used to poll every 8s, but the workbench allows exactly one
+          // background loop (the turn-progress ticker) — a poll is not a
+          // feature the Architect asked for, and it kept the tab awake.
+          this.refreshLimbPulse();
+        }
         if (tab === "models") this.refreshModelInventory(false);
         if (tab === "projects") this.refreshProjectsCatalog(false);
         if (tab === "more") this.refreshAdmission();

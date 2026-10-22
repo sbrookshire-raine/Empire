@@ -1373,6 +1373,14 @@ class EmpireHandler(SimpleHTTPRequestHandler):
         reasoning_filters: dict = {}
         tool_started: float | None = None
         stream_started = time.perf_counter()
+        # A stream that produced *nothing* and one that stalled mid-turn are
+        # different failures, so the first record is tracked separately: it is
+        # what decides which deadline applies and which message is reported.
+        #
+        # The flag is set on the *upstream* record, before projection: a turn
+        # whose first record is a reasoning block is alive even though the
+        # projection hides that record from the browser.
+        saw_event = False
         try:
             if response.stream is None:
                 return
@@ -1380,6 +1388,17 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 upstream_next_index += 1
                 if event is None:
                     continue
+                if not saw_event:
+                    # The turn is alive: relax the socket deadline to the
+                    # steady-state one, because a long tool is now a legitimate
+                    # reason for quiet.
+                    saw_event = True
+                    try:
+                        sock = getattr(response.connection, "sock", None)
+                        if sock is not None:
+                            sock.settimeout(eve_proxy.EVE_STREAM_READ_TIMEOUT_SECONDS)
+                    except OSError:
+                        pass
                 projected = eve_proxy.project_event(event)
                 if projected is None:
                     continue
@@ -1404,9 +1423,17 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                     )
                     tool_started = time.perf_counter()
                 elif event_type == "action.result" and tool_started is not None:
+                    # The tool name lives on `data.result.toolName` (the action
+                    # envelope), not on `data` — reading `data["toolName"]` found
+                    # nothing, so every `tool.result` trace line recorded
+                    # `"tool": null` and the trace could not name the tool that
+                    # ran (measured live 2026-10-21).
                     tool_name = ""
                     if isinstance(data, dict):
-                        tool_name = str(data.get("toolName") or data.get("name") or "")
+                        result = data.get("result")
+                        if isinstance(result, dict):
+                            tool_name = str(result.get("toolName") or "")
+                        tool_name = tool_name or str(data.get("toolName") or data.get("name") or "")
                     trace_event(
                         "tool.result",
                         ms=round((time.perf_counter() - tool_started) * 1000, 1),
@@ -1515,13 +1542,49 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 line = json.dumps(projected, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
                 self.wfile.write(line + b"\n")
                 self.wfile.flush()
+            if not saw_event and client_connected:
+                # A clean EOF with no records at all: the upstream closed the
+                # stream without ever producing one. That is not a disconnect
+                # — it is an empty turn — and it must say so, because the
+                # browser would otherwise wait forever for a reply that never
+                # comes.
+                trace_event(
+                    "stream.empty",
+                    seconds=round(time.perf_counter() - stream_started, 2),
+                    turn=turn_id,
+                    session=session_id,
+                )
+                try:
+                    line = json.dumps(
+                        eve_proxy.stream_error_event(eve_proxy.STREAM_ENDED_EMPTY_MESSAGE),
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                    self.wfile.write(line + b"\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
         except BrokenPipeError:
             client_connected = False
         except (OSError, TimeoutError):
             if client_connected:
+                # Say *which* failure this was. The old code reported the same
+                # "Eve disconnected" for a model that never started, a tool
+                # that never returned, and a clean-but-empty stream — so the
+                # operator had no way to tell a dead model from a slow one.
+                if not saw_event:
+                    message = eve_proxy.STREAM_NO_EVENTS_MESSAGE
+                else:
+                    message = eve_proxy.STREAM_STALLED_MESSAGE
+                trace_event(
+                    "stream.stalled",
+                    saw_event=saw_event,
+                    seconds=round(time.perf_counter() - stream_started, 2),
+                    turn=turn_id,
+                    session=session_id,
+                )
                 try:
                     line = json.dumps(
-                        eve_proxy.PROXY_ERROR_EVENT,
+                        eve_proxy.stream_error_event(message),
                         separators=(",", ":"),
                     ).encode("utf-8")
                     self.wfile.write(line + b"\n")

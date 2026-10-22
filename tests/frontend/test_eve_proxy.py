@@ -370,6 +370,44 @@ class EveProxyProjectionTests(unittest.TestCase):
             "The White Stripes were an American rock duo.",
         )
 
+    def test_strips_an_orphan_closing_tag(self) -> None:
+        """Measured live 2026-10-21: the model emitted its Qwen tool-call template
+        and the framework consumed the opening half, leaving a bare
+        "</translation>" at the head of the final message. It reached the bubble
+        and the speaker. An unpaired closing tag is scaffolding, never prose."""
+        leaked = "Kate Bush released two albums in 1978.\n</translation>"
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "Kate Bush released two albums in 1978.",
+        )
+
+    def test_orphan_closing_tags_do_not_eat_the_answer(self) -> None:
+        for tag in ("</translation>", "</thought>", "</reasoning>"):
+            with self.subTest(tag=tag):
+                text = f"The answer is 42.{tag}"
+                self.assertEqual(eve_proxy.strip_reasoning_blocks(text), "The answer is 42.")
+
+    def test_a_paired_block_still_collapses_as_a_unit(self) -> None:
+        """The orphan rule must not break the paired removal: the tool-call JSON
+        has to go with the tag, or it survives as prose."""
+        leaked = (
+            '<translation>{"name": "wiki_scout_search", "arguments": '
+            '{"query": "The White Stripes"}}</translation>'
+            "The White Stripes were an American rock duo."
+        )
+        self.assertEqual(
+            eve_proxy.sanitize_assistant_text(leaked),
+            "The White Stripes were an American rock duo.",
+        )
+
+    def test_the_stream_filter_drops_an_orphan_closing_tag(self) -> None:
+        """The stateless stripper is not the only path: deltas reach the browser
+        one at a time, so the stateful filter must drop the stray close too."""
+        stream_filter = eve_proxy.ReasoningStreamFilter()
+        emitted = stream_filter.feed("</translation>")
+        emitted += stream_filter.feed("The answer is 42.")
+        self.assertEqual(emitted, "The answer is 42.")
+
     def test_stream_filter_withholds_translation_deltas(self) -> None:
         stream_filter = eve_proxy.ReasoningStreamFilter()
         emitted = [
@@ -708,10 +746,28 @@ class EveRequestTests(unittest.TestCase):
         connection.sock = socket
         with patch.object(eve_proxy, "HTTPConnection", return_value=connection):
             response = eve_request("GET", "/eve/v1/session/ses_1/stream")
-        self.assertEqual(socket.timeouts, [eve_proxy.EVE_STREAM_READ_TIMEOUT_SECONDS])
+        # The stream starts on the *first-event* deadline: nothing has been
+        # produced yet, so a long tool cannot be why it is quiet. The
+        # steady-state deadline is applied once the first record arrives.
+        self.assertEqual(socket.timeouts, [eve_proxy.EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS])
         self.assertIsNotNone(socket.timeouts[0])
+        self.assertLess(
+            eve_proxy.EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS,
+            eve_proxy.EVE_STREAM_READ_TIMEOUT_SECONDS,
+            "the first-event deadline must be tighter than the steady-state one",
+        )
         response.close()
         self.assertTrue(connection.closed)
+
+    def test_stream_deadlines_are_far_below_the_old_silent_stall(self) -> None:
+        """The old read timeout was 600 s of silence before anything was said.
+
+        A stall that long reads as "hung" to the operator; the gate now caps
+        the wait and says what to check.
+        """
+
+        self.assertLessEqual(eve_proxy.EVE_STREAM_READ_TIMEOUT_SECONDS, 300)
+        self.assertLessEqual(eve_proxy.EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS, 120)
 
     def test_connect_and_initial_read_errors_are_sanitized_and_closed(self) -> None:
         cases = (
@@ -866,13 +922,12 @@ class EveRouteTests(unittest.TestCase):
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertNotIn("Content-Length", headers)
         self.assertEqual(lines[0]["data"]["messageDelta"], "<b>Hi</b>")
-        self.assertEqual(
-            lines[1],
-            {
-                "type": "proxy.error",
-                "data": {"message": "Eve disconnected. You can retry this message."},
-            },
-        )
+        # The turn had already produced output, so this is a mid-turn stall —
+        # and it must say so, naming the check to run. The old message
+        # ("Eve disconnected") was the same for every failure mode.
+        self.assertEqual(lines[1]["type"], "proxy.error")
+        self.assertEqual(lines[1]["data"]["message"], eve_proxy.STREAM_STALLED_MESSAGE)
+        self.assertIn("ollama ps", lines[1]["data"]["message"])
         self.assertNotIn(b"reasoning", body.lower())
         self.assertNotIn(b"secret", body)
         self.assertTrue(upstream.closed)
@@ -940,13 +995,94 @@ class EveRouteTests(unittest.TestCase):
         with patch.object(eve_proxy, "HTTPConnection", return_value=fake_connection):
             response = eve_request("GET", "/eve/v1/session/ses_1/stream")
             handler._write_eve_stream(response)
+        # No record arrived at all: the model never started. The message must
+        # say *that*, and point at Ollama — not report a generic disconnect.
         self.assertEqual(
             [json.loads(line) for line in writer.writes],
-            [eve_proxy.PROXY_ERROR_EVENT],
+            [eve_proxy.stream_error_event(eve_proxy.STREAM_NO_EVENTS_MESSAGE)],
         )
+        self.assertIn("never started", writer.writes[0].decode("utf-8"))
+        self.assertIn("11434", writer.writes[0].decode("utf-8"))
         self.assertEqual(writer.flushes, 1)
         self.assertTrue(upstream.closed)
         self.assertTrue(fake_connection.closed)
+
+    def test_reasoning_first_turn_counts_as_started(self) -> None:
+        """A turn whose first record is reasoning is alive.
+
+        The reasoning record is hidden from the browser, so if the "did
+        anything happen?" flag were set after projection, a model that
+        thinks before it speaks would be reported as "never started".
+        """
+
+        upstream = FakeUpstreamResponse(
+            200,
+            [b'{"type":"reasoning.appended","data":{"reasoningDelta":"thinking"}}\n'],
+            headers=[("Content-Type", "application/x-ndjson; charset=utf-8")],
+            error=TimeoutError("stalled after reasoning"),
+        )
+        fake_connection = FakeConnection(upstream)
+
+        class RecordingWriter:
+            def __init__(self) -> None:
+                self.writes: list[bytes] = []
+
+            def write(self, data: bytes) -> int:
+                self.writes.append(data)
+                return len(data)
+
+            def flush(self) -> None:
+                pass
+
+        handler = object.__new__(EmpireHandler)
+        writer = RecordingWriter()
+        handler.wfile = writer
+        with patch.object(eve_proxy, "HTTPConnection", return_value=fake_connection):
+            response = eve_request("GET", "/eve/v1/session/ses_1/stream")
+            handler._write_eve_stream(response)
+        payload = [json.loads(line) for line in writer.writes]
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["type"], "proxy.error")
+        self.assertEqual(
+            payload[0]["data"]["message"],
+            eve_proxy.STREAM_STALLED_MESSAGE,
+            "a reasoning-first turn is a mid-turn stall, not a dead model",
+        )
+
+    def test_empty_stream_reports_an_empty_turn_not_a_disconnect(self) -> None:
+        """A clean EOF with no records at all must not leave the browser waiting."""
+
+        upstream = FakeUpstreamResponse(
+            200,
+            [],
+            headers=[("Content-Type", "application/x-ndjson; charset=utf-8")],
+        )
+        fake_connection = FakeConnection(upstream)
+
+        class RecordingWriter:
+            def __init__(self) -> None:
+                self.writes: list[bytes] = []
+
+            def write(self, data: bytes) -> int:
+                self.writes.append(data)
+                return len(data)
+
+            def flush(self) -> None:
+                pass
+
+        handler = object.__new__(EmpireHandler)
+        writer = RecordingWriter()
+        handler.wfile = writer
+        with patch.object(eve_proxy, "HTTPConnection", return_value=fake_connection):
+            response = eve_request("GET", "/eve/v1/session/ses_1/stream")
+            handler._write_eve_stream(response)
+        payload = [json.loads(line) for line in writer.writes]
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["type"], "proxy.error")
+        self.assertEqual(
+            payload[0]["data"]["message"],
+            eve_proxy.STREAM_ENDED_EMPTY_MESSAGE,
+        )
 
     def test_each_projected_stream_line_is_flushed(self) -> None:
         upstream = FakeUpstreamResponse(

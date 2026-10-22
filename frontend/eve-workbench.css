@@ -26,6 +26,14 @@
   --glow-heading: 0 0 14px color-mix(in oklch, var(--color-neon-blue) 45%, transparent);
   --glow-user-bubble: 0 0 12px color-mix(in oklch, var(--color-neon-purple) 40%, transparent);
   --glow-assistant-bubble: 0 0 10px color-mix(in oklch, var(--color-neon-blue) 35%, transparent);
+  --tone-amber: oklch(78% 0.16 85);
+  --tone-amber-soft: oklch(72% 0.14 85);
+  --tone-amber-warm: oklch(68% 0.18 70);
+  --tone-red: oklch(62% 0.22 25);
+  --tone-red-deep: oklch(58% 0.2 25);
+  --tone-red-ember: oklch(52% 0.22 20);
+  --tone-red-strong: oklch(62% 0.24 25);
+  --tone-crimson: oklch(55% 0.22 25);
   --font-display: "Cascadia Mono", "Segoe UI Mono", ui-monospace, monospace;
   --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-wordmark: "Cascadia Mono", "Segoe UI Mono", ui-monospace, monospace;
@@ -2899,11 +2907,11 @@ textarea[data-state="success"] {
 }
 
 .limb-meter__score-label--amber {
-  color: oklch(78% 0.16 85);
+  color: var(--tone-amber);
 }
 
 .limb-meter__score-label--red {
-  color: oklch(62% 0.22 25);
+  color: var(--tone-red);
 }
 
 .limb-meter__score-track {
@@ -2930,12 +2938,12 @@ textarea[data-state="success"] {
 }
 
 .limb-meter__score-fill--amber {
-  background: linear-gradient(90deg, oklch(72% 0.14 85), oklch(68% 0.18 70));
+  background: linear-gradient(90deg, var(--tone-amber-soft), var(--tone-amber-warm));
 }
 
 .limb-meter__score-fill--red {
-  background: linear-gradient(90deg, oklch(58% 0.2 25), oklch(52% 0.22 20));
-  box-shadow: 0 0 10px color-mix(in oklch, oklch(55% 0.22 25) 50%, transparent);
+  background: linear-gradient(90deg, var(--tone-red-deep), var(--tone-red-ember));
+  box-shadow: 0 0 10px color-mix(in oklch, var(--tone-crimson) 50%, transparent);
 }
 
 .limb-meter__bars {
@@ -3048,9 +3056,9 @@ textarea[data-state="success"] {
 }
 
 .limb-meter__flash-item--off {
-  color: oklch(62% 0.24 25);
-  background: color-mix(in oklch, oklch(55% 0.22 25) 15%, transparent);
-  text-shadow: 0 0 8px color-mix(in oklch, oklch(55% 0.22 25) 45%, transparent);
+  color: var(--tone-red-strong);
+  background: color-mix(in oklch, var(--tone-crimson) 15%, transparent);
+  text-shadow: 0 0 8px color-mix(in oklch, var(--tone-crimson) 45%, transparent);
 }
 
 @keyframes limb-flash-in {

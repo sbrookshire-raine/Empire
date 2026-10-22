@@ -63,6 +63,80 @@ class EveToolbeltTests(unittest.TestCase):
         payload = {"message": "hi"}
         self.assertEqual(eve_toolbelt.apply_active_tools(payload), payload)
 
+    def test_extract_reads_the_flat_shape(self) -> None:
+        self.assertEqual(
+            eve_toolbelt.extract_active_tools({"active_tools": ["wiki_local", "junk"]}),
+            ["wiki_local"],
+        )
+
+    def test_extract_reads_the_nested_shape(self) -> None:
+        """The live harnesses posted `{"toolbelt": {"active_tools": [...]}}`.
+
+        The toolbelt path only read the flat shape, so the nested one was
+        silently discarded and every measurement taken against it was
+        attributed to a toolbelt that was never actually applied.
+        """
+
+        self.assertEqual(
+            eve_toolbelt.extract_active_tools(
+                {"toolbelt": {"active_tools": ["wiki_local", "voice_presence"]}}
+            ),
+            ["wiki_local", "voice_presence"],
+        )
+
+    def test_flat_shape_wins_when_both_are_present(self) -> None:
+        self.assertEqual(
+            eve_toolbelt.extract_active_tools(
+                {
+                    "active_tools": ["tool_forge"],
+                    "toolbelt": {"active_tools": ["wiki_local"]},
+                }
+            ),
+            ["tool_forge"],
+        )
+
+    def test_extract_returns_none_when_no_toolbelt_is_present(self) -> None:
+        """None means "carry no toolbelt" — not "an empty toolbelt".
+
+        The difference matters: an absent toolbelt must leave the persisted
+        selection alone, while an explicit empty list clears it.
+        """
+
+        self.assertIsNone(eve_toolbelt.extract_active_tools({"message": "hi"}))
+        self.assertIsNone(eve_toolbelt.extract_active_tools({"toolbelt": {}}))
+        self.assertIsNone(eve_toolbelt.extract_active_tools({"active_tools": "wiki_local"}))
+        self.assertEqual(eve_toolbelt.extract_active_tools({"active_tools": []}), [])
+
+    def test_apply_persists_the_nested_shape_and_strips_both_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                out = eve_toolbelt.apply_active_tools(
+                    {"message": "hello", "toolbelt": {"active_tools": ["wiki_local"]}}
+                )
+            self.assertEqual(out, {"message": "hello"})
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(saved["active_tools"], ["wiki_local"])
+
+    def test_temporary_active_tools_restores_the_previous_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                eve_toolbelt.write_active_tools(["tool_forge"])
+                with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                    self.assertEqual(eve_toolbelt.load_active_tools(), ["wiki_local"])
+                self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
+
+    def test_temporary_active_tools_restores_after_a_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                eve_toolbelt.write_active_tools(["tool_forge"])
+                with self.assertRaises(RuntimeError):
+                    with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                        raise RuntimeError("harness failed")
+                self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
+
     def test_load_defaults_empty_when_file_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "missing.json"

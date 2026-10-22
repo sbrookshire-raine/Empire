@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Iterator, Literal
 
 Bucket = Literal["always", "session", "products"]
 
@@ -215,16 +216,70 @@ def load_effective_tools() -> list[str]:
         return load_active_tools()
 
 
-def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:
-    """Read active_tools from the chat payload, persist, strip before Eve."""
+def extract_active_tools(payload: Any) -> list[str] | None:
+    """Read the requested toolbelt from a chat payload — flat or nested.
 
-    if "active_tools" not in payload:
+    Two shapes reach the Workbench:
+
+    - flat: ``{"active_tools": ["wiki_local"]}`` — what the browser sends.
+    - nested: ``{"toolbelt": {"active_tools": ["wiki_local"]}}`` — what the live
+      harnesses used to send. The toolbelt path only ever read the flat shape,
+      so the nested one was silently discarded: the harness measured Eve
+      against a toolbelt it never actually asked for.
+
+    The flat shape wins when both are present. ``None`` means "this payload
+    carries no toolbelt" and must never be confused with "an empty toolbelt":
+    the first leaves the persisted selection alone, the second clears it.
+    """
+
+    if not isinstance(payload, dict):
+        return None
+    raw = payload.get("active_tools")
+    if isinstance(raw, list):
+        return normalize_active_tools(raw)
+    nested = payload.get("toolbelt")
+    if isinstance(nested, dict):
+        inner = nested.get("active_tools")
+        if isinstance(inner, list):
+            return normalize_active_tools(inner)
+    return None
+
+
+def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:
+    """Read the requested toolbelt from the chat payload, persist, strip before Eve.
+
+    Both shapes are accepted (see `extract_active_tools`) and both keys are
+    stripped: Eve reads the persisted toolbelt file, so a leftover `toolbelt`
+    object in the forwarded payload is dead weight the upstream must not see.
+    """
+
+    categories = extract_active_tools(payload)
+    if categories is None:
         return payload
-    categories = normalize_active_tools(payload.get("active_tools"))
     write_active_tools(categories)
     cleaned = dict(payload)
     cleaned.pop("active_tools", None)
+    cleaned.pop("toolbelt", None)
     return cleaned
+
+
+@contextmanager
+def temporary_active_tools(categories: list[str]) -> Iterator[list[str]]:
+    """Run with a temporary toolbelt, then restore the operator's selection.
+
+    The live harnesses ask for a specific toolbelt so a measurement is
+    attributable to a known surface. Writing it is a side effect on the
+    operator's file, so the previous selection is restored — including when
+    the harness fails part-way.
+    """
+
+    previous = load_active_tools()
+    applied = normalize_active_tools(categories)
+    write_active_tools(applied)
+    try:
+        yield applied
+    finally:
+        write_active_tools(previous)
 
 
 def toolbelt_meta() -> dict[str, Any]:

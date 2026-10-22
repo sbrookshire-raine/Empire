@@ -14,7 +14,17 @@ from urllib.parse import parse_qs, urlsplit
 EVE_HOST = "127.0.0.1"
 EVE_PORT = 2000
 EVE_TIMEOUT_SECONDS = int(os.environ.get("EMPIRE_EVE_TIMEOUT", "120"))
-EVE_STREAM_READ_TIMEOUT_SECONDS = int(os.environ.get("EMPIRE_EVE_STREAM_TIMEOUT", "600"))
+# Two deadlines, because "nothing has happened yet" and "a long tool is still
+# running" are different failures with different remedies.
+#
+# The first record must arrive quickly: if the model never starts, waiting the
+# old 600 s only delays the report that it never started. Once the turn is
+# running, a tool (a local Wikipedia lookup, a farm run) can legitimately take
+# minutes, so the steady-state deadline is generous.
+EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS = int(
+    os.environ.get("EMPIRE_EVE_STREAM_FIRST_EVENT_TIMEOUT", "90")
+)
+EVE_STREAM_READ_TIMEOUT_SECONDS = int(os.environ.get("EMPIRE_EVE_STREAM_TIMEOUT", "300"))
 MAX_NDJSON_LINE_BYTES = 1024 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
@@ -23,7 +33,34 @@ PROXY_ERROR_EVENT = {
     "type": "proxy.error",
     "data": {"message": "Eve disconnected. You can retry this message."},
 }
+# A stalled stream used to sit silent for the whole read timeout and then
+# report the same "disconnected" line as any other failure, so the operator
+# had no idea whether the model had never started, a tool was still running,
+# or the machine had simply fallen over. Each stall now says which one it was
+# and what to check.
+STREAM_NO_EVENTS_MESSAGE = (
+    "Eve's turn produced no output at all and was cut off after "
+    f"{EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS}s. The model never started. "
+    "Check that Ollama is serving on 127.0.0.1:11434 and the chat model is "
+    "loaded (`ollama ps`), then retry."
+)
+STREAM_STALLED_MESSAGE = (
+    "Eve stopped responding mid-turn and was cut off after "
+    f"{EVE_STREAM_READ_TIMEOUT_SECONDS}s with no new output. Check `ollama ps` "
+    "(is the model still resident?) and the Eve server log for a tool that "
+    "never returned, then retry."
+)
+STREAM_ENDED_EMPTY_MESSAGE = (
+    "Eve's turn ended without producing any output. The model returned an "
+    "empty stream. Retry, and check the Eve server log if it repeats."
+)
 LOGGER = logging.getLogger(__name__)
+
+
+def stream_error_event(message: str) -> dict:
+    """A `proxy.error` event carrying an actionable, specific message."""
+
+    return {"type": "proxy.error", "data": {"message": message}}
 
 
 class EveRequestError(ValueError):
@@ -193,7 +230,11 @@ def eve_request(method: str, path: str, payload: dict | None = None) -> EveRespo
         if requested_stream and 200 <= response.status < 300:
             sock = getattr(connection, "sock", None)
             if sock is not None:
-                sock.settimeout(EVE_STREAM_READ_TIMEOUT_SECONDS)
+                # Start on the *first-event* deadline: the turn has not produced
+                # anything yet, so a long tool cannot be the reason for silence.
+                # `_write_eve_stream` relaxes this to the steady-state deadline
+                # as soon as the first record arrives.
+                sock.settimeout(EVE_STREAM_FIRST_EVENT_TIMEOUT_SECONDS)
             return EveResponse(
                 status=response.status,
                 headers={},
@@ -284,6 +325,12 @@ _THINK_OPEN_RE = re.compile(rf"<{_SCRATCH_TAG}\b[^>]*>", re.IGNORECASE)
 _TAG_OPEN_RE = re.compile(rf"<{_TAG_FAMILY}\b[^>]*>", re.IGNORECASE)
 _THINK_CLOSE_RE = re.compile(rf"</{_TAG_FAMILY}\s*>", re.IGNORECASE)
 _LONE_TRANSLATION_OPEN_RE = re.compile(r"<translation\b[^>]*>", re.IGNORECASE)
+# An orphan *closing* tag is never prose. Measured live 2026-10-21: the model
+# emitted its Qwen tool-call template and the framework consumed the opening
+# half, leaving "</translation>" at the head of the final message — it reached
+# the bubble and the speaker. `_WRAPPER_BLOCK_RE` above only removes *paired*
+# blocks, so an unpaired close needs its own rule.
+_ORPHAN_CLOSE_RE = re.compile(rf"</{_TAG_FAMILY}\s*>", re.IGNORECASE)
 
 
 def _drop_trailing_partial_tag(text: str) -> str:
@@ -313,11 +360,18 @@ def strip_reasoning_blocks(text: str) -> str:
 
     if not text:
         return text
+    # Paired blocks first: `<translation>{"name": ...}</translation>` must
+    # collapse as a unit, or the tool-call JSON would survive as prose.
     cleaned = _WRAPPER_BLOCK_RE.sub("", text)
     dangling = _THINK_OPEN_RE.search(cleaned)
     if dangling:
         cleaned = cleaned[: dangling.start()]
     cleaned = _LONE_TRANSLATION_OPEN_RE.sub("", cleaned)
+    # Then any *unpaired* closing tag. The paired rule above already removed
+    # every close that had an opener, so what is left is an orphan — measured
+    # live 2026-10-21 as a leading "</translation>" on a wiki answer, which
+    # reached the bubble and the speaker. It is scaffolding, never prose.
+    cleaned = _ORPHAN_CLOSE_RE.sub("", cleaned)
     return _drop_trailing_partial_tag(cleaned)
 
 
@@ -380,7 +434,10 @@ class ReasoningStreamFilter:
                 continue
             opening = _TAG_OPEN_RE.search(combined, index)
             if not opening:
-                out.append(combined[index:])
+                # Outside a block, a closing tag with no opener is scaffolding
+                # (measured live 2026-10-21 as a stray "</translation>" on a
+                # wiki answer). It must not reach the bubble or the speaker.
+                out.append(_ORPHAN_CLOSE_RE.sub("", combined[index:]))
                 break
             out.append(combined[index : opening.start()])
             self.in_block = True
