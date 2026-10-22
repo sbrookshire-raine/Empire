@@ -56,6 +56,37 @@ question's own subject words, which knocked out exact titles; a bare
 `except: pass` hid a `NameError` (Path was not imported) and the page
 outline silently never appeared.
 
+### E-07: the harnesses were rewriting the Architect's toolbelt
+`GET /api/toolbelt` reported `"voice_presence": false`. The cause was the
+TEST HARNESS, not debugging: a harness posts its own `active_tools` with
+the session, the toolbelt path *persists* it (the agent only reads the
+file), and nothing restored it — so every wiki smoke silently turned the
+voice limb off. Eleven harnesses post a toolbelt; two restored it. The
+five gate-facing ones now run inside `eve_toolbelt.temporary_active_tools(...)`
+and a test enforces the rule. The selection is back to the documented
+default (Voice + Wiki Local); `/api/voice/health` reports
+`voice_presence_limb: true` (Speaches on :8000). The remaining research and
+bench harnesses are listed in E-07 and still need the same guard.
+
+**The unit tests did it too.** Even with every harness guarded, the gate
+still left `voice_presence` off — because the TEST SUITE wrote the real
+file: `tests/frontend/test_wiki_green_path.py` called
+`apply_active_tools` (which persists what it is given) with no path
+override. The root fix: `_toolbelt_path()` now honours
+`EMPIRE_TOOLBELT_PATH`, and `tests/__init__.py` points it at a temp file
+on import — which covers pytest AND the gate's unittest discovery (both
+import the `tests` package). A test that depended on the operator's
+selection (`wiki_local` being active) now says so explicitly. The
+operator's toolbelt now survives a full test run.
+
+### The chat prefetch was a two-minute stall
+`memory_api.enrich_eve_message_payload` ran 3 expanded queries x 2 datasets
+= 6 Cognee recalls, SEQUENTIALLY, each ~15 s → **110 s** before the turn
+started, and the live routing battery timed out on it. The prefetch is a
+hint, not the work: it now asks for ONE bounded recall on `eve_core` with a
+20 s ceiling, and Eve's own `cognee_recall` tool does the deep work when
+the hint misses. The memory session create went from >120 s to 21 s.
+
 ## 2026-10-22 — Phase 2 pushed to GitHub; the gate was hiding the wiki limb
 
 **Committed and pushed** (6 commits, `5ba01b6..8914418` on `revision-refactor`):

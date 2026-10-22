@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -136,6 +137,30 @@ class EveToolbeltTests(unittest.TestCase):
                     with eve_toolbelt.temporary_active_tools(["wiki_local"]):
                         raise RuntimeError("harness failed")
                 self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
+
+    def test_toolbelt_path_honours_the_env_override(self) -> None:
+        """The toolbelt file is the operator's; the test suite redirects it.
+
+        A test that touched `apply_active_tools` (which persists what it is
+        given) used to write the REAL file in %LOCALAPPDATA%\\EMPIRE - so
+        running the unit tests turned the Architect's voice_presence limb
+        off. The path is now overridable and `tests/__init__.py` points it
+        at a temp file for every test run.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp:
+            override = Path(tmp) / "toolbelt.json"
+            with patch.dict(os.environ, {"EMPIRE_TOOLBELT_PATH": str(override)}):
+                self.assertEqual(eve_toolbelt._toolbelt_path(), override)
+
+    def test_the_test_package_redirects_the_toolbelt(self) -> None:
+        import tests
+
+        self.assertTrue(
+            os.environ.get("EMPIRE_TOOLBELT_PATH"),
+            "the test package must point the toolbelt at a temp file",
+        )
+        self.assertTrue(tests.__doc__)
 
     def test_load_defaults_empty_when_file_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

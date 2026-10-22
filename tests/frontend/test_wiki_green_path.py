@@ -30,6 +30,9 @@ def test_green_path_block_when_lookup_succeeds() -> None:
 
 
 def test_green_path_after_companion_and_pulse_enrich() -> None:
+    import tempfile
+    from pathlib import Path
+
     from frontend import companion_api, eve_toolbelt, resource_pulse_api
     from frontend.companion_api import extract_user_message
 
@@ -38,7 +41,13 @@ def test_green_path_after_companion_and_pulse_enrich() -> None:
         "released by the Beach Boys."
     )
     payload = {"message": q, "active_tools": ["wiki_local"]}
-    payload = eve_toolbelt.apply_active_tools(payload)
+    # `apply_active_tools` PERSISTS what it is given, so it must not write
+    # the operator's toolbelt file from a test.
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.object(
+            eve_toolbelt, "_toolbelt_path", return_value=Path(tmp) / "eve-toolbelt.json"
+        ):
+            payload = eve_toolbelt.apply_active_tools(payload)
     bare = str(payload["message"]).strip()
     payload = companion_api.enrich_eve_message_payload(payload)
     with patch(
@@ -55,9 +64,13 @@ def test_green_path_after_companion_and_pulse_enrich() -> None:
         payload = resource_pulse_api.enrich_eve_message_payload(payload)
     assert extract_user_message(payload["message"]) == q
     assert bare == q
-    with patch(
-        "frontend.wiki_green_path._call_with_timeout",
-        return_value=("[[EMPIRE_WIKI_EXTRACT]]\nPet Sounds\n", {}),
-    ):
-        out = build_green_path_block(bare)
+    # The green path only runs for a wiki ask when wiki_local is active, and
+    # the toolbelt file is a temp file under test - so say so explicitly
+    # instead of depending on what the operator happens to have selected.
+    with patch("frontend.wiki_green_path.load_active_tools", return_value=["wiki_local"]):
+        with patch(
+            "frontend.wiki_green_path._call_with_timeout",
+            return_value=("[[EMPIRE_WIKI_EXTRACT]]\nPet Sounds\n", {}),
+        ):
+            out = build_green_path_block(bare)
     assert "[[EMPIRE_WIKI_GREEN]]" in out

@@ -97,6 +97,13 @@ DEFAULTS_VERSION = 3
 
 
 def _toolbelt_path() -> Path:
+    # An explicit override. The toolbelt file is the OPERATOR's: it lives in
+    # %LOCALAPPDATA%\EMPIRE, and the test suite points it at a temp file so
+    # no test can rewrite the Architect's selection (it did - see
+    # tests/__init__.py).
+    override = os.environ.get("EMPIRE_TOOLBELT_PATH", "").strip()
+    if override:
+        return Path(override)
     local_app = os.environ.get("LOCALAPPDATA", "").strip()
     if local_app:
         folder = Path(local_app) / "EMPIRE"
