@@ -131,6 +131,48 @@ class StreamCorrelationTests(_TraceFileTestCase):
         # The ambient capture (chat continuity) joins on the same turn id.
         self.assertEqual({event["turn_id"] for event in self.ambient()}, {"turn-abc123"})
 
+    def test_the_tool_result_record_names_the_tool(self) -> None:
+        """Measured live 2026-10-21: every `tool.result` trace line recorded
+        `"tool": null`, because the tool name lives on `data.result.toolName`
+        (the action envelope) and not on `data`. The trace could not say
+        which tool ran, which is the whole point of a tool-latency record."""
+        events = [
+            {
+                "type": "actions.requested",
+                "data": {"actions": [{"toolName": "wiki_scout_search"}]},
+            },
+            {
+                "type": "action.result",
+                "data": {
+                    "result": {
+                        "callId": "call_1",
+                        "kind": "tool-result",
+                        "output": {},
+                        "toolName": "wiki_scout_search",
+                    },
+                    "status": "completed",
+                },
+            },
+        ]
+        response = eve_proxy.EveResponse(
+            status=200,
+            headers={"Content-Type": "application/x-ndjson; charset=utf-8"},
+            body=b"",
+            stream=io.BytesIO(_ndjson(events)),
+            connection=_Closable(),
+        )
+        handler = object.__new__(EmpireHandler)
+        handler.wfile = _RecordingWriter()
+        handler._ambient_turn_id = "turn-abc123"
+        handler._ambient_user_text = "what is magnetism"
+
+        with patch("pipeline.wiki_lookup_lock.clear_wiki_lookup_lock"):
+            handler._write_eve_stream(response, session_id="ses_1")
+
+        results = [r for r in self.records() if r["kind"] == "tool.result"]
+        self.assertTrue(results, self.records())
+        self.assertEqual(results[0].get("tool"), "wiki_scout_search")
+
     def test_explicit_turn_id_wins_over_the_ambient_one(self) -> None:
         response = eve_proxy.EveResponse(
             status=200,

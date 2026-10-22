@@ -691,10 +691,16 @@ MEMORY_ANCHOR_RE = re.compile(
 def is_memory_chat_query(text: str) -> bool:
     """True when a chat message should trigger automatic Cognee recall / memory answer.
 
-    Precedence (2026-09-23): an encyclopedia/entity subject belongs to Eve and the wiki
-    tools, even when it is phrased as "what can you tell me about <band>". The shortcut only
-    wins when the message is memory-anchored (about the Architect's own context, memory,
-    interests, projects, uploads) — otherwise the *wiki classifier* decides.
+    The shared classifier (`pipeline.route_classifier`) owns the *decision*.
+    A message is a memory ask when it carries a memory anchor ("what do you
+    know about me", "did we already build this") and is not an encyclopedia
+    ask. This function used to keep its own copy of the wiki check *and*
+    its own narrower memory regex, so the two answers could drift — and
+    they did: "what do you remember about X" and "did we already build X"
+    were memory asks that this function rejected.
+
+    The guard below still applies: a message that names the encyclopedia or
+    a cross-year comparison never takes the memory shortcut.
     """
 
     cleaned = text.strip()
@@ -702,6 +708,14 @@ def is_memory_chat_query(text: str) -> bool:
         return False
     if WIKI_OR_DRIFT_RE.search(cleaned):
         return False
+    try:
+        from pipeline import route_classifier
+
+        if route_classifier.classify(cleaned) == route_classifier.MEMORY:
+            return True
+    except Exception:  # noqa: BLE001 — never block the memory path on an import error
+        pass
+    # Fallback for when the classifier is unavailable: the old local rules.
     if not MEMORY_ANCHOR_RE.search(cleaned):
         try:
             from frontend.wiki_drift_api import is_wiki_lookup_query

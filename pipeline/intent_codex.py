@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pipeline import route_classifier
+
 ROOT = Path(__file__).resolve().parents[1]
 CODEX_PATH = ROOT / "config" / "eve-capabilities" / "intent-codex.json"
 
@@ -38,6 +40,16 @@ def _load() -> list[dict[str, Any]]:
     _CACHE["intents"] = intents
     _CACHE["mtime"] = mtime
     return intents
+
+
+def load_intents() -> list[dict[str, Any]]:
+    """The raw codex intents, for callers that need a policy by intent id.
+
+    The live routing battery reads the tool families straight from the codex
+    file, so the tools it asserts on are the ones the running system actually
+    applies -- not a copy that can drift.
+    """
+    return list(_load())
 
 
 def _words(text: str) -> set[str]:
@@ -81,6 +93,61 @@ def _score_intent(message: str, intent: dict[str, Any]) -> tuple[int, list[str]]
     return score, hits
 
 
+def _promote_intent(
+    intents: list[dict[str, Any]],
+    intent_id: str,
+    message: str,
+) -> dict[str, Any] | None:
+    """The named intent's policy, built from the codex — or None.
+
+    Used when the shared classifier has decided the route but the codex did
+    not score the matching intent highly enough to appear in the top-N.
+    The *policy* still comes from the codex file (one source of truth for
+    which tools and which limb); only the *choice* of intent comes from
+    the classifier.
+    """
+
+    for intent in _load():
+        if str(intent.get("id") or "") != intent_id:
+            continue
+        _score, hits = _score_intent(message, intent)
+        policy = intent.get("policy") or {}
+        return {
+            "id": intent_id,
+            "score": 0,
+            "say": intent.get("say", ""),
+            "matched": hits or [f"route:{intent_id}"],
+            "policy": policy,
+            "playbook": policy.get("playbook"),
+            "local_first": bool(policy.get("local_first", True)),
+            "local_tools": list(policy.get("local_tools") or []),
+            "online_tools": list(policy.get("online_tools") or []),
+            "limbs": list(policy.get("limbs") or []),
+            "sequence": list(policy.get("sequence") or []),
+            "needs": list(policy.get("needs") or []),
+        }
+    return None
+
+
+def _demote_intent(
+    primary: dict[str, Any] | None,
+    intent_id: str,
+    intents: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Drop the named intent from the primary slot, promoting the next one.
+
+    Used when the shared classifier has decided the message is *not* that
+    kind of ask, but the codex's trigger scoring put it there anyway.
+    """
+
+    if primary is None or str(primary.get("id") or "") != intent_id:
+        return primary
+    for candidate in intents:
+        if str(candidate.get("id") or "") != intent_id:
+            return candidate
+    return None
+
+
 def resolve(message: str, *, limit: int = 3, min_score: int = 4) -> dict[str, Any]:
     text = str(message or "").strip()
     if not text:
@@ -119,6 +186,27 @@ def resolve(message: str, *, limit: int = 3, min_score: int = 4) -> dict[str, An
     intents = [row for _, row in ranked[: max(1, min(int(limit), 5))]]
     primary = intents[0] if intents else None
 
+    # Apply the shared route. The classifier owns the *decision*; the codex
+    # owns the *policy* (which tools, which limb, which playbook). Before
+    # this, the codex scored triggers on its own and the wiki rule was
+    # applied *around* it in `context_block`, so `resolve()` and
+    # `context_block()` could pick different routes for one message.
+    route = route_classifier.classify(text)
+    if route == route_classifier.WIKI:
+        primary = _promote_intent(intents, "wiki_fact", text) or primary
+    elif route == route_classifier.MEMORY:
+        primary = _promote_intent(intents, "remember_recall", text) or primary
+    elif route == route_classifier.TASK:
+        primary = _promote_intent(intents, "task_todo", text) or primary
+    else:
+        # The classifier said "not a wiki ask", so the wiki intent must not
+        # win on trigger score alone. "what is my disk space" scores on the
+        # bare verb "what" and reached the wiki limb that way.
+        primary = _demote_intent(primary, "wiki_fact", intents)
+    if primary is not None:
+        primary = dict(primary)
+        primary["route"] = route
+
     steps: list[str] = []
     if primary:
         if primary.get("local_first"):
@@ -144,45 +232,10 @@ def resolve(message: str, *, limit: int = 3, min_score: int = 4) -> dict[str, An
     }
 
 
-def _primary_from_intent_id(message: str, intent_id: str) -> dict[str, Any] | None:
-    for intent in _load():
-        if str(intent.get("id") or "") != intent_id:
-            continue
-        _score, hits = _score_intent(message, intent)
-        policy = intent.get("policy") or {}
-        return {
-            "id": intent_id,
-            "say": intent.get("say", ""),
-            "matched": hits or [f"signal:{intent_id}"],
-            "local_first": bool(policy.get("local_first", True)),
-            "local_tools": list(policy.get("local_tools") or []),
-            "online_tools": list(policy.get("online_tools") or []),
-            "limbs": list(policy.get("limbs") or []),
-            "playbook": policy.get("playbook"),
-            "sequence": list(policy.get("sequence") or []),
-        }
-    return None
-
-
-def _steps_for_primary(primary: dict[str, Any]) -> list[str]:
-    steps: list[str] = []
-    if primary.get("local_first"):
-        steps.append("Local first: " + ", ".join(primary.get("local_tools") or []) or "(see playbook)")
-    if primary.get("online_tools"):
-        steps.append(
-            "If still open and limbs allow: "
-            + ", ".join(primary.get("online_tools") or [])
-            + " — admit Toolbelt / resource_pulse first."
-        )
-    if primary.get("playbook"):
-        steps.append(f"playbook({primary['playbook']!r}) for worked examples.")
-    steps.append("tool_docs(tool) before first call if parameters are uncertain.")
-    return steps
-
-
 def _format_context_block(primary: dict[str, Any], steps: list[str]) -> str:
     compact = {
         "primary_intent": primary.get("id"),
+        "route": primary.get("route"),
         "meaning": primary.get("say"),
         "local_first": primary.get("local_first"),
         "local_tools": primary.get("local_tools"),
@@ -201,19 +254,20 @@ def _format_context_block(primary: dict[str, Any], steps: list[str]) -> str:
     )
 
 
-def context_block(message: str, *, min_score: int = 5) -> str:
-    """Compact injection for serve.py — authoritative route hint next to the user ask."""
+def context_block(message: str, *, min_score: int = 4) -> str:
+    """Compact injection for serve.py — authoritative route hint next to the user ask.
 
-    text = str(message or "").strip()
-    try:
-        from frontend.wiki_drift_api import is_wiki_lookup_query
+    This is the *same* route `resolve()` picks — from the same scoring, the
+    same `min_score`, and the same shared classifier. It used to override
+    the codex result with a wiki rule, so the two functions could disagree
+    about the same message: `resolve()` and `context_block()` were two
+    different routers wearing one name.
 
-        if text and is_wiki_lookup_query(text):
-            wiki = _primary_from_intent_id(text, "wiki_fact")
-            if wiki:
-                return _format_context_block(wiki, _steps_for_primary(wiki))
-    except Exception:  # noqa: BLE001
-        pass
+    The wiki rule now lives in one place (`pipeline.route_classifier`) and
+    is applied to the *codex*, not around it: the `wiki_fact` intent scores
+    on its own triggers, so a wiki ask routes to the wiki limb without any
+    special case here.
+    """
 
     result = resolve(message, limit=2, min_score=min_score)
     primary = result.get("primary")

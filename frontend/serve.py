@@ -955,6 +955,8 @@ class EmpireHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/route/classify":
+            return self._route_classify()
         if path.startswith("/api/eve/"):
             if not self._memory_origin_allowed():
                 return self._send_json(403, {"ok": False, "error": "Origin is not allowed."})
@@ -1534,6 +1536,55 @@ class EmpireHandler(SimpleHTTPRequestHandler):
                 session=session_id,
             )
             response.close()
+
+    def _route_classify(self) -> None:
+        """Classify a message with the shared route classifier.
+
+        The browser needs this because it used to carry its *own* copy of
+        the routing rules (`isMemoryQuery`), which could not see the
+        server's rules and therefore disagreed with them on purpose. The
+        browser now asks the one classifier; on any error it **fails open
+        to Eve**, because a classifier outage must never stop a message
+        from reaching her.
+        """
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send_json(400, {"ok": False, "error": "Invalid Content-Length."})
+        if length <= 0 or length > 64 * 1024:
+            status = 413 if length > 64 * 1024 else 400
+            return self._send_json(status, {"ok": False, "error": "Invalid request size."})
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return self._send_json(400, {"ok": False, "error": "Could not parse JSON body."})
+        if not isinstance(payload, dict):
+            return self._send_json(400, {"ok": False, "error": "Expected a JSON object."})
+        text = payload.get("text") or payload.get("message") or ""
+        if not isinstance(text, str):
+            text = str(text)
+        try:
+            from pipeline import route_classifier
+
+            detail = route_classifier.explain(text)
+            memory_route = route_classifier.MEMORY
+            wiki_route = route_classifier.WIKI
+        except Exception as exc:  # noqa: BLE001
+            return self._send_json(
+                503,
+                {"ok": False, "error": "Classifier unavailable.", "detail": str(exc)[:200]},
+            )
+        return self._send_json(
+            200,
+            {
+                "ok": True,
+                "route": detail.get("route"),
+                "reason": detail.get("reason"),
+                "is_memory": detail.get("route") == memory_route,
+                "is_wiki": detail.get("route") == wiki_route,
+            },
+        )
 
     def _memory_recall(self) -> None:
         try:

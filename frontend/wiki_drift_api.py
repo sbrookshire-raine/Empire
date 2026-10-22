@@ -150,7 +150,14 @@ RESOURCE_PULSE_QUERY_RE = re.compile(
 WIKI_LOOKUP_RE = re.compile(
     r"\b(?:"
     r"who\s+(?:is|are|was|were)\b|"
-    r"what\s+(?:is|are|was|were)\b|"
+    # "what is X" only counts as a legacy fallback when it is not about the
+    # machine: "what is my disk space" matched the bare verb and was sent to
+    # Wikipedia. The shared classifier owns this decision now; this
+    # pattern is only a fallback for messages it does not recognise.
+    r"what\s+(?:is|are|was|were)\b(?![^.?!]{0,40}\b(?:disk|space|ram|vram|gpu|cpu|"
+    r"capabilit(?:y|ies)|tools?|limbs?|toolbelt|stack|service|server|port|container|"
+    r"docker|drive|drives|backup|estate|inventory|status|health|version|config|"
+    r"machine|system|memory|memories|remember|recall|task|tasks|todo)\b)|"
     r"what\b.{0,48}\b(?:albums?|songs?|records?|actors?|cast)\b|"
     r"what\b.{0,48}\b(?:80s|80's|eighties|1980s?)\b|"
     r"(?:who|which)\b.{0,40}\b(?:acted|starred|played|appeared)\b|"
@@ -259,8 +266,24 @@ def is_resource_pulse_query(text: str) -> bool:
 
 
 def is_wiki_lookup_query(text: str) -> bool:
+    """True when this message is an encyclopedia ask.
+
+    The shared classifier (`pipeline.route_classifier`) owns the *decision*.
+    This function adds the stateful part the classifier cannot see by
+    itself — the Title DNS disambiguation prompt, the last resolved page,
+    and the extract-shaped question rule.
+
+    The classifier is consulted **first**, and it can veto: a message it
+    routes to memory or to the machine is not a wiki ask, whatever the
+    legacy regexes below think. "what is my disk space" matched the bare
+    verb "what" and used to be sent to the Wikipedia; "what is in my
+    memory about the project" used to be sent there too. The legacy
+    `WIKI_LOOKUP_RE` is kept as a *fallback* for messages the classifier
+    does not recognise, so nothing that used to work stops working.
+    """
+
     raw = (text or "").strip()
-    if not raw or is_truth_drift_query(raw):
+    if not raw:
         return False
     if is_resource_pulse_query(raw):
         return False
@@ -273,8 +296,26 @@ def is_wiki_lookup_query(text: str) -> bool:
         return False
     if is_wiki_access_query(raw):
         return True
-    if bool(WIKI_LOOKUP_RE.search(raw)):
+
+    # The shared classifier decides. It can say "no" (a memory ask, a
+    # question about the machine) and that answer is final.
+    try:
+        from pipeline import route_classifier
+
+        route = route_classifier.classify(raw)
+    except Exception:  # noqa: BLE001
+        route = ""
+    if route == route_classifier.WIKI:
         return True
+    if route in {route_classifier.MEMORY, route_classifier.TASK}:
+        return False
+    # A cross-year comparison is a wiki ask too, but it is served by the
+    # Weaviate-backed `wiki_scout_compare_years` rather than the plain
+    # Title DNS path — so it must not be answered by the lookup gate.
+    if is_truth_drift_query(raw):
+        return False
+
+    # Stateful rules: the classifier cannot see the conversation.
     try:
         from pipeline.wiki_extract import is_extract_shaped_question
 
@@ -288,7 +329,9 @@ def is_wiki_lookup_query(text: str) -> bool:
     # Conversational follow-up referring back to the last resolved page.
     if is_anaphoric_followup(raw):
         return True
-    return False
+    # Legacy fallback: the messages the classifier does not recognise but
+    # the old regexes did.
+    return bool(WIKI_LOOKUP_RE.search(raw))
 
 
 def remember_dns_ambiguous(query: str, year: str, candidates: list[str]) -> None:
@@ -484,6 +527,16 @@ _ALBUM_DISCOGRAPHY_PATTERNS: tuple[str, ...] = (
     r"\btell\s+me\s+the\s+names\s+of\s+(?:the\s+)?(.+?)(?:'s|\u2019s)?\s+albums?\b",
 )
 
+# A subject named with a role word plus a quoted phrase ("the band 'the white
+# stripes' albums"). The quote *is* the subject; the role word is scaffolding.
+# Checked before the album-discography patterns, whose greedy artist slot used
+# to swallow the quote and answer "The band 'the white stripes discography".
+_ROLE_QUOTED_RE = re.compile(
+    r"\b(?:band|artist|group|singer|duo|trio)\s+(?:called|named)?\s*"
+    r"['\u2018\u2019\"](?P<quote>[^'\u2018\u2019\"]{2,80})['\u2018\u2019\"]",
+    re.IGNORECASE,
+)
+
 _ALBUM_ARTIST_TYPOS: dict[str, str] = {
     "beach boises": "Beach Boys",
     "beach boise": "Beach Boys",
@@ -567,6 +620,15 @@ def extract_search_query(text: str) -> str:
     )
     if access_only:
         return ""
+
+    # A subject named with a quoted phrase ("the band 'the white stripes'
+    # albums") is an explicit title. It wins over the derived "<artist>
+    # discography" title, which used to swallow the quote (2026-10-21).
+    role_quoted = _ROLE_QUOTED_RE.search(raw)
+    if role_quoted:
+        cleaned = _clean_topic(role_quoted.group("quote"))
+        if cleaned and not _is_anaphoric_topic(cleaned):
+            return cleaned
 
     discography_early = discography_title_from_album_question(raw)
     if discography_early:

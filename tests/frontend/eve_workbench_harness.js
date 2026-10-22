@@ -56,6 +56,16 @@ function loadWorkbench(fetchImpl) {
   return { context, workbench };
 }
 
+// Wait until a condition holds, draining the microtask queue between checks.
+// Used where the workbench now awaits a server call before it POSTs.
+async function waitFor(condition, attempts = 50) {
+  for (let i = 0; i < attempts; i += 1) {
+    if (condition()) return true;
+    await Promise.resolve();
+  }
+  return condition();
+}
+
 async function testWaitingBoundaryUsesProxyIndex() {
   let cancelled = false;
   const { workbench } = loadWorkbench();
@@ -200,7 +210,10 @@ async function testNewChatRejectsStaleSessionResponse() {
   });
   workbench.draft = "hello";
   const send = workbench.sendMessage();
-  await Promise.resolve();
+  // The classifier call is asynchronous (the browser asks the server), so
+  // the session POST is now further down the microtask queue than it used
+  // to be. Drain the queue until the POST has actually been made.
+  await waitFor(() => resolvePost !== undefined);
   await workbench.newChat();
   resolvePost();
   await send;
@@ -214,13 +227,25 @@ async function testNewChatRejectsStaleSessionResponse() {
 async function testStopAbortsInitialPost() {
   let capturedSignal;
   let rejectPost;
-  const { workbench } = loadWorkbench((_, options) => new Promise((_, reject) => {
-    capturedSignal = options.signal;
-    rejectPost = reject;
-  }));
+  const { workbench } = loadWorkbench((url, options) => {
+    // The classifier call comes first and is a server round trip; only the
+    // session POST is the one under test here.
+    if (!String(url).includes("/api/eve/session")) {
+      return Promise.resolve({
+        headers: { get: () => null },
+        json: async () => ({ ok: true, is_memory: false }),
+        ok: true,
+      });
+    }
+    return new Promise((_, reject) => {
+      capturedSignal = options.signal;
+      rejectPost = reject;
+    });
+  });
   workbench.draft = "hello";
   const send = workbench.sendMessage();
-  await Promise.resolve();
+  // The session POST is now behind the classifier round trip.
+  await waitFor(() => capturedSignal !== undefined);
   await workbench.stopChat();
 
   assert.ok(capturedSignal);
@@ -510,6 +535,44 @@ async function testTabsAndModelInventoryApply() {
   assert.match(workbench.modelRecommendations.summary, /16 GB VRAM/);
 }
 
+async function testMemoryQueryUsesTheServerClassifier() {
+  // The browser no longer carries its own routing rules — it asks the
+  // server's shared classifier, so it cannot disagree with the server.
+  let requested = null;
+  const { workbench } = loadWorkbench(async (url, options) => {
+    if (String(url).includes("/api/route/classify")) {
+      requested = JSON.parse(options.body);
+      return {
+        ok: true,
+        json: async () => ({ ok: true, route: "memory", is_memory: true, is_wiki: false }),
+      };
+    }
+    return { ok: true, json: async () => ({}) };
+  });
+
+  const answer = await workbench.isMemoryQuery("what do you know about me");
+  assert.equal(answer, true);
+  assert.equal(requested.text, "what do you know about me");
+}
+
+async function testMemoryQueryFailsOpenToEve() {
+  // A classifier outage must never stop a message reaching Eve: the
+  // browser falls back to "not a memory query", which routes to Eve.
+  const cases = [
+    async () => {
+      throw new Error("network down");
+    },
+    async () => ({ ok: false, status: 503, json: async () => ({ ok: false }) }),
+    async () => ({ ok: true, json: async () => ({ ok: false }) }),
+    async () => ({ ok: true, json: async () => { throw new Error("bad json"); } }),
+  ];
+  for (const impl of cases) {
+    const { workbench } = loadWorkbench(impl);
+    const answer = await workbench.isMemoryQuery("what do you know about me");
+    assert.equal(answer, false, "a classifier failure must fail open to Eve");
+  }
+}
+
 async function run() {
   await testWaitingBoundaryUsesProxyIndex();
   await testStreamStopsBeforeTransportEof();
@@ -526,7 +589,9 @@ async function run() {
   await testComposerEnterSendsAndShiftEnterDoesNot();
   await testToolActivityInterleavesInTranscript();
   await testTabsAndModelInventoryApply();
-  process.stdout.write("Eve Workbench runtime harness: 15 passed\n");
+  await testMemoryQueryUsesTheServerClassifier();
+  await testMemoryQueryFailsOpenToEve();
+  process.stdout.write("Eve Workbench runtime harness: 17 passed\n");
 }
 
 run().catch((error) => {

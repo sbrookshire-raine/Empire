@@ -45,6 +45,16 @@ def build_green_path_block(user_question: str) -> str:
     text = (user_question or "").strip()
     if not text or not _green_path_enabled():
         return ""
+    # The shared classifier decides; `is_wiki_lookup_query` adds the stateful
+    # rules (the page we are currently discussing) on top. Both must agree
+    # that this is a wiki ask before any evidence is prefetched.
+    try:
+        from pipeline import route_classifier
+
+        if route_classifier.classify(text) != route_classifier.WIKI:
+            return ""
+    except Exception:  # noqa: BLE001
+        pass
     if not is_wiki_lookup_query(text):
         return ""
     try:

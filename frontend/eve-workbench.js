@@ -1739,28 +1739,37 @@
         );
       },
 
-      isMemoryQuery: function (text) {
+      // The browser used to carry its own copy of the routing rules
+      // (isMemoryQuery), a third implementation next to
+      // wiki_drift_api.is_wiki_lookup_query and memory_api.is_memory_chat_query.
+      // It could not see the server's rules, so it disagreed with them on
+      // purpose. The server owns the decision now; the browser asks it.
+      //
+      // On any error — endpoint missing, network down, classifier broken —
+      // this fails OPEN to Eve: a classifier outage must never stop a
+      // message from reaching her.
+      isMemoryQuery: async function (text) {
         var cleaned = plainText(text || "").trim();
         if (!cleaned) return false;
-        // Truth Drift / wiki / structured extract must go to Eve — never Cognee memory answer.
-        if (
-          /\b(?:truth\s*drift|wikipedia|wiki(?:\s*local)?|encyclopedia|weaviate|compare\s+years?|across\s+years?|2017|2021|2026|extract\b|specifications?|wikitable|infobox)\b/i.test(
-            cleaned
-          )
-        ) {
+        var response;
+        try {
+          response = await fetch("/api/route/classify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: cleaned }),
+          });
+        } catch (_error) {
           return false;
         }
-        // 2026-09-23: a bare "what can you tell me about X" must not hijack an encyclopedia
-        // subject — Eve owns that intent and calls the wiki tools herself. The shortcut wins
-        // only when the message is memory-anchored; the server applies the same precedence in
-        // frontend/memory_api.py::is_memory_chat_query.
-        var memoryAnchored = /\b(?:memory|memories|interests?|interested|recall|recalled|remember|uploaded|my projects?|projects? in (?:your )?memory|memory graph|memory bank|my (?:notes|docs|documents|files|work|workbench|goals|plans)|about me|know about me)\b/i.test(
-          cleaned
-        );
-        if (!memoryAnchored) return false;
-        return /(?:\b(?:memory|memories|interests?|interested|recall|recalled)\b|\bwhat do you know\b|\bwhat can you (?:tell|see)\b|\bwhat am i\b|\bmy projects?\b|\bfrom (?:my )?memory\b|\buploaded\b|\bmemory graph\b|\bprojects? in (?:your )?memory\b)/i.test(
-          cleaned
-        );
+        if (!response || !response.ok) return false;
+        var body;
+        try {
+          body = await response.json();
+        } catch (_error) {
+          return false;
+        }
+        if (!body || body.ok === false) return false;
+        return body.is_memory === true;
       },
 
       answerFromMemory: async function (text, generation) {
@@ -1910,7 +1919,10 @@
         this.schedulePersistChat();
 
         try {
-          if (this.isMemoryQuery(text)) {
+          // `isMemoryQuery` asks the server's shared classifier, so it is
+          // asynchronous. It fails open (returns false) on any error, which
+          // sends the message to Eve.
+          if (await this.isMemoryQuery(text)) {
             await this.answerFromMemory(text, generation);
             return;
           }

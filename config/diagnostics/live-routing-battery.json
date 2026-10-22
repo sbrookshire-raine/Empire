@@ -1,0 +1,60 @@
+{
+  "schema": "LiveRoutingBattery.v1",
+  "description": "Live routing battery (E-03): each case is a real turn on the live stack. The route and the tool families are derived at run time from pipeline.route_classifier + pipeline.intent_codex - the same rules the running system uses - so the battery cannot drift from the routing it polices. 'require_tool': false means the server may satisfy the turn from prefetched evidence instead (the green path answers a wiki ask from a prefetched extract and tells Eve to skip the tool call), so only a FOREIGN tool is a failure there.",
+  "toolbelt": [
+    "voice_presence",
+    "wiki_local"
+  ],
+  "timeout_seconds": 240,
+  "cases": [
+    {
+      "id": "wiki_album",
+      "prompt": "What album did Kate Bush release in 1978?",
+      "route": "wiki",
+      "note": "Grounding case: the answer must come from the archive, not the model's memory. E-12 measured the 7B answering a similar question from 'The Magnets' instead of 'magnetism'. The server's green path may prefetch the extract, in which case no tool call is correct.",
+      "require_tool": false
+    },
+    {
+      "id": "wiki_discography",
+      "prompt": "What is the discography of Kate Bush",
+      "route": "wiki",
+      "note": "Grounding case: the answer must come from the archive, not the model's memory. E-12 measured the 7B answering a similar question from 'The Magnets' instead of 'magnetism'. The server's green path may prefetch the extract, in which case no tool call is correct.",
+      "require_tool": false
+    },
+    {
+      "id": "memory_recall",
+      "prompt": "What do you remember about the EMPIRE project so far?",
+      "route": "memory",
+      "note": "Memory anchor: must reach a memory tool, not the encyclopedia.",
+      "require_tool": true
+    },
+    {
+      "id": "task_list",
+      "prompt": "List my open tasks.",
+      "route": "task",
+      "note": "Task route: must reach a PocketBase task tool.",
+      "require_tool": true
+    },
+    {
+      "id": "task_create",
+      "prompt": "Add a task to buy milk",
+      "route": "task",
+      "note": "Task route with a write intent.",
+      "require_tool": true
+    },
+    {
+      "id": "other_disk",
+      "prompt": "what is my disk space",
+      "route": "other",
+      "note": "The regression that started this: the bare verb 'what' used to make this a wiki ask. It must NOT reach a wiki tool.",
+      "require_tool": true
+    },
+    {
+      "id": "other_capabilities",
+      "prompt": "What capabilities do you have right now?",
+      "route": "other",
+      "note": "A capability question must not be sent to the encyclopedia. The live pulse is injected into every turn, so Eve can answer from it without a tool call.",
+      "require_tool": false
+    }
+  ]
+}
