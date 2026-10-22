@@ -83,6 +83,28 @@ def probe_eve_tool_docs() -> dict[str, Any]:
     return _check("eve_tool_docs", ok, f"count={len(names)}", tool="tool_docs")
 
 
+def probe_always_on_tools() -> dict[str, Any]:
+    """Prove the always-on surface exists — and that it is not empty.
+
+    The capabilities report used to list only the tools a check happened to
+    touch, so `cognee_recall` (always registered, always available) never
+    appeared in the document that tells Eve what she can call. This check
+    makes the always-on set an explicit, counted part of the report.
+    """
+
+    from pipeline import tool_registry
+
+    always_on = tool_registry.always_on_tools()
+    default_gated = tool_registry.default_gated_tools()
+    undocumented = tool_registry.missing(always_on + default_gated)
+    ok = bool(always_on) and not undocumented
+    detail = (
+        f"always_on={len(always_on)} default_gated={len(default_gated)} "
+        f"undocumented={undocumented}"
+    )
+    return _check("always_on_tools", ok, detail, tool="cognee_recall", tier="surface")
+
+
 def probe_eve_build() -> dict[str, Any]:
     if not EVE_BUILD.is_file():
         return _check("eve_build", False, "missing index.mjs — run start-eve or npm run build", tool="eve_runtime")
@@ -172,6 +194,8 @@ def run_offline() -> list[dict[str, Any]]:
             checks.append(probe_capability_governance())
         elif kind == "eve_tool_docs":
             checks.append(probe_eve_tool_docs())
+        elif kind == "always_on_tools":
+            checks.append(probe_always_on_tools())
         elif kind == "eve_build":
             checks.append(probe_eve_build())
         elif spec.get("module"):
@@ -213,6 +237,33 @@ def run_live() -> list[dict[str, Any]]:
     return checks
 
 
+def _always_on_tool_names() -> list[str]:
+    """Always-registered tool names, or [] when the surface cannot be read.
+
+    Never raises: a report that cannot name the always-on tools is still a
+    report, and the `always_on_tools` check is what *fails* when the surface
+    is missing.
+    """
+
+    try:
+        from pipeline import tool_registry
+
+        return tool_registry.always_on_tools()
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _default_gated_tool_names() -> list[str]:
+    """Gated-but-on-by-default tool names (`wiki_local`), or [] on failure."""
+
+    try:
+        from pipeline import tool_registry
+
+        return tool_registry.default_gated_tools()
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
     passed = [c for c in checks if c.get("ok")]
     failed = [c for c in checks if not c.get("ok")]
@@ -220,6 +271,9 @@ def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
     mcps = sorted(
         {str(c.get("name") or "").replace("mcp:", "") for c in passed if str(c.get("tier")) == "mcp"}
     )
+    live_checks = [c for c in checks if str(c.get("tier")) == "live"]
+    always_on = _always_on_tool_names()
+    default_gated = _default_gated_tool_names()
     lines = [
         "---",
         "source: capability_verification",
@@ -238,7 +292,10 @@ def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
         "",
         f"- Offline checks: **{len([c for c in checks if c.get('tier') != 'live'])}** "
         f"({len(passed)} pass, {len(failed)} fail)",
-        f"- Live stack checks run: **{live_ran}**",
+        f"- Live stack checks run: **{live_ran}**"
+        + (f" ({len(live_checks)} checks)" if live_ran else " — _not run; offline report only_"),
+        f"- Always-on tools: **{len(always_on)}** (registered in every session, no admit needed)",
+        f"- On-by-default gated tools: **{len(default_gated)}** (`wiki_local`)",
         f"- Eve tool-doc registry: **{len(tools)}+** named tools (see `tool_docs` / `playbook`)",
         f"- MCP servers import-clean: **{len(mcps)}**",
         "",
@@ -250,9 +307,27 @@ def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
         "never claim you lack GitHub/internet if the tool is listed below as proven.",
         "4. **Workbench Tools dock** is read-only status; you manage admits.",
         "",
-        "## Proven MCP servers (import / wiring)",
+        "## Always-on tools (call these without asking)",
+        "",
+        "These are registered in every session — no Toolbelt click, no admit, no "
+        "`resource_pulse` round trip. If the Architect asks about memory, tasks, or the "
+        "catalog, use them directly.",
         "",
     ]
+    if always_on:
+        lines.extend(f"- `{name}`" for name in always_on)
+    else:
+        lines.append("- _(none detected — the tool surface could not be read)_")
+    if default_gated:
+        lines.extend(["", "### On by default (switch off via the Toolbelt)", ""])
+        lines.extend(f"- `{name}`" for name in default_gated)
+    lines.extend(
+        [
+            "",
+            "## Proven MCP servers (import / wiring)",
+            "",
+        ]
+    )
     for name in mcps:
         lines.append(f"- `{name}`")
     if not mcps:
@@ -262,6 +337,22 @@ def render_markdown(checks: list[dict[str, Any]], *, live_ran: bool) -> str:
         lines.append(f"- **{c.get('name')}** — `{c.get('tool')}` ({c.get('tier')})")
     if len(passed) > 40:
         lines.append(f"- … and {len(passed) - 40} more")
+    if live_ran:
+        lines.extend(["", "## Live stack checks (real tool calls on the wire)", ""])
+        for c in live_checks:
+            mark = "PASS" if c.get("ok") else "FAIL"
+            lines.append(f"- **{mark}** {c.get('name')}: {c.get('detail')}")
+    else:
+        lines.extend(
+            [
+                "",
+                "## Live stack checks",
+                "",
+                "_Not run._ The live tier proves real tool calls on the wire; run "
+                "`.\\scripts\\verify-capabilities.ps1 -Live` for that. Do not claim a tool "
+                "works on the wire from this report alone.",
+            ]
+        )
     if failed:
         lines.extend(["", "## Failed (Architect should not UX-test until fixed)", ""])
         for c in failed:

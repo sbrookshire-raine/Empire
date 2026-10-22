@@ -15,15 +15,39 @@ const REA_EVIDENCE_ROOT =
   process.env.REA_EVIDENCE_ROOT ??
   "C:/Empire_Workbench/04_Thought_Experiments/rea_cache";
 
+const DEFAULT_GHIDRA_INSTALL_DIR = path.join(
+  EMPIRE_ROOT,
+  "tools",
+  "ghidra",
+  "ghidra_12.1.4_PUBLIC",
+);
+
+const DEFAULT_JAVA_HOME =
+  process.platform === "win32"
+    ? "C:/Program Files/Microsoft/jdk-21.0.12.101-hotspot"
+    : "";
+
+function reaChildEnv(): Record<string, string> {
+  const env: Record<string, string> = {
+    REA_EVIDENCE_ROOT,
+  };
+  const ghidra =
+    process.env.GHIDRA_INSTALL_DIR?.trim() || DEFAULT_GHIDRA_INSTALL_DIR;
+  env.GHIDRA_INSTALL_DIR = ghidra.replace(/\//g, path.sep);
+  const javaHome = process.env.JAVA_HOME?.trim() || DEFAULT_JAVA_HOME;
+  if (javaHome) {
+    env.JAVA_HOME = javaHome.replace(/\//g, path.sep);
+  }
+  return env;
+}
+
 const mcp = createEmpireMcpClient({
   label: "rea",
   clientName: "eve-rea",
   command: process.execPath,
   args: [REA_SCRIPT, "mcp"],
   cwd: REA_PACKAGE_ROOT,
-  env: () => ({
-    REA_EVIDENCE_ROOT,
-  }),
+  env: reaChildEnv,
 });
 
 export async function reaDoctorViaMcp(): Promise<unknown> {

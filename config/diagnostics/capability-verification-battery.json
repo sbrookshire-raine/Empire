@@ -2,19 +2,93 @@
   "schema": "CapabilityVerificationBattery.v1",
   "description": "Offline probes for Eve tools (pipeline) and MCP import checks. Live Eve/MCP stdio probes run with --live.",
   "offline_pipeline_probes": [
-    { "id": "playbook_coverage", "kind": "playbook_coverage" },
-    { "id": "capability_governance", "kind": "capability_governance" },
-    { "id": "eve_tool_docs_count", "kind": "eve_tool_docs" },
-    { "id": "eve_build_bundle", "kind": "eve_build" },
-    { "id": "resource_farm_catalog", "module": "pipeline.resource_farm", "call": "catalog_status" },
-    { "id": "resource_pulse", "module": "pipeline.resource_pulse", "call": "pulse" },
-    { "id": "workspace_search", "module": "pipeline.workspace_search", "call": "search", "kwargs": { "query": "EMPIRE", "max_results": 1 } },
-    { "id": "switchboard_plan", "module": "pipeline.switchboard", "call": "plan", "args": [["frontend"]] },
-    { "id": "capability_route", "module": "pipeline.capability_index", "call": "route", "args": ["github scout"] }
+    {
+      "id": "playbook_coverage",
+      "kind": "playbook_coverage"
+    },
+    {
+      "id": "capability_governance",
+      "kind": "capability_governance"
+    },
+    {
+      "id": "eve_tool_docs_count",
+      "kind": "eve_tool_docs"
+    },
+    {
+      "id": "always_on_tool_surface",
+      "kind": "always_on_tools"
+    },
+    {
+      "id": "eve_build_bundle",
+      "kind": "eve_build"
+    },
+    {
+      "id": "resource_farm_catalog",
+      "module": "pipeline.resource_farm",
+      "call": "catalog_status"
+    },
+    {
+      "id": "resource_pulse",
+      "module": "pipeline.resource_pulse",
+      "call": "pulse"
+    },
+    {
+      "id": "workspace_search",
+      "module": "pipeline.workspace_search",
+      "call": "search",
+      "kwargs": {
+        "query": "EMPIRE",
+        "max_results": 1
+      }
+    },
+    {
+      "id": "switchboard_plan",
+      "module": "pipeline.switchboard",
+      "call": "plan",
+      "args": [
+        [
+          "frontend"
+        ]
+      ]
+    },
+    {
+      "id": "capability_route",
+      "module": "pipeline.capability_index",
+      "call": "route",
+      "args": [
+        "github scout"
+      ]
+    }
   ],
   "live_stack_probes": [
-    { "id": "smoke_eve_hands", "script": "scripts/smoke-eve-hands.py", "args": [] },
-    { "id": "eve_tools_playwright", "script": "scripts/test-eve-tools-playwright.py", "args": ["--skip-browser"], "note": "Authoritative live Eve tool-call proof (github_scout + resource_farm_run)" }
+    {
+      "id": "smoke_eve_hands",
+      "script": "scripts/smoke-eve-hands.py",
+      "args": []
+    },
+    {
+      "id": "eve_tools_playwright",
+      "script": "scripts/test-eve-tools-playwright.py",
+      "args": [
+        "--skip-browser"
+      ],
+      "note": "Authoritative live Eve tool-call proof (github_scout + resource_farm_run)"
+    },
+    {
+      "id": "live_routing_battery",
+      "script": "scripts/verify-live-routing.py",
+      "args": [
+        "--json-out",
+        "tmp/live-routing-report.json"
+      ],
+      "note": "E-03 routing battery: each prompt must reach a tool its route implies, and never a foreign route's tool."
+    },
+    {
+      "id": "live_prompt_budget",
+      "script": "scripts/measure-live-prompt.py",
+      "args": [],
+      "note": "Real prompt tokens the live model pays (Ollama prompt_tokens), not the chars/3.8 estimate."
+    }
   ],
   "cognee": {
     "dataset": "eve_core",

@@ -24,8 +24,17 @@ Architect should not run separate shell steps. Eve runs **`intake_to_lego_run`**
 ## After scout/study (verified learning)
 
 - **Ask:** "reverse engineer the clone" → **Do:** `playbook("reverse-engineering")` → REA on `local_path` from intake result → update card connections → publish/mature when Architect confirms.
+- **Ask:** "what came out of the study for owner/repo?" → **Do:** `intake_to_lego_run({ kind: "github", repo: "owner/repo", depth: "study" })` → **Get:** the study card plus the `local_path` REA needs.
+- **Ask:** "is REA ready to run on this machine?" → **Do:** `rea_doctor()` → **Get:** the readiness verdict (Node, engines, config) before any deep call.
+- **Ask:** "map the modules in that clone" → **Do:** `rea_analyze_javascript({ path: "<local_path>" })` → **Get:** the module/import/IPC map REA writes to evidence.
+- **Ask:** "which cards came out of that repo?" → **Do:** `disassembly_card_list({ limit: 20 })` → **Get:** the card ids to re-open or publish.
 
 ## Governance
 
 - Caches and cards are **scratch** until Architect confirms memory.
 - No auto-Cognee from wiki/github/web caches without `promote_memory` / confirm flow.
+- **Ask:** "catalog it, but keep it out of my memory" → **Do:** `intake_to_lego_run({ kind: "web", url })` with no `promote_memory` → **Get:** a scratch card and a cache path; nothing reaches `eve_memory`.
+- **Ask:** "remember the takeaway" → **Do:** `propose_remember({ content, reason })` → **Get:** a staging id in `eve_staging` and a crumb to recall it by.
+- **Ask:** "yes, keep that one" → **Do:** `confirm_remember({ entry_id, dataset: "eve_memory" })` → **Get:** the entry promoted to `eve_memory` — only on an explicit keep.
+- **Ask:** "what is still sitting in the queue?" → **Do:** `resource_farm_run()` → **Get:** `farmed_repos` — scratch work, never memory on its own.
+- **Ask:** "can the board take this card?" → **Do:** `heptabase_health()` → **Get:** board readiness before any orange placement is promised.

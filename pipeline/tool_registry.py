@@ -84,6 +84,52 @@ def tool_names() -> list[str]:
     return [path.stem for path in tool_sources()]
 
 
+def _is_gated(text: str) -> bool:
+    """True when a tool is registered only if its Toolbelt category is active."""
+
+    return "isCapabilityActive" in text or "isCategoryEnabled" in text
+
+
+def always_on_tools() -> list[str]:
+    """Tools that are registered in every session, whatever the Toolbelt says.
+
+    These are the *core brain* tools: Cognee memory, PocketBase tasks, the
+    catalog, the operating context, and the handful of other tools that are
+    unconditionally registered in the agent source.
+
+    This is the single place that decides it. The capabilities report, the
+    prompt-budget measurement and the Toolbelt UI all need "what is always
+    available?" and three separate answers is how `cognee_recall` came to be
+    missing from the report that tells Eve what she can call.
+
+    A tool that is *not* gated is always registered — but `wiki_local` is the
+    one gated tool that is on by default, so it is reported separately by
+    `default_gated_tools()`.
+    """
+
+    names: list[str] = []
+    for path in tool_sources():
+        text = path.read_text(encoding="utf-8")
+        if not _is_gated(text):
+            names.append(path.stem)
+    return sorted(names)
+
+
+def default_gated_tools() -> list[str]:
+    """Gated tools that are on by default (`wiki_local`).
+
+    These cost prompt budget by default but can be switched off, so they are
+    not "always on" — they are "on unless the Architect says otherwise".
+    """
+
+    names: list[str] = []
+    for path in tool_sources():
+        text = path.read_text(encoding="utf-8")
+        if _is_gated(text) and '"wiki_local"' in text:
+            names.append(path.stem)
+    return sorted(names)
+
+
 def docs_dir() -> Path:
     """Directory holding one markdown doc per tool (overridable for tests)."""
 

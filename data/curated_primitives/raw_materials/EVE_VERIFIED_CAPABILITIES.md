@@ -4,15 +4,17 @@ kind: eve_operating_contract
 dataset: eve_core
 memory_status: foundation
 promote: mechanic_only
-verified_at: 2026-10-21T14:24:11+00:00
+verified_at: 2026-10-22T02:33:55+00:00
 ---
 # EVE verified capabilities (mechanic report)
 
 This document is **written by Mechanic** (`pipeline.capability_verification`). Eve should treat it as authoritative for *what is proven to work* on this machine. Do not tell the Architect a tool is broken without checking this report age and re-running `scripts/verify-capabilities.ps1`.
 
-- Offline checks: **34** (34 pass, 0 fail)
-- Live stack checks run: **False**
-- Eve tool-doc registry: **34+** named tools (see `tool_docs` / `playbook`)
+- Offline checks: **35** (35 pass, 0 fail)
+- Live stack checks run: **False** — _not run; offline report only_
+- Always-on tools: **31** (registered in every session, no admit needed)
+- On-by-default gated tools: **8** (`wiki_local`)
+- Eve tool-doc registry: **35+** named tools (see `tool_docs` / `playbook`)
 - MCP servers import-clean: **25**
 
 ## How Eve should use this
@@ -21,6 +23,53 @@ This document is **written by Mechanic** (`pipeline.capability_verification`). E
 2. **Route:** `capability_route` → `playbook` → `tool_docs` for parameters.
 3. **Call tools** — optional limbs auto-admit via `resource_pulse` / `admit_for_goal`; never claim you lack GitHub/internet if the tool is listed below as proven.
 4. **Workbench Tools dock** is read-only status; you manage admits.
+
+## Always-on tools (call these without asking)
+
+These are registered in every session — no Toolbelt click, no admit, no `resource_pulse` round trip. If the Architect asks about memory, tasks, or the catalog, use them directly.
+
+- `admit_for_goal`
+- `capability_route`
+- `capability_status`
+- `check_workbench_health`
+- `cognee_forget`
+- `cognee_improve`
+- `cognee_recall`
+- `cognee_remember`
+- `create_task`
+- `delete_task`
+- `disassembly_card_write`
+- `gpu_lease_status`
+- `intake_to_lego_run`
+- `list_tasks`
+- `pb_health`
+- `playbook`
+- `rea_analyze_javascript`
+- `rea_doctor`
+- `rea_invoke`
+- `rea_list_inbox`
+- `release_capabilities`
+- `remember_wiki_lead`
+- `request_capability`
+- `resolve_intent`
+- `resource_farm_run`
+- `resource_pulse`
+- `search_catalog`
+- `search_tasks`
+- `tool_docs`
+- `update_task`
+- `wiki_remember`
+
+### On by default (switch off via the Toolbelt)
+
+- `promote_wiki_cache`
+- `wiki_extract`
+- `wiki_read_section`
+- `wiki_resolve`
+- `wiki_scout_compare_years`
+- `wiki_scout_search`
+- `wiki_scratch_read`
+- `wiki_scratch_upsert`
 
 ## Proven MCP servers (import / wiring)
 
@@ -55,6 +104,7 @@ This document is **written by Mechanic** (`pipeline.capability_verification`). E
 - **playbook_coverage** — `playbook` (offline)
 - **capability_governance** — `capability_registry` (offline)
 - **eve_tool_docs** — `tool_docs` (offline)
+- **always_on_tools** — `cognee_recall` (surface)
 - **eve_build** — `eve_runtime` (offline)
 - **resource_farm_catalog** — `catalog_status` (offline)
 - **resource_pulse** — `pulse` (offline)
@@ -86,6 +136,10 @@ This document is **written by Mechanic** (`pipeline.capability_verification`). E
 - **mcp:empire-workbench** — `empire-workbench` (mcp)
 - **mcp:graft** — `graft` (mcp)
 - **mcp:rea** — `rea` (mcp)
+
+## Live stack checks
+
+_Not run._ The live tier proves real tool calls on the wire; run `.\scripts\verify-capabilities.ps1 -Live` for that. Do not claim a tool works on the wire from this report alone.
 
 ## Refresh
 

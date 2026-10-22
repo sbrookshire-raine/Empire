@@ -115,5 +115,49 @@ class RepoDocsCoverageTests(unittest.TestCase):
         )
 
 
+class AlwaysOnSurfaceTests(unittest.TestCase):
+    """The always-on set is what the capabilities report tells Eve she has.
+
+    It is defined in one place (`tool_registry`) so the report, the prompt
+    budget and the Toolbelt UI cannot drift apart.
+    """
+
+    def test_always_on_tools_include_the_core_brain(self) -> None:
+        names = tool_registry.always_on_tools()
+        for tool in (
+            "cognee_recall",
+            "cognee_remember",
+            "create_task",
+            "list_tasks",
+            "search_catalog",
+            "tool_docs",
+            "playbook",
+            "resource_pulse",
+        ):
+            self.assertIn(tool, names, f"{tool} must be always registered")
+
+    def test_always_on_tools_exclude_gated_limbs(self) -> None:
+        names = set(tool_registry.always_on_tools())
+        for tool in ("github_scout_search", "wiki_scout_search", "voice_speak"):
+            self.assertNotIn(tool, names, f"{tool} is a gated limb, not always-on")
+
+    def test_always_on_tools_are_documented(self) -> None:
+        self.assertEqual(
+            tool_registry.missing(tool_registry.always_on_tools()),
+            [],
+            "always-on tools must have documentation (the report points at them)",
+        )
+
+    def test_default_gated_tools_are_the_wiki_limb(self) -> None:
+        gated = tool_registry.default_gated_tools()
+        self.assertIn("wiki_resolve", gated)
+        self.assertNotIn("cognee_recall", gated)
+
+    def test_always_on_and_default_gated_do_not_overlap(self) -> None:
+        always = set(tool_registry.always_on_tools())
+        gated = set(tool_registry.default_gated_tools())
+        self.assertEqual(always & gated, set())
+
+
 if __name__ == "__main__":
     unittest.main()

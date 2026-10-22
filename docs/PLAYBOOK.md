@@ -34,6 +34,30 @@ Use when: who/what/when questions, cast lists, briefs.
   then `wiki_read_section("Elephant")` → **Get:** the album+track answer with the page named.
 ```
 
+## Which area answers this ask
+
+The playbook is *how to use* a capability. Something upstream decides *which*
+capability -- and that decision is not the model's, and not a regex in the
+browser.
+
+`pipeline/route_classifier.py` assigns every incoming message one route:
+
+| Route | Means | Area |
+|-------|-------|------|
+| `wiki` | an encyclopedia ask | `wiki-archive` |
+| `memory` | a question about your own stored context | `memory-and-ideas` |
+| `task` | the PocketBase task list | `tasks-and-routing` |
+| `other` | anything else | the area the ask really belongs to |
+
+One function (`classify()`) makes that call, and every caller asks it: the
+intent codex, the wiki green path, the memory API, the wiki lookup, and the
+browser (which asks the server over `POST /api/route/classify` and fails open
+to Eve if the server is unreachable). Nobody keeps a second copy of the rules
+-- see [`ROUTE_CLASSIFIER.md`](ROUTE_CLASSIFIER.md) for the precedence and
+the shared corpus that holds every caller to it.
+
+The route chooses the *area*; the area is what holds the worked examples.
+
 ## The guarantee (and how to check it)
 
 `python -m pipeline.playbook --coverage` — exits 0 only when all of these hold, and

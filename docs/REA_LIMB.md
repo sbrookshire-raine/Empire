@@ -11,6 +11,14 @@ cd C:\EMPIRE
 
 This runs `npm install` in `tools/rea` (pinned `rea-agents@6.3.0`). Node **22.19+**, **24.11+**, or **26+** is required by REA.
 
+For **native binaries** (EXE/DLL), also install Ghidra + JDK (one-time, ~540 MB download):
+
+```powershell
+.\scripts\ensure-ghidra-rea.ps1
+```
+
+Default install dir: `C:\EMPIRE\tools\ghidra\ghidra_12.1.4_PUBLIC`. Eve and `.cursor/mcp.json` pass `GHIDRA_INSTALL_DIR` and `JAVA_HOME` into the REA MCP child process.
+
 Optional bundled agent skill (Cursor / other CLIs):
 
 ```powershell

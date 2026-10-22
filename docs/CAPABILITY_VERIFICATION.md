@@ -9,16 +9,43 @@
 | **Governance** | Governed arms match schema snapshots | `capability_verification` → `capability_governance` |
 | **Playbook** | Every registered Eve tool has worked examples | `pipeline.playbook --coverage` |
 | **Tool surface** | ~99 `tool_docs` + Eve bundle ships core tools | `eve_tool_docs`, `eve_build` |
+| **Always-on surface** | The tools Eve has in *every* session (no admit needed) are named, documented and non-empty | `always_on_tools` |
 | **Pipeline offline** | Key modules return `ok` (farm, pulse, search, switchboard plan) | battery `offline_pipeline_probes` |
 | **MCP** | Every Python MCP script in `.cursor/mcp.json` **imports cleanly** | per-server `mcp:*` checks |
 | **Live Eve** (optional) | Real tool-calls on the wire | `-Live` → `smoke-eve-hands`, `test-eve-tools-playwright` |
+| **Live routing** | Each ask reaches a tool *its route* implies, never a foreign route's tool | `-Live` → `verify-live-routing` (E-03) |
+| **Live prompt budget** | The prompt the model *actually* pays, in real tokens | `-Live` → `measure-live-prompt` |
 
 Architect UX (clicking `eve.html`) is **feel and product**, not “is the tool there?”
+
+## The two tiers, and why they are separate
+
+The **offline** tier proves the surface exists and is wired. The **live** tier proves
+Eve actually calls tools on the wire. They are reported separately, and the report
+says which one ran:
+
+- An offline report says `Live stack checks run: **False**` and tells Eve not to
+  claim a tool works on the wire from it.
+- A live report lists each live check with its pass/fail.
+
+`mechanic-green.ps1 -Live` **enforces** this: if the live tier was requested and the
+report says it did not run, the gate **fails**. A gate that silently skips the live
+tier is how "green" came to mean "nothing was proven".
+
+## The always-on tools
+
+The report names the tools that are registered in every session — `cognee_recall`,
+`cognee_remember`, the PocketBase task tools, `search_catalog`, `tool_docs`,
+`playbook`, `resource_pulse` and the rest — plus the `wiki_local` tools that are
+on by default but can be switched off. This set is defined in exactly one place,
+`pipeline/tool_registry.py::always_on_tools()`, so the report, the prompt-budget
+measurement and the Toolbelt UI cannot drift apart.
 
 ## Run order
 
 ```powershell
 .\scripts\mechanic-green.ps1          # units + governance + stack (when Docker ok)
+.\scripts\mechanic-green.ps1 -Live    # + the live tier, ENFORCED (stack must be up)
 .\scripts\verify-capabilities.ps1      # all tools + MCP pavement (offline)
 .\scripts\verify-capabilities.ps1 -Live   # + Eve must call github_scout / resource_farm
 .\scripts\verify-capabilities.ps1 -Live -SyncCognee   # + remember report in eve_core
@@ -49,3 +76,65 @@ Edit `config/diagnostics/capability-verification-battery.json`:
 Re-run verify; commit updated `EVE_VERIFIED_CAPABILITIES.md` when the report changes materially.
 
 Related: [EMPIRE_CLARITY.md](EMPIRE_CLARITY.md) (build innovation gate — local first, local soon), [PLAYBOOK.md](PLAYBOOK.md), [MEMORY_GOVERNANCE.md](MEMORY_GOVERNANCE.md), [RESOURCE_FARM_AND_CATALOG.md](RESOURCE_FARM_AND_CATALOG.md).
+
+## The live tier proves routing, not just tool presence
+
+Two live probes were added on 2026-10-21, when the stack was finally up
+enough to exercise the live tier for real.
+
+**`verify-live-routing`** (E-03) runs each prompt from
+`config/diagnostics/live-routing-battery.json` as a real turn and reads the
+framework's *structured* events -- `actions.requested` (`data.actions[].toolName`)
+and `action.result` (`data.result.toolName`). The previous harnesses grepped
+the raw stream for a tool name, which passes when the model merely mentions
+one. The expected tool comes from the same classifier and codex the running
+system uses, so the battery cannot assert what the system does not claim.
+
+**`measure-live-prompt`** reports the prompt the model is *actually* charged
+(`Ollama prompt_tokens`) next to the static chars/3.8 estimate. Measured
+2026-10-21 on `empire-fast:14b` with 24 always-on tools: **6,669 real tokens
+vs 6,388 estimated (+281, +4.4%)**, with 17,907 tokens of headroom in the
+24,576 window. The estimate is a consistent proxy and slightly *optimistic*;
+the live number is the truth.
+
+### Three defects the live tier found
+
+Running against the live stack (not a mock) surfaced three real bugs that the
+offline tier could not see:
+
+| Defect | Fix |
+|--------|-----|
+| A stray `</translation>` (a closing tag with no opener) survived sanitization and reached the bubble **and** the speaker | `frontend/eve_proxy.py` now drops unpaired closing tags -- in the stateless stripper and the streaming filter |
+| Every `tool.result` trace line recorded `"tool": null` -- the name lives on `data.result.toolName`, not `data` | `frontend/serve.py` reads the action envelope |
+| The model sometimes emitted its tool call as *content* instead of a native call | Now visible: the battery reads structured events, so a mention is not counted as a call |
+
+The first two are fixed with regression tests
+(`tests/frontend/test_eve_proxy.py`, `tests/frontend/test_trace_correlation.py`).
+The third is a model behaviour, not a code bug -- but the battery now
+*measures* it instead of hiding it behind a string match.
+
+## Model promotion gates
+
+A model is not promoted because it "feels good in chat". Each gate below has
+a command, and a candidate that fails any one of them is not promoted
+(REFACTOR_PLAN section 4; E-12/E-16 measured the 7B against them).
+
+| Gate | Command | Must show |
+|------|---------|-----------|
+| Tool calling through the compat proxy | `scripts/ab-fast-toolcalling.py --models <tag>` | native `tool_calls` using the real tool names |
+| Context window | same script | the ~10k-token prompt ingested uncut |
+| Correct tool per route | `scripts/verify-live-routing.py` | every case reaches a tool *its route* implies, and no foreign route's tool |
+| The prompt actually fits | `scripts/measure-live-prompt.py` | the measured `prompt_tokens` under the window, with headroom left |
+| End-to-end behaviour | `scripts/test-eve-browser-playwright.py` | one bubble per question, no scratch in bubble *or* speech |
+| Grounding | browser A/B | the answer comes from the resolved page, not an adjacent entity |
+
+The last two gates need the *candidate* model resident, so the order is:
+probe the candidate directly (`ab-fast-toolcalling.py`, no restart), then
+switch the active model and run the live gates against it, then restore the
+operator's model. `empire-fast:7b` currently fails the **grounding** gate
+(E-12: it answered "How do magnets work?" from *The Magnets*), which is why
+Fast stays locked to `empire-fast:14b`.
+
+The routing and budget gates are new (2026-10-21). They are what turn
+"the model called a tool" into "the model called the *right* tool, and the
+prompt it paid for still fits".
