@@ -17,6 +17,7 @@ from frontend.wiki_drift_api import (
     _lookup_from_title_dns,
     discography_title_from_album_question,
     extract_search_query,
+    is_anaphoric_followup,
     is_wiki_lookup_query,
 )
 
@@ -72,6 +73,16 @@ def build_green_path_block(user_question: str) -> str:
 
     year = default_snapshot_year()
     timeout = float(os.environ.get("EMPIRE_WIKI_GREEN_TIMEOUT", str(_DEFAULT_TIMEOUT)))
+    # Hop leads: the landing page is often NOT the page that holds the asked
+    # fact ("what 80s song became a hit again in the series Stranger Things?"
+    # -> the series page does not name the song, "Music of Stranger Things"
+    # does). Without the hop lead, Eve reads the landing page and answers
+    # "the archive does not cover it" - she never learns the page exists.
+    #
+    # Anaphoric follow-ups ("what else is on that page") target the SAME
+    # page, so hop leads there are noise and make Eve answer from the wrong
+    # page. Those keep the hop leads out.
+    include_hops = not is_anaphoric_followup(text)
     try:
         block, _evidence = _call_with_timeout(
             _lookup_from_title_dns,
@@ -79,7 +90,7 @@ def build_green_path_block(user_question: str) -> str:
             title,
             year=year,
             user_question=text,
-            include_hops=False,
+            include_hops=include_hops,
         )
     except Exception:  # noqa: BLE001
         return ""

@@ -30,9 +30,71 @@ from pipeline.wiki_scout import (
 
 mcp = FastMCP("empire-wiki-scout")
 
+# E-10: the landing page is rarely the page that holds the asked-for fact. When
+# the link web names a page one hop away, the tool says so - in the RESULT, so
+# it costs no prompt budget.
+HOP_CANDIDATE_HINT = (
+    "The landing page may not hold the answer. hop_candidates names the page(s) "
+    "one link away - read the one that fits the question with wiki_read_section "
+    "before you answer."
+)
+
 
 def _json(data: Any) -> str:
     return json.dumps(data, indent=2, default=str)
+
+
+def _hop_candidates(
+    titles: list[str],
+    query: str,
+    year: str,
+    limit: int = 3,
+) -> list[str]:
+    """Pages ONE HOP away from the landing page, ranked against the question.
+
+    Why this exists
+    ---------------
+    "What 80s song became a hit again in the series Stranger Things?" needs a
+    hop: the series page does not name the song, the *Music of Stranger
+    Things* page does. The tools can do the hop, but the model had no way to
+    know WHICH page to hop to, so it answered the landing lead.
+
+    Two hop sources, because neither alone is enough:
+
+    1. The **link web** (semantic): the landing page's own outgoing links.
+       The web used to be empty (0 rows) because the bulk build is a
+       14.5-hour job, so a page's links are now scanned on demand
+       (`pipeline.wiki_title_dns.ensure_links`) - one file read per page.
+    2. The **title index** (lexical): titles that CONTAIN the subject
+       ("Music of Stranger Things", "Stranger Things (soundtrack)"). The
+       link web is one-directional, and the series page does not link to
+       the music page - the music page links to the series.
+
+    This travels with the RESULT, not with the system prompt: a new tool
+    would cost prompt budget, and the prompt is already at 6,688 of 6,800.
+    """
+
+    from pipeline import wiki_title_dns as dns
+
+    out: list[str] = []
+    for title in titles[:2]:
+        if not title:
+            continue
+        try:
+            hops = dns.hop_titles(
+                title,
+                year or "2026",
+                question=query,
+                limit=limit,
+            )
+        except Exception:  # noqa: BLE001 - a hop must never break a lookup
+            continue
+        for hop in hops:
+            if hop and hop not in out:
+                out.append(hop)
+        if len(out) >= limit:
+            break
+    return out[:limit]
 
 
 # Section-read repeat guard state (mirrors wiki_scout's search strikes; see wiki_read_section).
@@ -89,6 +151,16 @@ async def wiki_scout_search(
     )
     if isinstance(result, dict) and result.get("ok"):
         rule = str(result.get("chat_reply_rule") or "").strip()
+        card_titles = [
+            str(card.get("title"))
+            for card in (result.get("cards") or [])
+            if isinstance(card, dict) and card.get("title")
+        ]
+        hops = _hop_candidates(card_titles, query, year_value)
+        if hops:
+            rule = (
+                f"{rule} {HOP_CANDIDATE_HINT}".strip()
+            )
         slim = {
             "ok": True,
             "query": result.get("query"),
@@ -102,6 +174,11 @@ async def wiki_scout_search(
             # the readings and choose (or ask) instead of grounding on whichever page matched first.
             "ambiguous": bool(result.get("ambiguous")),
             "candidate_titles": list(result.get("candidate_titles") or []),
+            # E-10: the page one link away that holds the asked-for fact. The landing
+            # lead often does NOT contain the answer ("Stranger Things" does not name
+            # the song; "Music of Stranger Things" does), and the model had no way to
+            # know where to hop. It travels with the result, not the prompt.
+            "hop_candidates": hops,
         }
         return _json(slim)
     # Miss. The Error Book is the only place a dead end is remembered, and nothing in the autonomous

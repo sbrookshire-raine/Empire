@@ -195,8 +195,124 @@ def list_section_titles(body: str, *, limit: int = 12) -> list[str]:
     return titles
 
 
+def page_outline(body: str, *, limit: int = 12, preview_chars: int = 150) -> list[str]:
+    """One line per section: its heading and the first words of its text.
+
+    Why this exists
+    ---------------
+    A page can hold several answers to one question, and the evidence block
+    has to let the reader tell them apart. "Music of Stranger Things" has
+    three song sections: "Should I Stay or Should I Go" (the FIRST season)
+    and "Running Up That Hill" (the fourth season, back in the charts in
+    2022). Dumped as prose, the model read "first season" as "later seasons"
+    and answered with the wrong song. An outline puts each answer next to
+    its own context.
+    """
+
+    _, text = _parse_frontmatter(body or "")
+    cleaned = _strip_infobox_noise(text.strip())
+    if not cleaned:
+        return []
+    lines: list[str] = []
+    current = ""
+    for raw in cleaned.splitlines():
+        heading = re.match(r"^#{2,4}\s+(.+?)\s*$", raw)
+        if heading:
+            current = heading.group(1).strip()
+            continue
+        if not current or not raw.strip():
+            continue
+        stripped = raw.strip()
+        # Raw wikitable markup is noise in an outline (and the lead has the
+        # same guard: a table-heavy preview made Eve answer from a table).
+        if stripped.startswith("{|") or stripped.startswith("|}"):
+            continue
+        preview = re.sub(r"\s+", " ", stripped)[:preview_chars]
+        if not preview:
+            continue
+        lines.append(f"{current}: {preview}")
+        current = ""
+        if len(lines) >= max(1, limit):
+            break
+    return lines
+
+
 def wants_cast_section(user_question: str) -> bool:
     return bool(_CAST_QUESTION_RE.search(user_question or ""))
+
+
+# A page section that holds songs for a song question. "Period music" on the
+# "Music of Stranger Things" page is the section that holds "Running Up That
+# Hill" - the page LEAD is about the score and never names the song.
+_MUSIC_SECTION_WORDS = (
+    "period music",
+    "track listing",
+    "songs",
+    "discography",
+    "soundtrack",
+    "singles",
+    "albums",
+    "music",
+)
+_QUOTED_TITLE_RE = re.compile(r"^[\"“”'‘].+[\"“”'’]$")
+
+
+def pick_section_for_question(section_titles: list[str], user_question: str) -> str:
+    """Choose the section of a page that fits the question.
+
+    Why this exists
+    ---------------
+    A hop page often holds the answer in a SECTION, not in its lead. "Music
+    of Stranger Things" has a `"Running Up That Hill"` section; its lead is
+    about the score and never names the song. Reading the lead is how Eve
+    answered "the local archive does not cover it" while the page was right
+    there.
+
+    The rules are deliberately blunt - a page's own headings are the only
+    vocabulary available:
+
+    - a cast question wants a cast section
+    - a song/album question wants a music section, and failing that a
+      quoted title (a song title on its own section)
+    - a discography question wants the discography
+    """
+
+    titles = [str(title or "").strip() for title in (section_titles or [])]
+    titles = [title for title in titles if title]
+    if not titles:
+        return ""
+    question = (user_question or "").casefold()
+
+    if wants_cast_section(user_question):
+        for title in titles:
+            if title.casefold() in _CAST_SECTION_NAMES:
+                return title
+
+    if any(token in question for token in ("discography", "album", "albums")):
+        for title in titles:
+            if "discograph" in title.casefold():
+                return title
+
+    song_question = bool(
+        re.search(
+            r"\b(?:songs?|albums?|singles?|tracks?|soundtrack|discography|"
+            r"80s|80's|eighties|1980s?|hit\s+again|re-?popular|featured|music)\b",
+            question,
+        )
+    )
+    if song_question:
+        # The words are ordered by specificity, and the WORDS drive the search
+        # (not the titles): on the "Music of Stranger Things" page the first
+        # title containing "music" is "Original music score production" (the
+        # score), while the section that holds the song is "Period music".
+        for word in _MUSIC_SECTION_WORDS:
+            for title in titles:
+                if word in title.casefold():
+                    return title
+        for title in titles:
+            if _QUOTED_TITLE_RE.match(title):
+                return title
+    return ""
 
 
 def allowed_names_from_lead(lead: str, *, title: str = "") -> list[str]:
@@ -392,9 +508,16 @@ def wiki_read(
     section: str = "",
     corpus_rel_path: str | None = None,
     max_chars: int = DEFAULT_LEAD_MAX_CHARS,
+    section_max_chars: int = 0,
     user_question: str = "",
 ) -> dict[str, Any]:
-    """Read lead and/or a named H2 section from local markdown (Title DNS path)."""
+    """Read lead and/or a named H2 section from local markdown (Title DNS path).
+
+    `section_max_chars` raises the section cap for callers that need the
+    WHOLE section: the default (1,400) cut the "Period music" section of
+    "Music of Stranger Things" before the "Running Up That Hill" subsection,
+    which is the text that holds the answer.
+    """
     question = user_question or ""
     section_key = (section or "").strip() or prefer_section_for_question(question)
     base = wiki_read_lead(
@@ -419,10 +542,11 @@ def wiki_read(
     except OSError as exc:
         base["section_error"] = str(exc)
         return base
+    section_cap = int(section_max_chars) if section_max_chars else DEFAULT_SECTION_MAX_CHARS
     body = extract_named_section(
         raw,
         names,
-        max_chars=min(DEFAULT_SECTION_MAX_CHARS, max(600, max_chars)),
+        max_chars=min(section_cap, max(600, max_chars)),
     )
     if body:
         label = section_key.strip().title() or "Section"

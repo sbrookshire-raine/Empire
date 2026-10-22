@@ -974,6 +974,38 @@ def _outgoing_from_frontmatter(block: str) -> list[str]:
     return _as_list(meta.get("outgoing_links"))
 
 
+def page_section_titles(rel_path: str, year: str = "2026") -> list[str]:
+    """The section headings of a corpus page, from its frontmatter.
+
+    The corpus carries `section_headings` in the frontmatter, so the list is
+    one small read - no need to scan the body. It is what tells a reader
+    WHICH section holds the fact: "Music of Stranger Things" has
+    `"Running Up That Hill"` as a section, and its lead (the score) does not
+    name the song.
+    """
+
+    rel = (rel_path or "").strip().replace("\\", "/")
+    if not rel:
+        return []
+    y = validate_year(year)
+    path = (wiki_md_root() / y) / rel.replace("/", os.sep)
+    block = _read_frontmatter_head(path)
+    if not block:
+        return []
+    try:
+        from pipeline.wiki_normalizer import _as_list, _parse_frontmatter_manual
+
+        meta = _parse_frontmatter_manual(block)
+    except Exception:  # noqa: BLE001 - a heading list is never worth a failure
+        return []
+    titles: list[str] = []
+    for raw in _as_list(meta.get("section_headings")):
+        title = str(raw or "").strip()
+        if title and title not in titles:
+            titles.append(title)
+    return titles
+
+
 def build_links(
     year: str = "2026",
     *,
@@ -1066,6 +1098,208 @@ def build_links(
     }
 
 
+def ensure_links(
+    subject: str,
+    year: str = "2026",
+    *,
+    index_path: Path | None = None,
+    user_question: str = "",
+) -> dict[str, Any]:
+    """Scan ONE page's outgoing links on demand, and cache them.
+
+    Why this exists
+    ---------------
+    The link web is the hop affordance: `Stranger Things` links to
+    `Music of Stranger Things`, which links to `Running Up That Hill`. A hop
+    only needs the edges of the page you are *standing on*.
+
+    The full web is 7.1M pages and ~63 outgoing links each (measured:
+    1,257,550 edges from the first 20,000 pages). The bulk build runs at
+    **136 pages/s**, so a complete web is a **14.5 hour** job - it cannot be
+    a prerequisite for a lookup, and the web was empty (0 rows) in practice.
+
+    So the edges of a page are scanned the first time they are asked for and
+    cached in the same `links` table the bulk build writes to. Cost: one file
+    read per page, ever.
+
+    The bulk build stays available for the case where the whole web is
+    wanted (`links` subcommand); this is the path that makes a hop work
+    today.
+    """
+
+    y = validate_year(year)
+    dns = resolve(subject, y, user_question=user_question, index_path=index_path)
+    if dns.status != "hit" or dns.hit is None:
+        return {"ok": False, "status": dns.status, "query": subject, "scanned": False, "edges": 0}
+    rel = str(dns.hit.rel_path or "").strip()
+    if not rel:
+        return {"ok": False, "status": dns.status, "query": subject, "scanned": False, "edges": 0}
+    out = index_path or default_index_path(y)
+    if not out.is_file():
+        return {"ok": False, "status": dns.status, "query": subject, "scanned": False, "edges": 0}
+
+    conn = _connect(out)
+    try:
+        done = conn.execute("SELECT 1 FROM link_progress WHERE rel_path = ?", (rel,)).fetchone()
+        if done is not None:
+            edges = int(
+                conn.execute("SELECT COUNT(*) FROM links WHERE from_norm = ?", (normalize_text(dns.hit.title),)).fetchone()[0]
+                or 0
+            )
+            return {
+                "ok": True,
+                "status": "hit",
+                "query": subject,
+                "title": dns.hit.title,
+                "scanned": False,
+                "edges": edges,
+            }
+        path = (wiki_md_root() / y) / rel.replace("/", os.sep)
+        block = _read_frontmatter_head(path)
+        from_norm = normalize_text(dns.hit.title)
+        rows: list[tuple[str, str, str]] = []
+        kept = 0
+        for target in _outgoing_from_frontmatter(block):
+            clean = target.split("#", 1)[0].strip()
+            if _skip_link_target(clean):
+                continue
+            to_norm = normalize_text(clean)
+            if not to_norm or to_norm == from_norm:
+                continue
+            rows.append((from_norm, to_norm, clean))
+            kept += 1
+            if kept >= MAX_LINKS_PER_PAGE:
+                break
+        if rows:
+            conn.executemany("INSERT OR IGNORE INTO links(from_norm, to_norm, to_title) VALUES (?, ?, ?)", rows)
+        conn.execute("INSERT OR IGNORE INTO link_progress(rel_path) VALUES (?)", (rel,))
+        conn.commit()
+        return {
+            "ok": True,
+            "status": "hit",
+            "query": subject,
+            "title": dns.hit.title,
+            "scanned": True,
+            "edges": len(rows),
+        }
+    finally:
+        conn.close()
+
+
+def related_titles(
+    subject: str,
+    year: str = "2026",
+    *,
+    limit: int = 12,
+    index_path: Path | None = None,
+) -> list[str]:
+    """Titles in the index that CONTAIN the subject.
+
+    The link web is the *semantic* hop, and it is one-directional: the
+    "Stranger Things" series page does not link to "Music of Stranger
+    Things" (it links to the cast, the seasons, the genres). This is the
+    *lexical* hop: a title that contains the subject is nearly always a page
+    about it - "Music of Stranger Things", "Stranger Things (soundtrack)",
+    "List of Stranger Things episodes", "Kate Bush discography".
+
+    Measured on the 7,138,751-title index: **537 ms** per scan (a LIKE
+    filter is not index-optimised, so this is a full range scan - it is
+    bounded by the LIMIT and by the index size, and it is worth it because
+    it is the difference between the model answering the landing lead and
+    the model reaching the page that holds the fact).
+    """
+
+    text = (subject or "").strip()
+    if not text:
+        return []
+    y = validate_year(year)
+    out = index_path or default_index_path(y)
+    if not out.is_file():
+        return []
+    norm = normalize_text(text)
+    if not norm:
+        return []
+    # LIKE wildcards inside the subject must be escaped, or "AC/DC" reads as
+    # a wildcard and matches half the corpus.
+    escaped = norm.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    conn = _connect(out)
+    try:
+        rows = conn.execute(
+            "SELECT title FROM pages WHERE title_norm LIKE ? ESCAPE '\\' ORDER BY title_norm LIMIT ?",
+            (f"%{escaped}%", max(1, int(limit)) * 3),
+        ).fetchall()
+    except Exception:  # noqa: BLE001 - a hop must never break a lookup
+        return []
+    finally:
+        conn.close()
+    seen: set[str] = set()
+    titles: list[str] = []
+    for row in rows:
+        title = str(row["title"] or "").strip()
+        key = normalize_text(title)
+        if not title or key in seen or key == norm:
+            continue
+        seen.add(key)
+        titles.append(title)
+        if len(titles) >= max(1, int(limit)):
+            break
+    return titles
+
+
+def hop_titles(
+    subject: str,
+    year: str = "2026",
+    *,
+    question: str = "",
+    limit: int = 3,
+    index_path: Path | None = None,
+) -> list[str]:
+    """The pages ONE HOP away from a subject, ranked against the question.
+
+    One rule, one place: the MCP tool and the server-side evidence builder
+    both ask this, so a hop is the same hop whichever path answered.
+
+    Two sources, because neither alone is enough:
+
+    1. The **link web** (semantic): the page's own outgoing links. Scanned
+       on demand (`ensure_links`) - the bulk web is a 14.5-hour build, and
+       it used to be empty (0 rows), so no hop was ever available.
+    2. The **title index** (lexical): titles that CONTAIN the subject. The
+       link web is one-directional, and the "Stranger Things" series page
+       does not link to "Music of Stranger Things" - the music page links to
+       the series.
+    """
+
+    text = (subject or "").strip()
+    if not text:
+        return []
+    y = validate_year(year)
+    pool: list[str] = []
+    try:
+        related = neighbors(
+            text,
+            y,
+            index_path=index_path,
+            user_question=question,
+            limit=24,
+        )
+    except Exception:  # noqa: BLE001 - a hop must never break a lookup
+        related = {}
+    for hop in related.get("hops") or []:
+        if hop:
+            pool.append(str(hop))
+    try:
+        for extra in related_titles(text, y, limit=14, index_path=index_path):
+            pool.append(extra)
+    except Exception:  # noqa: BLE001 - a hop must never break a lookup
+        pass
+    if not pool:
+        return []
+    landing = str(related.get("title") or text)
+    ranked = rank_related_titles(pool, question, landing_title=landing)
+    return ranked[: max(1, int(limit))]
+
+
 def neighbors(
     subject: str,
     year: str = "2026",
@@ -1074,9 +1308,23 @@ def neighbors(
     index_path: Path | None = None,
     user_question: str = "",
 ) -> dict[str, Any]:
-    """Outbound (and inbound) titles from the link web. Empty if links not built."""
+    """Outbound (and inbound) titles from the link web.
+
+    The page's own outgoing links are scanned on demand (see `ensure_links`),
+    so a hop works without waiting for the 14.5-hour bulk web build.
+    """
     y = validate_year(year)
     dns = resolve(subject, y, user_question=user_question, index_path=index_path)
+    if dns.status == "hit" and dns.hit is not None:
+        try:
+            ensure_links(
+                subject,
+                y,
+                index_path=index_path,
+                user_question=user_question,
+            )
+        except Exception as exc:  # noqa: BLE001 - a hop must never break a lookup
+            logger.debug("wiki_title_dns: on-demand link scan failed for %r: %s", subject, exc)
     if dns.status != "hit" or dns.hit is None:
         return {
             "ok": False,

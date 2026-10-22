@@ -29,6 +29,7 @@ import concurrent.futures
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from frontend.companion_api import extract_user_message
@@ -56,6 +57,12 @@ COMPARE_TIMEOUT_SEC = 45
 COMPARE_TIMEOUT_NOTE = "Wiki compare failed or timed out"
 LOOKUP_FAIL_NOTE = "Wiki lookup failed or returned no usable cards"
 EVIDENCE_MAX_CHARS = 1800
+# A hop page holds the asked-for fact in a SECTION, and that section is often
+# longer than the landing lead is allowed to be: the "Period music" section
+# of "Music of Stranger Things" names three songs and only the third one
+# ("Running Up That Hill") is the answer. At 900 chars the section was cut
+# before it. The hop is the whole point of the hop, so it gets real room.
+HOP_READ_MAX_CHARS = 2600
 EVIDENCE_TOKEN_BUDGET = 2000
 
 _EVIDENCE_BY_SESSION: dict[str, dict[str, Any]] = {}
@@ -943,6 +950,7 @@ def _lookup_from_title_dns(
         wiki_extract,
     )
     from pipeline.wiki_read_lead import (
+        pick_section_for_question,
         prefer_section_for_question,
         wiki_read,
         wiki_read_lead_enabled,
@@ -1009,6 +1017,7 @@ def _lookup_from_title_dns(
             lead["extract"] = extracted
     except Exception as exc:  # noqa: BLE001
         logger.debug("wiki extract attach failed for %r: %s", hit.title, exc)
+    from pipeline.wiki_title_dns import hop_titles as dns_hop_titles
     from pipeline.wiki_title_dns import neighbors as dns_neighbors
 
     related = dns_neighbors(
@@ -1023,23 +1032,79 @@ def _lookup_from_title_dns(
         lead["related_titles"] = ranked[:12]
         hop_leads: list[dict[str, Any]] = []
         extra_names: list[str] = []
-        for hop_title in related.get("hops") or []:
-            if not include_hops:
-                break
+        # The hop rule lives in ONE place (`wiki_title_dns.hop_titles`): the
+        # link web (semantic) plus the title index (lexical), ranked against
+        # the question. The MCP tool asks the same question, so a hop is the
+        # same hop whichever path answered.
+        hop_pool = (
+            dns_hop_titles(
+                hit.title,
+                year,
+                question=user_question,
+                limit=2,
+            )
+            if include_hops
+            else []
+        )
+        for hop_title in hop_pool:
             hop_dns = dns_resolve(str(hop_title), year, user_question=user_question)
+            if hop_dns.status != "hit" or hop_dns.hit is None:
+                # The QUESTION's own subject words can knock out the hop page.
+                # "Music of Stranger Things" is an exact title, but a question
+                # about "the series stranger things" resolves it as a close
+                # substring match of the question's subject, and the TV/year
+                # filter then drops it - the hop page became "ambiguous" and
+                # was never read. The hop title is already a chosen page, so
+                # resolve it on its own.
+                hop_dns = dns_resolve(str(hop_title), year, user_question="")
             if hop_dns.status != "hit" or hop_dns.hit is None:
                 continue
             hop_section = prefer_section_for_question(user_question)
+            if not hop_section:
+                # The hop page usually holds the fact in a SECTION, not in its
+                # lead: "Music of Stranger Things" has a "Running Up That
+                # Hill" section, while its lead is about the score. The page's
+                # own headings decide which section fits the question.
+                try:
+                    from pipeline.wiki_title_dns import page_section_titles
+
+                    hop_section = pick_section_for_question(
+                        page_section_titles(hop_dns.hit.rel_path or "", year),
+                        user_question,
+                    )
+                except Exception:  # noqa: BLE001 - a hop is never worth a failure
+                    hop_section = ""
             hop = wiki_read(
                 hop_dns.hit.title,
                 year,
                 section=hop_section,
                 corpus_rel_path=hop_dns.hit.rel_path or None,
-                max_chars=max(400, EVIDENCE_MAX_CHARS // 2),
+                max_chars=max(400, HOP_READ_MAX_CHARS),
+                section_max_chars=HOP_READ_MAX_CHARS,
                 user_question=user_question,
             )
             if not hop.get("ok"):
                 continue
+            # The page OUTLINE: one line per section with its opening words.
+            # A page can hold several answers to one question (three song
+            # sections on "Music of Stranger Things"), and as prose the model
+            # read "first season" as "later seasons" and answered with the
+            # wrong song. The outline puts each answer next to its context.
+            try:
+                from pipeline.wiki_read_lead import page_outline
+
+                hop_path = str(hop.get("path") or "")
+                if hop_path and Path(hop_path).is_file():
+                    outline = page_outline(
+                        Path(hop_path).read_text(encoding="utf-8", errors="replace"),
+                        limit=10,
+                    )
+                    if outline:
+                        hop["outline"] = outline
+            except Exception as exc:  # noqa: BLE001 - an outline is never worth a failure
+                # Log it: a bare `except: pass` hid a NameError here (Path was
+                # not imported) and the outline silently never appeared.
+                logger.debug("wiki hop outline failed for %r: %s", hop_title, exc)
             hop_leads.append(hop)
             extra_names.extend(
                 str(name) for name in (hop.get("allowed_names") or []) if str(name).strip()
@@ -1171,9 +1236,21 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
                 if "{|" in hop_lead:
                     lines.append("Hop lead: (raw wikitable omitted — use wiki_extract)")
                 else:
+                    # The hop SECTION is the substance when there is one (the
+                    # answer lives in the section, not the lead). Printing
+                    # both in full pushed the block over the token budget, and
+                    # the budget trim cut the section - the very text that
+                    # held the answer.
+                    if hop_section and len(hop_lead) > 400:
+                        hop_lead = hop_lead[:399].rstrip() + "…"
+                    elif not hop_section and len(hop_lead) > 1200:
+                        hop_lead = hop_lead[:1199].rstrip() + "…"
                     lines.append(f"Hop lead: {hop_lead}")
             if hop_section:
                 lines.append(f"Hop section: {hop_section}")
+            hop_outline = hop.get("outline")
+            if isinstance(hop_outline, list) and hop_outline:
+                lines.append("Hop page sections: " + " | ".join(str(x) for x in hop_outline))
     escalate = _escalation_hint(user_question)
     lines.extend([
         "",
@@ -1199,6 +1276,24 @@ def _format_evidence_block(evidence: dict[str, Any], *, user_question: str) -> s
         if cast_section and len(cast_section) > 500:
             evidence["cast_section"] = cast_section[:499].rstrip() + "…"
             evidence["section"] = evidence["cast_section"]
+        # The HOP leads have to be trimmed too. They were not, so the retry
+        # produced the same oversized block and called itself again - an
+        # infinite recursion (RecursionError) instead of a trimmed block. A
+        # bigger hop read made the budget overflow reachable, which is how
+        # this surfaced.
+        hop_leads = evidence.get("hop_leads")
+        if isinstance(hop_leads, list):
+            squeezed = []
+            for hop in hop_leads[:2]:
+                if not isinstance(hop, dict):
+                    continue
+                hop = dict(hop)
+                for key in ("lead", "section", "cast_section"):
+                    value = str(hop.get(key) or "")
+                    if len(value) > 700:
+                        hop[key] = value[:699].rstrip() + "…"
+                squeezed.append(hop)
+            evidence["hop_leads"] = squeezed
         return _format_evidence_block(evidence, user_question=user_question)
     return block
 

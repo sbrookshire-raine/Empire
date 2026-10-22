@@ -97,17 +97,18 @@ COMPARE_QUESTIONS = [
 ]
 
 
-# Known model-behaviour gap (2026-09-23 migration): the fast model lands the right page
-# and then answers the article LEAD instead of hopping to the page that holds the asked
-# fact ("which 80s song got popular again because of Stranger Things?"). The tools can do
-# the hop — two sequential tool calls are supported and the same question phrased as two
-# explicit steps returns "Running Up That Hill" — so these live cases are warnings, not
-# wiring failures. Tracked as E-10 in docs/EMPIRE_IDEA_QUEUE.md.
-KNOWN_MODEL_GAPS = {
-    "popular_80s_stranger_things",
-    "80s_hit_again",
-    "kate_bush_revival",
-}
+# Known model-behaviour gaps. The list is EMPTY on purpose: the three cases that
+# were here (popular_80s_stranger_things, 80s_hit_again, kate_bush_revival) were
+# closed on 2026-10-22 (E-10), and a name left in this set would downgrade a
+# future regression to a warning instead of failing the smoke.
+#
+# What the gap actually was: not the model, the corpus. The Title DNS index
+# held 57% of the titles, so "Stranger Things" resolved to the ABC SONG and
+# Eve answered about the wrong page; and the link web was empty (0 rows), so
+# no hop target existed. The index is now complete (7,138,751 titles) and the
+# hop affordance is live (see pipeline/wiki_title_dns.py: ensure_links,
+# related_titles, hop_titles).
+KNOWN_MODEL_GAPS: set[str] = set()
 
 
 def _needle_ok(needle: str, lowered: str) -> bool:
