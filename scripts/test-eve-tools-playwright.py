@@ -26,6 +26,10 @@ if str(_EMPIRE_ROOT) not in sys.path:
 FRONTEND = "http://127.0.0.1:8080"
 EVE = "http://127.0.0.1:2000"
 TIMEOUT_SEC = 240
+# The toolbelt this harness measures against. It is applied for the duration
+# of the run and the operator's own selection is restored afterwards — the
+# toolbelt file is the operator's, not the harness's.
+REQUESTED_TOOLBELT = ("voice_presence", "wiki_local")
 
 
 def _http_ok(url: str) -> bool:
@@ -37,11 +41,17 @@ def _http_ok(url: str) -> bool:
 
 
 def _stream_session(message: str) -> tuple[bool, str, str]:
-    """Create session and poll NDJSON stream for tool-call evidence."""
+    """Create session and poll NDJSON stream for tool-call evidence.
+
+    The toolbelt is sent **flat** (`active_tools`), which is the shape the
+    toolbelt path actually reads. The old nested `{"toolbelt": {...}}` shape
+    was silently discarded, so every measurement this harness took was
+    against a toolbelt it never actually asked for.
+    """
     payload = json.dumps(
         {
             "message": message,
-            "toolbelt": {"active_tools": ["voice_presence", "wiki_local"]},
+            "active_tools": list(REQUESTED_TOOLBELT),
         }
     ).encode("utf-8")
     req = urllib.request.Request(
@@ -148,39 +158,42 @@ def main() -> int:
     checks: list[dict] = []
     failures: list[str] = []
 
-    if args.tool in ("farm", "both"):
-        msg = (
-            "Call resource_farm_run with no query to show the processed materials catalog. "
-            "Summarize farmed_repo_count in one short paragraph. Do not refuse."
-        )
-        done, blob, assistant = _stream_session(msg)
-        low = (blob + assistant).casefold()
-        ok = "resource_farm_run" in low and "tool-call" in low
-        checks.append({"name": "eve_resource_farm_run", "tool": "resource_farm_run", "ok": ok})
-        if not ok:
-            failures.append("Eve did not tool-call resource_farm_run")
-        if not done:
-            failures.append("resource_farm stream did not complete")
+    from frontend import eve_toolbelt
 
-    if args.tool in ("github", "both"):
-        msg = (
-            "Call github_scout_search with query 'duckdb mcp server'. "
-            "List one repo name. Do not refuse."
-        )
-        done, blob, assistant = _stream_session(msg)
-        low = (blob + assistant).casefold()
-        ok = "github_scout_search" in low and "tool-call" in low
-        checks.append({"name": "eve_github_scout_search", "tool": "github_scout_search", "ok": ok})
-        if not ok:
-            failures.append("Eve did not tool-call github_scout_search")
-        refused = "don't have access to github" in low or "do not have access to the internet" in low
-        if refused and not ok:
-            failures.append("Eve refused GitHub")
+    with eve_toolbelt.temporary_active_tools(list(REQUESTED_TOOLBELT)):
+        if args.tool in ("farm", "both"):
+            msg = (
+                "Call resource_farm_run with no query to show the processed materials catalog. "
+                "Summarize farmed_repo_count in one short paragraph. Do not refuse."
+            )
+            done, blob, assistant = _stream_session(msg)
+            low = (blob + assistant).casefold()
+            ok = "resource_farm_run" in low and "tool-call" in low
+            checks.append({"name": "eve_resource_farm_run", "tool": "resource_farm_run", "ok": ok})
+            if not ok:
+                failures.append("Eve did not tool-call resource_farm_run")
+            if not done:
+                failures.append("resource_farm stream did not complete")
 
-    if not args.skip_browser and args.tool == "farm":
-        q = "Show processed materials catalog — use resource_farm_run."
-        ui_errs = run_playwright_ui(headful=args.headful, question=q)
-        failures.extend(ui_errs)
+        if args.tool in ("github", "both"):
+            msg = (
+                "Call github_scout_search with query 'duckdb mcp server'. "
+                "List one repo name. Do not refuse."
+            )
+            done, blob, assistant = _stream_session(msg)
+            low = (blob + assistant).casefold()
+            ok = "github_scout_search" in low and "tool-call" in low
+            checks.append({"name": "eve_github_scout_search", "tool": "github_scout_search", "ok": ok})
+            if not ok:
+                failures.append("Eve did not tool-call github_scout_search")
+            refused = "don't have access to github" in low or "do not have access to the internet" in low
+            if refused and not ok:
+                failures.append("Eve refused GitHub")
+
+        if not args.skip_browser and args.tool == "farm":
+            q = "Show processed materials catalog — use resource_farm_run."
+            ui_errs = run_playwright_ui(headful=args.headful, question=q)
+            failures.extend(ui_errs)
 
     from pipeline import verified_hands
 

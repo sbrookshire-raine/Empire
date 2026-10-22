@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import os
@@ -123,6 +124,110 @@ class EveBuildStalenessTests(unittest.TestCase):
             ignored.write_text("x", encoding="utf-8")
 
             self.assertEqual(set(self.helper.collect_inputs(root)), set(wanted))
+
+
+class MechanicGreenLiveGateTests(unittest.TestCase):
+    """The green gate must be able to *require* the live tier.
+
+    `mechanic-green.ps1` had no `-Live` switch at all, so the live
+    verification could never be run from the gate — and "green" meant
+    "nothing was proven on the wire" without saying so. The live tier is
+    therefore now requested with `-Live` and *enforced*: the report must
+    say the live tier ran.
+    """
+
+    SCRIPT = ROOT / "scripts" / "mechanic-green.ps1"
+
+    def source(self) -> str:
+        return self.SCRIPT.read_text(encoding="utf-8")
+
+    def test_gate_declares_a_live_switch(self) -> None:
+        self.assertIn("[switch]$Live", self.source())
+
+    def test_gate_runs_the_live_tier_when_requested(self) -> None:
+        source = self.source()
+        self.assertIn("verify-capabilities.ps1\") -Live", source)
+
+    def test_gate_enforces_that_the_live_tier_actually_ran(self) -> None:
+        """Requesting -Live and getting a silent no-op must be a FAILURE."""
+
+        source = self.source()
+        self.assertIn("live_ran", source)
+        self.assertIn("live verification tier did not run", source)
+
+    def test_gate_discards_a_stale_live_report_first(self) -> None:
+        """A report left over from an earlier run must not satisfy the gate.
+
+        Without the delete, a `live_ran: true` report on disk from a previous
+        (successful) run would make the check pass without the live tier
+        having run in this gate.
+        """
+
+        source = self.source()
+        self.assertIn("Remove-Item $liveReport -Force", source)
+
+    def test_gate_still_runs_the_offline_tier(self) -> None:
+        source = self.source()
+        self.assertIn("verify-capabilities.ps1\")", source)
+        self.assertIn("unit tests", source)
+
+
+class LiveHarnessToolbeltTests(unittest.TestCase):
+    """The live harnesses must send a toolbelt the toolbelt path reads.
+
+    They posted `{"toolbelt": {"active_tools": [...]}}`, which the toolbelt
+    path never read — the nested object was silently dropped, so every
+    routing measurement was taken against a toolbelt that was never
+    actually applied.
+    """
+
+    HARNESSES = (
+        ROOT / "scripts" / "test-eve-tools-playwright.py",
+        ROOT / "scripts" / "smoke-eve-hands.py",
+    )
+
+    def test_harnesses_send_a_flat_active_tools_list(self) -> None:
+        """Check the *code*, not the prose.
+
+        The docstrings deliberately name the old nested shape to explain the
+        defect, so a text search would flag the explanation as the bug.
+        """
+
+        for path in self.HARNESSES:
+            with self.subTest(harness=path.name):
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                nested = [
+                    node
+                    for node in ast.walk(tree)
+                    if isinstance(node, ast.Dict)
+                    and any(
+                        isinstance(key, ast.Constant) and key.value == "toolbelt"
+                        for key in node.keys
+                        if key is not None
+                    )
+                ]
+                self.assertEqual(
+                    nested,
+                    [],
+                    f"{path.name} still posts the nested toolbelt shape",
+                )
+                flat = [
+                    node
+                    for node in ast.walk(tree)
+                    if isinstance(node, ast.Dict)
+                    and any(
+                        isinstance(key, ast.Constant) and key.value == "active_tools"
+                        for key in node.keys
+                        if key is not None
+                    )
+                ]
+                self.assertTrue(flat, f"{path.name} must send a flat active_tools list")
+
+    def test_harnesses_restore_the_operator_toolbelt(self) -> None:
+        """The toolbelt file is the operator's, not the harness's."""
+
+        source = (ROOT / "scripts" / "test-eve-tools-playwright.py").read_text(encoding="utf-8")
+        self.assertIn("temporary_active_tools", source)
 
 
 if __name__ == "__main__":

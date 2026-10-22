@@ -1,8 +1,13 @@
 # Mechanic green gate - run before handing UX smoke to the Architect.
 # Default: unit tests + wiki extract CLI battery + verify-stack.
+# -Live: also run the live capability tier (real Eve tool calls on the wire).
+#        The live tier is ENFORCED: if it was requested and did not run, the
+#        gate fails. A silent "live verification never ran" is how a green
+#        gate came to mean "nothing was actually proven".
 # -Full: also verify-eve-workbench (live Cognee + Eve chat).
 param(
     [switch]$Full,
+    [switch]$Live,
     [switch]$SkipStack
 )
 $ErrorActionPreference = "Stop"
@@ -51,6 +56,42 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
 
 Invoke-Step "verify-capabilities (offline)" {
     & (Join-Path $Root "scripts\verify-capabilities.ps1")
+}
+
+# The live tier proves real Eve tool calls on the wire. It is separate from the
+# offline tier because it needs the stack up (Ollama + Eve + frontend), and it
+# is ENFORCED when requested: the report must say the live tier actually ran.
+# Without that check, "-Live" could quietly do nothing and still report green.
+$liveReport = Join-Path $Root "tmp\capability_verification_report.json"
+if ($Live) {
+    # Delete the report first: a stale one from an earlier run would carry
+    # live_ran=true and make this check pass without the live tier ever
+    # having run in *this* gate.
+    if (Test-Path $liveReport) {
+        Remove-Item $liveReport -Force
+    }
+    Invoke-Step "verify-capabilities (live)" {
+        & (Join-Path $Root "scripts\verify-capabilities.ps1") -Live
+    }
+    $liveRan = $false
+    if (Test-Path $liveReport) {
+        try {
+            $parsed = Get-Content $liveReport -Raw -Encoding UTF8 | ConvertFrom-Json
+            $liveRan = [bool]$parsed.live_ran
+        }
+        catch {
+            $liveRan = $false
+        }
+    }
+    if (-not $liveRan) {
+        Write-Host ""
+        Write-Host "FAIL live verification tier did not run (report has live_ran=false)." -ForegroundColor Red
+        Write-Host "     The live tier needs the stack up: .\scripts\start-stack.ps1" -ForegroundColor Yellow
+        $failed += 1
+    }
+    else {
+        Write-Host "PASS live verification tier ran" -ForegroundColor Green
+    }
 }
 
 Invoke-Step "capability governance (fail-closed)" {

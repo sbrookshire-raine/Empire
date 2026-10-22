@@ -198,7 +198,10 @@ def main() -> int:
                     "Call github_scout_search with query 'duckdb mcp server'. "
                     "Then briefly list repo names. Do not refuse."
                 ),
-                "toolbelt": {"active_tools": ["voice_presence", "wiki_local"]},
+                # Flat, not nested: the toolbelt path reads `active_tools`.
+                # The nested shape was silently discarded, so this smoke test
+                # never ran against the toolbelt it asked for.
+                "active_tools": ["voice_presence", "wiki_local"],
             },
         )
         check("Eve session create", status in (200, 201, 202), f"HTTP {status} {sess}")
