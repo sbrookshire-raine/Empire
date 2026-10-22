@@ -451,4 +451,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. The live cases
+    # send their own toolbelt with the session, which the toolbelt path
+    # persists - so without the guard, running the smoke silently turned the
+    # operator's voice_presence limb OFF.
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+        raise SystemExit(main())

@@ -318,7 +318,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.live:
         print()
         print("=== LIVE EVE ===")
-        live_rows = [live_run(c) for c in CASES if c[0] in LIVE_IDS and c[0] not in skipped]
+        # The toolbelt file is the OPERATOR's, not the harness's: the live
+        # sessions send their own toolbelt, which the toolbelt path persists.
+        from frontend import eve_toolbelt
+
+        with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+            live_rows = [live_run(c) for c in CASES if c[0] in LIVE_IDS and c[0] not in skipped]
         for r in live_rows:
             mark = "PASS" if r["pass"] else "FAIL"
             print(f"{mark} {r['id']} chars={r.get('chars', 0)} | {r['notes']}")

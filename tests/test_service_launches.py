@@ -224,10 +224,25 @@ class LiveHarnessToolbeltTests(unittest.TestCase):
                 self.assertTrue(flat, f"{path.name} must send a flat active_tools list")
 
     def test_harnesses_restore_the_operator_toolbelt(self) -> None:
-        """The toolbelt file is the operator's, not the harness's."""
+        """The toolbelt file is the operator's, not the harness's.
 
-        source = (ROOT / "scripts" / "test-eve-tools-playwright.py").read_text(encoding="utf-8")
-        self.assertIn("temporary_active_tools", source)
+        Every harness that posts a session payload with a toolbelt makes the
+        toolbelt path PERSIST it - the agent only ever reads the file. So a
+        harness that does not restore the selection silently rewrites the
+        Architect's toolbelt: running the wiki smoke used to turn the
+        voice_presence limb OFF (E-07).
+        """
+
+        for name in (
+            "test-eve-tools-playwright.py",
+            "verify-live-routing.py",
+            "smoke-eve-hands.py",
+            "test-wiki-chat-smoke.py",
+            "wiki_extract_battery.py",
+        ):
+            with self.subTest(harness=name):
+                source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
+                self.assertIn("temporary_active_tools", source)
 
 
 if __name__ == "__main__":
