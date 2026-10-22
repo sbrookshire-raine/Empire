@@ -20,6 +20,18 @@ from pipeline import tool_registry
 
 ROOT = Path(__file__).resolve().parents[1]
 CHARS_PER_TOKEN = 3.8
+
+# The chars/3.8 estimate is a *proxy*: it cannot see the chat template, the JSON
+# Schema envelope or the tool-call scaffolding that Ollama also charges for, so
+# it undercounts. Measured 2026-10-21 against empire-fast:14b: 6,688 real
+# prompt tokens for a prompt this estimate puts at 6,410 — a 4.3% undercount
+# (and the calibrated estimate, 6,692, lands 4 tokens from the truth).
+#
+# The ceilings in `tests/test_prompt_budget.py` are therefore written in REAL
+# tokens, and the static estimate is scaled onto that scale before it is
+# compared. Re-measure with `scripts/measure-live-prompt.py` before changing
+# this number.
+LIVE_OVER_ESTIMATE = 1.044
 INSTRUCTIONS = (
     ROOT / "eve_instructions.md",
     ROOT / "agents" / "empire-task-agent" / "agent" / "empire-routing.md",
@@ -36,6 +48,17 @@ def tokens(chars: int) -> int:
     """chars -> approximate tokens (kept in one place so every report uses one basis)."""
 
     return int(chars / CHARS_PER_TOKEN)
+
+
+def real_tokens(estimate_tokens: int) -> int:
+    """Scale a static chars/3.8 estimate onto the real-token scale.
+
+    The estimate undercounts by the template/schema overhead Ollama charges for
+    (see `LIVE_OVER_ESTIMATE`). Every ceiling is written in real tokens, so
+    this is the bridge between the cheap offline measure and the truth.
+    """
+
+    return int(round(estimate_tokens * LIVE_OVER_ESTIMATE))
 
 
 def schema_chars(text: str) -> tuple[int, int]:
@@ -60,6 +83,13 @@ def _tool_files() -> list[Path]:
 
 
 def _classify(text: str) -> str:
+    """Bucket one tool source: always-registered, default-gated, or gated.
+
+    `pipeline.tool_registry` owns this definition (see `always_on_tools` /
+    `default_gated_tools`) — two places deciding "what is always on" is how
+    the capabilities report and the budget measurement drifted apart.
+    """
+
     gated = "isCapabilityActive" in text or "isCategoryEnabled" in text
     if not gated:
         return "always"
@@ -86,6 +116,117 @@ def _git_show(rev: str, path: Path) -> str:
     return result.stdout if result.returncode == 0 else ""
 
 
+def live_tool_schemas(frontend: str = "http://127.0.0.1:8080", eve: str = "http://127.0.0.1:2000") -> list[dict[str, Any]]:
+    """The tool schemas the *running* server exposes, in OpenAI function form.
+
+    The static measurement below reads the tool sources off disk. That is the
+    right basis for a ceiling test (it works with no stack), but it is an
+    estimate of what the model is offered. This reads what the live agent
+    actually registered, so a live measurement can compare the two.
+    """
+    import json as _json
+    import urllib.request
+
+    request = urllib.request.Request(f"{eve}/eve/v1/info", headers={"Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        info = _json.loads(response.read().decode("utf-8", errors="replace"))
+    tools: list[dict[str, Any]] = []
+    for entry in (info.get("tools") or {}).get("available") or []:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        schema = entry.get("inputSchema")
+        parameters = schema if isinstance(schema, dict) and schema.get("properties") else {"type": "object", "properties": {}}
+        tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": str(entry.get("description") or ""),
+                    "parameters": parameters,
+                },
+            }
+        )
+    return tools
+
+
+def measure_live(model: str = "", ollama: str = "http://127.0.0.1:11434") -> dict[str, Any]:
+    """Measure the prompt the live model actually pays, in real tokens.
+
+    The static measurement estimates tokens as chars/3.8. That is a
+    *consistent proxy*, not the truth: Ollama's own `prompt_tokens` counts
+    the template, the JSON Schema envelope and the tool-call scaffolding the
+    estimate cannot see. This sends the live system prompt and the live tool
+    schemas to the model and reports what it was actually charged.
+
+    Returns a dict with `ok: False` and a reason when the stack is not up —
+    a measurement that cannot be taken must never look like a passing one.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    if not model:
+        try:
+            from frontend import ollama_api
+
+            model = str((ollama_api.load_active_config() or {}).get("model") or "")
+        except Exception:  # noqa: BLE001
+            model = ""
+    if not model:
+        return {"ok": False, "reason": "no active model configured"}
+
+    try:
+        tools = live_tool_schemas()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "reason": f"cannot read the live tool surface: {exc}"}
+    if not tools:
+        return {"ok": False, "reason": "the live agent exposed no tools"}
+
+    system = "\n\n---\n\n".join(
+        path.read_text(encoding="utf-8").strip() for path in INSTRUCTIONS if path.is_file()
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": "hi"},
+        ],
+        "tools": tools,
+        "stream": False,
+    }
+    request = urllib.request.Request(
+        f"{ollama}/v1/chat/completions",
+        data=_json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            payload = _json.loads(response.read().decode("utf-8", errors="replace"))
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        return {"ok": False, "reason": f"Ollama is unreachable: {exc}"}
+    except ValueError as exc:
+        return {"ok": False, "reason": f"Ollama returned an unreadable body: {exc}"}
+
+    usage = payload.get("usage") or {}
+    measured = usage.get("prompt_tokens")
+    if not isinstance(measured, int) or measured <= 0:
+        return {"ok": False, "reason": "Ollama reported no prompt_tokens"}
+    return {
+        "ok": True,
+        "model": model,
+        "prompt_tokens": measured,
+        "completion_tokens": usage.get("completion_tokens"),
+        "tool_count": len(tools),
+        "system_chars": len(system),
+        "num_ctx": SHARED_NUM_CTX,
+        "headroom_tokens": SHARED_NUM_CTX - measured,
+    }
+
+
 def measure_rev(rev: str) -> dict[str, Any]:
     """Same measurement against a git revision, so before/after is reproducible."""
 
@@ -107,16 +248,23 @@ def _summarise(instructions: dict[str, int], sources: dict[Path, str]) -> dict[s
 
     default_schema = buckets["always"] + buckets["wiki_local"]
     floor = instruction_chars + default_schema
+    instruction_tokens = tokens(instruction_chars)
+    default_schema_tokens = tokens(default_schema)
+    floor_tokens = tokens(floor)
     return {
         "instructions": instructions,
         "instruction_chars": instruction_chars,
-        "instruction_tokens": tokens(instruction_chars),
+        "instruction_tokens": instruction_tokens,
+        "instruction_real_tokens": real_tokens(instruction_tokens),
         "always_tools": counts["always"],
         "always_schema_tokens": tokens(buckets["always"]),
         "default_gated_tools": counts["wiki_local"],
         "default_gated_schema_tokens": tokens(buckets["wiki_local"]),
-        "default_schema_tokens": tokens(default_schema),
-        "floor_tokens": tokens(floor),
+        "default_schema_tokens": default_schema_tokens,
+        "default_schema_real_tokens": real_tokens(default_schema_tokens),
+        "floor_tokens": floor_tokens,
+        "floor_real_tokens": real_tokens(floor_tokens),
+        "live_over_estimate": LIVE_OVER_ESTIMATE,
         "num_ctx": SHARED_NUM_CTX,
-        "headroom_tokens": SHARED_NUM_CTX - tokens(floor),
+        "headroom_tokens": SHARED_NUM_CTX - real_tokens(floor_tokens),
     }

@@ -6,7 +6,14 @@ hot prompt into `config/eve-capabilities/tool-docs/` (fetched with the `tool_doc
 **~4,486 tokens** (−21%). These ceilings encode that reduction, so growing the prompt back is a build
 failure rather than a silent slowdown.
 
+**The ceilings are in REAL tokens** — what the model is actually charged. The static
+chars/3.8 estimate cannot see the chat template, the JSON Schema envelope or the tool-call
+scaffolding Ollama also bills for, so it undercounts: measured 2026-10-21, **6,688 real tokens**
+against a 6,410-token static estimate (+4.3%). `pipeline.prompt_budget.LIVE_OVER_ESTIMATE` carries
+that calibration, and every comparison below is made on the calibrated figure.
+
 Run `.\scripts\measure-prompt-budget.py` for the full breakdown and `--baseline HEAD` for the delta.
+Run `.\venv\Scripts\python.exe scripts\measure-live-prompt.py` (stack up) for the real number.
 """
 
 from __future__ import annotations
@@ -17,10 +24,11 @@ from frontend.ollama_chat_profiles import SHARED_NUM_CTX
 from pipeline import prompt_budget, tool_registry
 from pipeline.prompt_budget import tokens
 
-# Measured after R-03 (see docs/REFACTOR_PLAN.md section 3). Re-run measure-prompt-budget.py before raising.
-INSTRUCTION_CEILING_TOKENS = 5_050  # measured ~4,966 (2026-10-10; + eve-operating-context.md)
-DEFAULT_SCHEMA_CEILING_TOKENS = 1_220  # measured ~1,211 (2026-10-10)
-FLOOR_CEILING_TOKENS = 6_250  # measured ~6,178 (2026-10-10)
+# Measured after R-03 (see docs/REFACTOR_PLAN.md section 3) and re-based on the live
+# measurement of 2026-10-21. Re-run measure-live-prompt.py before raising.
+INSTRUCTION_CEILING_TOKENS = 5_300  # measured ~5,180 real (2026-10-21)
+DEFAULT_SCHEMA_CEILING_TOKENS = 1_575  # measured ~1,511 real (2026-10-21)
+FLOOR_CEILING_TOKENS = 6_800  # measured ~6,688 real (2026-10-21)
 MIN_CONVERSATION_HEADROOM = 4_096
 TOOLBELT_CATEGORY_CEILING = 30
 
@@ -37,25 +45,27 @@ class PromptBudgetTests(unittest.TestCase):
             )
 
     def test_instruction_weight_under_ceiling(self) -> None:
+        real = self.data["instruction_real_tokens"]
         self.assertLessEqual(
-            self.data["instruction_tokens"],
+            real,
             INSTRUCTION_CEILING_TOKENS,
-            f"always-on instructions are ~{self.data['instruction_tokens']} tokens "
+            f"always-on instructions are ~{real} real tokens "
             f"(ceiling {INSTRUCTION_CEILING_TOKENS}); move detail into a skill or a tool doc",
         )
 
     def test_default_schema_weight_under_ceiling(self) -> None:
         """R-03's measured reduction: the schemas of tools enabled by default carry cues, not prose."""
 
+        real = self.data["default_schema_real_tokens"]
         self.assertLessEqual(
-            self.data["default_schema_tokens"],
+            real,
             DEFAULT_SCHEMA_CEILING_TOKENS,
-            f"default-enabled schema prose is ~{self.data['default_schema_tokens']} tokens "
+            f"default-enabled schema prose is ~{real} real tokens "
             f"(ceiling {DEFAULT_SCHEMA_CEILING_TOKENS}); put detail in the tool doc, keep the cue",
         )
 
     def test_floor_leaves_conversation_headroom(self) -> None:
-        floor = self.data["floor_tokens"]
+        floor = self.data["floor_real_tokens"]
         self.assertLessEqual(floor, FLOOR_CEILING_TOKENS)
         headroom = SHARED_NUM_CTX - floor
         self.assertGreaterEqual(

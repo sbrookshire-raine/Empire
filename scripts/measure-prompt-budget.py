@@ -43,7 +43,10 @@ def main() -> int:
     print("Always-on instructions")
     for name, chars in data["instructions"].items():
         print(f"  {name:<28} {chars:6,} chars  ~{tokens(chars):5,} tok")
-    print(f"  {'subtotal':<28} {data['instruction_chars']:6,} chars  ~{data['instruction_tokens']:5,} tok")
+    print(
+        f"  {'subtotal':<28} {data['instruction_chars']:6,} chars  ~{data['instruction_tokens']:5,} tok"
+        f"  (~{data['instruction_real_tokens']:,} real)"
+    )
 
     print("\nTool schemas (description + parameter text)")
     print(f"  always registered ({data['always_tools']} tools)   ~{data['always_schema_tokens']:5,} tok")
@@ -51,12 +54,17 @@ def main() -> int:
         f"  wiki_local ({data['default_gated_tools']} tools, on)   "
         f"~{data['default_gated_schema_tokens']:5,} tok"
     )
-    print(f"  default schema weight             ~{data['default_schema_tokens']:5,} tok")
+    print(
+        f"  default schema weight             ~{data['default_schema_tokens']:5,} tok"
+        f"  (~{data['default_schema_real_tokens']:,} real)"
+    )
 
     print(
         f"\nFLOOR before the user speaks: ~{data['floor_tokens']:,} of {data['num_ctx']:,} tokens "
-        f"(~{data['headroom_tokens']:,} left for conversation + tool results)"
+        f"(~{data['floor_real_tokens']:,} real at the measured x{data['live_over_estimate']} overhead; "
+        f"~{data['headroom_tokens']:,} left for conversation + tool results)"
     )
+    print("  (the real figure is what the model is charged — measure it with measure-live-prompt.py)")
 
     if args.baseline.strip():
         base = measure_rev(args.baseline.strip())
