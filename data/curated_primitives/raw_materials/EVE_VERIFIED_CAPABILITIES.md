@@ -4,17 +4,17 @@ kind: eve_operating_contract
 dataset: eve_core
 memory_status: foundation
 promote: mechanic_only
-verified_at: 2026-10-22T02:33:55+00:00
+verified_at: 2026-10-22T04:43:34+00:00
 ---
 # EVE verified capabilities (mechanic report)
 
 This document is **written by Mechanic** (`pipeline.capability_verification`). Eve should treat it as authoritative for *what is proven to work* on this machine. Do not tell the Architect a tool is broken without checking this report age and re-running `scripts/verify-capabilities.ps1`.
 
-- Offline checks: **35** (35 pass, 0 fail)
-- Live stack checks run: **False** — _not run; offline report only_
+- Offline checks: **35** (39 pass, 0 fail)
+- Live stack checks run: **True** (4 checks)
 - Always-on tools: **31** (registered in every session, no admit needed)
 - On-by-default gated tools: **8** (`wiki_local`)
-- Eve tool-doc registry: **35+** named tools (see `tool_docs` / `playbook`)
+- Eve tool-doc registry: **39+** named tools (see `tool_docs` / `playbook`)
 - MCP servers import-clean: **25**
 
 ## How Eve should use this
@@ -136,10 +136,45 @@ These are registered in every session — no Toolbelt click, no admit, no `resou
 - **mcp:empire-workbench** — `empire-workbench` (mcp)
 - **mcp:graft** — `graft` (mcp)
 - **mcp:rea** — `rea` (mcp)
+- **smoke_eve_hands** — `smoke_eve_hands` (live)
+- **eve_tools_playwright** — `eve_tools_playwright` (live)
+- **live_routing_battery** — `live_routing_battery` (live)
+- **live_prompt_budget** — `live_prompt_budget` (live)
 
-## Live stack checks
+## Live stack checks (real tool calls on the wire)
 
-_Not run._ The live tier proves real tool calls on the wire; run `.\scripts\verify-capabilities.ps1 -Live` for that. Do not claim a tool works on the wire from this report alone.
+- **PASS** smoke_eve_hands: ive after release
+[PASS] workspace_search arm runs offline â€” engine=builtin count=3
+[PASS] switchboard plan is dry-run and correct â€” start=['pocketbase', 'frontend'] stop=[]
+[PASS] switchboard never starts ollama/eve
+       verified_hands: Mechanic verified: pulse_inject, admit_github_scout, resource_farm_catalog. (as of 2026-10-22T04:40:43 UTC). Proven toolâ€¦
+=== all smoke checks passed ===
+
+- **PASS** eve_tools_playwright: PASS test-eve-tools-playwright
+  OK eve_resource_farm_run
+  OK eve_github_scout_search
+
+- **PASS** live_routing_battery: ed=['cognee_recall'] 95.6s
+[PASS] task_list            route=task    called=['list_tasks'] 11.0s
+[PASS] task_create          route=task    called=['create_task'] 4.1s
+[PASS] other_disk           route=other   called=['check_workbench_health'] 5.3s
+[PASS] other_capabilities   route=other   called=[] 4.1s
+
+live routing: 7/7 cases routed to the right tool
+wrote C:\EMPIRE\tmp\live-routing-report.json
+
+- **PASS** live_prompt_budget: ated)
+  model                empire-fast:14b
+  always-on tools      24
+  system prompt        18,788 chars
+  MEASURED prompt      6,669 tokens
+  static estimate      6,388 tokens (chars/3.8)
+  delta                +281 tokens (+4.4%)
+  context window       24,576 tokens
+  headroom             17,907 tokens
+  ceiling              24,576 tokens
+PASS: the live prompt fits with 17,907 tokens to spare
+
 
 ## Refresh
 

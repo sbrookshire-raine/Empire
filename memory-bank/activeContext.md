@@ -1,5 +1,101 @@
 # Active Context — Current work focus & next steps
 # Active Context — Current work focus & next steps
+## 2026-10-22 — E-10 closed: the corpus was the gap, not the model
+
+**Phase 2 is on GitHub** (`5ba01b6..8914418`, six commits on
+`revision-refactor`), and the **enforced live gate passes on that tree**.
+
+### The wiki limb was crippled by a 57% index
+`mechanic-green.ps1` hardcoded `I:\EMPIRE_DATA\...` as the precondition for
+the wiki extract battery, so with the T7 unmounted the gate **skipped** it
+while the runtime served lookups from the same corpus on D:. The gate now
+asks the runtime (`scripts/wiki-index-path.py`), and the battery is
+corpus-aware: a case whose page is not in the corpus is a loud **SKIP**
+(with the corpus path and the count), not a FAIL.
+
+With the battery running it **failed 2 of 11** — and the failure was honest:
+"Nintendo Switch" is genuinely absent from the corpus. That led to the real
+find:
+
+| | before | after |
+|---|---|---|
+| Title DNS titles | 4,095,795 (82 of 143 batches, 57%) | **7,138,751 (all 143 batches)** |
+| link web rows | 0 | grows on demand |
+| `wiki_extract_battery` | 9/9 checked, 2 skipped | **11/11, 0 skipped** |
+
+The rebuild took ~25 minutes (`rg` per batch, 7.5 s, 61 batches to go). The
+old index is kept at `D:\EMPIRE_DATA\wiki-reports\2026\title-index.sqlite.bak-2026-10-22`.
+
+### E-10 was never a model gap
+The live answers were about **"Stranger Things" the ABC song** — the model
+was faithfully reporting the wrong page, because the index did not have the
+series page and the link web was empty. Three fixes, in order of effect:
+
+1. **The complete index** — "Stranger Things" now resolves to the series.
+2. **The hop affordance is live** (`pipeline/wiki_title_dns.py`):
+   - `ensure_links` scans a page's own outgoing links **on demand** (one
+     file read per page, ever). The bulk web is a **14.5-hour** job at
+     136 pages/s, so it was never built and the hop was dead code.
+   - `related_titles` is the lexical hop: titles that *contain* the subject
+     ("Music of Stranger Things"). The link web is one-directional.
+   - `hop_titles` merges both into ONE rule; the MCP tool and the
+     server-side evidence builder both ask it.
+3. **The hop evidence carries the answer**: the hop page's section is chosen
+   by the question (`pick_section_for_question`), read whole
+   (`section_max_chars`), and its page outline is included — so three song
+   sections sit next to their own season instead of one prose wall.
+
+`scripts/test-wiki-chat-smoke.py`: **PASS** (7 live + 5 injection + miss +
+compare). Both E-10 questions now answer **Running Up That Hill**.
+`KNOWN_MODEL_GAPS` is empty on purpose — a regression fails the smoke.
+
+**Bugs found and fixed on the way**: an infinite recursion in
+`_format_evidence_block` (the budget retry trimmed the lead but not the hop
+leads, so it re-entered itself); the hop title was resolved with the
+question's own subject words, which knocked out exact titles; a bare
+`except: pass` hid a `NameError` (Path was not imported) and the page
+outline silently never appeared.
+
+## 2026-10-22 — Phase 2 pushed to GitHub; the gate was hiding the wiki limb
+
+**Committed and pushed** (6 commits, `5ba01b6..8914418` on `revision-refactor`):
+the route classifier, the live-token calibration, the capability report, the
+stream-failure messages, the enforced live gate, and the Phase 2 record.
+`mechanic-green.ps1 -Live` re-run on the committed tree: **all steps passed**.
+
+### The gate was skipping a real check
+`mechanic-green.ps1` hardcoded `I:\EMPIRE_DATA\...title-index.sqlite` as the
+precondition for the wiki extract battery. The runtime resolves the corpus
+differently (`pipeline.wiki_ops_paths.reports_root()`: override → I: → D:), so
+with the T7 unmounted the gate **skipped the battery** while the runtime
+served wiki lookups from the same corpus on D:. The gate now asks the runtime
+(`scripts/wiki-index-path.py`).
+
+With the battery actually running, it **failed 2 of 11 cases** — not an
+extractor bug: "Nintendo Switch" is genuinely absent from the 57% D: corpus,
+so "not in title registry" was the *correct* refusal. A case whose page is not
+in the corpus is now a loud **SKIP** (with the corpus path and the count), not
+a FAIL, and `--require-full-corpus` makes it fatal.
+
+### E-10 diagnosed properly (it is not a model gap)
+The live answers were about **"Stranger Things" the ABC song**, not the
+series. The Title DNS corpus has the siblings (ABC song, disambiguation, Edie
+Brickell album) but **not** "Stranger Things (TV series)" nor "Music of
+Stranger Things" — the pages that hold the answer. The model answered
+confidently from the wrong sibling. The link web is empty (0 rows) and the
+markdown corpus *does* carry `outgoing_links` frontmatter, so the hop
+affordance is buildable once the index is complete.
+
+### E-01 measured (the row asked for 16384; the real window is 24576)
+| Mode | Model | ctx | VRAM | Total | tok/s |
+|---|---|---|---|---|---|
+| Fast | `empire-fast:14b` | 24576 | 10.51 GB | 10.51 GB | 40.0 |
+| Deep | `logicbeat/qwen3.8-27B_GSQ_RCO` | 24576 | 11.73 GB | 11.73 GB | 27.4 |
+| Librarian | `command-r:35b` | 24576 | 13.61 GB | **21.53 GB** | 8.2 |
+
+Librarian spills **~7.9 GB to system RAM** on this 16 GB card and leaves
+654 MiB of VRAM (so Fast is evicted), but it is usable at 8.2 tok/s.
+
 ## 2026-10-21 — Phase 2 closed: 7 baseline failures fixed, ceilings calibrated, 7B/14B measured
 
 **The seven known pre-existing failures are gone.** The suite is now

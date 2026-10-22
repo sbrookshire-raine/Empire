@@ -1,5 +1,38 @@
 # Progress — What works, what's left, current status
 # Progress — What works, what's left, current status
+## 2026-10-22 — The wiki limb is whole: full index, live hop, bounded prefetch
+
+**Working (872 passed / 1 skipped / 0 failed):**
+
+| Thing | Before | Now |
+|---|---|---|
+| Title DNS titles | 4,095,795 (57%) | **7,138,751 (all 143 batches)** |
+| `wiki_extract_battery` | skipped by the gate | **runs: 11/11, 0 skipped** |
+| Wiki chat smoke | 3 known-gaps + 3 failures, exit 1 | **PASS** (7 live + 5 injection) |
+| Live routing battery | 7/7 (fragile) | **7/7** |
+| Memory ask (session create) | **110 s** (6 sequential recalls) | **~21 s** (one bounded recall) |
+
+**E-10 is closed.** The gap was never the model: the index did not have the
+page ("Stranger Things" resolved to the ABC *song*) and the link web was
+empty, so Eve was reporting the wrong page faithfully. The index is rebuilt
+and the hop affordance is live — `ensure_links` (a page's own outgoing links,
+scanned on demand), `related_titles` (titles that contain the subject),
+`hop_titles` (one rule both callers ask), and the hop evidence carries the
+page's section and its outline, so three song sections sit next to their own
+season instead of one prose wall.
+
+**The gate now asks the runtime where the corpus is** (`scripts/wiki-index-path.py`)
+instead of hardcoding `I:\`, and the battery is corpus-aware: a case whose
+page is not in the corpus is a loud SKIP, not a FAIL.
+
+**Still open:**
+- The chat prefetch still costs ~20 s (one Cognee recall ≈ 15 s on this
+  machine). It is bounded now, but it is the slowest thing in a chat turn.
+- The bulk link web is still unbuilt (14.5 h at 136 pages/s). The on-demand
+  scan covers the pages that are actually visited.
+- Weaviate (`:8091`) is still opt-in; the wiki limb works without it.
+- `empire-fast:7b` still cannot do native tool calls — a model property.
+
 ## 2026-10-21 — Phase 2 closed (green suite + calibrated ceilings + model evaluation)
 
 **Working:** the whole suite is green (**849 passed / 1 skipped / 0 failed**),
