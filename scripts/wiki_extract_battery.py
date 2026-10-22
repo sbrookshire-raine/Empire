@@ -38,6 +38,59 @@ CASES = [
 LIVE_IDS = {"G1", "G2", "G3", "G4", "G6", "R1", "R2", "R4", "R5"}
 
 
+def corpus_index_path(year: str = "2026") -> str:
+    """The Title DNS index the battery is running against ("" when there is none)."""
+
+    try:
+        from pipeline.wiki_title_dns import default_index_path
+
+        path = default_index_path(year)
+    except Exception:  # noqa: BLE001
+        return ""
+    try:
+        return str(path) if path.is_file() else ""
+    except OSError:
+        return ""
+
+
+def corpus_has(subject: str, question: str, year: str = "2026") -> bool:
+    """True when the local Title DNS registry knows this subject.
+
+    A case whose subject is not in the local corpus is not a regression
+    signal: "not in title registry" is the CORRECT refusal for a page the
+    corpus does not hold. The D: rebuild covers about 57% of the titles
+    (the full set lives on the T7), so cases about pages that were not
+    rebuilt used to FAIL the battery for a reason that has nothing to do
+    with the extractor - and a permanently red gate is a gate people learn
+    to ignore.
+
+    Cases that EXPECT a miss (a fabricated title) always run: the miss is
+    the assertion, so the corpus is not a precondition for them.
+    """
+
+    try:
+        from pipeline.wiki_title_dns import resolve
+
+        result = resolve(subject, year, user_question=question)
+    except Exception:  # noqa: BLE001 - never skip because the probe failed
+        return True
+    return result.status != "miss"
+
+
+def corpus_skips(cases: list[tuple], year: str = "2026") -> dict[str, str]:
+    """Map case id -> subject for cases this corpus cannot check."""
+
+    skipped: dict[str, str] = {}
+    for case in cases:
+        cid, question, expect = case[0], case[1], case[2]
+        if expect == "miss":
+            continue
+        subject = extract_search_query(question) or question
+        if not corpus_has(subject, question, year):
+            skipped[cid] = subject
+    return skipped
+
+
 def cli_run(case: tuple) -> dict:
     cid, q, expect, must, must_not, notes = case
     subject = extract_search_query(q) or q
@@ -220,24 +273,52 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Wiki extract regression battery")
     parser.add_argument("--live", action="store_true", help="Also run live Eve sessions")
     parser.add_argument("--json-out", default="", help="Optional results JSON path")
+    parser.add_argument(
+        "--require-full-corpus",
+        action="store_true",
+        help="Fail when a case could not be checked because the page is not in this corpus",
+    )
     args = parser.parse_args(argv)
 
-    cli_rows = [cli_run(c) for c in CASES]
+    corpus = corpus_index_path()
+    skipped = corpus_skips(CASES)
     print("=== CLI ===")
+    if corpus:
+        print(f"corpus: {corpus}")
+    cli_rows: list[dict] = []
+    for case in CASES:
+        row = cli_run(case)
+        if case[0] in skipped:
+            row["skipped"] = True
+            row["skip_reason"] = "not_in_corpus"
+        cli_rows.append(row)
     for r in cli_rows:
+        if r.get("skipped"):
+            print(
+                f"SKIP {r['id']} subject={r.get('subject')!r} "
+                f"not in this corpus (the page is absent, so the case cannot be checked)"
+            )
+            continue
         mark = "PASS" if r["pass"] else "FAIL"
         print(f"{mark} {r['id']} state={r['state']} L={r['L']} T={r['T']} F={r['F']} | {r['notes']}")
         if not r["pass"]:
             print(f"     subject={r.get('subject')!r} title={r.get('title')!r}")
             print(f"     {r.get('preview')}")
-    cli_pass = sum(1 for r in cli_rows if r["pass"])
-    print(f"CLI {cli_pass}/{len(cli_rows)}")
+    cli_checked = [r for r in cli_rows if not r.get("skipped")]
+    cli_pass = sum(1 for r in cli_checked if r["pass"])
+    cli_skipped = len(cli_rows) - len(cli_checked)
+    print(f"CLI {cli_pass}/{len(cli_checked)}")
+    if cli_skipped:
+        print(
+            f"     {cli_skipped} case(s) SKIPPED: the page is not in this corpus "
+            f"({corpus or 'no corpus'}). Pass --require-full-corpus to make that fatal."
+        )
 
     live_rows: list[dict] = []
     if args.live:
         print()
         print("=== LIVE EVE ===")
-        live_rows = [live_run(c) for c in CASES if c[0] in LIVE_IDS]
+        live_rows = [live_run(c) for c in CASES if c[0] in LIVE_IDS and c[0] not in skipped]
         for r in live_rows:
             mark = "PASS" if r["pass"] else "FAIL"
             print(f"{mark} {r['id']} chars={r.get('chars', 0)} | {r['notes']}")
@@ -254,7 +335,10 @@ def main(argv: list[str] | None = None) -> int:
         "cli": cli_rows,
         "live": live_rows,
         "cli_pass": cli_pass,
-        "cli_total": len(cli_rows),
+        "cli_total": len(cli_checked),
+        "cli_skipped": cli_skipped,
+        "cli_skipped_cases": skipped,
+        "corpus": corpus,
         "live_pass": live_pass,
         "live_total": len(live_rows),
     }
@@ -263,9 +347,11 @@ def main(argv: list[str] | None = None) -> int:
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"wrote {out_path}")
 
-    if cli_pass != len(cli_rows):
+    if cli_pass != len(cli_checked):
         return 1
     if args.live and live_pass != len(live_rows):
+        return 1
+    if args.require_full_corpus and cli_skipped:
         return 1
     return 0
 

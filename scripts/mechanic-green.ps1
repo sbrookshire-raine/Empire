@@ -132,14 +132,28 @@ Invoke-Step "infra checks (deptry/ruff/gitleaks, advisory)" {
     & (Join-Path $Root "scripts\infra-checks.ps1")
 }
 
-$wikiTitleIndex = "I:\EMPIRE_DATA\wiki-reports\2026\title-index.sqlite"
-if (Test-Path $wikiTitleIndex) {
+# The wiki extract battery needs the Title DNS corpus. Ask the RUNTIME where
+# that corpus is (scripts/wiki-index-path.py -> pipeline.wiki_ops_paths) instead
+# of hardcoding a drive letter: the old hardcoded I: check made the gate skip
+# the battery whenever the T7 was not mounted, even though the runtime was
+# serving wiki lookups from the same corpus on D:. A green gate that skipped a
+# real check proved nothing about the wiki limb.
+$wikiTitleIndex = ""
+try {
+    $resolved = & $py (Join-Path $Root "scripts\wiki-index-path.py") 2>$null
+    if ($resolved) { $wikiTitleIndex = ($resolved | Select-Object -First 1).Trim() }
+} catch {
+    $wikiTitleIndex = ""
+}
+if ($wikiTitleIndex -and (Test-Path $wikiTitleIndex)) {
+    Write-Host ""
+    Write-Host "wiki corpus: $wikiTitleIndex" -ForegroundColor DarkGray
     Invoke-Step "wiki extract battery (CLI)" {
         & $py (Join-Path $Root "scripts\wiki_extract_battery.py")
     }
 } else {
     Write-Host ""
-    Write-Host "SKIP wiki extract battery (no $wikiTitleIndex — plug T7 or run build-wiki-title-index.ps1)" -ForegroundColor Yellow
+    Write-Host "SKIP wiki extract battery (no Title DNS corpus found — plug T7 or run build-wiki-title-index.ps1)" -ForegroundColor Yellow
 }
 
 # The browser-logic harness stubs the workbench JS in node. It is the only gate on
