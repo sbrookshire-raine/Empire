@@ -25,10 +25,14 @@ After forge or fix, run from repo root:
 
 ```powershell
 .\scripts\mechanic-green.ps1          # units + verify-capabilities (offline) + governance + wiki battery + verify-stack
+.\scripts\mechanic-green.ps1 -Live    # + the live capability tier, ENFORCED (stack up)
 .\scripts\mechanic-green.ps1 -Full    # also live Eve workbench verify
 .\scripts\verify-capabilities.ps1 -Live   # Eve tool-calls on the wire (stack up)
 .\scripts\verify-capabilities.ps1 -Live -SyncCognee   # + eve_core remembers what works
 ```
+
+`-Live` is **enforced**: if the live tier was requested and the report says it did not
+run, the gate fails. A green gate that silently skipped the live tier proved nothing.
 
 Do **not** ask the Architect to click through UX until mechanic-green exits 0. **Capability pavement** (`verify-capabilities`) must pass before “does this tool work?” UX; see [docs/CAPABILITY_VERIFICATION.md](docs/CAPABILITY_VERIFICATION.md). Architect smoke is optional product feel, not CI.
 

@@ -1,4 +1,91 @@
 # Progress — What works, what's left, current status
+# Progress — What works, what's left, current status
+## 2026-10-21 — Phase 2 closed (green suite + calibrated ceilings + model evaluation)
+
+**Working:** the whole suite is green (**849 passed / 1 skipped / 0 failed**),
+the green gate passes offline *and* with the enforced live tier, the
+prompt-budget ceilings are calibrated against a live measurement, and the
+7B/14B promotion decision is now *measured* rather than inherited.
+
+**The seven pre-existing failures are fixed** (root causes in
+`activeContext.md`). The non-obvious one: the workbench theme rule ("every
+colour lives in a `:root` token") was broken by 8 literal `oklch()` values in
+the limb meter, and the workbench was running a second background loop (an 8 s
+limb-meter poll) that the polling guard forbids.
+
+**Prompt budget:** the live measurement is **6,688 real tokens** against a
+6,410-token chars/3.8 estimate (**+4.3%**).
+`pipeline.prompt_budget.LIVE_OVER_ESTIMATE` carries that calibration and the
+ceilings in `tests/test_prompt_budget.py` are now written in real tokens.
+
+**Model decision (E-12):** `empire-fast:14b` **promoted** (6/6 gates).
+`empire-fast:7b` **not promoted** — it fails the live routing battery (5/7):
+it writes tool calls as JSON prose in the message body, so no tool runs and the
+task is never created. The proxy gate passes for it, which is exactly why the
+live battery exists. Evidence: `eve-audit/promotion-2026-10-21/gates.txt`.
+
+**Not done / deferred:** Title DNS rebuild (57% coverage) and Weaviate stay out
+of scope. The 7B's native-tool-calling gap is a model property, not a code bug.
+
+## 2026-10-21 — Live tier exercised (Phase 2)
+## 2026-10-21 — Live tier exercised (Phase 2)
+
+**Working:** the live tier now runs against a real stack and proves two
+things the offline tier cannot: that each ask reaches a tool *its route*
+implies (E-03 battery, 7/7 measured), and what the model is *actually*
+charged for the prompt (6,669 real tokens vs 6,388 estimated).
+
+**New:** `pipeline/live_probe.py` (structured turn evidence + correct-tool
+assertions), `config/diagnostics/live-routing-battery.json`,
+`scripts/verify-live-routing.py`, `scripts/measure-live-prompt.py`,
+`pipeline/intent_codex.load_intents()`.
+
+**Fixed (real defects the live tier found):**
+- a stray `</translation>` with no opener survived sanitization and reached
+  the bubble and the speaker;
+- every `tool.result` trace line recorded `"tool": null` (wrong field path);
+- the live harnesses proved tool calls by grepping the raw blob, which
+  passes when the model merely *mentions* a tool.
+
+**Test state:** 754 tests, the same 7 known pre-existing failures (was
+734/7 -- 20 added, no regressions). Browser harness 17/17.
+
+**Not done / deferred:** the 7B/14B sequential evaluation (E-12/E-16) and
+the Title DNS rebuild (57% coverage) stay parked; Weaviate stays out of
+scope. Prompt-token *budgeting* is next: the live number is 4.4% above the
+chars/3.8 estimate, so the static ceilings are slightly optimistic.
+## 2026-10-21 — Shared route classifier + enforced live gate (Phases 0–1)
+
+**Working:** one classifier decides wiki / memory / task / other, and every
+caller agrees with it; the green gate can now *require* the live tier and
+fails if it did not run; the capabilities report names the always-on tools.
+
+**Test state:** 734 tests, 7 failures (baseline was 678 / 8 — one fixed, 56
+added, no regressions). The 7 are the known pre-existing set: 2
+`eve_workbench_static`, 2 `wiki_drift_api` (`extract_search_query` band
+extraction, unrelated to routing), 1 thin playbook area, 2 prompt-budget
+ceilings.
+
+**New:** `pipeline/route_classifier.py`, `docs/ROUTE_CLASSIFIER.md`,
+`POST /api/route/classify`, `tests/pipeline/route_corpus.py` (~50 cases
+shared by the classifier test and the caller-parity test).
+
+**Fixed along the way (all pre-existing defects, not new features):**
+- the live harnesses were posting a nested toolbelt that the toolbelt path
+  never read — every live measurement was against the wrong surface;
+- `context_block()` overrode the codex with a second wiki rule, so
+  `resolve()` and `context_block()` could pick different routes;
+- the browser carried a third copy of the routing rules;
+- a stalled stream sat silent for 600 s and then reported a generic
+  "disconnected" that named no cause;
+- `cognee_recall` never appeared in the report that lists what Eve can call.
+
+**Not done / deferred:** the live tier has never been exercised here (no
+Ollama/Eve/frontend stack in this environment), so `mechanic-green.ps1
+-Live` is implemented and enforced but unrun. The live harness rewrite
+(structured `tool.requested` events, correct-tool selection, measured prompt
+tokens, 7B promotion criteria) is still outstanding. Title DNS rebuild
+(57% coverage) and Weaviate remain out of scope.
 
 ## 2026-10-21 — REA Bin-1 integration (working, live-verified)
 
