@@ -1,5 +1,46 @@
 # Active Context — Current work focus & next steps
 # Active Context — Current work focus & next steps
+## 2026-10-22 — E-07 closed: no harness touches the Architect's toolbelt
+
+**Pushed** `178bd83` on `revision-refactor` (`HEAD == origin/revision-refactor`,
+clean tree). The **enforced live gate passes** (exit 0) and the operator's
+toolbelt file is **SHA-identical** before and after a full gate run.
+
+### The list was a snapshot, and it had already missed nine
+The previous fix guarded five harnesses and wrote the names into a test.
+The nine research/bench harnesses were still posting their own toolbelt —
+and a sweep of `scripts/*.py` found a **tenth** offender
+(`test-wiki-eve-playwright.py`, which POSTed `/api/toolbelt` directly and
+never restored it). The lesson: a *named list* of offenders is a snapshot
+that goes stale. The test is now **discovery-based** — it AST-scans every
+script for a payload that carries `active_tools` and requires the guard in
+each one. The next harness cannot slip through.
+
+All fourteen now run inside `eve_toolbelt.temporary_active_tools(...)`.
+
+### The guard itself was subtly wrong
+Two defects, both invisible until you look at the *file* rather than the
+list it holds:
+
+| defect | why it mattered |
+|---|---|
+| the restore re-wrote a **normalised** list | a **missing** file and a file holding `[]` are different states — the agent falls back to Voice+Wiki only when the file is ABSENT, so the old restore turned the voice limb OFF on a fresh install |
+| the write was a plain `write_text` | the agent reads the file on **every tool check**, so a torn write was observable |
+
+The restore is now **byte-for-byte** (and removes a file it created) and
+the write is **atomic**. `merge=True` was added for the browser harnesses,
+which need wiki+voice *added* to the operator's selection rather than
+replacing it.
+
+`diagnostic.py` also got a `finally`: a crash mid-battery used to leave
+**Research Partner mode ON** — operator state, leaking the same way.
+
+### Proof
+A research bench, a wiki chat smoke (PASS) and the whole enforced live
+gate each left `%LOCALAPPDATA%\EMPIRE\eve-toolbelt.json` **SHA-identical**.
+`GET /api/voice/health` → `voice_presence_limb: true`. Suite: **880 passed,
+1 skipped, 0 failed**.
+
 ## 2026-10-22 — E-10 closed: the corpus was the gap, not the model
 
 **Phase 2 is on GitHub** (`5ba01b6..8914418`, six commits on

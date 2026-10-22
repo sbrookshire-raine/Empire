@@ -1,5 +1,31 @@
 # Progress — What works, what's left, current status
 # Progress — What works, what's left, current status
+## 2026-10-22 — E-07 closed: the toolbelt is the Architect's, and stays that way
+
+**Working (880 passed / 1 skipped / 0 failed; enforced live gate exit 0):**
+
+| Thing | Before | Now |
+|---|---|---|
+| harnesses that clobber the toolbelt | 14 (5 fixed, 9 unknown to the test) | **0** — all guarded, and the test *discovers* them |
+| the guard's restore | re-wrote a normalised list | **byte-for-byte**, and removes a file it created |
+| the guard's write | plain `write_text` | **atomic** (the agent reads it every tool check) |
+| `diagnostic.py` on a crash | left Research Partner mode ON | restored in a `finally` |
+
+**E-07 is closed.** The nine research/bench harnesses now carry the same
+guard as the five gate-facing ones, and a **tenth** offender found during
+the sweep (`test-wiki-eve-playwright.py`, which POSTed `/api/toolbelt`
+directly and never restored it) does too. The enforcement test is
+**discovery-based** — it AST-scans `scripts/` for any payload carrying
+`active_tools` — so a *named list* of offenders cannot go stale again.
+
+**Still open:**
+- The chat prefetch still costs ~20 s (one Cognee recall ≈ 15 s on this
+  machine). It is bounded now, but it is the slowest thing in a chat turn.
+- The bulk link web is still unbuilt (14.5 h at 136 pages/s). The on-demand
+  scan covers the pages that are actually visited.
+- Weaviate (`:8091`) is still opt-in; the wiki limb works without it.
+- `empire-fast:7b` still cannot do native tool calls — a model property.
+
 ## 2026-10-22 — The wiki limb is whole: full index, live hop, bounded prefetch
 
 **Working (872 passed / 1 skipped / 0 failed):**
