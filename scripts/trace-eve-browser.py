@@ -57,27 +57,17 @@ def _clear_active_chat() -> None:
 
 
 def _toolbelt(tools: list[str]) -> list[str]:
-    with urllib.request.urlopen(f"{ORIGIN}/api/toolbelt", timeout=5) as resp:
-        previous = list(json.loads(resp.read().decode("utf-8")).get("active_tools") or [])
-    _restore_toolbelt(sorted(set(previous) | set(tools)), origin=ORIGIN)
-    return previous
+    """Deprecated: the shared toolbelt guard owns this now.
+
+    The guard writes the toolbelt FILE (the only thing the agent reads) and
+    restores the operator's selection byte-for-byte afterwards.
+    """
+    return []
 
 
 def _restore_toolbelt(tools: list[str], *, origin: str) -> None:
-    """Restore a previously captured Toolbelt set."""
-
-    payload = json.dumps({"active_tools": tools}).encode()
-    request = urllib.request.Request(
-        f"{origin}/api/toolbelt",
-        data=payload,
-        headers={"Content-Type": "application/json", "Origin": origin},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=5):
-            pass
-    except Exception:  # noqa: BLE001
-        pass
+    """Deprecated: the shared toolbelt guard owns the restore now."""
+    return None
 
 
 _post_toolbelt = _restore_toolbelt
@@ -296,4 +286,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. This tracer
+    # needs wiki + voice for the turn; the guard adds them for the run and
+    # restores the operator's selection afterwards (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(
+        ["wiki_local", "voice_presence"], merge=True
+    ):
+        raise SystemExit(main())

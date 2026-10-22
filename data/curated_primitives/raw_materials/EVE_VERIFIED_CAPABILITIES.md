@@ -4,7 +4,7 @@ kind: eve_operating_contract
 dataset: eve_core
 memory_status: foundation
 promote: mechanic_only
-verified_at: 2026-10-22T05:24:52+00:00
+verified_at: 2026-10-22T17:57:41+00:00
 ---
 # EVE verified capabilities (mechanic report)
 
@@ -147,18 +147,18 @@ These are registered in every session — no Toolbelt click, no admit, no `resou
 [PASS] workspace_search arm runs offline â€” engine=builtin count=3
 [PASS] switchboard plan is dry-run and correct â€” start=['pocketbase', 'frontend'] stop=[]
 [PASS] switchboard never starts ollama/eve
-       verified_hands: Mechanic verified: pulse_inject, admit_github_scout, resource_farm_catalog. (as of 2026-10-22T05:21:34 UTC). Proven toolâ€¦
+       verified_hands: Mechanic verified: pulse_inject, admit_github_scout, resource_farm_catalog. (as of 2026-10-22T17:54:20 UTC). Proven toolâ€¦
 === all smoke checks passed ===
 
 - **PASS** eve_tools_playwright: PASS test-eve-tools-playwright
   OK eve_resource_farm_run
   OK eve_github_scout_search
 
-- **PASS** live_routing_battery: d=['cognee_recall'] 110.3s
-[PASS] task_list            route=task    called=['list_tasks'] 19.9s
-[PASS] task_create          route=task    called=['create_task'] 4.4s
-[PASS] other_disk           route=other   called=['check_workbench_health'] 5.2s
-[PASS] other_capabilities   route=other   called=[] 4.1s
+- **PASS** live_routing_battery:  114.8s
+[PASS] task_list            route=task    called=['list_tasks'] 18.3s
+[PASS] task_create          route=task    called=['create_task'] 4.5s
+[PASS] other_disk           route=other   called=['check_workbench_health'] 4.5s
+[PASS] other_capabilities   route=other   called=['capability_route'] 11.7s
 
 live routing: 7/7 cases routed to the right tool
 wrote C:\EMPIRE\tmp\live-routing-report.json

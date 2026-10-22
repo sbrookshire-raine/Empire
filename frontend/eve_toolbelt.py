@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Literal
@@ -147,8 +148,24 @@ def write_active_tools(categories: list[str]) -> Path:
         "defaults_version": DEFAULTS_VERSION,
         "buckets": categories_by_bucket(),
     }
+    encoded = json.dumps(payload, indent=2) + "\n"
     try:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Atomic: the agent reads this file on every tool check, so a
+        # half-written file must never be observable.
+        handle, tmp_name = tempfile.mkstemp(
+            prefix="toolbelt-", suffix=".json", dir=str(path.parent)
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(handle, "w", encoding="utf-8") as stream:
+                stream.write(encoded)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(tmp_path, path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
     except OSError:
         pass
     return path
@@ -270,23 +287,71 @@ def apply_active_tools(payload: dict[str, Any]) -> dict[str, Any]:
     return cleaned
 
 
+def _snapshot_toolbelt() -> tuple[bool, bytes | None]:
+    """The operator's toolbelt file, verbatim.
+
+    Returns ``(existed, payload)``. A MISSING file and a file holding an
+    empty list are NOT the same state: the agent falls back to Voice + Wiki
+    only when the file is absent, so the restore has to be byte-exact.
+    """
+
+    path = _toolbelt_path()
+    try:
+        return True, path.read_bytes()
+    except FileNotFoundError:
+        return False, None
+    except OSError:
+        return True, None
+
+
+def _restore_toolbelt(snapshot: tuple[bool, bytes | None]) -> None:
+    """Put the operator's toolbelt file back exactly as it was found."""
+
+    existed, payload = snapshot
+    path = _toolbelt_path()
+    try:
+        if not existed:
+            path.unlink(missing_ok=True)
+        elif payload is not None:
+            path.write_bytes(payload)
+    except OSError:
+        pass
+
+
 @contextmanager
-def temporary_active_tools(categories: list[str]) -> Iterator[list[str]]:
+def temporary_active_tools(
+    categories: list[str], *, merge: bool = False
+) -> Iterator[list[str]]:
     """Run with a temporary toolbelt, then restore the operator's selection.
 
     The live harnesses ask for a specific toolbelt so a measurement is
     attributable to a known surface. Writing it is a side effect on the
     operator's file, so the previous selection is restored — including when
     the harness fails part-way.
+
+    The restore is BYTE-EXACT: the file is put back exactly as it was found,
+    and a file that did not exist is removed again. Re-writing a normalised
+    (possibly empty) list instead would silently turn the voice_presence
+    limb OFF on a fresh install, because the agent only falls back to its
+    default Voice + Wiki selection when the file is ABSENT.
+
+    ``merge=True`` keeps the operator's current limbs and ADDS ``categories``
+    to them — for a harness that needs wiki + voice without switching the
+    operator's other limbs off for the duration of the run.
     """
 
-    previous = load_active_tools()
-    applied = normalize_active_tools(categories)
+    # Snapshot FIRST. `load_active_tools` migrates a legacy file in place
+    # (it rewrites the file), so reading it before the snapshot would
+    # capture the migrated version instead of the operator's original.
+    snapshot = _snapshot_toolbelt()
+    current = load_active_tools()
+    wanted = [*current, *categories] if merge else categories
+    applied = normalize_active_tools(wanted)
     write_active_tools(applied)
     try:
         yield applied
     finally:
-        write_active_tools(previous)
+        _restore_toolbelt(snapshot)
 
 
 def toolbelt_meta() -> dict[str, Any]:

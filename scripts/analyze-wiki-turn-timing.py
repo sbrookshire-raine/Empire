@@ -9,6 +9,8 @@ import urllib.request
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 ORIGIN = "http://127.0.0.1:8080"
 TRACE = _ROOT / "eve-audit" / "eve-trace.jsonl"
 
@@ -104,4 +106,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. This timing run
+    # posts its own toolbelt with the session, which the toolbelt path
+    # persists - so without the guard, running the timing probe silently
+    # rewrote the Architect's selection (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+        raise SystemExit(main())

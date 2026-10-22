@@ -9,11 +9,17 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
+
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 ORIGIN = "http://127.0.0.1:8080"
 REPORT = r"C:\Empire_Workbench\04_Thought_Experiments\wiki_cache\e2e_full_verify_last.json"
@@ -349,4 +355,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. The live turn
+    # posts its own toolbelt with the session, which the toolbelt path
+    # persists - so without the guard, running this verification silently
+    # rewrote the Architect's selection (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+        raise SystemExit(main())

@@ -67,57 +67,65 @@ battery = [
     }
 ]
 
-if __name__ == "__main__":
+def main() -> int:
     print("--- ENABLING RESEARCH PARTNER ---")
     try:
         post('/api/admission', {'action': 'set_research_partner', 'enabled': True})
     except Exception as e:
         print(f"Failed to enable research partner: {e}")
 
-    for test in battery:
-        print(f"\n========================================")
-        print(f"RUNNING TEST: {test['name']}")
-        print(f"PROMPT: {test['prompt']}")
-        print(f"========================================")
-        
-        # NOTE: deliberately omits "active_tools". Posting that field makes
-        # eve_toolbelt.apply_active_tools persist the posted list verbatim, which
-        # would strip the "always" bucket (voice_presence / push-to-talk) from the
-        # operator toolbelt as a side effect. The persisted toolbelt already
-        # enables wiki_local, so the wiki tests still run.
-        payload = {
-            'message': test['prompt'],
-            'mode': 'fast',
-            'chat_id': 'diag-' + uuid.uuid4().hex[:8],
-            'workbench_ui': {}
-        }
-        
-        try:
-            session_data = post('/api/eve/session', payload)
-            session_id = session_data.get('sessionId')
-            
-            if not session_id:
-                print("ERROR: Server responded, but no sessionId was returned.")
-                continue
-                
-            trace_log, assistant_text, total_time = stream_and_trace(session_id)
-            
-            print("\n--- TRACE TIMELINE ---")
-            for log in trace_log:
-                print(log)
-                
-            print("\n--- EVE SYNTHESIS ---")
-            print(assistant_text)
-            print(f"\nTotal Turn Time: {total_time}s")
-            
-        except urllib.error.HTTPError as e:
-            print(f"TEST FAILED: HTTP Error {e.code} - {e.reason}")
-            print(f"Server response: {e.read().decode('utf-8', errors='ignore')}")
-        except Exception as e:
-            print(f"TEST FAILED: {str(e)}")
-
-    print("\n--- DISABLING RESEARCH PARTNER ---")
     try:
-        post('/api/admission', {'action': 'set_research_partner', 'enabled': False})
-    except Exception as e:
-        print(f"Failed to disable research partner: {e}")
+        for test in battery:
+            print(f"\n========================================")
+            print(f"RUNNING TEST: {test['name']}")
+            print(f"PROMPT: {test['prompt']}")
+            print(f"========================================")
+
+            # NOTE: deliberately omits "active_tools". Posting that field makes
+            # eve_toolbelt.apply_active_tools persist the posted list verbatim, which
+            # would strip the "always" bucket (voice_presence / push-to-talk) from the
+            # operator toolbelt as a side effect. The persisted toolbelt already
+            # enables wiki_local, so the wiki tests still run.
+            payload = {
+                'message': test['prompt'],
+                'mode': 'fast',
+                'chat_id': 'diag-' + uuid.uuid4().hex[:8],
+                'workbench_ui': {}
+            }
+
+            try:
+                session_data = post('/api/eve/session', payload)
+                session_id = session_data.get('sessionId')
+
+                if not session_id:
+                    print("ERROR: Server responded, but no sessionId was returned.")
+                    continue
+
+                trace_log, assistant_text, total_time = stream_and_trace(session_id)
+
+                print("\n--- TRACE TIMELINE ---")
+                for log in trace_log:
+                    print(log)
+
+                print("\n--- EVE SYNTHESIS ---")
+                print(assistant_text)
+                print(f"\nTotal Turn Time: {total_time}s")
+
+            except urllib.error.HTTPError as e:
+                print(f"TEST FAILED: HTTP Error {e.code} - {e.reason}")
+                print(f"Server response: {e.read().decode('utf-8', errors='ignore')}")
+            except Exception as e:
+                print(f"TEST FAILED: {str(e)}")
+    finally:
+        # The research-partner grant is OPERATOR state too. Without the
+        # finally, a crash mid-battery left Partner mode ON.
+        print("\n--- DISABLING RESEARCH PARTNER ---")
+        try:
+            post('/api/admission', {'action': 'set_research_partner', 'enabled': False})
+        except Exception as e:
+            print(f"Failed to disable research partner: {e}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

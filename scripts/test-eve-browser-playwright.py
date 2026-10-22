@@ -53,50 +53,19 @@ def _frontend_up() -> bool:
 
 
 def _toolbelt(*, add: tuple[str, ...], origin: str) -> list[str]:
-    """Ensure tools are active for the browser turn; returns the previous set for restore."""
+    """Deprecated: the shared toolbelt guard owns this now.
 
-    def _get() -> list[str]:
-        try:
-            with urllib.request.urlopen(f"{origin}/api/toolbelt", timeout=5) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-            return list(body.get("active_tools") or [])
-        except Exception:  # noqa: BLE001
-            return []
-
-    def _post(tools: list[str]) -> None:
-        payload = json.dumps({"active_tools": tools}).encode("utf-8")
-        request = urllib.request.Request(
-            f"{origin}/api/toolbelt",
-            data=payload,
-            headers={"Content-Type": "application/json", "Origin": origin},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=5):
-                pass
-        except Exception:  # noqa: BLE001
-            pass
-
-    previous = _get()
-    _post(sorted(set(previous) | set(add)))
-    return previous
+    The guard writes the toolbelt FILE (the only thing the agent reads) and
+    restores the operator's selection byte-for-byte afterwards. The previous
+    HTTP round-trip could not restore an absent file, and it lost the file
+    if the run died between the write and the restore.
+    """
+    return []
 
 
 def _restore_toolbelt(tools: list[str], *, origin: str) -> None:
-    """Restore a previously captured Toolbelt set."""
-
-    payload = json.dumps({"active_tools": tools}).encode("utf-8")
-    request = urllib.request.Request(
-        f"{origin}/api/toolbelt",
-        data=payload,
-        headers={"Content-Type": "application/json", "Origin": origin},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=5):
-            pass
-    except Exception:  # noqa: BLE001
-        pass
+    """Deprecated: the shared toolbelt guard owns the restore now."""
+    return None
 
 
 def run_browser(
@@ -288,4 +257,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. This harness
+    # needs wiki + voice for the browser turn; the guard adds them for the
+    # run and restores the operator's selection afterwards (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(
+        ["wiki_local", "voice_presence"], merge=True
+    ):
+        raise SystemExit(main())

@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -231,18 +232,98 @@ class LiveHarnessToolbeltTests(unittest.TestCase):
         harness that does not restore the selection silently rewrites the
         Architect's toolbelt: running the wiki smoke used to turn the
         voice_presence limb OFF (E-07).
+
+        The set of offenders is DISCOVERED, not listed: the old check named
+        five harnesses and the next nine (a research bench, a wiki
+        calibration, the browser probes...) were missed because the list was
+        a snapshot. A harness that posts a toolbelt and does not guard it is
+        now a failure wherever it lives.
         """
 
-        for name in (
-            "test-eve-tools-playwright.py",
-            "verify-live-routing.py",
-            "smoke-eve-hands.py",
-            "test-wiki-chat-smoke.py",
-            "wiki_extract_battery.py",
-        ):
-            with self.subTest(harness=name):
-                source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
-                self.assertIn("temporary_active_tools", source)
+        scripts = sorted((ROOT / "scripts").rglob("*.py"))
+        self.assertTrue(scripts, "no scripts found to check")
+        checked = 0
+        for path in scripts:
+            source = path.read_text(encoding="utf-8")
+            if not _posts_a_toolbelt(source):
+                continue
+            checked += 1
+            with self.subTest(harness=path.name):
+                self.assertIn(
+                    "temporary_active_tools",
+                    source,
+                    f"{path.name} posts a toolbelt but never restores the "
+                    "operator's selection - wrap it in "
+                    "eve_toolbelt.temporary_active_tools(...)",
+                )
+        self.assertGreaterEqual(
+            checked,
+            10,
+            "the discovery found suspiciously few toolbelt-posting harnesses",
+        )
+
+    def test_the_guard_is_importable_and_restores_byte_for_byte(self) -> None:
+        """The guard is the mechanism the harnesses rely on.
+
+        It must be importable from the repo root (the harnesses add the root
+        to sys.path themselves) and must put the file back exactly as it was
+        found - including the case where there was NO file.
+        """
+
+        from frontend import eve_toolbelt
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            original = b'{"active_tools": ["voice_presence"], "extra": 1}\n'
+            path.write_bytes(original)
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                    self.assertEqual(
+                        eve_toolbelt.load_active_tools(),
+                        ["wiki_local"],
+                    )
+                self.assertEqual(path.read_bytes(), original)
+
+    def test_the_guard_removes_a_file_it_created(self) -> None:
+        """A missing file and a file holding [] are different states.
+
+        The agent falls back to its default Voice + Wiki selection only when
+        the file is ABSENT, so restoring "[]" would turn the voice limb off
+        on a fresh install.
+        """
+
+        from frontend import eve_toolbelt
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                    self.assertTrue(path.exists())
+                self.assertFalse(
+                    path.exists(),
+                    "the guard left a file behind that was not there before",
+                )
+
+
+def _posts_a_toolbelt(source: str) -> bool:
+    """True when a script posts a toolbelt the toolbelt path will persist.
+
+    Looked up in the CODE, not the prose: several harnesses explain the
+    defect in their docstrings, and a text search would flag the
+    explanation as the bug.
+    """
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for key in node.keys:
+            if isinstance(key, ast.Constant) and key.value == "active_tools":
+                return True
+    return False
 
 
 if __name__ == "__main__":

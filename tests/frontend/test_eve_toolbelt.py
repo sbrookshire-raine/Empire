@@ -138,6 +138,70 @@ class EveToolbeltTests(unittest.TestCase):
                         raise RuntimeError("harness failed")
                 self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
 
+    def test_temporary_active_tools_restores_the_file_byte_for_byte(self) -> None:
+        """The restore must be EXACT, not merely equivalent.
+
+        The file is the operator's; a re-serialised version would drop keys
+        the operator (or a future version) put there.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            original = b'{"active_tools": ["voice_presence"], "custom": 7}\n'
+            path.write_bytes(original)
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                    self.assertEqual(eve_toolbelt.load_active_tools(), ["wiki_local"])
+                self.assertEqual(path.read_bytes(), original)
+
+    def test_temporary_active_tools_removes_a_file_it_created(self) -> None:
+        """A missing file and a file holding [] are different states.
+
+        The agent (toolbelt.ts) falls back to its default Voice + Wiki
+        selection only when the file is ABSENT, so restoring "[]" would
+        silently turn the voice limb OFF on a fresh install.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                with eve_toolbelt.temporary_active_tools(["wiki_local"]):
+                    self.assertTrue(path.exists())
+                self.assertFalse(
+                    path.exists(),
+                    "the guard left a toolbelt file that was not there before",
+                )
+
+    def test_temporary_active_tools_merge_keeps_the_operator_selection(self) -> None:
+        """merge=True ADDS limbs; the operator's own stay on for the run."""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                eve_toolbelt.write_active_tools(["tool_forge"])
+                with eve_toolbelt.temporary_active_tools(
+                    ["wiki_local"], merge=True
+                ) as applied:
+                    self.assertIn("tool_forge", applied)
+                    self.assertIn("wiki_local", applied)
+                self.assertEqual(eve_toolbelt.load_active_tools(), ["tool_forge"])
+
+    def test_write_active_tools_is_atomic(self) -> None:
+        """A half-written file must never be observable.
+
+        The agent reads this file on every tool check, so a torn write would
+        be read as a broken toolbelt.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eve-toolbelt.json"
+            with patch.object(eve_toolbelt, "_toolbelt_path", return_value=path):
+                eve_toolbelt.write_active_tools(["wiki_local"])
+                saved = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(saved["active_tools"], ["wiki_local"])
+            leftovers = [p.name for p in Path(tmp).iterdir() if p.name != "eve-toolbelt.json"]
+            self.assertEqual(leftovers, [], "the atomic write left a temp file behind")
+
     def test_toolbelt_path_honours_the_env_override(self) -> None:
         """The toolbelt file is the operator's; the test suite redirects it.
 

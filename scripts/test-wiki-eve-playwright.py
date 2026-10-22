@@ -40,19 +40,12 @@ def _frontend_up() -> bool:
 
 
 def _enable_wiki_local() -> None:
-    payload = json.dumps({"active_tools": ["wiki_local", "voice_presence"]}).encode("utf-8")
-    req = urllib.request.Request(
-        f"{ORIGIN}/api/toolbelt",
-        data=payload,
-        headers={"Content-Type": "application/json", "Origin": ORIGIN},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10):
-            pass
-    except urllib.error.HTTPError:
-        # Toolbelt route may differ; session payload still passes active_tools.
-        pass
+    """Deprecated: the shared toolbelt guard owns this now.
+
+    Kept as a no-op so the call site stays readable; the actual toolbelt
+    switch is done by ``eve_toolbelt.temporary_active_tools`` around
+    ``main()``, which also RESTORES the operator's selection afterwards.
+    """
 
 
 def run_playwright(*, headful: bool, question: str) -> list[str]:
@@ -117,4 +110,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. This harness
+    # needs wiki + voice for the turn; the guard adds them for the run and
+    # restores the operator's selection afterwards (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(
+        ["wiki_local", "voice_presence"], merge=True
+    ):
+        raise SystemExit(main())

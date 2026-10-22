@@ -423,4 +423,13 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # The toolbelt file is the OPERATOR's, not the harness's. This battery
+    # posts its own toolbelt with the session, and the toolbelt path
+    # PERSISTS it - so without the guard, running the battery silently
+    # rewrote the Architect's selection (E-07).
+    from frontend import eve_toolbelt
+
+    with eve_toolbelt.temporary_active_tools(
+        ["wiki_local", "voice_presence", "rea"]
+    ):
+        raise SystemExit(main())
